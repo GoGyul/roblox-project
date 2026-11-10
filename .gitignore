@@ -1,0 +1,13 @@
+# 빌드된 장소 파일 (코드에서 언제든 다시 만들 수 있어요)
+/*.rbxl
+/*.rbxlx
+
+# Roblox Studio 잠금 파일
+/*.rbxl.lock
+/*.rbxlx.lock
+
+# Rojo / 에디터
+sourcemap.json
+
+# macOS
+.DS_Store
