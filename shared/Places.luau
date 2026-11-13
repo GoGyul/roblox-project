@@ -32,7 +32,7 @@ Places.Games = {
 		id = "salary",
 		name = "월급루팡",
 		emoji = "💼",
-		placeId = 0, -- ← Publish 후 채우기
+		placeId = 131519518238691,
 		maxPlayers = 1, -- 혼자 하는 게임: 한 명씩 자기 사무실로
 		color = Color3.fromRGB(120, 200, 255),
 	},
