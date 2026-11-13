@@ -28,6 +28,14 @@ Places.Games = {
 		maxPlayers = 4,
 		color = Color3.fromRGB(255, 190, 90),
 	},
+	{
+		id = "salary",
+		name = "월급루팡",
+		emoji = "💼",
+		placeId = 0, -- ← Publish 후 채우기
+		maxPlayers = 1, -- 혼자 하는 게임: 한 명씩 자기 사무실로
+		color = Color3.fromRGB(120, 200, 255),
+	},
 	-- 새 게임 예시:
 	-- {
 	-- 	id = "newgame",
