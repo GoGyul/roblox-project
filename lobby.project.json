@@ -1,28 +1,24 @@
 {
-  "name": "로블",
+  "name": "고결게임즈 광장",
   "tree": {
     "$className": "DataModel",
-
     "ReplicatedStorage": {
       "Shared": {
-        "$path": "src/shared"
+        "$path": "shared"
       }
     },
-
     "ServerScriptService": {
       "Server": {
-        "$path": "src/server"
+        "$path": "places/lobby/server"
       }
     },
-
     "StarterPlayer": {
       "StarterPlayerScripts": {
         "Client": {
-          "$path": "src/client"
+          "$path": "places/lobby/client"
         }
       }
     },
-
     "Workspace": {
       "$properties": {
         "FilteringEnabled": true
@@ -32,9 +28,9 @@
         "$properties": {
           "Anchored": true,
           "Color": [
-            0.38823,
-            0.37254,
-            0.38823
+            0.35,
+            0.55,
+            0.3
           ],
           "Locked": true,
           "Position": [

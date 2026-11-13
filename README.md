@@ -1,7 +1,19 @@
-# 로블록스 오비 프로젝트
+# 고결게임즈
 
-[Rojo](https://rojo.space)로 코드를 관리하는 로블록스 오비(장애물 코스) 게임이에요.
-코스, 게임 로직, UI가 전부 `src/` 안의 코드라서 Git으로 함께 작업할 수 있어요.
+[Rojo](https://rojo.space)로 코드를 관리하는 로블록스 게임 모음이에요.
+**메인 광장**에 게임별 포탈이 있고, 포탈 앞 발판에서 팀을 모아 출발하면 그 게임의 **팀 전용 서버**로 이동해요.
+광장에는 앞으로 게임이 하나씩 추가될 예정이에요.
+
+### 지금 있는 게임
+- 🕰️ **멈춘 시계탑** (방탈출): 회중시계로 **현재 ↔ 50년 전 과거**를 오가며 퍼즐을 풀고, 멈춘 시계탑을 다시 움직이면 탈출해요.
+
+### 새 게임 추가하는 법
+1. `places/새게임/` 폴더(server, client)와 `새게임.project.json`을 만들어요. 기존 것을 복사하면 쉬워요.
+2. 로블록스 Experience에 **새 Place를 추가하고 Publish**해요.
+3. `shared/Places.luau`의 `Games` 목록에 게임 정보(이름, 이모지, Place ID, 인원, 색)를 추가해요.
+4. 광장을 다시 Publish하면 **포탈이 자동으로 생겨요.** (포탈 자리는 현재 3개)
+
+> 연습용으로 만든 오비 게임은 `main` 브랜치의 첫 커밋에 남아 있어요.
 
 ## 처음 한 번만: 준비하기
 
@@ -28,10 +40,11 @@
 
 ## 개발하기
 
-1. 프로젝트 폴더에서 동기화 서버를 켜요.
+1. 프로젝트 폴더에서 **작업할 장소**의 동기화 서버를 켜요. (한 번에 하나만)
 
    ```bash
-   rojo serve
+   rojo serve lobby.project.json        # 메인 광장 작업할 때
+   rojo serve clocktower.project.json   # 시계탑 방탈출 작업할 때
    ```
 
 2. 스튜디오에서 **Baseplate** 템플릿으로 새 장소를 만들어요. 이 장소는 각자 테스트용이에요.
@@ -43,16 +56,34 @@
 
 ## 폴더 구조
 
-| 경로 | 스튜디오 위치 | 역할 |
-| --- | --- | --- |
-| `src/server/init.server.luau` | ServerScriptService.Server | 서버 시작점 |
-| `src/server/CourseBuilder.luau` | Server 안의 모듈 | 코스 만들기 (발판, 장애물) |
-| `src/server/StageService.luau` | Server 안의 모듈 | 체크포인트, 죽는 발판, 골인 |
-| `src/client/init.client.luau` | StarterPlayerScripts.Client | 화면 UI (스테이지, 타이머) |
-| `src/shared/` | ReplicatedStorage.Shared | 서버와 클라이언트가 같이 쓰는 코드 |
+이 게임은 **장소(Place) 두 개**로 이루어져 있어요. 광장에서 시계탑으로는 텔레포트로 이동해요.
 
-> 스튜디오에서 손으로 만든 파트나 모델은 Git에 저장되지 않아요.
-> 맵은 `CourseBuilder.luau`에 코드로 추가하거나, 모델을 `.rbxm`으로 저장해 `src/` 안에 넣어 주세요.
+```
+lobby.project.json        ← 🏛️ 고결게임즈 메인 광장 장소의 Rojo 설정
+clocktower.project.json   ← 🕰️ 시계탑 장소의 Rojo 설정
+places/
+├── lobby/                ← 메인 광장 전용 코드
+│   ├── server/  (init.server, LobbyBuilder, Queue)
+│   └── client/  (init.client)
+└── clocktower/           ← 시계탑 방탈출 전용 코드
+    ├── server/  (init.server, TowerBuilder, Puzzles, TimeTravel, Inventory, Remotes)
+    └── client/  (init.client, Hud, Panels)
+shared/                   ← 두 장소가 함께 쓰는 코드 (ReplicatedStorage.Shared)
+    Places.luau     게임 목록 + 장소 ID ← Publish 후 꼭 채우기!
+    Teleport.luau   장소 이동
+    Build.luau      맵 짓는 도구
+    Ui.luau         UI 도우미
+    Config.luau     시계탑 설정
+```
+
+| 파일 이름 | 스튜디오에서 |
+| --- | --- |
+| `init.server.luau` | Script (서버에서 자동 실행) |
+| `init.client.luau` | LocalScript (클라이언트에서 자동 실행) |
+| 그 외 `.luau` | ModuleScript (`require`로 불러서 사용) |
+
+> 스튜디오 테스트에서는 텔레포트가 동작하지 않아요. 장소 이동은 Publish한 게임에서 확인하세요.
+> 스튜디오에서 손으로 만든 파트나 모델은 Git에 저장되지 않아요. 맵은 코드로 만들어 주세요.
 
 ## 협업 규칙
 
