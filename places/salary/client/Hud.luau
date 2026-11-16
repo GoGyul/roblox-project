@@ -268,7 +268,7 @@ for i, actionId in SalaryConfig.DeskActions do
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed or not actionPanel.Visible then
+	if gameProcessed or not actionPanel.Visible or player:GetAttribute("ScreenHidden") then
 		return
 	end
 	local index = table.find(KEYS, input.KeyCode)
