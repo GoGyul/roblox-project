@@ -12,4 +12,5 @@ if arrivingGui then
 end
 
 require(script.Hud)
+require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("BossKey")).start()
 require(script.Panels)

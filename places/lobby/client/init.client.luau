@@ -51,3 +51,6 @@ Remotes:WaitForChild("TeleportFailed").OnClientEvent:Connect(function()
 	loading.Enabled = false
 end)
 Remotes:WaitForChild("Notify").OnClientEvent:Connect(Ui.toast)
+
+-- 🙈 화면 숨기기 (보스 키)
+require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BossKey")).start()

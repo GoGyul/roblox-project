@@ -48,7 +48,7 @@ end
 
 toggleButton.Activated:Connect(requestToggle)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if not gameProcessed and input.KeyCode == Config.TOGGLE_KEY then
+	if not gameProcessed and input.KeyCode == Config.TOGGLE_KEY and not player:GetAttribute("ScreenHidden") then
 		requestToggle()
 	end
 end)

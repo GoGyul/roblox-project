@@ -18,6 +18,7 @@ if arrivingGui then
 end
 
 require(script.Hud)
+require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("BossKey")).start()
 require(script.Poses).start()
 require(script.StockPanel).start()
 local Panels = require(script.Panels)
