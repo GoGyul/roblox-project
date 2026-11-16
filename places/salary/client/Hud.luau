@@ -175,6 +175,32 @@ local actionPanel = Ui.make("Frame", {
 	Visible = false,
 	Parent = gui,
 })
+-- 서 있을 때 안내 (농땡이 메뉴는 내 자리에 앉아야 나와요)
+local standHint = text({
+	AnchorPoint = Vector2.new(0.5, 1),
+	Position = UDim2.new(0.5, 0, 1, -24),
+	Size = UDim2.fromOffset(520, 28),
+	TextSize = 17,
+	TextXAlignment = Enum.TextXAlignment.Center,
+	TextStrokeTransparency = 0.3,
+	Text = "🪑 ⭐ 내 자리에 앉으면 농땡이 메뉴가 나와요",
+	Visible = false,
+	Parent = gui,
+})
+
+-- 화면이 좁으면 행동 버튼 줄을 줄여요
+local actionScale = Ui.make("UIScale", { Parent = actionPanel })
+local function fitActionPanel()
+	local camera = workspace.CurrentCamera
+	if camera then
+		actionScale.Scale = math.clamp((camera.ViewportSize.X - 40) / actionPanel.Size.X.Offset, 0.5, 1)
+	end
+end
+fitActionPanel()
+if workspace.CurrentCamera then
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitActionPanel)
+end
+
 local hintText = text({
 	Size = UDim2.new(1, 0, 0, 22),
 	TextSize = 16,
@@ -199,6 +225,7 @@ local KEYS = {
 	Enum.KeyCode.Five,
 	Enum.KeyCode.Six,
 	Enum.KeyCode.Seven,
+	Enum.KeyCode.Eight,
 }
 local buttons: { [string]: TextButton } = {}
 
@@ -208,6 +235,14 @@ end
 
 local function buttonText(index: number, actionId: string, unlocked: boolean): string
 	local info = States[actionId]
+	if actionId == "snack" then
+		local snack = SalaryConfig.getSnack(player:GetAttribute("HeldSnack") or "")
+		if not snack then
+			return `[{index}] 🍪 간식\n탕비실에서\n가져오기`
+		end
+		local percent = math.floor((player:GetAttribute("SnackProgress") or 0) * 100)
+		return `[{index}] {snack.emoji} {snack.name}\n먹기 {percent}%\n+{snack.bonus}원`
+	end
 	if not unlocked then
 		return `[{index}] 🔒\n{info.name}\n{Ranks[info.unlockRank :: number].name}부터`
 	end
@@ -299,7 +334,7 @@ RunService.RenderStepped:Connect(function()
 	-- 직급과 경력
 	local rankIndex = player:GetAttribute("Rank") or 1
 	local rank = Ranks[rankIndex] or Ranks[1]
-	rankText.Text = `🪪 {rank.name} {player.DisplayName}`
+	rankText.Text = `👔 {rank.name} {player.DisplayName}`
 	local xp = player:GetAttribute("XP") or 0
 	local nextXp = player:GetAttribute("NextXP") or 0
 	if nextXp > 0 then
@@ -335,16 +370,26 @@ RunService.RenderStepped:Connect(function()
 	local warnings = player:GetAttribute("Warnings") or 0
 	warningText.Text = `경고 {string.rep("🟥", warnings)}{string.rep("⬜", math.max(0, SalaryConfig.MAX_WARNINGS - warnings))} ({warnings}/{SalaryConfig.MAX_WARNINGS})`
 	local combo = player:GetAttribute("Combo") or 1
-	comboText.Text = if combo > 1 then `🔥 아슬아슬 콤보 x{combo}` else ""
+	local comboLine = if combo > 1 then `🔥 콤보 x{combo}` else ""
+	local heldSnack = SalaryConfig.getSnack(player:GetAttribute("HeldSnack") or "")
+	if heldSnack then
+		local percent = math.floor((player:GetAttribute("SnackProgress") or 0) * 100)
+		comboLine = `{heldSnack.emoji} {heldSnack.name} {percent}%  ` .. comboLine
+	end
+	comboText.Text = comboLine
 
 	-- 행동 버튼
 	local seated = player:GetAttribute("Seated") == true
 	local fired = player:GetAttribute("Fired") == true
 	actionPanel.Visible = seated and not fired and phase ~= "offwork"
+	standHint.Visible = not seated and not fired and phase ~= "offwork" and player:GetAttribute("OnToilet") ~= true
 	local current = player:GetAttribute("SalaryAction") or "work"
 	for i, actionId in SalaryConfig.DeskActions do
 		local button = buttons[actionId]
 		local unlocked = (States[actionId].unlockRank or 1) <= rankIndex
+		if actionId == "snack" then
+			unlocked = (player:GetAttribute("HeldSnack") or "") ~= "" -- 간식을 들고 있어야 먹을 수 있어요
+		end
 		local selected = actionId == current
 		button.Text = buttonText(i, actionId, unlocked)
 		button.BackgroundColor3 = if not unlocked then COLORS.locked elseif selected then C.brass else COLORS.idle
@@ -426,6 +471,10 @@ Remotes:WaitForChild("Caught").OnClientEvent:Connect(function(line: string, warn
 	TweenService:Create(flash, TweenInfo.new(0.8), { BackgroundTransparency = 1 }):Play()
 	Hud.popup(`🚨 적발! "{line}"`, COLORS.bad, 3)
 	Ui.toast(`경고 {warnings}/{SalaryConfig.MAX_WARNINGS} · 시말서 감봉 -{comma(SalaryConfig.CAUGHT_PENALTY)}원`)
+end)
+
+Remotes:WaitForChild("Bonus").OnClientEvent:Connect(function(message: string, amount: number)
+	Hud.popup(`{message} +{comma(amount)}원`, Color3.fromRGB(255, 210, 80), 2.5)
 end)
 
 Remotes:WaitForChild("Unlocked").OnClientEvent:Connect(function(emoji: string, name: string)

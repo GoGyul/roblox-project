@@ -24,6 +24,9 @@ function Npc.create(name: string, look: Look, parent: Instance): Model
 	model.Name = name
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	-- 애니메이션이 없는 NPC는 넘어지면 잘 못 일어나요 → 넘어지는 상태를 꺼 둬요
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
 
 	-- 머리 위 표시: 이름 / 상태 이모지 / 말풍선
 	local head = model:WaitForChild("Head") :: BasePart
@@ -89,6 +92,34 @@ function Npc.say(model: Model, text: string, seconds: number?)
 			speech.Visible = false
 		end
 	end)
+end
+
+-- 기울어졌으면 똑바로 세우기 (바라보는 방향은 유지)
+function Npc.standUpright(model: Model)
+	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root or root.CFrame.UpVector.Y > 0.8 then
+		return
+	end
+	local look = root.CFrame.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	if flat.Magnitude < 0.1 then
+		flat = Vector3.new(0, 0, -1)
+	end
+	local position = root.Position + Vector3.new(0, 1, 0)
+	model:PivotTo(CFrame.lookAt(position, position + flat))
+	root.AssemblyAngularVelocity = Vector3.zero
+end
+
+-- 의자에서 확실히 일어나기 (의자 고정을 풀고 점프)
+function Npc.stand(model: Model, seat: Seat)
+	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
+	for _, child in seat:GetChildren() do
+		if child:IsA("Weld") and child.Name == "SeatWeld" then
+			child:Destroy()
+		end
+	end
+	humanoid.Sit = false
+	humanoid.Jump = true
 end
 
 -- 의자에 앉히기

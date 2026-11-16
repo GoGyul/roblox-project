@@ -17,6 +17,7 @@ local OfficeBuilder = {}
 
 local FLOOR_Y = 1 -- 바닥 윗면 높이
 local WALL_HEIGHT = 12
+local HALF_WIDTH = 38 -- 사무실 가로 절반 (벽 안쪽)
 
 local COLORS = {
 	floor = Color3.fromRGB(150, 150, 155),
@@ -46,6 +47,11 @@ export type Office = {
 	waypoints: { Vector3 },
 	toiletZone: BasePart,
 	pantryZone: BasePart,
+	printer: BasePart,
+	pantryCounter: BasePart,
+	spots: { Vector3 }, -- 동료들이 들르는 곳 (탕비실, 프린터, 창가)
+	snackSpots: { Vector3 }, -- 간식이 놓이는 자리 (테이블 윗면)
+	toiletSeats: { Seat }, -- 변기 (앉으면 주식 거래)
 	setClock: (number, number) -> (),
 }
 
@@ -116,20 +122,20 @@ function OfficeBuilder.build(): Office
 	local B = Build.new(folder, Vector3.zero)
 	local wall = { Color = COLORS.wall, Material = Enum.Material.Plaster }
 
-	-- 바닥, 천장, 바깥 벽
-	B:part(Vector3.new(62, 1, 46), Vector3.new(0, FLOOR_Y - 0.5, 0), { Color = COLORS.floor, Material = Enum.Material.Carpet })
-	B:part(Vector3.new(62, 1, 46), v(0, WALL_HEIGHT + 0.5, 0), { Color = COLORS.wall })
-	B:wall("X", -22.5, -31, 31, FLOOR_Y, WALL_HEIGHT, { { center = 0, width = 6, height = 8 } }, wall) -- 앞 (출입문)
-	B:wall("X", 22.5, -31, 31, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 뒤
-	B:wall("Z", -30.5, -22, 22, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 왼쪽
-	B:wall("Z", 30.5, -22, 22, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 오른쪽
+	-- 바닥, 천장, 바깥 벽 (가로 76칸: 가운데 사무실 + 양쪽 끝 화장실·탕비실)
+	B:part(Vector3.new(HALF_WIDTH * 2 + 2, 1, 46), Vector3.new(0, FLOOR_Y - 0.5, 0), { Color = COLORS.floor, Material = Enum.Material.Carpet })
+	B:part(Vector3.new(HALF_WIDTH * 2 + 2, 1, 46), v(0, WALL_HEIGHT + 0.5, 0), { Color = COLORS.wall })
+	B:wall("X", -22.5, -HALF_WIDTH - 1, HALF_WIDTH + 1, FLOOR_Y, WALL_HEIGHT, { { center = 0, width = 6, height = 8 } }, wall) -- 앞 (출입문)
+	B:wall("X", 22.5, -HALF_WIDTH - 1, HALF_WIDTH + 1, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 뒤
+	B:wall("Z", -HALF_WIDTH - 0.5, -22, 22, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 왼쪽
+	B:wall("Z", HALF_WIDTH + 0.5, -22, 22, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 오른쪽
 	-- 출입문 바깥은 막아 둬요 (나가 버리지 않게)
 	B:part(Vector3.new(8, WALL_HEIGHT, 1), v(0, WALL_HEIGHT / 2, -25), wall)
 	B:part(Vector3.new(1, WALL_HEIGHT, 3), v(-4, WALL_HEIGHT / 2, -24), wall)
 	B:part(Vector3.new(1, WALL_HEIGHT, 3), v(4, WALL_HEIGHT / 2, -24), wall)
 
 	-- 창문 (앞 벽 안쪽에 붙은 유리)
-	for _, x in { -22, -12, 12, 22 } do
+	for _, x in { -32, -22, -12, 12, 22, 32 } do
 		B:part(Vector3.new(7, 5, 0.2), v(x, 6, -21.9), {
 			Color = Color3.fromRGB(170, 210, 240),
 			Material = Enum.Material.Glass,
@@ -166,31 +172,68 @@ function OfficeBuilder.build(): Office
 	B:part(Vector3.new(2.6, 1.8, 0.3), v(0, 3.4, 16.8), { Color = COLORS.monitor })
 	B:part(Vector3.new(3, 3.5, 3), v(7, 1.75, 19.5), { Color = Color3.fromRGB(60, 30, 25), Material = Enum.Material.Leather }) -- 부장 의자 (옆으로 빼 둠)
 
-	-- 화장실 (왼쪽 뒤) : 부장이 들어오지 않는 안전지대
-	B:wall("Z", -20.5, 10, 22, FLOOR_Y, WALL_HEIGHT, { { center = 13, width = 4, height = 8 } }, wall)
-	B:wall("X", 10.5, -30, -20, FLOOR_Y, WALL_HEIGHT, nil, wall)
-	B:part(Vector3.new(9, 0.2, 11), v(-25.5, 0.1, 16.5), { Color = COLORS.tile, Material = Enum.Material.Marble })
-	for _, z in { 15, 19.5 } do
-		B:part(Vector3.new(0.3, 7, 4), v(-26, 3.5, z), { Color = Color3.fromRGB(150, 190, 200) }) -- 칸막이
-		B:part(Vector3.new(2, 1.6, 2.4), v(-28.5, 0.8, z), { Color = Color3.fromRGB(245, 245, 245) }) -- 변기
+	-- 🚻 화장실 (왼쪽 뒤, x -38~-24 / z 6~22) : 부장이 들어오지 않는 안전지대
+	B:wall("Z", -24.5, 6, 22, FLOOR_Y, WALL_HEIGHT, { { center = 10, width = 4, height = 8 } }, wall)
+	B:wall("X", 6.5, -HALF_WIDTH, -24, FLOOR_Y, WALL_HEIGHT, nil, wall)
+	B:part(Vector3.new(13, 0.2, 15), v(-31.5, 0.1, 14.5), { Color = COLORS.tile, Material = Enum.Material.Marble })
+	local toiletSeats = {}
+	for i, x in { -35.5, -31.5, -27.5 } do
+		-- 칸막이와 문 없는 칸 (안쪽 벽에 붙은 변기)
+		if i < 3 then
+			B:part(Vector3.new(0.3, 7, 5), v(x + 2, 3.5, 19.5), { Color = Color3.fromRGB(150, 190, 200) })
+		end
+		B:part(Vector3.new(2.2, 1, 2.6), v(x, 0.5, 20.4), { Color = Color3.fromRGB(245, 245, 245) }) -- 변기 몸통
+		B:part(Vector3.new(2.2, 2.4, 0.9), v(x, 1.8, 21.5), { Color = Color3.fromRGB(240, 240, 240) }) -- 물탱크
+		local seat = B:part(Vector3.new(2, 0.4, 2), v(x, 1.2, 20.2), {
+			ClassName = "Seat",
+			Name = "ToiletSeat",
+			Color = Color3.fromRGB(250, 250, 250),
+		}) :: Seat
+		table.insert(toiletSeats, seat)
 	end
-	local toiletSign = B:part(Vector3.new(0.2, 1.5, 3), v(-19.85, 9, 13), { Color = Color3.fromRGB(40, 90, 160) })
+	-- 세면대
+	for _, z in { 9, 12.5 } do
+		B:part(Vector3.new(2, 3, 2.5), v(-37, 1.5, z), { Color = Color3.fromRGB(235, 235, 240) })
+		B:part(Vector3.new(0.2, 2.5, 2.2), v(-37.9, 5, z), { Color = Color3.fromRGB(190, 220, 235), Material = Enum.Material.Glass }) -- 거울
+	end
+	local toiletSign = B:part(Vector3.new(0.2, 1.5, 3), v(-23.85, 9, 10), { Color = Color3.fromRGB(40, 90, 160) })
 	Build.surfaceText(toiletSign, Enum.NormalId.Right, "🚻 화장실")
-	local toiletZone = zone(B, "ToiletZone", Vector3.new(9, 10, 11), v(-25.5, 5, 16.5))
+	local toiletZone = zone(B, "ToiletZone", Vector3.new(13, 10, 15), v(-31.5, 5, 14.5))
 
-	-- 탕비실 (오른쪽 뒤)
-	B:wall("Z", 20.5, 10, 22, FLOOR_Y, WALL_HEIGHT, { { center = 13, width = 4, height = 8 } }, wall)
-	B:wall("X", 10.5, 20, 30, FLOOR_Y, WALL_HEIGHT, nil, wall)
-	B:part(Vector3.new(2.5, 3, 9), v(28.5, 1.5, 16.5), { Color = Color3.fromRGB(230, 230, 230) }) -- 조리대
-	B:part(Vector3.new(1.4, 2, 1.4), v(28.5, 4, 14), { Color = Color3.fromRGB(30, 30, 30) }) -- 커피머신
-	B:part(Vector3.new(2.5, 7, 2.5), v(28.5, 3.5, 20.5), { Color = Color3.fromRGB(200, 200, 205), Material = Enum.Material.Metal }) -- 냉장고
-	B:part(Vector3.new(1.2, 4, 1.2), v(22.5, 2, 21), { Color = Color3.fromRGB(240, 240, 250) }) -- 정수기
-	local pantrySign = B:part(Vector3.new(0.2, 1.5, 3), v(19.85, 9, 13), { Color = COLORS.accent })
+	-- ☕ 탕비실 (오른쪽 뒤, x 24~38 / z 6~22)
+	B:wall("Z", 24.5, 6, 22, FLOOR_Y, WALL_HEIGHT, { { center = 10, width = 4, height = 8 } }, wall)
+	B:wall("X", 6.5, 24, HALF_WIDTH, FLOOR_Y, WALL_HEIGHT, nil, wall)
+	B:part(Vector3.new(13, 0.2, 15), v(31.5, 0.1, 14.5), { Color = Color3.fromRGB(225, 215, 195), Material = Enum.Material.Wood })
+	local pantryCounter = B:part(Vector3.new(2.5, 3, 9), v(36.75, 1.5, 12.5), {
+		Name = "PantryCounter",
+		Color = Color3.fromRGB(230, 230, 230),
+	}) -- 조리대 (라면)
+	B:part(Vector3.new(1.4, 2, 1.4), v(36.75, 4, 9.5), { Color = Color3.fromRGB(30, 30, 30) }) -- 커피머신
+	B:part(Vector3.new(1.6, 0.6, 1.6), v(36.75, 3.3, 14.5), { Color = Color3.fromRGB(60, 60, 65) }) -- 전기레인지
+	B:part(Vector3.new(2.5, 7, 2.5), v(36.75, 3.5, 20.5), { Color = Color3.fromRGB(200, 200, 205), Material = Enum.Material.Metal }) -- 냉장고
+	B:part(Vector3.new(1.2, 4, 1.2), v(26, 2, 21.2), { Color = Color3.fromRGB(240, 240, 250) }) -- 정수기
+	-- 식탁과 의자
+	B:part(Vector3.new(4, 2.5, 3), v(30.5, 1.25, 20.5), { Color = Color3.fromRGB(200, 170, 130), Material = Enum.Material.Wood })
+	for _, x in { 29, 32 } do
+		B:part(Vector3.new(1.5, 1.5, 1.5), v(x, 0.75, 18.4), { Color = Color3.fromRGB(120, 90, 60) })
+	end
+	local pantrySign = B:part(Vector3.new(0.2, 1.5, 3), v(23.85, 9, 10), { Color = COLORS.accent })
 	Build.surfaceText(pantrySign, Enum.NormalId.Left, "☕ 탕비실")
-	local pantryZone = zone(B, "PantryZone", Vector3.new(9, 10, 11), v(25.5, 5, 16.5))
+	local pantryZone = zone(B, "PantryZone", Vector3.new(13, 10, 15), v(31.5, 5, 14.5))
+
+	-- 간식 테이블 (탕비실 가운데, 위에 과자 8개)
+	B:part(Vector3.new(4, 3, 6), v(30.5, 1.5, 12.5), { Color = Color3.fromRGB(170, 120, 80), Material = Enum.Material.Wood })
+	local snackSign = B:part(Vector3.new(3, 0.9, 0.2), v(30.5, 3.7, 9.4), { Color = Color3.fromRGB(255, 240, 200) })
+	Build.surfaceText(snackSign, Enum.NormalId.Front, "🍪 간식 (1인 1개)", { TextColor3 = Color3.fromRGB(80, 50, 30) })
+	local snackSpots = {}
+	for _, z in { 10.3, 11.8, 13.3, 14.8 } do
+		for _, x in { 29.7, 31.3 } do
+			table.insert(snackSpots, v(x, 3, z)) -- 테이블 윗면 위치
+		end
+	end
 
 	-- 장식: 화분, 프린터
-	for _, position in { v(-28, 0, -20), v(28, 0, -20), v(-28, 0, 4), v(28, 0, 4) } do
+	for _, position in { v(-36, 0, -20), v(36, 0, -20), v(-36, 0, 3), v(36, 0, 3) } do
 		B:part(Vector3.new(1.6, 1.6, 1.6), position + Vector3.new(0, 0.8, 0), { Color = Color3.fromRGB(150, 90, 60) })
 		B:part(Vector3.new(2.4, 2.4, 2.4), position + Vector3.new(0, 2.6, 0), {
 			Shape = Enum.PartType.Ball,
@@ -198,10 +241,11 @@ function OfficeBuilder.build(): Office
 			Material = Enum.Material.Grass,
 		})
 	end
-	B:part(Vector3.new(3, 2.5, 2.5), v(-27, 1.25, -8), { Color = Color3.fromRGB(220, 220, 225) }) -- 프린터
+	local printer = B:part(Vector3.new(3, 2.5, 2.5), v(-27, 1.25, -8), { Name = "Printer", Color = Color3.fromRGB(220, 220, 225) }) -- 프린터 (서류)
+	B:part(Vector3.new(2.6, 0.6, 1.8), v(-27, 2.8, -8), { Color = Color3.fromRGB(60, 60, 65) })
 
 	-- 형광등
-	for _, x in { -16, 0, 16 } do
+	for _, x in { -31, -16, 0, 16, 31 } do
 		for _, z in { -12, 2, 14 } do
 			local lamp = B:part(Vector3.new(6, 0.3, 1.2), v(x, WALL_HEIGHT - 0.2, z), {
 				Color = Color3.fromRGB(245, 250, 255),
@@ -210,7 +254,7 @@ function OfficeBuilder.build(): Office
 			})
 			local light = Instance.new("PointLight")
 			light.Range = 22
-			light.Brightness = 0.8
+			light.Brightness = 0.45
 			light.Color = Color3.fromRGB(235, 245, 255)
 			light.Parent = lamp
 		end
@@ -240,7 +284,9 @@ function OfficeBuilder.build(): Office
 		v(17, 0, 7),
 		v(-6, 0, 8.5), -- 뒷줄 의자 뒤
 		v(6, 0, 8.5),
-		v(17, 0, 13), -- 탕비실 문 앞 (안을 들여다봐요)
+		v(21, 0, 10), -- 탕비실 문 앞 (안을 들여다봐요)
+		v(-28, 0, -4), -- 왼쪽 끝 (프린터 쪽)
+		v(28, 0, -4), -- 오른쪽 끝
 	}
 
 	return {
@@ -252,6 +298,11 @@ function OfficeBuilder.build(): Office
 		waypoints = waypoints,
 		toiletZone = toiletZone,
 		pantryZone = pantryZone,
+		printer = printer,
+		pantryCounter = pantryCounter,
+		snackSpots = snackSpots,
+		spots = { v(34, 0, 8), v(-24, 0, -8), v(-12, 0, -18), v(12, 0, -18), v(34, 0, 17) },
+		toiletSeats = toiletSeats,
 		setClock = setClock,
 	}
 end

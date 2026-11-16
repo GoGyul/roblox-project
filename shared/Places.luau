@@ -32,8 +32,8 @@ Places.Games = {
 		id = "salary",
 		name = "월급루팡",
 		emoji = "💼",
-		placeId = 0, -- ← Publish 후 채우기
-		maxPlayers = 1, -- 혼자 하는 게임: 한 명씩 자기 사무실로
+		placeId = 131519518238691,
+		maxPlayers = 4, -- 최대 4명이 같은 사무실에 입사 (남는 책상엔 동료 NPC)
 		color = Color3.fromRGB(120, 200, 255),
 	},
 	-- 새 게임 예시:
