@@ -685,6 +685,19 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		end
 		local now = os.clock()
 
+		-- 0. 남의 책상 의자에 앉았으면 일으켜 세워요 (변기는 괜찮아요)
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		local seatPart = humanoid and humanoid.SeatPart
+		if humanoid and seatPart and seatPart.Name == "Seat" and seatPart ~= d.desk.seat then
+			for _, child in seatPart:GetChildren() do
+				if child:IsA("Weld") and child.Name == "SeatWeld" then
+					child:Destroy()
+				end
+			end
+			humanoid.Sit = false
+			remotes.Notify:FireClient(player, "🙅 여기는 다른 사람 자리예요! ⭐ 표시된 내 자리에 앉아요.")
+		end
+
 		-- 1. 지금 상태
 		local previous = d.state
 		if isSeated(player, d) then

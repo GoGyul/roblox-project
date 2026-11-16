@@ -83,9 +83,10 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 	local function goErrand(c: Coworker)
 		c.atDesk = false
 		c.prompt.Enabled = false
-		c.humanoid.Sit = false
-		c.humanoid.Jump = true
+		Npc.stand(c.model, c.desk.seat)
 		task.wait(0.4)
+		Npc.standUpright(c.model)
+		c.desk.seat.Disabled = true -- 자리를 비운 동안 아무도 못 앉게 잠가요
 		local function cancelled()
 			return c.removed
 		end
@@ -101,6 +102,7 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 		if c.removed then
 			return
 		end
+		c.desk.seat.Disabled = false
 		Npc.sit(c.model, c.desk.seat)
 		c.atDesk = true
 		c.prompt.Enabled = true
@@ -179,6 +181,18 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 		task.spawn(runAi, c)
 	end
 
+	-- 안전장치: 걷다가 넘어지거나 기울어진 동료를 1초마다 바로 세워요
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			for _, c in list do
+				if not c.removed and not c.atDesk then
+					Npc.standUpright(c.model)
+				end
+			end
+		end
+	end)
+
 	-- 김부장이 농땡이 치는 동료를 발견하면 혼내요
 	task.spawn(function()
 		while true do
@@ -211,6 +225,7 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 			return
 		end
 		c.removed = true
+		c.desk.seat.Disabled = false -- 이제 플레이어 자리
 		for _, child in c.desk.seat:GetChildren() do
 			if child:IsA("Weld") and child.Name == "SeatWeld" then
 				child:Destroy()

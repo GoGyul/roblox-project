@@ -175,6 +175,19 @@ local actionPanel = Ui.make("Frame", {
 	Visible = false,
 	Parent = gui,
 })
+-- 서 있을 때 안내 (농땡이 메뉴는 내 자리에 앉아야 나와요)
+local standHint = text({
+	AnchorPoint = Vector2.new(0.5, 1),
+	Position = UDim2.new(0.5, 0, 1, -24),
+	Size = UDim2.fromOffset(520, 28),
+	TextSize = 17,
+	TextXAlignment = Enum.TextXAlignment.Center,
+	TextStrokeTransparency = 0.3,
+	Text = "🪑 ⭐ 내 자리에 앉으면 농땡이 메뉴가 나와요",
+	Visible = false,
+	Parent = gui,
+})
+
 -- 화면이 좁으면 행동 버튼 줄을 줄여요
 local actionScale = Ui.make("UIScale", { Parent = actionPanel })
 local function fitActionPanel()
@@ -369,6 +382,7 @@ RunService.RenderStepped:Connect(function()
 	local seated = player:GetAttribute("Seated") == true
 	local fired = player:GetAttribute("Fired") == true
 	actionPanel.Visible = seated and not fired and phase ~= "offwork"
+	standHint.Visible = not seated and not fired and phase ~= "offwork" and player:GetAttribute("OnToilet") ~= true
 	local current = player:GetAttribute("SalaryAction") or "work"
 	for i, actionId in SalaryConfig.DeskActions do
 		local button = buttons[actionId]

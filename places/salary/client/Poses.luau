@@ -5,6 +5,9 @@
 --
 -- 대상: 플레이어(SalaryState 속성), 동료와 김부장(모델의 Pose 속성)
 -- 클라이언트에서만 바꾸는 거라 서버 판정(의심도 등)에는 영향이 없어요.
+--
+-- NPC(동료, 김부장)는 로블록스 기본 애니메이션이 없어서 앉기·걷기 다리 동작도 여기서 만들어요.
+-- (플레이어는 로블록스가 앉기·걷기 애니메이션을 틀어 주니까 다리는 건드리지 않아요)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -22,6 +25,10 @@ type Pose = {
 	rElbow: number?,
 	lShoulder: number?,
 	lElbow: number?,
+	rHip: number?,
+	lHip: number?,
+	rKnee: number?,
+	lKnee: number?,
 	waves: { { any } }?,
 	prop: string?,
 }
@@ -36,11 +43,24 @@ local POSES: { [string]: Pose } = {
 	recline = { waist = 25, neck = 30, rShoulder = 160, rElbow = 120, lShoulder = 160, lElbow = 120, waves = { { "waist", "x", 2, 0.5 } } },
 	returning = { waist = -8, neck = -10, rShoulder = 45, rElbow = 35, lShoulder = 45, lElbow = 35, waves = { { "neck", "y", 15, 14 } } },
 	coffee = { rShoulder = 40, rElbow = 85, prop = "cup", waves = { { "rElbow", "x", 12, 1 } } },
-	docs = { rShoulder = 35, rElbow = 60, lShoulder = 35, lElbow = 60, prop = "folder" },
+	docs = { rShoulder = 20, rElbow = 70, lShoulder = 20, lElbow = 70, prop = "folder" },
 	chat = { neck = 5, rShoulder = 35, rElbow = 50, waves = { { "rShoulder", "z", 15, 2 }, { "neck", "y", 8, 1 } } },
 	ramen = { neck = -15, rShoulder = 50, rElbow = 95, lShoulder = 30, lElbow = 60, prop = "bowl", waves = { { "rElbow", "x", 15, 4 } } },
 	snack = { neck = -10, rShoulder = 60, rElbow = 105, lShoulder = 20, lElbow = 30, prop = "snack", waves = { { "rElbow", "x", 10, 3 }, { "neck", "x", 4, 3 } } },
 	scold = { waist = -5, rShoulder = 85, rElbow = 5, waves = { { "rShoulder", "x", 8, 6 } } },
+	walk = {},
+}
+
+-- NPC(동료, 김부장)용 작은 자세: 애니메이션이 없는 NPC는 큰 각도를 주면 몸이 이상하게 꺾여 보여서
+-- 허리는 거의 그대로 두고 고개와 팔만 살짝 움직여요. 반복 움직임(waves)도 없어요.
+local NPC_POSES: { [string]: Pose } = {
+	work = { neck = -5, rShoulder = 25, rElbow = 30, lShoulder = 25, lElbow = 30 },
+	phone = { neck = -20, rShoulder = 30, rElbow = 60, prop = "phone" },
+	sleep = { neck = -35 },
+	coffee = { rShoulder = 20, rElbow = 70, prop = "cup" },
+	docs = { rShoulder = 15, rElbow = 70, lShoulder = 15, lElbow = 70, prop = "folder" },
+	chat = { neck = 5 },
+	scold = { rShoulder = 70, rElbow = 5 },
 	walk = {},
 }
 
@@ -52,13 +72,17 @@ local JOINTS = {
 	rElbow = "RightLowerArm",
 	lShoulder = "LeftUpperArm",
 	lElbow = "LeftLowerArm",
+	rHip = "RightUpperLeg",
+	rKnee = "RightLowerLeg",
+	lHip = "LeftUpperLeg",
+	lKnee = "LeftLowerLeg",
 }
 
 -- 손에 드는 소품
 local PROPS = {
 	phone = { hand = "RightHand", size = Vector3.new(0.5, 0.9, 0.1), color = Color3.fromRGB(20, 20, 25), offset = CFrame.new(0, -0.3, -0.2) },
 	cup = { hand = "RightHand", size = Vector3.new(0.5, 0.6, 0.5), color = Color3.fromRGB(245, 245, 240), offset = CFrame.new(0, -0.3, -0.25) },
-	folder = { hand = "RightHand", size = Vector3.new(1.4, 1.8, 0.15), color = Color3.fromRGB(240, 200, 80), offset = CFrame.new(-0.6, -0.4, -0.4) },
+	folder = { hand = "RightHand", size = Vector3.new(1, 1.3, 0.12), color = Color3.fromRGB(240, 200, 80), offset = CFrame.new(-0.5, -0.3, -0.35) },
 	snack = { hand = "RightHand", size = Vector3.new(0.5, 0.25, 0.5), color = Color3.fromRGB(200, 150, 90), offset = CFrame.new(0, -0.3, -0.25) },
 	bowl = { hand = "LeftHand", size = Vector3.new(1, 0.5, 1), color = Color3.fromRGB(200, 60, 40), offset = CFrame.new(0, -0.2, -0.4) },
 }
@@ -166,16 +190,46 @@ local function setProp(model: Model, rig: Rig, wanted: string?)
 	end
 end
 
-local function apply(model: Model, poseName: string?, dt: number, t: number)
+-- NPC 다리(와 걷는 팔): 앉아 있으면 무릎을 굽히고, 움직이면 다리를 번갈아 흔들어요
+local function npcBody(model: Model, pose: Pose, t: number): { [string]: number }
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if root and root.CFrame.UpVector.Y < 0.7 then
+		return {} -- 몸이 기울어져 있으면(넘어짐) 다리는 그대로 둬요
+	end
+	if humanoid and humanoid.Sit and humanoid.SeatPart then
+		return { rHip = 90, lHip = 90, rKnee = -90, lKnee = -90 }
+	end
+	if root then
+		local velocity = root.AssemblyLinearVelocity
+		if Vector3.new(velocity.X, 0, velocity.Z).Magnitude > 1 then
+			-- 걸을 때 다리만 살짝 번갈아 (움직임 최소화)
+			local swing = math.sin(t * math.pi * 2 * 1.6) * 15
+			return {
+				rHip = swing,
+				lHip = -swing,
+				rKnee = -5,
+				lKnee = -5,
+			}
+		end
+	end
+	return {}
+end
+
+local function apply(model: Model, poseName: string?, dt: number, t: number, isNpc: boolean)
 	local rig = getRig(model)
 	if not rig then
 		return
 	end
-	local pose = (poseName and POSES[poseName]) or {}
+	local poseTable = if isNpc then NPC_POSES else POSES
+	local pose = (poseName and poseTable[poseName]) or {}
 	local alpha = 1 - math.exp(-10 * dt) -- 부드럽게 따라가기
+	local body = if isNpc then npcBody(model, pose, t) else {}
 
 	for name, joint in rig.joints do
-		local target = Vector3.new((pose :: any)[name] or 0, 0, 0)
+		local isLeg = name == "rHip" or name == "lHip" or name == "rKnee" or name == "lKnee"
+		local base = if isLeg and not isNpc then 0 else ((pose :: any)[name] or body[name] or 0)
+		local target = Vector3.new(base, 0, 0)
 		for _, wave in pose.waves or {} do
 			if wave[1] == name then
 				local amount = math.sin(t * wave[4] * math.pi * 2) * wave[3]
@@ -199,7 +253,7 @@ function Poses.start()
 			if character then
 				-- 변기에 앉아 있으면 폰으로 주식 보는 자세
 				local pose = if player:GetAttribute("OnToilet") then "phone" else player:GetAttribute("SalaryState")
-				apply(character, pose, dt, t)
+				apply(character, pose, dt, t, false)
 			end
 		end
 		-- 동료와 김부장
@@ -207,7 +261,7 @@ function Poses.start()
 		if office then
 			for _, model in office:GetChildren() do
 				if model:IsA("Model") and model:FindFirstChildOfClass("Humanoid") then
-					apply(model, model:GetAttribute("Pose"), dt, t)
+					apply(model, model:GetAttribute("Pose"), dt, t, true)
 				end
 			end
 		end

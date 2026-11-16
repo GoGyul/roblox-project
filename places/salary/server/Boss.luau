@@ -308,6 +308,7 @@ function Boss:run()
 				task.wait(0.2)
 				continue
 			end
+			Npc.standUpright(self.model) -- 혹시 넘어져 있으면 바로 세워요
 			local token = self.token
 			local noisePosition, noiseChance = nil, 0
 			if self.noiseSource then
