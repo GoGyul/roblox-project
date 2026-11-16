@@ -26,6 +26,12 @@ SalaryConfig.NEAR_MISS_WINDOW = 2.5 -- 복귀한 뒤 몇 초 안에 부장이 �
 SalaryConfig.MAX_COMBO = 5
 SalaryConfig.TOILET_LIMIT = 60 -- 화장실에 이보다 오래 있으면 자리 비움이 티 남
 SalaryConfig.COFFEE_GRACE = 40 -- 탕비실에서 이 시간까지는 커피 타는 척 가능
+SalaryConfig.DOCS_SECONDS = 40 -- 서류 들고 바쁜 척 지속 시간
+SalaryConfig.RAMEN_SECONDS = 15 -- 라면 먹는 시간
+SalaryConfig.RAMEN_PER_DAY = 2 -- 하루에 끓일 수 있는 라면 수
+SalaryConfig.CHAT_RANGE = 7 -- 수다가 이어지는 거리
+SalaryConfig.CHAT_TOPIC_BONUS = 500 -- 수다 주제 하나를 끝까지 하면 받는 보너스
+SalaryConfig.CHAT_LINE_SECONDS = 2.6 -- 수다 대사 한 줄이 보이는 시간 (짧을수록 수다 성공이 쉬워요)
 SalaryConfig.SUSPICION_DECAY = 8 -- 들키지 않을 때 의심도가 초당 줄어드는 양
 
 ---------------------------------------------------------------------------
@@ -112,6 +118,15 @@ SalaryConfig.States = {
 		payLabel = "낮잠 수당",
 		hint = "고수입! 코 고는 소리 주의. 일어나는 데 2초.",
 	},
+	snack = {
+		emoji = "🍪",
+		name = "몰래 간식 먹기",
+		income = 3,
+		detect = 45,
+		returnTime = 0.5,
+		payLabel = "간식 섭취 수당",
+		hint = "탕비실에서 가져온 간식을 몰래 먹어요. 다 먹으면 보너스! 먹던 양은 유지돼요.",
+	},
 	recline = {
 		emoji = "🛌",
 		name = "의자 젖히고 꿀잠",
@@ -151,6 +166,33 @@ SalaryConfig.States = {
 		income = 0,
 		detect = 15,
 	},
+	-- 돌아다니며 하는 농땡이 (자리에서 일어나서)
+	docs = {
+		emoji = "📄",
+		name = "서류 들고 바쁜 척",
+		income = 4,
+		detect = 0,
+		payLabel = "바쁜 척 수당",
+		hint = "프린터에서 서류를 들면 40초 동안 어디를 돌아다녀도 안 들켜요.",
+	},
+	chat = {
+		emoji = "💬",
+		name = "동료와 수다",
+		income = 10,
+		detect = 25,
+		noise = 0.2,
+		payLabel = "수다 수당",
+		hint = "자리에 앉아 있는 동료에게 말을 걸어요. 떨어지면 끝나요.",
+	},
+	ramen = {
+		emoji = "🍜",
+		name = "탕비실 라면",
+		income = 16,
+		detect = 60,
+		noise = 0.4,
+		payLabel = "라면 수당",
+		hint = "탕비실 조리대에서 끓여 먹어요. 냄새 때문에 부장이 올 수 있어요!",
+	},
 	fired = {
 		emoji = "📦",
 		name = "해고됨",
@@ -160,7 +202,81 @@ SalaryConfig.States = {
 } :: { [string]: StateInfo }
 
 -- 자리에서 고를 수 있는 행동 (숫자키 1~7, 직급이 오르면 하나씩 열려요)
-SalaryConfig.DeskActions = { "work", "blank", "webtoon", "phone", "shopping", "sleep", "recline" }
+SalaryConfig.DeskActions = { "work", "blank", "webtoon", "phone", "shopping", "sleep", "recline", "snack" }
+
+---------------------------------------------------------------------------
+-- 🍪 탕비실 간식 (매일 아침 다시 채워져요)
+--   seconds: 다 먹는 데 걸리는 시간 / bonus: 다 먹으면 받는 돈 / count: 하루에 놓이는 개수
+---------------------------------------------------------------------------
+export type SnackInfo = {
+	id: string,
+	emoji: string,
+	name: string,
+	seconds: number,
+	bonus: number,
+	count: number,
+	size: Vector3,
+	color: Color3,
+}
+
+SalaryConfig.Snacks = {
+	{ id = "candy", emoji = "🍬", name = "사탕", seconds = 4, bonus = 200, count = 3, size = Vector3.new(0.6, 0.4, 0.6), color = Color3.fromRGB(255, 120, 160) },
+	{ id = "cookie", emoji = "🍪", name = "쿠키", seconds = 7, bonus = 400, count = 2, size = Vector3.new(0.9, 0.25, 0.9), color = Color3.fromRGB(200, 150, 90) },
+	{ id = "chocobar", emoji = "🍫", name = "초코바", seconds = 10, bonus = 600, count = 1, size = Vector3.new(1.2, 0.3, 0.5), color = Color3.fromRGB(110, 60, 30) },
+	{ id = "donut", emoji = "🍩", name = "도넛", seconds = 14, bonus = 900, count = 1, size = Vector3.new(1, 0.4, 1), color = Color3.fromRGB(240, 170, 200) },
+	{ id = "cake", emoji = "🍰", name = "케이크 한 조각", seconds = 20, bonus = 1500, count = 1, size = Vector3.new(1.2, 0.9, 1.2), color = Color3.fromRGB(250, 240, 230) },
+} :: { SnackInfo }
+
+---------------------------------------------------------------------------
+-- 📈 화장실 주식 (게임 속 가짜 회사예요. 실제 주식과는 관계없어요)
+--   volatility: 2초마다 움직이는 폭 (클수록 크게 오르내림)
+---------------------------------------------------------------------------
+export type StockInfo = {
+	id: string,
+	emoji: string,
+	name: string,
+	price: number, -- 시작 가격
+	volatility: number,
+	good: { string }, -- 오를 때 뉴스
+	bad: { string }, -- 내릴 때 뉴스
+}
+
+SalaryConfig.Stocks = {
+	{ id = "gogyeol", emoji = "📱", name = "고결전자", price = 1000, volatility = 0.025,
+		good = { "고결전자, 접히는 키보드 출시!", "고결전자, 해외 수출 대박!" },
+		bad = { "고결전자, 신제품 배터리 논란", "고결전자 공장에 정전 발생" } },
+	{ id = "pantry", emoji = "🍜", name = "탕비실푸드", price = 500, volatility = 0.045,
+		good = { "탕비실푸드, 신상 컵라면 품절 대란!", "직장인 간식 소비 역대 최고!" },
+		bad = { "탕비실푸드 과자, 질소 과다 논란", "다이어트 열풍에 간식 매출 감소" } },
+	{ id = "bujang", emoji = "👔", name = "김부장엔터", price = 2000, volatility = 0.06,
+		good = { "김부장엔터, 회식 신사업 발표!", "김부장엔터 '라떼는' 굿즈 완판!" },
+		bad = { "김부장엔터, 꼰대 논란으로 구독자 이탈", "김부장엔터 대표, 단톡방 실수" } },
+	{ id = "overtime", emoji = "🌙", name = "야근물산", price = 300, volatility = 0.1,
+		good = { "야근물산, 야식 배달 사업 대박!", "야근물산, 에너지드링크 판매 급증" },
+		bad = { "정시 퇴근 캠페인에 야근물산 폭락!", "주 4일제 소식에 야근물산 휘청" } },
+} :: { StockInfo }
+
+SalaryConfig.STOCK_TICK = 2 -- 주가가 바뀌는 간격(초)
+SalaryConfig.STOCK_NEWS_CHANCE = 0.08 -- 틱마다 뉴스가 터질 확률
+SalaryConfig.STOCK_STARTER_GIFT = 3000 -- 처음 변기에 앉으면 주는 입문 지원금
+
+function SalaryConfig.getStock(stockId: string): StockInfo?
+	for _, stock in SalaryConfig.Stocks do
+		if stock.id == stockId then
+			return stock
+		end
+	end
+	return nil
+end
+
+function SalaryConfig.getSnack(snackId: string): SnackInfo?
+	for _, snack in SalaryConfig.Snacks do
+		if snack.id == snackId then
+			return snack
+		end
+	end
+	return nil
+end
 
 ---------------------------------------------------------------------------
 -- 📈 직급
@@ -169,13 +285,13 @@ SalaryConfig.DeskActions = { "work", "blank", "webtoon", "phone", "shopping", "s
 ---------------------------------------------------------------------------
 SalaryConfig.Ranks = {
 	{ name = "인턴", xp = 0, basePay = 3000, bonus = 1.0, quota = 60 },
-	{ name = "사원", xp = 15000, basePay = 4000, bonus = 1.15, quota = 70 },
-	{ name = "주임", xp = 40000, basePay = 5500, bonus = 1.3, quota = 80 },
-	{ name = "대리", xp = 80000, basePay = 7000, bonus = 1.5, quota = 90 },
-	{ name = "과장", xp = 140000, basePay = 9000, bonus = 1.75, quota = 100 },
-	{ name = "차장", xp = 220000, basePay = 11500, bonus = 2.0, quota = 110 },
-	{ name = "부장", xp = 330000, basePay = 14500, bonus = 2.3, quota = 120 },
-	{ name = "이사", xp = 480000, basePay = 18000, bonus = 2.7, quota = 130 },
+	{ name = "사원", xp = 6000, basePay = 4000, bonus = 1.15, quota = 70 },
+	{ name = "주임", xp = 20000, basePay = 5500, bonus = 1.3, quota = 80 },
+	{ name = "대리", xp = 50000, basePay = 7000, bonus = 1.5, quota = 90 },
+	{ name = "과장", xp = 100000, basePay = 9000, bonus = 1.75, quota = 100 },
+	{ name = "차장", xp = 170000, basePay = 11500, bonus = 2.0, quota = 110 },
+	{ name = "부장", xp = 260000, basePay = 14500, bonus = 2.3, quota = 120 },
+	{ name = "이사", xp = 380000, basePay = 18000, bonus = 2.7, quota = 130 },
 	-- 👑 사장: 3단계 엔딩에서 공개
 }
 
@@ -214,6 +330,10 @@ end
 -- 📖 업적 (도감에는 농땡이 행동 + 업적이 함께 기록돼요)
 ---------------------------------------------------------------------------
 SalaryConfig.Achievements = {
+	{ id = "mobile", emoji = "🚶", name = "움직이는 루팡", description = "서류, 수다, 라면을 모두 해 보기" },
+	{ id = "stock_buffett", emoji = "🧻", name = "화장실 워런 버핏", description = "화장실 주식으로 누적 1만원 수익 내기" },
+	{ id = "cake_thief", emoji = "🍰", name = "케이크 도둑", description = "케이크 한 조각을 끝까지 몰래 먹기" },
+	{ id = "chatterbox", emoji = "🗣️", name = "사내 수다왕", description = "수다 주제 15개 수집하기" },
 	{ id = "near_miss", emoji = "😮‍💨", name = "아슬아슬 입문", description = "처음으로 아슬아슬 보너스 받기" },
 	{ id = "combo_max", emoji = "🔥", name = "곡예사", description = "아슬아슬 콤보 x5 달성" },
 	{ id = "caught", emoji = "📝", name = "시말서 데뷔", description = "처음으로 적발되기" },
@@ -255,6 +375,11 @@ SalaryConfig.BossLines = {
 		"음? 무슨 소리지?",
 		"거기 누구 코 고는 소리 아냐?",
 		"방금 게임 소리 났는데…",
+	},
+	scoldCoworker = {
+		"{name}! 또 자고 있나?!",
+		"{name}! 휴대폰 내려놓게!",
+		"{name}, 자네 요즘 왜 그래?",
 	},
 	caught = {
 		"자네… 지금 뭐 하는 건가?!",

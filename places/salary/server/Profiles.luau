@@ -20,7 +20,10 @@ export type Profile = {
 	items: { [string]: boolean }, -- 산 아이템
 	energy: number, -- 에너지 드링크 개수
 	collection: { [string]: boolean }, -- 도감: "action_낮잠" 같은 행동 + 업적 ID
-	stats: { days: number, nearMiss: number, caught: number, fired: number },
+	stocks: { [string]: number }, -- 가진 주식 수
+	stockCost: { [string]: number }, -- 주식 산 값 합계 (수익률 계산용)
+	stockGift: boolean, -- 입문 지원금을 받았나
+	stats: { days: number, nearMiss: number, caught: number, fired: number, stockProfit: number },
 }
 
 function Profiles.default(): Profile
@@ -33,7 +36,10 @@ function Profiles.default(): Profile
 		items = {},
 		energy = 0,
 		collection = {},
-		stats = { days = 0, nearMiss = 0, caught = 0, fired = 0 },
+		stocks = {},
+		stockCost = {},
+		stockGift = false,
+		stats = { days = 0, nearMiss = 0, caught = 0, fired = 0, stockProfit = 0 },
 	}
 end
 

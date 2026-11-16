@@ -9,11 +9,11 @@
 --
 -- 시야: 부장 앞쪽 부채꼴 안 + 가리는 물건이 없을 때만 보여요.
 
-local PathfindingService = game:GetService("PathfindingService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local Npc = require(script.Parent.Npc)
+local Walker = require(script.Parent.Walker)
 
 local Boss = {}
 Boss.__index = Boss
@@ -107,44 +107,14 @@ function Boss:wait(seconds: number, token: number): boolean
 	return self.token == token
 end
 
--- 길찾기로 target까지 걸어가기
+-- 길찾기로 target까지 걸어가기 (도중에 다른 행동으로 끊기면 false)
 function Boss:walkTo(target: Vector3, token: number): boolean
-	local path = PathfindingService:CreatePath({
-		AgentRadius = 1.5,
-		AgentHeight = 5,
-		AgentCanJump = false,
-		WaypointSpacing = 4,
-	})
-	local ok = pcall(function()
-		path:ComputeAsync(self.root.Position, target)
-	end)
-	local points: { Vector3 } = {}
-	if ok and path.Status == Enum.PathStatus.Success then
-		for _, waypoint in path:GetWaypoints() do
-			table.insert(points, waypoint.Position)
-		end
-	else
-		table.insert(points, target) -- 길을 못 찾으면 그냥 직진
-	end
-
 	self.footsteps.Playing = true
-	for _, point in points do
-		if self.token ~= token then
-			break
-		end
-		self.humanoid:MoveTo(point)
-		local done = false
-		local connection = self.humanoid.MoveToFinished:Once(function()
-			done = true
-		end)
-		local giveUp = os.clock() + 3
-		while not done and os.clock() < giveUp and self.token == token do
-			task.wait(0.05)
-		end
-		connection:Disconnect()
-	end
+	local arrived = Walker.walkTo(self.humanoid, self.root, target, function()
+		return self.token ~= token
+	end)
 	self.footsteps.Playing = false
-	return self.token == token
+	return arrived
 end
 
 ---------------------------------------------------------------------------
@@ -253,6 +223,7 @@ function Boss:scold(character: Model, line: string)
 	local token = self.token
 	self.scolding = true
 	self.watching = true
+	self.model:SetAttribute("Pose", "scold")
 	self:status("😡")
 	self:say(line, 4)
 	task.spawn(function()
@@ -266,6 +237,7 @@ function Boss:scold(character: Model, line: string)
 			end
 		end
 		self:wait(3, token)
+		self.model:SetAttribute("Pose", nil)
 		if self.token == token then
 			self.scolding = false
 		end
