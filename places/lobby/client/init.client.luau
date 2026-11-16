@@ -52,5 +52,7 @@ Remotes:WaitForChild("TeleportFailed").OnClientEvent:Connect(function()
 end)
 Remotes:WaitForChild("Notify").OnClientEvent:Connect(Ui.toast)
 
--- 🙈 화면 숨기기 (보스 키)
-require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BossKey")).start()
+-- 🙈 화면 숨기기 (보스 키) — 다른 기능을 막지 않게 따로 시작해요
+task.spawn(function()
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BossKey")).start()
+end)

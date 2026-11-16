@@ -381,10 +381,16 @@ function BossKey.start()
 	end)
 
 	-- 숨긴 동안에는 캐릭터 조작도 꺼요 (키보드로 걸어가 버리지 않게)
+	-- 캐릭터 조작 모듈은 따로(백그라운드에서) 가져와요. 여기서 기다리면 다른 기능 시작이 막혀요!
 	local controls = nil
-	pcall(function()
-		local playerModule = require(player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule") :: any)
-		controls = playerModule:GetControls()
+	task.spawn(function()
+		pcall(function()
+			local playerScripts = player:WaitForChild("PlayerScripts", 10)
+			local playerModule = playerScripts and playerScripts:WaitForChild("PlayerModule", 10)
+			if playerModule then
+				controls = (require(playerModule :: any) :: any):GetControls()
+			end
+		end)
 	end)
 	player:GetAttributeChangedSignal("ScreenHidden"):Connect(function()
 		if controls then

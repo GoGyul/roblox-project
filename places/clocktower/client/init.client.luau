@@ -12,5 +12,9 @@ if arrivingGui then
 end
 
 require(script.Hud)
-require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("BossKey")).start()
 require(script.Panels)
+
+-- 🙈 화면 숨기기 (보스 키) — 다른 기능을 막지 않게 맨 마지막에, 따로 시작해요
+task.spawn(function()
+	require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("BossKey")).start()
+end)
