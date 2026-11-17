@@ -3,6 +3,9 @@
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- 🛡️ 이 코드가 맞는 장소에서 실행되는지 확인 (다른 장소에 잘못 게시하는 실수 방지)
+require(ReplicatedStorage.Shared.PlaceGuard).check("lobby")
+
 -- 통신 채널 (클라이언트가 찾을 수 있게 가장 먼저 만들어요)
 local remoteFolder = Instance.new("Folder")
 remoteFolder.Name = "Remotes"

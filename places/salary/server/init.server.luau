@@ -4,6 +4,9 @@
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- 🛡️ 이 코드가 맞는 장소에서 실행되는지 확인 (다른 장소에 잘못 게시하는 실수 방지)
+require(ReplicatedStorage.Shared.PlaceGuard).check("salary")
+
 local Remotes = require(script.Remotes) -- 가장 먼저 (클라이언트가 찾을 수 있게)
 local OfficeBuilder = require(script.OfficeBuilder)
 local Boss = require(script.Boss)
@@ -37,7 +40,7 @@ local coworkers = Coworkers.start(office, boss, dayCycle, Remotes, function(play
 end)
 Employees.start(office, boss, dayCycle, Remotes, coworkers)
 boss:run()
-dayCycle:run()
+-- 하루 흐름은 첫 플레이어의 저장된 날짜를 불러온 뒤 시작해요 (Employees가 시작시켜요)
 
 -- 벽시계는 게임 속 시간을 보여 줘요
 task.spawn(function()

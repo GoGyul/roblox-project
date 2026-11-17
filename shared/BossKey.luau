@@ -294,7 +294,7 @@ function BossKey.start()
 	}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }) })
 	local tip = label({
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -60, 1, -18),
+		Position = UDim2.new(1, -10, 1, -62), -- 🙈 버튼 바로 위 (아래쪽 행동 버튼과 겹치지 않게)
 		Size = UDim2.fromOffset(240, 28),
 		Text = "화면 숨기기 [B] · 위장 바꾸기 [Shift+B]",
 		Font = Enum.Font.GothamBold,
@@ -306,6 +306,14 @@ function BossKey.start()
 		Visible = false,
 		Parent = buttonGui,
 	})
+	-- 폰에서는 오른쪽 아래가 점프 버튼 자리라서, 오른쪽 가운데 위쪽으로 옮겨요
+	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+		hideButton.AnchorPoint = Vector2.new(1, 0.5)
+		hideButton.Position = UDim2.new(1, -10, 0.35, 0)
+		tip.AnchorPoint = Vector2.new(1, 0.5)
+		tip.Position = UDim2.new(1, -60, 0.35, 0)
+	end
+
 	hideButton.MouseEnter:Connect(function()
 		tip.Visible = true
 	end)

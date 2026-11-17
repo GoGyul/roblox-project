@@ -275,6 +275,14 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		}
 		data[player] = d
 		player:SetAttribute("DeskIndex", desk.index)
+
+		-- 첫 플레이어가 들어오면, 그 사람이 마지막으로 일한 다음 날부터 하루를 시작해요
+		-- (광장에 다녀와도 다시 월요일이 되지 않게)
+		if not dayCycle.started then
+			dayCycle.started = true
+			dayCycle.day = profile.stats.days
+			dayCycle:run()
+		end
 		publish(player, d)
 		publishCollection(player, d)
 		publishStocks(player, d)

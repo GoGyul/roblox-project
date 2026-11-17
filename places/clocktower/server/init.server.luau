@@ -4,6 +4,9 @@ local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- 🛡️ 이 코드가 맞는 장소에서 실행되는지 확인 (다른 장소에 잘못 게시하는 실수 방지)
+require(ReplicatedStorage.Shared.PlaceGuard).check("clocktower")
+
 local Remotes = require(script.Remotes) -- 가장 먼저 만들어 둬야 클라이언트가 찾을 수 있어요
 local Inventory = require(script.Inventory)
 local TowerBuilder = require(script.TowerBuilder)

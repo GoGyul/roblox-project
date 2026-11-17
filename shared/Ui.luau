@@ -89,6 +89,11 @@ local toastLabel = Ui.make("TextLabel", {
 }, { Ui.corner(10), Ui.padding(12) })
 local toastToken = 0
 
+-- 안내 문구 위치 바꾸기 (화면 아래 버튼과 겹칠 때)
+function Ui.setToastPosition(position: UDim2)
+	toastLabel.Position = position
+end
+
 function Ui.toast(text: string)
 	toastToken += 1
 	local myToken = toastToken

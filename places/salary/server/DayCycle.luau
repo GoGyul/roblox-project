@@ -13,6 +13,7 @@ export type Phase = "work" | "lunch" | "offwork"
 function DayCycle.new()
 	return setmetatable({
 		day = 0,
+		started = false, -- 첫 플레이어가 들어와 날짜를 불러오면 true
 		minute = SalaryConfig.START_MINUTE,
 		phase = "offwork" :: Phase,
 		listeners = {} :: { [string]: { (...any) -> () } },

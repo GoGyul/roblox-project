@@ -9,6 +9,7 @@ local SalaryConfig = require(Shared:WaitForChild("SalaryConfig"))
 local ChatTopics = require(Shared:WaitForChild("ChatTopics"))
 local Ui = require(Shared:WaitForChild("Ui"))
 local Hud = require(script.Parent.Hud)
+local Sounds = require(Shared:WaitForChild("Sounds"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -55,6 +56,16 @@ local function sheet(width: number, height: number): Frame
 		Ui.padding(20),
 		Ui.make("UIScale", { Scale = fitScale(width, height) }),
 	})
+
+	-- 게임에 막 들어온 순간엔 화면 크기가 아직 정확하지 않아서 창이 너무 작게 계산될 수 있어요.
+	-- 창이 열려 있는 동안 화면 크기를 계속 확인해서 다시 맞춰요.
+	local uiScale = frame:FindFirstChildOfClass("UIScale") :: UIScale
+	task.spawn(function()
+		while frame.Parent do
+			uiScale.Scale = fitScale(width, height)
+			task.wait(0.3)
+		end
+	end)
 
 	-- 오른쪽 위 ✕ 닫기
 	local closeButton = Ui.make("TextButton", {
@@ -119,39 +130,71 @@ end
 ---------------------------------------------------------------------------
 -- 입사 안내
 ---------------------------------------------------------------------------
-function Panels.showWelcome()
-	local frame = sheet(600, 560)
-	line(frame, 0, 34, "📢 (주)고결상사 입사를 환영합니다!", { Font = Enum.Font.GothamBlack, TextSize = 26 })
-	line(
-		frame,
-		44,
-		440,
-		table.concat({
-			"목표: 💰 일은 최소로, 월급은 최대로! 그리고 승진!",
-			"",
-			"• 자리에 앉아 숫자키로 행동을 고르세요. 농땡이일수록 돈을 많이 벌어요.",
-			"• 👔 김부장에게 농땡이가 보이면 의심도가 올라요. 100%가 되면 적발!",
-			"• 큰 농땡이는 일하는 척으로 돌아오는 데 시간이 걸려요.",
-			"• 부장 머리 위: 🖥️ 모니터 보는 중(안전) / 👀 감시 중(위험)",
-			"• 아슬아슬하게 복귀하면 보너스! 연속이면 콤보!",
-			"• 🚽 화장실은 안전지대, ☕ 탕비실은 잠깐 안전해요.",
-			"• 🚶 돌아다니며 농땡이: 📄 프린터에서 서류 들기, 💬 동료와 수다, 🍜 탕비실 라면",
-			"• 🍪 탕비실 간식 테이블에서 과자를 챙겨 자리에서 [8]로 몰래 먹기!",
-			"• 🚽 화장실 변기에 앉으면 📈 화장실 주식 거래! (게임 속 가짜 주식)",
-			"• 🙈 진짜 회사에서 몰래 하는 중이라면? [B] 화면 숨기기 / [Shift+B] 위장 화면 바꾸기",
-			"• 👥 동료도 몰래 농땡이를 쳐요. 부장이 동료를 혼낼 때가 기회!",
-			"• 하루 최소 업무는 채워야 해요. 경고 3번이면 📦 해고.",
-			"• 📈 월급이 쌓이면 승진! 직급이 오르면 새 농땡이가 열려요.",
-			"• 🛒 매점에서 루팡 아이템을 사고, 📖 도감을 채워 보세요.",
-		}, "\n")
-	)
-	button(frame, 0, "출근하기", close)
+-- 2페이지로 나눠서 글씨를 크게 보여 줘요 (한 장에 다 넣으면 화면에 맞추느라 너무 작아져요)
+local WELCOME_PAGES = {
+	{
+		title = "📢 (주)고결상사 입사를 환영합니다!",
+		lines = {
+			"💰 목표: 일은 최소로, 월급은 최대로!",
+			"🪑 자리에 앉아 숫자키 [1]~[8]로 농땡이를 골라요",
+			"👔 김부장에게 들키면 의심도 ↑, 100%면 🚨 적발",
+			"👀 부장 머리 위를 보세요: 🖥️ 안전 / 👀 위험",
+			"⚠️ 하루 업무는 꼭 채우기! 경고 3번이면 📦 해고",
+		},
+	},
+	{
+		title = "💡 월급루팡 꿀팁",
+		lines = {
+			"😮‍💨 아슬아슬하게 복귀하면 보너스 + 콤보",
+			"🚶 서류 들기 · 동료와 수다 · 탕비실 라면",
+			"🍪 탕비실 간식을 챙겨서 자리에서 [8]로 몰래 먹기",
+			"🚽 화장실 변기에 앉으면 📈 주식 거래 (가짜 주식)",
+			"📈 승진하면 새 농땡이! 🛒 매점 · 📖 도감도 있어요",
+			"🙈 진짜 회사라면? [B] 화면 숨기기",
+		},
+	},
+}
+
+function Panels.showWelcome(page: number?)
+	local index = page or 1
+	local info = WELCOME_PAGES[index]
+	local frame = sheet(700, 430)
+	line(frame, 0, 40, info.title, { Font = Enum.Font.GothamBlack, TextSize = 30 })
+	line(frame, 0, 40, `{index}/{#WELCOME_PAGES}`, {
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextColor3 = MUTED,
+		TextSize = 18,
+		Size = UDim2.new(1, -46, 0, 40),
+	})
+	for i, text in info.lines do
+		line(frame, 56 + (i - 1) * 46, 40, text, { TextSize = 22, Font = Enum.Font.GothamMedium })
+	end
+	if index < #WELCOME_PAGES then
+		if index > 1 then
+			button(frame, -95, "◀ 이전", function()
+				Panels.showWelcome(index - 1)
+			end)
+		end
+		button(frame, if index > 1 then 95 else 0, "다음 ▶", function()
+			Panels.showWelcome(index + 1)
+		end)
+	else
+		button(frame, -95, "◀ 이전", function()
+			Panels.showWelcome(index - 1)
+		end)
+		button(frame, 95, "출근하기!", close)
+	end
 end
+
 
 ---------------------------------------------------------------------------
 -- 월급명세서
 ---------------------------------------------------------------------------
 Remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
+	Sounds.play("swoosh", 0.5)
+	if slip.promotedTo then
+		Sounds.play("ping", 0.7, 1.3)
+	end
 	local rows = #slip.lines
 	local extra = if slip.promotedTo then 70 else 0
 	local frame = sheet(470, 280 + rows * 26 + extra)
@@ -216,6 +259,7 @@ end)
 -- 해고 통지
 ---------------------------------------------------------------------------
 Remotes:WaitForChild("Fired").OnClientEvent:Connect(function(bossLine: string, rankName: string)
+	Sounds.play("bass", 0.7, 0.6)
 	local frame = sheet(480, 320)
 	line(frame, 0, 40, "📦 해고 통지", { Font = Enum.Font.GothamBlack, TextSize = 30, TextXAlignment = Enum.TextXAlignment.Center })
 	line(
