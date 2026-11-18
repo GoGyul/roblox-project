@@ -107,6 +107,31 @@ local footstepText = text({
 	Parent = gui,
 })
 
+-- 🎲 돌발 이벤트 안내 (발소리 표시 아래)
+local eventText = text({
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 110),
+	Size = UDim2.fromOffset(560, 30),
+	TextSize = 21,
+	TextXAlignment = Enum.TextXAlignment.Center,
+	TextStrokeTransparency = 0.3,
+	Visible = false,
+	Parent = gui,
+})
+
+-- 👀 이과장이 내 농땡이를 보고 있을 때 경고 (게이지가 다 차면 고자질!)
+local leeText = text({
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 142),
+	Size = UDim2.fromOffset(460, 30),
+	TextSize = 22,
+	TextColor3 = Color3.fromRGB(255, 120, 120),
+	TextXAlignment = Enum.TextXAlignment.Center,
+	TextStrokeTransparency = 0.2,
+	Visible = false,
+	Parent = gui,
+})
+
 ---------------------------------------------------------------------------
 -- 오른쪽 위: 직급, 경력, 돈
 ---------------------------------------------------------------------------
@@ -331,6 +356,10 @@ local function applyLayout()
 	clockPanel.Position = UDim2.new(0.5, 0, 0, if compact then 4 else 8)
 	footstepText.Position = UDim2.new(0.5, 0, 0, if compact then 50 else 78)
 	footstepText.TextSize = if compact then 17 else 22
+	eventText.Position = UDim2.new(0.5, 0, 0, if compact then 74 else 110)
+	eventText.TextSize = if compact then 16 else 21
+	leeText.Position = UDim2.new(0.5, 0, 0, if compact then 96 else 142)
+	leeText.TextSize = if compact then 17 else 22
 
 	scales[moneyPanel].Scale = small
 	moneyPanel.Position = UDim2.new(1, if compact then -6 else -12, 0, if compact then 4 else 8)
@@ -444,8 +473,71 @@ local dangerBorder = Ui.make("Frame", {
 }, { Ui.stroke(COLORS.bad, 8) })
 local dangerStroke = dangerBorder:FindFirstChildOfClass("UIStroke") :: UIStroke
 local quotaWarnedDay: any = nil -- 퇴근 전 업무 미달 알림을 보낸 날
+local lastEventKey = "" -- 이벤트가 바뀌는 순간에만 연출하려고 기억해 둬요
+local nextAlarmAt = 0
+
+-- 🎲 돌발 이벤트 안내 줄
+local function updateEvent()
+	local eventId = ReplicatedStorage:GetAttribute("SalaryEvent") or ""
+	local stage = ReplicatedStorage:GetAttribute("SalaryEventStage") or ""
+	local endsAt = ReplicatedStorage:GetAttribute("SalaryEventEndsAt") or 0
+	local left = math.max(0, math.ceil(endsAt - workspace:GetServerTimeNow()))
+	local key = `{eventId}:{stage}`
+	local changed = key ~= lastEventKey
+	lastEventKey = key
+
+	local message, color = nil, COLORS.warn
+	if eventId == "audit" and stage == "active" then
+		message = `🔍 감사 기간 · 검은 정장 감사팀 조심! · 농땡이 수입 ×{SalaryConfig.AUDIT_INCOME}`
+		if changed then
+			Sounds.play("bass", 0.5, 1.2)
+			Hud.popup("🔍 오늘은 감사 기간!", COLORS.warn, 3)
+		end
+	elseif eventId == "blackout" and stage == "active" then
+		message = `💡 정전! 컴퓨터 꺼짐 · 지금은 자도 안 들켜요 ({left}초)`
+		color = Color3.fromRGB(150, 190, 255)
+		if changed then
+			Sounds.play("bass", 0.7, 0.6)
+			Hud.popup("💡 정전!", color, 2.5)
+		end
+	elseif eventId == "cake" and stage == "active" then
+		message = "🎂 탕비실 조리대에 생일 케이크! (먼저 먹는 사람이 임자)"
+		color = Color3.fromRGB(255, 180, 210)
+		if changed then
+			Sounds.play("ping", 0.6, 1.4)
+			Hud.popup("🎂 생일 케이크 도착!", color, 2.5)
+		end
+	elseif eventId == "drill" and stage == "active" then
+		local blink = math.floor(os.clock() * 3) % 2 == 0
+		message = `🚨 소방 훈련! 초록색 집결지(출입문 앞)로 대피! {left}초 · 점프로 일어나기`
+		color = if blink then COLORS.bad else Color3.new(1, 1, 1)
+		if changed then
+			Hud.popup("🚨 소방 훈련! 대피하세요!", COLORS.bad, 3)
+		end
+		if os.clock() >= nextAlarmAt then
+			nextAlarmAt = os.clock() + 0.6
+			Sounds.play("ping", 0.5, 2) -- 삐- 삐- 경보음
+		end
+	elseif eventId == "drill" and stage == "rollcall" then
+		message = `🚒 인원 점검 중… 부장님 감시 쉬는 중 ({left}초)`
+		color = COLORS.good
+	end
+	eventText.Visible = message ~= nil
+	if message then
+		eventText.Text = message
+		eventText.TextColor3 = color
+	end
+end
 
 RunService.RenderStepped:Connect(function()
+	updateEvent()
+	-- 👀 이과장 경고
+	local leeWatch = player:GetAttribute("LeeWatch") or 0
+	leeText.Visible = leeWatch > 0
+	if leeWatch > 0 then
+		local filled = math.ceil(leeWatch * 5)
+		leeText.Text = `👀 이과장이 보고 있어요! 얼른 일하는 척! {string.rep("■", filled)}{string.rep("□", 5 - filled)}`
+	end
 	-- 시계
 	local minute = ReplicatedStorage:GetAttribute("SalaryMinute") or SalaryConfig.START_MINUTE
 	local phase = ReplicatedStorage:GetAttribute("SalaryPhase")

@@ -225,6 +225,8 @@ SalaryConfig.Snacks = {
 	{ id = "chocobar", emoji = "🍫", name = "초코바", seconds = 10, bonus = 600, count = 1, size = Vector3.new(1.2, 0.3, 0.5), color = Color3.fromRGB(110, 60, 30) },
 	{ id = "donut", emoji = "🍩", name = "도넛", seconds = 14, bonus = 900, count = 1, size = Vector3.new(1, 0.4, 1), color = Color3.fromRGB(240, 170, 200) },
 	{ id = "cake", emoji = "🍰", name = "케이크 한 조각", seconds = 20, bonus = 1500, count = 1, size = Vector3.new(1.2, 0.9, 1.2), color = Color3.fromRGB(250, 240, 230) },
+	-- 🎂 생일 케이크 이벤트 때만 나와요 (count = 0이라 매일 아침에는 안 놓여요)
+	{ id = "birthday", emoji = "🎂", name = "생일 케이크", seconds = 25, bonus = 4000, count = 0, size = Vector3.new(1.3, 1, 1.3), color = Color3.fromRGB(255, 190, 210) },
 } :: { SnackInfo }
 
 ---------------------------------------------------------------------------
@@ -333,6 +335,11 @@ SalaryConfig.Achievements = {
 	{ id = "mobile", emoji = "🚶", name = "움직이는 루팡", description = "서류, 수다, 라면을 모두 해 보기" },
 	{ id = "stock_buffett", emoji = "🧻", name = "화장실 워런 버핏", description = "화장실 주식으로 누적 1만원 수익 내기" },
 	{ id = "cake_thief", emoji = "🍰", name = "케이크 도둑", description = "케이크 한 조각을 끝까지 몰래 먹기" },
+	{ id = "birthday_cake", emoji = "🎂", name = "생일 축하해요(?)", description = "남의 생일 케이크를 끝까지 먹기" },
+	{ id = "drill_hero", emoji = "🚒", name = "모범 대피자", description = "소방 훈련 때 제시간에 집결지로 대피하기" },
+	{ id = "audit_survivor", emoji = "🔍", name = "감사 생존자", description = "감사 기간에 한 번도 안 걸리고 퇴근하기" },
+	{ id = "lee_bribe", emoji = "☕", name = "커피 외교", description = "이과장에게 커피를 상납해서 고자질 막기" },
+	{ id = "lee_dodge", emoji = "🫣", name = "눈치 싸움 승리", description = "이과장의 ❗를 보고 들키기 전에 일하는 척하기" },
 	{ id = "chatterbox", emoji = "🗣️", name = "사내 수다왕", description = "수다 주제 15개 수집하기" },
 	{ id = "near_miss", emoji = "😮‍💨", name = "아슬아슬 입문", description = "처음으로 아슬아슬 보너스 받기" },
 	{ id = "combo_max", emoji = "🔥", name = "곡예사", description = "아슬아슬 콤보 x5 달성" },
@@ -393,5 +400,49 @@ SalaryConfig.BossLines = {
 }
 
 SalaryConfig.CoworkerNames = { "이대리", "박사원", "최주임", "정과장", "한인턴" }
+
+---------------------------------------------------------------------------
+-- 🎲 돌발 이벤트 (하루에 최대 1개)
+--   allDay: 출근할 때 공지하고 하루 종일 / 아니면 근무 중 갑자기 일어나요
+---------------------------------------------------------------------------
+export type EventInfo = { id: string, emoji: string, name: string, allDay: boolean, description: string }
+
+SalaryConfig.EVENT_CHANCE = 0.5 -- 2일차부터, 하루에 이벤트가 생길 확률
+-- 🧪 스튜디오 테스트용: "audit", "blackout", "cake", "drill" 중 하나를 넣으면 매일 그 이벤트만 나와요 (게시해도 실제 게임엔 영향 없음)
+SalaryConfig.TEST_EVENT = ""
+SalaryConfig.Events = {
+	{ id = "audit", emoji = "🔍", name = "감사 기간", allDay = true, description = "감사팀이 순찰해요. 대신 농땡이 수입 ×2!" },
+	{ id = "blackout", emoji = "💡", name = "정전", allDay = false, description = "30초 동안 컴퓨터가 꺼져요. 어두워서 자도 안 들켜요!" },
+	{ id = "cake", emoji = "🎂", name = "생일 케이크", allDay = false, description = "탕비실에 생일 케이크 3조각! 먼저 먹는 사람이 임자" },
+	{ id = "drill", emoji = "🚒", name = "소방 훈련", allDay = false, description = "45초 안에 초록색 집결지로 대피! 안 하면 경고" },
+} :: { EventInfo }
+
+SalaryConfig.AUDIT_INCOME = 2 -- 감사 기간 농땡이 수입 배율
+
+---------------------------------------------------------------------------
+-- 👀 눈치 빠른 이과장 (수요일·목요일 출근)
+--   돌아다니다가 머리 위에 ❗가 뜨면 휙 뒤돌아봐요.
+--   농땡이를 LEE_NOTICE초 이상 보면 부장님께 고자질 → 의심도 +LEE_TATTLE, 부장님이 바로 달려와요.
+--   ☕ 커피를 상납하면 그날 고자질을 한 번 눈감아 줘요.
+---------------------------------------------------------------------------
+SalaryConfig.LEE_DAYS = { "수요일", "목요일" }
+SalaryConfig.LEE_NOTICE = 1.2
+SalaryConfig.LEE_TATTLE = 35
+SalaryConfig.LEE_COOLDOWN = 25 -- 같은 사람을 다시 고자질하기까지 (초)
+SalaryConfig.LEE_BRIBE_COST = 1000
+SalaryConfig.TEST_LEE = true -- 🧪 스튜디오에서 요일 상관없이 매일 출근 (실제 게임엔 영향 없음)
+SalaryConfig.BLACKOUT_SECONDS = 30
+SalaryConfig.DRILL_SECONDS = 45 -- 대피 제한 시간
+SalaryConfig.DRILL_ROLLCALL_SECONDS = 20 -- 대피 후 인원 점검 (자유시간)
+SalaryConfig.DRILL_BONUS = 800
+
+function SalaryConfig.getEvent(eventId: string): EventInfo?
+	for _, event in SalaryConfig.Events do
+		if event.id == eventId then
+			return event
+		end
+	end
+	return nil
+end
 
 return SalaryConfig

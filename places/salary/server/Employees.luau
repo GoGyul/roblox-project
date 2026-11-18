@@ -50,6 +50,7 @@ type DayRecord = {
 	chatBonus: number, -- 수다 완주 보너스 합계
 	chatTopics: number, -- 오늘 끝까지 나눈 수다 주제 수
 	snackBonus: number, -- 간식 완식 보너스 합계
+	eventBonus: number, -- 돌발 이벤트 보너스 합계 (소방 훈련 대피 등)
 	snacksEaten: number,
 	stockProfit: number, -- 오늘 주식으로 번(잃은) 돈 (통장에 바로 반영돼서 명세서 합계엔 안 들어가요)
 	settled: boolean, -- 오늘 번 돈을 이미 통장에 넣었나 (퇴근 명세서 또는 해고)
@@ -69,6 +70,9 @@ type EmployeeData = {
 	nearMissUsed: boolean,
 	toiletTime: number,
 	toiletWarned: boolean, -- "화장실 너무 오래" 경고를 보냈나
+	leeWatch: number, -- 👀 이과장이 내 농땡이를 본 시간 (초)
+	leeBribed: boolean, -- ☕ 오늘 커피를 상납했나 (고자질 1번 막아 줘요)
+	leeCooldownUntil: number, -- 이 시각 전에는 다시 고자질 안 해요
 	coffeeTime: number,
 	energyActive: boolean, -- 오늘 에너지 드링크를 마셨나
 	activity: { kind: string, untilTime: number?, coworker: any? }?, -- 돌아다니며 하는 농땡이
@@ -80,7 +84,7 @@ type EmployeeData = {
 }
 
 local function newDay(): DayRecord
-	return { earned = {}, seconds = {}, nearMiss = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, snacksEaten = 0, stockProfit = 0, settled = false }
+	return { earned = {}, seconds = {}, nearMiss = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, eventBonus = 0, snacksEaten = 0, stockProfit = 0, settled = false }
 end
 
 local function inZone(zone: BasePart, position: Vector3): boolean
@@ -92,7 +96,7 @@ local function pick<T>(list: { T }): T
 	return list[math.random(1, #list)]
 end
 
-function Employees.start(office, boss, dayCycle, remotes, coworkers)
+function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee)
 	local data: { [Player]: EmployeeData } = {}
 	local deskOwner: { [number]: Player } = {}
 
@@ -116,7 +120,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		for _, amount in d.today.earned do
 			total += amount
 		end
-		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus - d.today.caught * SalaryConfig.CAUGHT_PENALTY
+		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus + d.today.eventBonus - d.today.caught * SalaryConfig.CAUGHT_PENALTY
 	end
 
 	local function getHumanoid(player: Player): Humanoid?
@@ -211,6 +215,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		player:SetAttribute("CanSave", d.canSave)
 		player:SetAttribute("OnToilet", isOnToilet(player))
 		player:SetAttribute("ToiletLeft", math.max(0, math.ceil(toiletLimit(d) - d.toiletTime)))
+		player:SetAttribute("LeeWatch", math.clamp(d.leeWatch / SalaryConfig.LEE_NOTICE, 0, 1))
+		player:SetAttribute("LeeBribed", d.leeBribed)
 		local held = d.heldSnack
 		local heldInfo = held and SalaryConfig.getSnack(held.id)
 		player:SetAttribute("HeldSnack", if heldInfo then heldInfo.id else "")
@@ -295,6 +301,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 			nearMissUsed = true,
 			toiletTime = 0,
 			toiletWarned = false,
+			leeWatch = 0,
+			leeBribed = false,
+			leeCooldownUntil = 0,
 			coffeeTime = 0,
 			energyActive = false,
 			activity = nil,
@@ -569,6 +578,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		if snack.id == "cake" then
 			unlockAchievement(player, d, "cake_thief")
 			publishCollection(player, d)
+		elseif snack.id == "birthday" then
+			unlockAchievement(player, d, "birthday_cake")
+			publishCollection(player, d)
 		end
 	end
 
@@ -711,7 +723,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		task.spawn(save, player, d)
 	end
 
-	local function caught(player: Player, d: EmployeeData)
+	local function caught(player: Player, d: EmployeeData, customLine: string?)
 		d.profile.warnings += 1
 		d.profile.stats.caught += 1
 		d.today.caught += 1
@@ -739,7 +751,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		endActivity(d)
 		unlockAchievement(player, d, "caught")
 		publishCollection(player, d)
-		local line = pick(SalaryConfig.BossLines.caught)
+		local line = customLine or pick(SalaryConfig.BossLines.caught)
 		if player.Character then
 			boss:scold(player.Character, line)
 		end
@@ -872,10 +884,17 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 
 		-- 2. 돈 벌기 (농땡이는 직급 배율을 받아요)
 		local multiplier = if d.state == "work" then 1 else rankOf(d).bonus
+		if events:is("audit") and d.state ~= "work" then
+			multiplier *= SalaryConfig.AUDIT_INCOME -- 🔍 감사 기간: 위험한 만큼 농땡이 수입 ×2
+		end
+		local blackout = events:is("blackout")
+		if blackout and (d.state == "work" or info.screen) then
+			multiplier = 0 -- 💡 정전: 컴퓨터가 꺼져서 일도, 화면 농땡이도 돈이 안 나와요
+		end
 		local income = info.income * multiplier * dt
 		d.today.earned[d.state] = (d.today.earned[d.state] or 0) + income
 		d.today.seconds[d.state] = (d.today.seconds[d.state] or 0) + dt
-		if d.state == "work" then
+		if d.state == "work" and not blackout then
 			d.workSeconds += dt
 		end
 		if d.state == "snack" then
@@ -902,14 +921,53 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 			if info.screen and hasItem(d, "cover") then
 				rate *= 0.7
 			end
+			if blackout and (d.state == "sleep" or d.state == "recline") then
+				rate = 0 -- 💡 어두워서 자는 게 안 보여요
+			end
 			local raised = false
 			if rate > 0 then
 				local seen, distance = boss:canSee(character)
+				if seen and blackout and distance > boss.range * 0.5 then
+					seen = false -- 어두워서 멀리는 안 보여요
+				end
+				if not seen then
+					seen, distance = events:auditorSees(character) -- 🔍 감사팀
+				end
 				if seen then
 					local closeness = math.clamp(1.5 - distance / boss.range, 0.5, 1.5)
 					d.suspicion += rate * closeness * dt
 					raised = true
 				end
+			end
+
+			-- 👀 이과장: 농땡이를 LEE_NOTICE초 보면 고자질
+			local leeSees = lee:sees(character)
+			if leeSees and rate > 0 then
+				d.leeWatch += dt
+				if d.leeWatch >= SalaryConfig.LEE_NOTICE and now >= d.leeCooldownUntil then
+					d.leeWatch = 0
+					d.leeCooldownUntil = now + SalaryConfig.LEE_COOLDOWN
+					if d.leeBribed then
+						d.leeBribed = false
+						lee:say("…☕ 커피 값으로 못 본 걸로 할게요~", 3)
+						remotes.Notify:FireClient(player, "☕ 이과장이 커피 덕분에 눈감아 줬어요! (오늘 커피 효과 끝)")
+						unlockAchievement(player, d, "lee_bribe")
+						publishCollection(player, d)
+					else
+						d.suspicion += SalaryConfig.LEE_TATTLE
+						raised = true
+						lee:say(`부장님~ {player.DisplayName} 씨 또 놀아요~`, 3)
+						boss:callTo(root.Position)
+						remotes.Notify:FireClient(player, "😱 이과장이 고자질했어요! 부장님이 이쪽으로 와요!")
+					end
+				end
+			elseif leeSees and d.leeWatch > 0 then
+				-- 들키기 직전에 일하는 척 성공!
+				d.leeWatch = 0
+				unlockAchievement(player, d, "lee_dodge")
+				publishCollection(player, d)
+			elseif not leeSees then
+				d.leeWatch = 0
 			end
 			local limit = toiletLimit(d)
 			if d.state == "toilet" and not d.toiletWarned and d.toiletTime > limit - 15 then
@@ -966,6 +1024,53 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		end
 	end)
 
+	---------------------------------------------------------------- ☕ 이과장 커피 상납
+	lee.onBribe = function(player: Player): boolean
+		local d = data[player]
+		if not d or d.fired then
+			return false
+		end
+		if d.leeBribed then
+			remotes.Notify:FireClient(player, "☕ 오늘은 이미 커피를 드렸어요.")
+			return false
+		end
+		if d.profile.money < SalaryConfig.LEE_BRIBE_COST then
+			remotes.Notify:FireClient(player, `☕ 커피 살 돈이 없어요… ({SalaryConfig.LEE_BRIBE_COST}원 필요)`)
+			return false
+		end
+		d.profile.money -= SalaryConfig.LEE_BRIBE_COST
+		d.leeBribed = true
+		remotes.Notify:FireClient(player, "☕ 커피 상납 완료! 오늘 이과장 고자질을 한 번 막아 줘요.")
+		publish(player, d)
+		return true
+	end
+
+	---------------------------------------------------------------- 🎲 돌발 이벤트 연결
+	events.snacks = snacks
+	events.notifyAll = function(message: string)
+		for player in data do
+			remotes.Notify:FireClient(player, message)
+		end
+	end
+	-- 🚒 소방 훈련 인원 점검: 집결지에 있으면 보너스, 없으면 경고
+	events.onDrillCheck = function(isInZone: (Vector3) -> boolean)
+		for player, d in data do
+			if d.fired then
+				continue
+			end
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if root and isInZone(root.Position) then
+				d.today.eventBonus += SalaryConfig.DRILL_BONUS
+				remotes.Bonus:FireClient(player, "🚒 모범 대피!", SalaryConfig.DRILL_BONUS)
+				unlockAchievement(player, d, "drill_hero")
+				publishCollection(player, d)
+			else
+				caught(player, d, "소방 훈련에 안 나왔어요?! 시말서 쓰세요!")
+			end
+		end
+	end
+
 	---------------------------------------------------------------- 하루 일정
 	dayCycle:on("dayStart", function(weekday)
 		boss:startDay(weekday)
@@ -986,6 +1091,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 			endActivity(d)
 			d.ramenToday = 0
 			d.heldSnack = nil
+			d.leeWatch, d.leeBribed = 0, false
 			updateBubble(player, "work")
 			task.spawn(seatPlayer, player, d)
 			remotes.Notify:FireClient(player, `🏢 {weekday.name} 출근! 오늘 부장님은 "{weekday.mood}"`)
@@ -1034,6 +1140,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 			if d.today.chatBonus > 0 then
 				table.insert(lines, { label = `수다 완주 보너스 ({d.today.chatTopics}개)`, amount = d.today.chatBonus })
 			end
+			if d.today.eventBonus > 0 then
+				table.insert(lines, { label = "돌발 이벤트 보너스", amount = d.today.eventBonus })
+			end
 			if d.today.caught > 0 then
 				table.insert(lines, { label = `시말서 감봉 ({d.today.caught}회)`, amount = -d.today.caught * SalaryConfig.CAUGHT_PENALTY })
 			end
@@ -1053,6 +1162,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 			profile.stats.days += 1
 
 			-- 업적
+			if d.today.caught == 0 and events.todayId == "audit" then
+				unlockAchievement(player, d, "audit_survivor")
+			end
 			if d.today.caught == 0 and quotaOk and d.today.nearMiss > 0 then
 				unlockAchievement(player, d, "perfect_day")
 			end

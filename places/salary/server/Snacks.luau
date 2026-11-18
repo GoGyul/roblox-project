@@ -85,6 +85,16 @@ local BUILDERS: { [string]: (Model, CFrame, SalaryConfig.SnackInfo) -> BasePart 
 		piece(model, base, Vector3.new(0.2, 0.05, 0.12), CFrame.new(0.1, 1.06, 0.15), Color3.fromRGB(70, 160, 70)) -- 꼭지
 		return sponge
 	end,
+	birthday = function(model, base, snack)
+		-- 생일 케이크 조각: 분홍 크림 + 초 하나
+		local sponge = piece(model, base, Vector3.new(1.1, 0.35, 1.3), CFrame.new(0, 0.18, 0), Color3.fromRGB(250, 225, 160))
+		piece(model, base, Vector3.new(1.1, 0.1, 1.3), CFrame.new(0, 0.4, 0), WHITE)
+		piece(model, base, Vector3.new(1.1, 0.3, 1.3), CFrame.new(0, 0.6, 0), Color3.fromRGB(250, 225, 160))
+		piece(model, base, Vector3.new(1.12, 0.14, 1.32), CFrame.new(0, 0.82, 0), snack.color)
+		piece(model, base, Vector3.new(0.1, 0.5, 0.1), CFrame.new(0, 1.14, 0), Color3.fromRGB(120, 190, 255)) -- 초
+		ball(model, base, 0.16, Vector3.new(0, 1.45, 0), Color3.fromRGB(255, 200, 60)) -- 불꽃
+		return sponge
+	end,
 }
 
 -- onTake(player, snack): 가져갈 수 있으면 true를 돌려줘요 (Employees가 판단)
@@ -143,6 +153,17 @@ function Snacks.start(office, onTake: (Player, SalaryConfig.SnackInfo) -> boolea
 					placeSnack(snack, spot)
 				end
 			end
+		end
+	end
+
+	-- 이벤트용 간식을 정해진 자리에 놓아요 (예: 🎂 생일 케이크)
+	function api.placeExtra(snackId: string, spots: { Vector3 })
+		local snack = SalaryConfig.getSnack(snackId)
+		if not snack then
+			return
+		end
+		for _, spot in spots do
+			placeSnack(snack, spot)
 		end
 	end
 
