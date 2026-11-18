@@ -4,6 +4,9 @@ local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- 🛡️ 이 코드가 맞는 장소에서 실행되는지 확인 (다른 장소에 잘못 게시하는 실수 방지)
+require(ReplicatedStorage.Shared.PlaceGuard).check("clocktower")
+
 local Remotes = require(script.Remotes) -- 가장 먼저 만들어 둬야 클라이언트가 찾을 수 있어요
 local Inventory = require(script.Inventory)
 local TowerBuilder = require(script.TowerBuilder)
@@ -11,9 +14,14 @@ local TimeTravel = require(script.TimeTravel)
 local Puzzles = require(script.Puzzles)
 local Places = require(ReplicatedStorage.Shared.Places)
 local Teleport = require(ReplicatedStorage.Shared.Teleport)
+local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 
 -- 광장으로 돌아가기 (탈출 성공 화면의 버튼)
+local allowReturn = RateLimit.new(5) -- 순간이동 요청 연타 방지
 Remotes.ReturnToLobby.OnServerEvent:Connect(function(player)
+	if not allowReturn(player) then
+		return
+	end
 	local ok, message = Teleport.send(Places.LOBBY, { player }, false)
 	if not ok and message then
 		Remotes.Notify:FireClient(player, message)

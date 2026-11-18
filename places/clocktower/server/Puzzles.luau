@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 local Inventory = require(script.Parent.Inventory)
 local Remotes = require(script.Parent.Remotes)
 local TowerBuilder = require(script.Parent.TowerBuilder)
@@ -60,8 +61,14 @@ local function codeLock(id: string, part: BasePart, title: string, code: string,
 	end
 end
 
+-- 🛡️ 비밀번호를 프로그램으로 0000~9999 다 넣어 보는 걸 막아요 (0.5초에 한 번)
+local allowCode = RateLimit.new(0.5)
+
 Remotes.SubmitCode.OnServerInvoke = function(player: Player, id: any, code: any)
-	if typeof(id) ~= "string" or typeof(code) ~= "string" then
+	if not allowCode(player) then
+		return false
+	end
+	if typeof(id) ~= "string" or typeof(code) ~= "string" or #code > 10 then
 		return false
 	end
 	local lock = locks[id]

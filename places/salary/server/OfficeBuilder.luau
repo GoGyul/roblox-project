@@ -170,7 +170,11 @@ function OfficeBuilder.build(): Office
 		TextColor3 = Color3.fromRGB(230, 190, 90),
 	})
 	B:part(Vector3.new(2.6, 1.8, 0.3), v(0, 3.4, 16.8), { Color = COLORS.monitor })
-	B:part(Vector3.new(3, 3.5, 3), v(7, 1.75, 19.5), { Color = Color3.fromRGB(60, 30, 25), Material = Enum.Material.Leather }) -- 부장 의자 (옆으로 빼 둠)
+	B:part(Vector3.new(3, 3.5, 3), v(7, 1.75, 20.5), {
+		Color = Color3.fromRGB(60, 30, 25),
+		Material = Enum.Material.Leather,
+		CanCollide = false, -- 부장이 지나다니다 끼지 않게 (장식)
+	}) -- 부장 의자
 
 	-- 🚻 화장실 (왼쪽 뒤, x -38~-24 / z 6~22) : 부장이 들어오지 않는 안전지대
 	B:wall("Z", -24.5, 6, 22, FLOOR_Y, WALL_HEIGHT, { { center = 10, width = 4, height = 8 } }, wall)

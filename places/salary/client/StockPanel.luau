@@ -1,4 +1,5 @@
--- 📈 화장실 증권 창: 변기에 앉으면 화면 오른쪽에 떠요 (게임 속 가짜 주식)
+-- 📈 화장실 증권 창: 변기에 앉으면 화면에 떠요 (게임 속 가짜 주식)
+-- 큰 글씨로 가격·보유 주식·손익을 보여 주고, 맨 위에 내 주식 전체 요약이 있어요.
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -7,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local SalaryConfig = require(Shared:WaitForChild("SalaryConfig"))
 local Ui = require(Shared:WaitForChild("Ui"))
+local Sounds = require(Shared:WaitForChild("Sounds"))
 local Hud = require(script.Parent.Hud)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -14,25 +16,26 @@ local player = Players.LocalPlayer
 local comma = Hud.comma
 local text = Hud.text
 
-local UP = Color3.fromRGB(230, 80, 70) -- 한국 증시처럼 오르면 빨강
-local DOWN = Color3.fromRGB(80, 140, 240) -- 내리면 파랑
-local ROW_HEIGHT = 100
+local UP = Color3.fromRGB(255, 95, 85) -- 한국 증시처럼 오르면 빨강
+local DOWN = Color3.fromRGB(95, 155, 255) -- 내리면 파랑
+local MUTED = Color3.fromRGB(185, 190, 205)
+local WIDTH = 600
+local ROW_HEIGHT = 132
+local HEADER = 128
+local FOOTER = 56
 local BARS = 30
 
 local StockPanel = {}
 
-local function decode(attribute: string): { [string]: any }
+local function decode(source: Instance, attribute: string): { [string]: any }
 	local ok, value = pcall(function()
-		return HttpService:JSONDecode(ReplicatedStorage:GetAttribute(attribute) or player:GetAttribute(attribute) or "{}")
+		return HttpService:JSONDecode(source:GetAttribute(attribute) or "{}")
 	end)
 	return if ok and typeof(value) == "table" then value else {}
 end
 
-local function decodePlayer(attribute: string): { [string]: any }
-	local ok, value = pcall(function()
-		return HttpService:JSONDecode(player:GetAttribute(attribute) or "{}")
-	end)
-	return if ok and typeof(value) == "table" then value else {}
+local function signed(n: number): string
+	return `{if n >= 0 then "+" else ""}{comma(n)}`
 end
 
 ---------------------------------------------------------------------------
@@ -40,85 +43,92 @@ end
 ---------------------------------------------------------------------------
 local frame = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(1, 0.5),
-	Position = UDim2.new(1, -12, 0.56, 0),
-	Size = UDim2.fromOffset(420, 96 + #SalaryConfig.Stocks * ROW_HEIGHT + 44),
-	BackgroundColor3 = Color3.fromRGB(20, 24, 32),
-	BackgroundTransparency = 0.05,
+	Position = UDim2.new(1, -12, 0.55, 0),
+	Size = UDim2.fromOffset(WIDTH, HEADER + #SalaryConfig.Stocks * ROW_HEIGHT + FOOTER),
+	BackgroundColor3 = Color3.fromRGB(18, 22, 30),
+	BackgroundTransparency = 0.03,
 	Visible = false,
 	ZIndex = 20,
 	Parent = Ui.gui,
-}, { Ui.corner(12), Ui.padding(12), Ui.stroke(Color3.fromRGB(90, 160, 255), 2), Ui.make("UIScale", {}) })
+}, { Ui.corner(14), Ui.padding(14), Ui.stroke(Color3.fromRGB(90, 160, 255), 2) })
+local scale = Ui.make("UIScale", { Parent = frame })
 
-local titleText = text({ Size = UDim2.new(1, 0, 0, 26), TextSize = 21, Text = "📈 화장실 증권", ZIndex = 21, Parent = frame })
+text({ Size = UDim2.new(1, 0, 0, 30), TextSize = 26, Text = "📈 화장실 증권", ZIndex = 21, Parent = frame })
 local balanceText = text({
-	Size = UDim2.new(1, 0, 0, 26),
-	TextSize = 16,
+	Size = UDim2.new(1, 0, 0, 30),
+	TextSize = 20,
 	TextXAlignment = Enum.TextXAlignment.Right,
 	TextColor3 = Color3.fromRGB(255, 220, 120),
 	ZIndex = 21,
 	Parent = frame,
 })
+-- 내 주식 전체 요약
+local summaryText = text({
+	Position = UDim2.fromOffset(0, 36),
+	Size = UDim2.new(1, 0, 0, 26),
+	TextSize = 19,
+	ZIndex = 21,
+	Parent = frame,
+})
 local newsText = text({
-	Position = UDim2.fromOffset(0, 30),
-	Size = UDim2.new(1, 0, 0, 40),
-	TextSize = 15,
+	Position = UDim2.fromOffset(0, 66),
+	Size = UDim2.new(1, 0, 0, 48),
+	TextSize = 18,
 	TextWrapped = true,
 	TextColor3 = Color3.fromRGB(255, 230, 150),
 	ZIndex = 21,
 	Parent = frame,
 })
 
-local function tradeButton(parent: Instance, x: number, label: string, onClick: () -> ()): TextButton
+local messageText: TextLabel
+
+local function trade(stockId: string, quantity: number)
+	Sounds.play("click", 0.4)
+	local ok, message = Remotes.TradeStock:InvokeServer(stockId, quantity)
+	messageText.Text = message
+	messageText.TextColor3 = if ok then Color3.fromRGB(140, 230, 160) else Color3.fromRGB(255, 140, 130)
+	if ok then
+		Sounds.play("ping", 0.4, if quantity > 0 then 1.1 else 0.9)
+	end
+end
+
+local function tradeButton(parent: Instance, x: number, label: string, onClick: () -> ())
 	local b = Ui.button({
-		Position = UDim2.new(1, x, 0, 52),
-		Size = UDim2.fromOffset(68, 28),
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, x, 0, 70),
+		Size = UDim2.fromOffset(96, 36),
 		Text = label,
-		TextSize = 14,
+		TextSize = 17,
 		ZIndex = 22,
 		Parent = parent,
 	})
 	b.Activated:Connect(onClick)
-	return b
-end
-
-local messageText -- 아래에서 만들어요
-
-local function trade(stockId: string, quantity: number)
-	local ok, message = Remotes.TradeStock:InvokeServer(stockId, quantity)
-	messageText.Text = message
-	messageText.TextColor3 = if ok then Color3.fromRGB(140, 230, 160) else Color3.fromRGB(255, 140, 130)
 end
 
 local rows = {}
 for i, stock in SalaryConfig.Stocks do
 	local row = Ui.make("Frame", {
-		Position = UDim2.fromOffset(0, 76 + (i - 1) * ROW_HEIGHT),
-		Size = UDim2.new(1, 0, 0, ROW_HEIGHT - 6),
-		BackgroundColor3 = Color3.fromRGB(34, 40, 52),
+		Position = UDim2.fromOffset(0, HEADER + (i - 1) * ROW_HEIGHT - 8),
+		Size = UDim2.new(1, 0, 0, ROW_HEIGHT - 8),
+		BackgroundColor3 = Color3.fromRGB(32, 38, 50),
 		ZIndex = 21,
 		Parent = frame,
-	}, { Ui.corner(8), Ui.padding(6) })
+	}, { Ui.corner(10), Ui.padding(8) })
 
-	local nameText = text({ Size = UDim2.fromOffset(170, 22), TextSize = 16, Text = `{stock.emoji} {stock.name}`, ZIndex = 22, Parent = row })
-	local priceText = text({ Position = UDim2.fromOffset(0, 22), Size = UDim2.fromOffset(170, 22), TextSize = 18, ZIndex = 22, Parent = row })
-	local ownedText = text({
-		Position = UDim2.fromOffset(0, 44),
-		Size = UDim2.fromOffset(170, 18),
-		TextSize = 13,
-		TextColor3 = Color3.fromRGB(190, 195, 210),
-		ZIndex = 22,
-		Parent = row,
-	})
+	text({ Size = UDim2.fromOffset(255, 24), TextSize = 20, Text = `{stock.emoji} {stock.name}`, ZIndex = 22, Parent = row })
+	local priceText = text({ Position = UDim2.fromOffset(0, 26), Size = UDim2.fromOffset(255, 30), TextSize = 24, ZIndex = 22, Parent = row })
+	local ownedText = text({ Position = UDim2.fromOffset(0, 60), Size = UDim2.fromOffset(250, 22), TextSize = 17, TextColor3 = MUTED, ZIndex = 22, Parent = row })
+	local profitText = text({ Position = UDim2.fromOffset(0, 82), Size = UDim2.fromOffset(250, 22), TextSize = 17, ZIndex = 22, Parent = row })
 
 	-- 미니 그래프 (최근 가격 막대)
 	local chart = Ui.make("Frame", {
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 2),
-		Size = UDim2.fromOffset(200, 44),
-		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(290, 60),
+		BackgroundColor3 = Color3.fromRGB(24, 28, 38),
 		ZIndex = 22,
 		Parent = row,
-	})
+	}, { Ui.corner(6) })
 	local bars = {}
 	for b = 1, BARS do
 		bars[b] = Ui.make("Frame", {
@@ -131,32 +141,32 @@ for i, stock in SalaryConfig.Stocks do
 		})
 	end
 
-	tradeButton(row, -216, "+1주", function()
+	tradeButton(row, -204, "+1주", function()
 		trade(stock.id, 1)
 	end)
-	tradeButton(row, -144, "+10주", function()
+	tradeButton(row, -102, "+10주", function()
 		trade(stock.id, 10)
 	end)
-	tradeButton(row, -72, "전부 팔기", function()
+	tradeButton(row, 0, "전부 팔기", function()
 		trade(stock.id, -999999)
 	end)
 
-	rows[stock.id] = { name = nameText, price = priceText, owned = ownedText, bars = bars }
+	rows[stock.id] = { price = priceText, owned = ownedText, profit = profitText, bars = bars }
 end
 
 messageText = text({
-	Position = UDim2.new(0, 0, 1, -40),
-	Size = UDim2.new(1, 0, 0, 20),
-	TextSize = 14,
+	Position = UDim2.new(0, 0, 1, -50),
+	Size = UDim2.new(1, 0, 0, 24),
+	TextSize = 17,
 	Text = "",
 	ZIndex = 21,
 	Parent = frame,
 })
 local footerText = text({
-	Position = UDim2.new(0, 0, 1, -18),
-	Size = UDim2.new(1, 0, 0, 18),
-	TextSize = 13,
-	TextColor3 = Color3.fromRGB(170, 175, 190),
+	Position = UDim2.new(0, 0, 1, -24),
+	Size = UDim2.new(1, 0, 0, 22),
+	TextSize = 15,
+	TextColor3 = MUTED,
 	ZIndex = 21,
 	Parent = frame,
 })
@@ -165,14 +175,15 @@ local footerText = text({
 -- 갱신
 ---------------------------------------------------------------------------
 local function refresh()
-	local prices = decode("StockPrices")
-	local history = decode("StockHistory")
-	local holdings = decodePlayer("StockHoldings")
-	local costs = decodePlayer("StockCost")
+	local prices = decode(ReplicatedStorage, "StockPrices")
+	local history = decode(ReplicatedStorage, "StockHistory")
+	local holdings = decode(player, "StockHoldings")
+	local costs = decode(player, "StockCost")
 
-	balanceText.Text = `🏦 {comma(player:GetAttribute("TotalMoney") or 0)}원`
+	balanceText.Text = `🏦 통장 {comma(player:GetAttribute("TotalMoney") or 0)}원`
 	newsText.Text = ReplicatedStorage:GetAttribute("StockNews") or ""
 
+	local totalValue, totalCost = 0, 0
 	for _, stock in SalaryConfig.Stocks do
 		local row = rows[stock.id]
 		local price = prices[stock.id] or stock.price
@@ -180,15 +191,22 @@ local function refresh()
 		local first = points[1] or price
 		local change = if first > 0 then (price - first) / first * 100 else 0
 		local color = if change >= 0 then UP else DOWN
-		row.price.Text = `{comma(price)}원  {if change >= 0 then "▲" else "▼"} {string.format("%.1f", math.abs(change))}%`
+		row.price.Text = `{comma(price)}원  {if change >= 0 then "▲" else "▼"}{string.format("%.1f", math.abs(change))}%`
 		row.price.TextColor3 = color
 
 		local owned = holdings[stock.id] or 0
 		if owned > 0 then
-			local profit = price * owned - (costs[stock.id] or 0)
-			row.owned.Text = `보유 {owned}주 · 평가 {if profit >= 0 then "+" else ""}{comma(profit)}원`
+			local value = price * owned
+			local cost = costs[stock.id] or 0
+			local profit = value - cost
+			totalValue += value
+			totalCost += cost
+			row.owned.Text = `보유 {owned}주 · 평가 {comma(value)}원`
+			row.profit.Text = `손익 {signed(math.floor(profit))}원 ({string.format("%+.1f", if cost > 0 then profit / cost * 100 else 0)}%)`
+			row.profit.TextColor3 = if profit >= 0 then UP else DOWN
 		else
 			row.owned.Text = "보유 없음"
+			row.profit.Text = ""
 		end
 
 		-- 그래프: 최근 가격들을 최저~최고 사이로 맞춰 막대 높이로
@@ -210,28 +228,52 @@ local function refresh()
 		end
 	end
 
-	local total = player:GetAttribute("StockProfitTotal") or 0
-	footerText.Text = `누적 실현 손익 {if total >= 0 then "+" else ""}{comma(total)}원 · ⚠️ 오래 있으면 자리 비움이 티 나요!`
+	if totalValue > 0 then
+		local profit = totalValue - totalCost
+		summaryText.Text = `💼 내 주식 평가액 {comma(totalValue)}원 · 손익 {signed(math.floor(profit))}원`
+		summaryText.TextColor3 = if profit >= 0 then UP else DOWN
+	else
+		summaryText.Text = "💼 아직 가진 주식이 없어요. +1주로 시작해 보세요!"
+		summaryText.TextColor3 = MUTED
+	end
+
+	local realized = player:GetAttribute("StockProfitTotal") or 0
+	local left = player:GetAttribute("ToiletLeft") or 0
+	local warning = if left > 0 then `⏰ 자리 비움 들키기까지 {left}초` else "🚨 자리 비운 게 티 나요! 얼른 자리로!"
+	footerText.Text = `누적 실현 손익 {signed(realized)}원 · {warning} (게임 속 가짜 주식)`
 end
 
--- 화면이 작으면 창을 줄여요
+-- 화면 크기에 맞추기: 폰에서는 가운데에, 화면에 들어가게 줄여요
 local function fit()
 	local camera = workspace.CurrentCamera
-	local scale = frame:FindFirstChildOfClass("UIScale")
-	if camera and scale then
-		scale.Scale = math.clamp((camera.ViewportSize.Y - 140) / frame.Size.Y.Offset, 0.5, 1)
+	if not camera then
+		return
+	end
+	local viewport = camera.ViewportSize
+	local compact = Hud.isCompact()
+	scale.Scale = math.clamp(math.min((viewport.Y - 90) / frame.Size.Y.Offset, (viewport.X - 24) / frame.Size.X.Offset), 0.45, 1)
+	if compact then
+		frame.AnchorPoint = Vector2.new(0.5, 0.5)
+		frame.Position = UDim2.new(0.5, 0, 0.53, 0)
+	else
+		frame.AnchorPoint = Vector2.new(1, 0.5)
+		frame.Position = UDim2.new(1, -12, 0.55, 0)
 	end
 end
 
 function StockPanel.start()
 	fit()
+	if workspace.CurrentCamera then
+		workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+	end
 	task.spawn(function()
 		while true do
-			local onToilet = player:GetAttribute("OnToilet") == true
+			local onToilet = player:GetAttribute("OnToilet") == true and player:GetAttribute("ScreenHidden") ~= true
 			if onToilet and not frame.Visible then
 				fit()
+				Sounds.play("swoosh", 0.4)
 				messageText.Text = "🚽 변기에 앉았다… 이제 시장을 볼 시간!"
-				messageText.TextColor3 = Color3.fromRGB(200, 200, 210)
+				messageText.TextColor3 = MUTED
 			end
 			frame.Visible = onToilet
 			if onToilet then
@@ -240,7 +282,6 @@ function StockPanel.start()
 			task.wait(0.25)
 		end
 	end)
-	titleText.Text = "📈 화장실 증권 (게임 속 가짜 주식)"
 end
 
 return StockPanel

@@ -27,6 +27,12 @@ function Npc.create(name: string, look: Look, parent: Instance): Model
 	-- 애니메이션이 없는 NPC는 넘어지면 잘 못 일어나요 → 넘어지는 상태를 꺼 둬요
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+	-- 팔다리가 의자·책상에 부딪혀 덜덜 떨지 않게, 몸통 중심(HumanoidRootPart)만 충돌해요
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+			part.CanCollide = false
+		end
+	end
 
 	-- 머리 위 표시: 이름 / 상태 이모지 / 말풍선
 	local head = model:WaitForChild("Head") :: BasePart
@@ -110,8 +116,47 @@ function Npc.standUpright(model: Model)
 	root.AssemblyAngularVelocity = Vector3.zero
 end
 
+-- 🦵 앉은 다리 자세 (서버에서 한 번만 설정해요 — 화면 쪽에서 건드리면 서버와 싸워서 다리가 떨려요)
+local LEG_ANGLES = { RightUpperLeg = 90, LeftUpperLeg = 90, RightLowerLeg = -90, LeftLowerLeg = -90 }
+local legBases: { [Instance]: CFrame } = setmetatable({}, { __mode = "k" }) :: any
+
+-- bodyPart를 움직이는 관절: Motor6D면 C0, AnimationConstraint면 부모 쪽 Attachment
+local function legJoint(model: Model, bodyPart: BasePart): (Instance?, string?)
+	for _, item in model:GetDescendants() do
+		if item:IsA("Motor6D") and item.Part1 == bodyPart then
+			return item, "C0"
+		end
+	end
+	for _, item in model:GetDescendants() do
+		if item:IsA("AnimationConstraint") and item.Attachment0 and item.Attachment1 then
+			if item.Attachment1.Parent == bodyPart then
+				return item.Attachment0, "CFrame"
+			elseif item.Attachment0.Parent == bodyPart then
+				return item.Attachment1, "CFrame"
+			end
+		end
+	end
+	return nil, nil
+end
+
+function Npc.setSitPose(model: Model, sitting: boolean)
+	for partName, angle in LEG_ANGLES do
+		local bodyPart = model:FindFirstChild(partName)
+		if bodyPart and bodyPart:IsA("BasePart") then
+			local joint, property = legJoint(model, bodyPart)
+			if joint and property then
+				local base = legBases[joint] or (joint :: any)[property]
+				legBases[joint] = base
+				local rotation = CFrame.Angles(math.rad(if sitting then angle else 0), 0, 0)
+				;(joint :: any)[property] = CFrame.new(base.Position) * rotation * base.Rotation
+			end
+		end
+	end
+end
+
 -- 의자에서 확실히 일어나기 (의자 고정을 풀고 점프)
 function Npc.stand(model: Model, seat: Seat)
+	Npc.setSitPose(model, false)
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 	for _, child in seat:GetChildren() do
 		if child:IsA("Weld") and child.Name == "SeatWeld" then
@@ -127,6 +172,7 @@ function Npc.sit(model: Model, seat: Seat)
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 	model:PivotTo(seat.CFrame + Vector3.new(0, 3, 0))
 	seat:Sit(humanoid)
+	Npc.setSitPose(model, true)
 end
 
 return Npc

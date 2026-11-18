@@ -9,6 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local SalaryConfig = require(Shared:WaitForChild("SalaryConfig"))
 local Ui = require(Shared:WaitForChild("Ui"))
+local Sounds = require(Shared:WaitForChild("Sounds"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -150,17 +151,42 @@ Hud.toolbar = Ui.make("Frame", {
 	Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6) }),
 })
 
-local saveText = text({
+-- 💾 저장이 꺼져 있을 때만 왼쪽 아래 작은 아이콘 (마우스를 올리거나 누르면 설명)
+local saveText = Ui.make("TextButton", {
 	AnchorPoint = Vector2.new(0, 1),
-	Position = UDim2.new(0, 12, 1, -8),
-	Size = UDim2.fromOffset(300, 18),
-	TextSize = 13,
-	TextColor3 = Color3.fromRGB(200, 120, 110),
-	TextStrokeTransparency = 0.5,
-	Text = "💾 저장 꺼짐 (나가면 진행이 사라져요)",
+	Position = UDim2.new(0, 10, 1, -10),
+	Size = UDim2.fromOffset(34, 34),
+	BackgroundColor3 = Color3.fromRGB(60, 30, 30),
+	BackgroundTransparency = 0.2,
+	Text = "💾",
+	TextSize = 18,
+	AutoButtonColor = false,
 	Visible = false,
+	ZIndex = 60, -- 행동 버튼보다 위에 (설명 말풍선이 가려지지 않게)
 	Parent = gui,
+}, { Ui.corner(17), Ui.stroke(Color3.fromRGB(220, 90, 80), 2) })
+local saveTip = text({
+	AnchorPoint = Vector2.new(0, 1),
+	Position = UDim2.fromOffset(42, 30),
+	Size = UDim2.fromOffset(330, 28),
+	BackgroundTransparency = 0.15,
+	BackgroundColor3 = Color3.fromRGB(30, 25, 25),
+	TextSize = 14,
+	Text = "  저장 꺼짐: 나가면 오늘 진행이 사라져요 (스튜디오 테스트 중)",
+	Visible = false,
+	ZIndex = 61,
+	Parent = saveText,
 })
+Ui.corner(8).Parent = saveTip
+saveText.MouseEnter:Connect(function()
+	saveTip.Visible = true
+end)
+saveText.MouseLeave:Connect(function()
+	saveTip.Visible = false
+end)
+saveText.Activated:Connect(function()
+	saveTip.Visible = not saveTip.Visible
+end)
 
 ---------------------------------------------------------------------------
 -- 아래: 행동 버튼 (자리에 앉아 있을 때만)
@@ -188,18 +214,6 @@ local standHint = text({
 	Parent = gui,
 })
 
--- 화면이 좁으면 행동 버튼 줄을 줄여요
-local actionScale = Ui.make("UIScale", { Parent = actionPanel })
-local function fitActionPanel()
-	local camera = workspace.CurrentCamera
-	if camera then
-		actionScale.Scale = math.clamp((camera.ViewportSize.X - 40) / actionPanel.Size.X.Offset, 0.5, 1)
-	end
-end
-fitActionPanel()
-if workspace.CurrentCamera then
-	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitActionPanel)
-end
 
 local hintText = text({
 	Size = UDim2.new(1, 0, 0, 22),
@@ -214,7 +228,13 @@ local buttonRow = Ui.make("Frame", {
 	BackgroundTransparency = 1,
 	Parent = actionPanel,
 }, {
-	Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6) }),
+	Ui.make("UIGridLayout", {
+		Name = "Grid",
+		CellSize = UDim2.fromOffset(BUTTON_WIDTH, 88),
+		CellPadding = UDim2.fromOffset(6, 6),
+		FillDirectionMaxCells = actionCount,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}),
 })
 
 local KEYS = {
@@ -262,6 +282,7 @@ for i, actionId in SalaryConfig.DeskActions do
 		Parent = buttonRow,
 	})
 	button.Activated:Connect(function()
+		Sounds.play("click", 0.4)
 		chooseAction(actionId)
 	end)
 	buttons[actionId] = button
@@ -276,6 +297,95 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		chooseAction(SalaryConfig.DeskActions[index])
 	end
 end)
+
+---------------------------------------------------------------------------
+-- 📱 화면 크기에 따라 배치 바꾸기
+--   큰 화면(PC): 원래 배치
+--   작은 화면(폰·작은 창): 패널을 줄이고, 행동 버튼은 2줄로 위쪽에, 서로 겹치지 않게
+---------------------------------------------------------------------------
+local scales = {}
+for _, frame in { clockPanel, moneyPanel, statusPanel, Hud.toolbar, actionPanel } do
+	scales[frame] = Ui.make("UIScale", { Parent = frame })
+end
+
+-- 작은 화면인가? (패널을 줄여요)
+function Hud.isCompact(): boolean
+	local camera = workspace.CurrentCamera
+	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
+	return Hud.isPhone() or viewport.X < 1000 or viewport.Y < 560
+end
+
+-- 폰처럼 터치만 되는 기기인가? (행동 버튼을 2줄 큰 버튼으로)
+function Hud.isPhone(): boolean
+	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
+local function applyLayout()
+	local camera = workspace.CurrentCamera
+	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
+	local compact = Hud.isCompact()
+	local grid = buttonRow:FindFirstChild("Grid") :: UIGridLayout
+	local small = if compact then 0.7 else 1
+
+	scales[clockPanel].Scale = small
+	clockPanel.Position = UDim2.new(0.5, 0, 0, if compact then 4 else 8)
+	footstepText.Position = UDim2.new(0.5, 0, 0, if compact then 50 else 78)
+	footstepText.TextSize = if compact then 17 else 22
+
+	scales[moneyPanel].Scale = small
+	moneyPanel.Position = UDim2.new(1, if compact then -6 else -12, 0, if compact then 4 else 8)
+
+	scales[statusPanel].Scale = small
+	if compact then
+		statusPanel.AnchorPoint = Vector2.new(0, 0)
+		statusPanel.Position = UDim2.new(0, 6, 0, 60)
+		Hud.toolbar.Position = UDim2.new(0, 6, 0, 60 + math.floor(196 * small) + 4)
+	else
+		statusPanel.AnchorPoint = Vector2.new(0, 0.5)
+		statusPanel.Position = UDim2.new(0, 12, 0.42, 0)
+		Hud.toolbar.Position = UDim2.new(0, 12, 0.42, 108)
+	end
+	scales[Hud.toolbar].Scale = if compact then 0.85 else 1
+
+	-- 행동 버튼
+	--   폰: 4개씩 2줄 큰 버튼, 조이스틱·점프 버튼과 겹치지 않게 위로
+	--   PC: 화면 크기와 상관없이 1줄 작은 버튼, 맨 아래에 붙여서 게임 화면을 덜 가리게
+	local phone = Hud.isPhone()
+	local columns = if phone then 4 else actionCount
+	local rows = math.ceil(actionCount / columns)
+	local cellWidth = if phone then 100 else 92
+	local cellHeight = if phone then 64 else 60
+	grid.FillDirectionMaxCells = columns
+	grid.CellSize = UDim2.fromOffset(cellWidth, cellHeight)
+	local width = columns * cellWidth + (columns - 1) * 6
+	local height = rows * cellHeight + (rows - 1) * 6
+	buttonRow.Size = UDim2.new(1, 0, 0, height)
+	actionPanel.Size = UDim2.fromOffset(width, 22 + height)
+	actionPanel.Position = UDim2.new(0.5, 0, 1, if phone then -90 else -6)
+	scales[actionPanel].Scale = math.clamp((viewport.X - 24) / width, 0.5, 1)
+	hintText.Size = UDim2.new(1, 0, 0, 18)
+	hintText.TextSize = if phone then 14 else 13
+	buttonRow.Position = UDim2.fromOffset(0, 22)
+	for _, button in buttons do
+		button.TextSize = if phone then 12 else 11
+	end
+
+	local bottomGap = if phone then 90 else 6
+	local barHeight = (22 + height) * scales[actionPanel].Scale
+	standHint.Position = UDim2.new(0.5, 0, 1, if phone then -100 else -24)
+	standHint.TextSize = if compact then 15 else 17
+	-- 안내 문구는 행동 버튼 위로
+	Ui.setToastPosition(UDim2.new(0.5, 0, 1, -(bottomGap + barHeight + 10)))
+end
+
+applyLayout()
+if workspace.CurrentCamera then
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyLayout)
+end
+-- 막 들어왔을 땐 화면 크기가 정확하지 않을 수 있어서, 잠시 뒤 한 번 더 맞춰요
+for _, delay in { 0.5, 1.5, 3 } do
+	task.delay(delay, applyLayout)
+end
 
 ---------------------------------------------------------------------------
 -- 내 자리 표시 (자리에서 일어났을 때 어디로 돌아갈지)
@@ -324,6 +434,17 @@ local function phaseName(phase: string?): string
 	return ""
 end
 
+-- ⚠️ 해고 직전(경고 2/3)이면 화면 테두리가 빨갛게 깜빡여요
+local dangerBorder = Ui.make("Frame", {
+	Size = UDim2.fromScale(1, 1),
+	BackgroundTransparency = 1,
+	Visible = false,
+	ZIndex = 49,
+	Parent = gui,
+}, { Ui.stroke(COLORS.bad, 8) })
+local dangerStroke = dangerBorder:FindFirstChildOfClass("UIStroke") :: UIStroke
+local quotaWarnedDay: any = nil -- 퇴근 전 업무 미달 알림을 보낸 날
+
 RunService.RenderStepped:Connect(function()
 	-- 시계
 	local minute = ReplicatedStorage:GetAttribute("SalaryMinute") or SalaryConfig.START_MINUTE
@@ -368,7 +489,25 @@ RunService.RenderStepped:Connect(function()
 	workFill.Size = UDim2.fromScale(math.clamp(work / quota, 0, 1), 1)
 
 	local warnings = player:GetAttribute("Warnings") or 0
+	local onEdge = warnings >= SalaryConfig.MAX_WARNINGS - 1 and player:GetAttribute("Fired") ~= true
 	warningText.Text = `경고 {string.rep("🟥", warnings)}{string.rep("⬜", math.max(0, SalaryConfig.MAX_WARNINGS - warnings))} ({warnings}/{SalaryConfig.MAX_WARNINGS})`
+		.. (if onEdge then " 한 번 더면 해고!" else "")
+	warningText.TextColor3 = if onEdge then COLORS.bad else C.text
+	dangerBorder.Visible = onEdge and phase ~= "offwork"
+	if dangerBorder.Visible then
+		dangerStroke.Transparency = 0.35 + 0.35 * math.sin(os.clock() * 4)
+	end
+
+	-- 퇴근 1시간 전인데 업무를 못 채웠으면 미리 알려 줘요 (못 채우면 경고가 쌓여요)
+	local day = ReplicatedStorage:GetAttribute("SalaryDay")
+	if phase == "work" and minute >= SalaryConfig.END_MINUTE - 60 and quotaWarnedDay ~= day and player:GetAttribute("Fired") ~= true then
+		quotaWarnedDay = day
+		if work < quota then
+			Sounds.play("caught", 0.4)
+			local outcome = if onEdge then "못 채우면 해고예요!!" else "못 채우면 경고 1개!"
+			Ui.toast(`⏰ 퇴근 1시간 전! 업무가 {quota - work}초 남았어요. {outcome}`)
+		end
+	end
 	local combo = player:GetAttribute("Combo") or 1
 	local comboLine = if combo > 1 then `🔥 콤보 x{combo}` else ""
 	local heldSnack = SalaryConfig.getSnack(player:GetAttribute("HeldSnack") or "")
@@ -393,6 +532,7 @@ RunService.RenderStepped:Connect(function()
 		local selected = actionId == current
 		button.Text = buttonText(i, actionId, unlocked)
 		button.BackgroundColor3 = if not unlocked then COLORS.locked elseif selected then C.brass else COLORS.idle
+		button.BackgroundTransparency = if selected then 0.05 else 0.3 -- 살짝 비쳐서 게임 화면을 덜 가려요
 		button.TextColor3 = if selected then C.ink else C.text
 	end
 	if stateId == "returning" then
@@ -463,17 +603,27 @@ function Hud.popup(message: string, color: Color3, seconds: number)
 end
 
 Remotes:WaitForChild("NearMiss").OnClientEvent:Connect(function(bonus: number, combo: number)
+	Sounds.play("ping", 0.6, 1 + combo * 0.1)
 	Hud.popup(`😮‍💨 아슬아슬! +{comma(bonus)}원 (콤보 x{combo})`, COLORS.good, 2)
 end)
 
 Remotes:WaitForChild("Caught").OnClientEvent:Connect(function(line: string, warnings: number)
+	Sounds.play("caught", 0.8)
+	Sounds.play("bass", 0.5, 0.8)
 	flash.BackgroundTransparency = 0.4
 	TweenService:Create(flash, TweenInfo.new(0.8), { BackgroundTransparency = 1 }):Play()
 	Hud.popup(`🚨 적발! "{line}"`, COLORS.bad, 3)
 	Ui.toast(`경고 {warnings}/{SalaryConfig.MAX_WARNINGS} · 시말서 감봉 -{comma(SalaryConfig.CAUGHT_PENALTY)}원`)
+	if warnings == SalaryConfig.MAX_WARNINGS - 1 then
+		task.delay(2, function()
+			Hud.popup("⚠️ 한 번만 더 걸리면 해고!", COLORS.bad, 3.5)
+		end)
+	end
 end)
 
 Remotes:WaitForChild("Bonus").OnClientEvent:Connect(function(message: string, amount: number)
+	Sounds.play("ping", 0.6, 1.2)
+	Sounds.play("swoosh", 0.3)
 	Hud.popup(`{message} +{comma(amount)}원`, Color3.fromRGB(255, 210, 80), 2.5)
 end)
 
@@ -482,5 +632,39 @@ Remotes:WaitForChild("Unlocked").OnClientEvent:Connect(function(emoji: string, n
 end)
 
 Remotes:WaitForChild("Notify").OnClientEvent:Connect(Ui.toast)
+
+---------------------------------------------------------------------------
+-- 🔊 상황별 소리
+---------------------------------------------------------------------------
+Sounds.startMusic()
+local typingLoop = Sounds.loop("typing", 0.12)
+local lastCrunch = 0
+local lastPhase = ReplicatedStorage:GetAttribute("SalaryPhase")
+RunService.Heartbeat:Connect(function()
+	local state = player:GetAttribute("SalaryState")
+	local hidden = player:GetAttribute("ScreenHidden") == true
+	-- 일하는 중엔 타자 소리, 화면을 숨기면 조용히
+	if typingLoop then
+		local shouldType = state == "work" and player:GetAttribute("Seated") == true and not hidden
+		if typingLoop.Playing ~= shouldType then
+			typingLoop.Playing = shouldType
+		end
+	end
+	-- 간식 먹는 중엔 바삭바삭
+	if state == "snack" and not hidden and os.clock() - lastCrunch > 0.7 then
+		lastCrunch = os.clock()
+		Sounds.play("crunch", 0.35, 0.9 + math.random() * 0.3)
+	end
+	-- 점심 시작/끝 알림음
+	local phase = ReplicatedStorage:GetAttribute("SalaryPhase")
+	if phase ~= lastPhase then
+		if phase == "lunch" then
+			Sounds.play("ping", 0.6, 0.8)
+		elseif phase == "work" and lastPhase == "lunch" then
+			Sounds.play("bass", 0.5)
+		end
+		lastPhase = phase
+	end
+end)
 
 return Hud

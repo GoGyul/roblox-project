@@ -2,7 +2,7 @@
 --
 -- ■ 내 캐릭터(플레이어): 농땡이 행동에 맞게 몸과 팔을 움직이고 소품(폰, 컵 등)을 들어요.
 --     예) 엎드려 낮잠 → 허리를 숙이고 팔을 책상에 올리고 고개를 숙여요.
--- ■ NPC(동료, 김부장): 농땡이 모션은 없어요. 의자를 뚫지 않게 "앉은 다리"만 만들어요.
+-- ■ NPC(동료, 김부장): 여기서는 건드리지 않아요. (앉은 다리는 서버가 한 번만 설정 — 화면에서 건드리면 다리가 떨려요)
 --
 -- 애니메이션 파일 없이 관절 각도를 직접 바꾸는 방식이에요.
 -- 관절마다 축 방향이 다르기 때문에(R15/R6, 옛 관절/새 관절), 각도를 "캐릭터 기준"으로 정하고
@@ -15,7 +15,11 @@
 -- wave = {관절, 축, 크기, 빠르기}: 반복 움직임 (타자 치기, 고개 끄덕임 등)
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local SalaryConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SalaryConfig"))
 
 local Poses = {}
 
@@ -165,6 +169,15 @@ local function setProp(model: Model, rig: Rig, wanted: string?)
 	end
 	if wanted and not rig.props[wanted] then
 		local spec = PROPS[wanted]
+		-- 간식은 지금 들고 있는 간식 모양·색으로 ("snack_cake" 같은 이름)
+		local snackId = string.match(wanted, "^snack_(.+)$")
+		local snack = snackId and SalaryConfig.getSnack(snackId)
+		if snack then
+			spec = { hands = { "RightHand", "Right Arm" }, size = snack.size * 0.8, color = snack.color, offset = CFrame.new(0, -0.3, -0.25) }
+		end
+		if not spec then
+			return
+		end
 		local hand = findPart(model, spec.hands)
 		if hand then
 			local part = Instance.new("Part")
@@ -201,6 +214,74 @@ local function applyAngles(rig: Rig, targets: { [string]: Vector3 }, dt: number)
 	end
 end
 
+-- 😴 잘 때는 눈 감은 얼굴 + 머리 위 💤
+local sleepState: { [Model]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+
+local function setSleepFace(model: Model, sleeping: boolean)
+	if sleepState[model] == sleeping then
+		return
+	end
+	sleepState[model] = sleeping
+	local head = model:FindFirstChild("Head") :: BasePart?
+	if not head then
+		return
+	end
+	-- 원래 얼굴(눈 뜬 그림)은 숨기고, 감은 눈을 그려요
+	local face = head:FindFirstChild("face")
+	if face and face:IsA("Decal") then
+		face.Transparency = if sleeping then 1 else 0
+	end
+	local overlay = head:FindFirstChild("SleepFace")
+	if sleeping and not overlay then
+		overlay = Instance.new("SurfaceGui")
+		overlay.Name = "SleepFace"
+		overlay.Face = Enum.NormalId.Front
+		overlay.LightInfluence = 1
+		local eyes = Instance.new("TextLabel")
+		eyes.Size = UDim2.fromScale(1, 0.5)
+		eyes.Position = UDim2.fromScale(0, 0.18)
+		eyes.BackgroundTransparency = 1
+		eyes.Text = "︶   ︶"
+		eyes.TextScaled = true
+		eyes.Font = Enum.Font.GothamBlack
+		eyes.TextColor3 = Color3.fromRGB(30, 25, 25)
+		eyes.Parent = overlay
+		local mouth = Instance.new("TextLabel")
+		mouth.Size = UDim2.fromScale(1, 0.3)
+		mouth.Position = UDim2.fromScale(0, 0.62)
+		mouth.BackgroundTransparency = 1
+		mouth.Text = "o"
+		mouth.TextScaled = true
+		mouth.Font = Enum.Font.GothamBold
+		mouth.TextColor3 = Color3.fromRGB(60, 30, 30)
+		mouth.Parent = overlay
+		overlay.Parent = head
+
+		-- 💤 가 머리 위로 떠올라요
+		local zzz = Instance.new("BillboardGui")
+		zzz.Name = "SleepZzz"
+		zzz.Size = UDim2.fromOffset(60, 40)
+		zzz.StudsOffset = Vector3.new(1.2, 2.2, 0)
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Text = "💤"
+		label.TextScaled = true
+		label.Parent = zzz
+		zzz.Parent = head
+		local tween = TweenService:Create(zzz, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+			StudsOffset = Vector3.new(1.6, 3, 0),
+		})
+		tween:Play()
+	elseif not sleeping and overlay then
+		overlay:Destroy()
+		local zzz = head:FindFirstChild("SleepZzz")
+		if zzz then
+			zzz:Destroy()
+		end
+	end
+end
+
 -- 내 캐릭터: 농땡이 모션
 local function applyPlayer(model: Model, poseName: string?, dt: number, t: number)
 	local rig = getRig(model)
@@ -225,27 +306,13 @@ local function applyPlayer(model: Model, poseName: string?, dt: number, t: numbe
 		end
 	end
 	applyAngles(rig, targets, dt)
-	setProp(model, rig, pose.prop)
-end
-
--- NPC: 농땡이 모션 없이, 앉아 있을 때만 다리를 굽혀요 (의자를 뚫지 않게)
-local function applyNpc(model: Model, dt: number)
-	local rig = getRig(model)
-	if not rig then
-		return
+	local prop = pose.prop
+	if prop == "snack" then
+		local held = Players.LocalPlayer:GetAttribute("HeldSnack")
+		prop = if held and held ~= "" then `snack_{held}` else "snack"
 	end
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local upright = root ~= nil and root.CFrame.UpVector.Y > 0.7
-	local seated = humanoid ~= nil and humanoid.Sit and humanoid.SeatPart ~= nil and upright
-	local targets: { [string]: Vector3 } = {}
-	if seated then
-		targets.rHip = Vector3.new(90, 0, 0)
-		targets.lHip = Vector3.new(90, 0, 0)
-		targets.rKnee = Vector3.new(-90, 0, 0)
-		targets.lKnee = Vector3.new(-90, 0, 0)
-	end
-	applyAngles(rig, targets, dt)
+	setProp(model, rig, prop)
+	setSleepFace(model, poseName == "sleep" or poseName == "recline")
 end
 
 function Poses.start()
@@ -259,15 +326,6 @@ function Poses.start()
 			-- 변기에 앉아 있으면 폰으로 주식 보는 자세
 			local pose = if me:GetAttribute("OnToilet") then "phone" else me:GetAttribute("SalaryState")
 			applyPlayer(character, pose, dt, t)
-		end
-		-- 동료와 김부장
-		local office = workspace:FindFirstChild("Office")
-		if office then
-			for _, model in office:GetChildren() do
-				if model:IsA("Model") and model:FindFirstChildOfClass("Humanoid") then
-					applyNpc(model, dt)
-				end
-			end
 		end
 	end)
 end

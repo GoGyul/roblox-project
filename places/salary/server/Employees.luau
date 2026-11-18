@@ -17,6 +17,7 @@ local RunService = game:GetService("RunService")
 
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local ChatTopics = require(ReplicatedStorage.Shared.ChatTopics)
+local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 local Npc = require(script.Parent.Npc)
 local Profiles = require(script.Parent.Profiles)
 local Snacks = require(script.Parent.Snacks)
@@ -33,6 +34,13 @@ local AUTOSAVE_SECONDS = 60
 local GAME_MINUTES_PER_SECOND = (SalaryConfig.END_MINUTE - SalaryConfig.START_MINUTE) / SalaryConfig.DAY_SECONDS
 local PAYSLIP_ORDER = { "work", "blank", "webtoon", "phone", "shopping", "sleep", "recline", "toilet", "coffee", "docs", "chat", "ramen" }
 local MOBILE_STATES = { "docs", "chat", "ramen" }
+local MAX_TRADE = 1000 -- 한 번에 사고팔 수 있는 최대 주식 수
+
+-- 🛡️ 요청 속도 제한 (해킹 툴로 연타하는 걸 막아요)
+local allowAction = RateLimit.new(0.15)
+local allowBuy = RateLimit.new(0.3)
+local allowEnergy = RateLimit.new(1)
+local allowTrade = RateLimit.new(0.15)
 
 type DayRecord = {
 	earned: { [string]: number }, -- 상태별 번 돈
@@ -44,6 +52,7 @@ type DayRecord = {
 	snackBonus: number, -- 간식 완식 보너스 합계
 	snacksEaten: number,
 	stockProfit: number, -- 오늘 주식으로 번(잃은) 돈 (통장에 바로 반영돼서 명세서 합계엔 안 들어가요)
+	settled: boolean, -- 오늘 번 돈을 이미 통장에 넣었나 (퇴근 명세서 또는 해고)
 }
 
 type EmployeeData = {
@@ -59,6 +68,7 @@ type EmployeeData = {
 	lastReturnEnd: number?,
 	nearMissUsed: boolean,
 	toiletTime: number,
+	toiletWarned: boolean, -- "화장실 너무 오래" 경고를 보냈나
 	coffeeTime: number,
 	energyActive: boolean, -- 오늘 에너지 드링크를 마셨나
 	activity: { kind: string, untilTime: number?, coworker: any? }?, -- 돌아다니며 하는 농땡이
@@ -70,7 +80,7 @@ type EmployeeData = {
 }
 
 local function newDay(): DayRecord
-	return { earned = {}, seconds = {}, nearMiss = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, snacksEaten = 0, stockProfit = 0 }
+	return { earned = {}, seconds = {}, nearMiss = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, snacksEaten = 0, stockProfit = 0, settled = false }
 end
 
 local function inZone(zone: BasePart, position: Vector3): boolean
@@ -93,6 +103,20 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 
 	local function hasItem(d: EmployeeData, itemId: string): boolean
 		return d.profile.items[itemId] == true
+	end
+
+	-- 화장실에 이 시간(초)보다 오래 있으면 자리 비움이 티 나요
+	local function toiletLimit(d: EmployeeData): number
+		return if hasItem(d, "dummy") then 150 else SalaryConfig.TOILET_LIMIT
+	end
+
+	-- 오늘 지금까지 번 돈 (기본급 빼고, 아직 통장에 안 들어간 돈)
+	local function runningTotal(d: EmployeeData): number
+		local total = 0
+		for _, amount in d.today.earned do
+			total += amount
+		end
+		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus - d.today.caught * SalaryConfig.CAUGHT_PENALTY
 	end
 
 	local function getHumanoid(player: Player): Humanoid?
@@ -164,11 +188,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 
 	-- 클라이언트 화면에 보여 줄 값들을 속성으로 내보내요
 	local function publish(player: Player, d: EmployeeData)
-		local todayMoney = 0
-		for _, amount in d.today.earned do
-			todayMoney += amount
-		end
-		todayMoney += d.today.nearMiss + d.today.chatBonus + d.today.snackBonus - d.today.caught * SalaryConfig.CAUGHT_PENALTY
+		local todayMoney = runningTotal(d)
 		local profile = d.profile
 		local nextRank = Ranks[profile.rank + 1]
 
@@ -190,6 +210,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		player:SetAttribute("EnergyActive", d.energyActive)
 		player:SetAttribute("CanSave", d.canSave)
 		player:SetAttribute("OnToilet", isOnToilet(player))
+		player:SetAttribute("ToiletLeft", math.max(0, math.ceil(toiletLimit(d) - d.toiletTime)))
 		local held = d.heldSnack
 		local heldInfo = held and SalaryConfig.getSnack(held.id)
 		player:SetAttribute("HeldSnack", if heldInfo then heldInfo.id else "")
@@ -213,10 +234,18 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		player:SetAttribute("StockProfitTotal", math.floor(d.profile.stats.stockProfit))
 	end
 
+	local pendingSaves = 0
 	local function save(player: Player, d: EmployeeData)
-		if d.canSave then
-			Profiles.save(player, d.profile)
+		if not d.canSave then
+			return
 		end
+		-- 하루 중간에 나가도 오늘 번 돈이 사라지지 않게 "정산 대기" 금액으로 같이 저장해요.
+		-- 다음에 들어오면 통장에 넣어 줘요.
+		local unsettled = if d.today.settled or d.fired then 0 else runningTotal(d)
+		d.profile.unsettled = math.max(0, math.floor(unsettled))
+		pendingSaves += 1
+		Profiles.save(player, d.profile)
+		pendingSaves -= 1
 	end
 
 	local function seatPlayer(player: Player, d: EmployeeData)
@@ -265,6 +294,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 			lastReturnEnd = nil,
 			nearMissUsed = true,
 			toiletTime = 0,
+			toiletWarned = false,
 			coffeeTime = 0,
 			energyActive = false,
 			activity = nil,
@@ -275,6 +305,27 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		}
 		data[player] = d
 		player:SetAttribute("DeskIndex", desk.index)
+
+		-- 지난번에 퇴근 전에 나갔다면, 그때까지 번 돈을 정산해 줘요
+		local unsettled = profile.unsettled or 0
+		if unsettled > 0 then
+			profile.money += unsettled
+			profile.xp += unsettled
+			profile.unsettled = 0
+			task.delay(3, function()
+				if player.Parent then
+					remotes.Bonus:FireClient(player, "💾 지난번 조퇴 전까지 번 돈 정산!", unsettled)
+				end
+			end)
+		end
+
+		-- 첫 플레이어가 들어오면, 그 사람이 마지막으로 일한 다음 날부터 하루를 시작해요
+		-- (광장에 다녀와도 다시 월요일이 되지 않게)
+		if not dayCycle.started then
+			dayCycle.started = true
+			dayCycle.day = profile.stats.days
+			dayCycle:run()
+		end
 		publish(player, d)
 		publishCollection(player, d)
 		publishStocks(player, d)
@@ -312,7 +363,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 	-- 서버가 꺼질 때 모두 저장
 	game:BindToClose(function()
 		for player, d in data do
-			save(player, d)
+			task.spawn(save, player, d)
+		end
+		-- 나가는 사람 저장이 끝날 때까지 서버가 꺼지지 않게 기다려요 (최대 25초)
+		local waited = 0
+		while pendingSaves > 0 and waited < 25 do
+			waited += task.wait(0.5)
 		end
 	end)
 
@@ -329,6 +385,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 	---------------------------------------------------------------- 행동 고르기
 	remotes.SetAction.OnServerEvent:Connect(function(player, actionId)
 		local d = data[player]
+		if not allowAction(player) then
+			return
+		end
 		if not d or d.fired or typeof(actionId) ~= "string" or not table.find(SalaryConfig.DeskActions, actionId) then
 			return
 		end
@@ -370,6 +429,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 
 	---------------------------------------------------------------- 매점
 	remotes.BuyItem.OnServerInvoke = function(player: Player, itemId: any): (boolean, string)
+		if not allowBuy(player) then
+			return false, "천천히 눌러 주세요."
+		end
 		local d = data[player]
 		local item = typeof(itemId) == "string" and SalaryConfig.getItem(itemId)
 		if not d or not item then
@@ -393,6 +455,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 	end
 
 	remotes.UseEnergy.OnServerEvent:Connect(function(player)
+		if not allowEnergy(player) then
+			return
+		end
 		local d = data[player]
 		if not d or d.energyActive or d.profile.energy <= 0 or dayCycle.phase == "offwork" then
 			return
@@ -406,9 +471,22 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 	local market = StockMarket.start()
 
 	remotes.TradeStock.OnServerInvoke = function(player: Player, stockId: any, quantity: any): (boolean, string)
+		if not allowTrade(player) then
+			return false, "천천히 주문해 주세요."
+		end
 		local d = data[player]
 		local stock = typeof(stockId) == "string" and SalaryConfig.getStock(stockId)
-		if not d or not stock or typeof(quantity) ~= "number" or quantity ~= quantity or quantity == 0 then
+		-- 숫자가 아니거나, NaN·무한대거나, 0이거나, 한 번에 너무 많이 사면 거절
+		-- (팔 때는 "전부 팔기"가 큰 수를 보내요. 가진 만큼만 팔려서 괜찮아요)
+		if
+			not d
+			or not stock
+			or typeof(quantity) ~= "number"
+			or quantity ~= quantity
+			or math.abs(quantity) == math.huge
+			or quantity == 0
+			or quantity > MAX_TRADE
+		then
 			return false, "잘못된 주문이에요."
 		end
 		if not isOnToilet(player) then
@@ -627,6 +705,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		profile.rank = math.max(1, profile.rank - 1)
 		profile.xp = Ranks[profile.rank].xp
 		profile.warnings = 0
+		d.today.settled = true -- 해고되면 오늘 번 돈은 없어요
 		unlockAchievement(player, d, "fired")
 		publishCollection(player, d)
 		task.spawn(save, player, d)
@@ -645,6 +724,18 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		end
 		d.deskAction = "work"
 		d.returnUntil = nil
+		-- 자리 비움 시간도 처음부터 (안 그러면 화장실에서 연달아 적발돼 바로 해고돼요)
+		d.toiletTime, d.coffeeTime, d.toiletWarned = 0, 0, false
+		local humanoid = getHumanoid(player)
+		if humanoid and humanoid.SeatPart and isOnToilet(player) then
+			-- 부장님이 화장실 문을 두드려요: 변기에서 일으켜 세워요
+			for _, child in humanoid.SeatPart:GetChildren() do
+				if child:IsA("Weld") and child.Name == "SeatWeld" then
+					child:Destroy()
+				end
+			end
+			humanoid.Sit = false
+		end
 		endActivity(d)
 		unlockAchievement(player, d, "caught")
 		publishCollection(player, d)
@@ -701,7 +792,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 		-- 1. 지금 상태
 		local previous = d.state
 		if isSeated(player, d) then
-			d.toiletTime, d.coffeeTime = 0, 0
+			d.toiletTime, d.coffeeTime, d.toiletWarned = 0, 0, false
 			if d.returnUntil and now >= d.returnUntil then
 				d.returnUntil = nil
 				d.deskAction = "work"
@@ -820,8 +911,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 					raised = true
 				end
 			end
-			local toiletLimit = if hasItem(d, "dummy") then 150 else SalaryConfig.TOILET_LIMIT
-			if d.state == "toilet" and d.toiletTime > toiletLimit then
+			local limit = toiletLimit(d)
+			if d.state == "toilet" and not d.toiletWarned and d.toiletTime > limit - 15 then
+				d.toiletWarned = true
+				remotes.Notify:FireClient(player, "⏰ 화장실에 너무 오래 있었어요! 15초 안에 자리로 돌아가세요!")
+			end
+			if d.state == "toilet" and d.toiletTime > limit then
 				d.suspicion += 6 * dt -- 자리가 너무 오래 비어 있어요
 				raised = true
 			end
@@ -954,6 +1049,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers)
 			end
 			profile.money = math.max(0, profile.money + dayTotal)
 			profile.xp += math.max(0, dayTotal)
+			d.today.settled = true
 			profile.stats.days += 1
 
 			-- 업적
