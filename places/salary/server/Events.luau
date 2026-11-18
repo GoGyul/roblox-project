@@ -124,16 +124,27 @@ end
 
 function Events:choose()
 	local day = self.dayCycle.day
+	-- 👀 이과장이 출근하는 날(수·목)에는 감사 기간이 안 나와요 (감시자가 너무 많아지니까)
+	local leeToday = SalaryConfig.leeWorksOn(self.dayCycle:weekday().name)
 	if IS_STUDIO then
 		local forced = SalaryConfig.getEvent(SalaryConfig.TEST_EVENT)
-		return forced or SalaryConfig.Events[(day - 1) % #SalaryConfig.Events + 1]
+		if forced then
+			return forced
+		end
+		for offset = 0, #SalaryConfig.Events - 1 do
+			local event = SalaryConfig.Events[(day - 1 + offset) % #SalaryConfig.Events + 1]
+			if not (leeToday and event.id == "audit") then
+				return event
+			end
+		end
+		return nil
 	end
 	if day < 2 or math.random() > SalaryConfig.EVENT_CHANCE then
 		return nil
 	end
 	local candidates = {}
 	for _, event in SalaryConfig.Events do
-		if event.id ~= self.lastId then
+		if event.id ~= self.lastId and not (leeToday and event.id == "audit") then
 			table.insert(candidates, event)
 		end
 	end

@@ -430,7 +430,15 @@ SalaryConfig.LEE_NOTICE = 1.2
 SalaryConfig.LEE_TATTLE = 35
 SalaryConfig.LEE_COOLDOWN = 25 -- 같은 사람을 다시 고자질하기까지 (초)
 SalaryConfig.LEE_BRIBE_COST = 1000
-SalaryConfig.TEST_LEE = true -- 🧪 스튜디오에서 요일 상관없이 매일 출근 (실제 게임엔 영향 없음)
+SalaryConfig.TEST_LEE = false -- 🧪 true면 스튜디오에서 요일 상관없이 매일 출근 (실제 게임엔 영향 없음)
+
+-- 오늘 이과장이 출근하나? (감사 기간과 겹치지 않게 Events도 이걸 봐요)
+function SalaryConfig.leeWorksOn(weekdayName: string): boolean
+	if SalaryConfig.TEST_LEE and game:GetService("RunService"):IsStudio() then
+		return true
+	end
+	return table.find(SalaryConfig.LEE_DAYS, weekdayName) ~= nil
+end
 SalaryConfig.BLACKOUT_SECONDS = 30
 SalaryConfig.DRILL_SECONDS = 45 -- 대피 제한 시간
 SalaryConfig.DRILL_ROLLCALL_SECONDS = 20 -- 대피 후 인원 점검 (자유시간)

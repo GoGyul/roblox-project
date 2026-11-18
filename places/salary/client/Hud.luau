@@ -86,6 +86,7 @@ local clockPanel = panel({
 	Position = UDim2.new(0.5, 0, 0, 8),
 	Size = UDim2.fromOffset(300, 62),
 })
+Hud.clockPanel = clockPanel -- Panels가 옆에 "👀 이과장" 버튼을 붙여요
 local clockText = text({ Size = UDim2.new(1, 0, 0, 24), TextSize = 22, TextXAlignment = Enum.TextXAlignment.Center, Parent = clockPanel })
 local moodText = text({
 	Position = UDim2.fromOffset(0, 26),

@@ -10,7 +10,6 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local Boss = require(script.Parent.Boss)
@@ -76,11 +75,7 @@ function Lee.new(office, dayCycle)
 	model.Parent = nil -- 출근 전에는 숨겨 둬요
 
 	dayCycle:on("dayStart", function(weekday)
-		local works = table.find(SalaryConfig.LEE_DAYS, weekday.name) ~= nil
-		if RunService:IsStudio() and SalaryConfig.TEST_LEE then
-			works = true
-		end
-		if works then
+		if SalaryConfig.leeWorksOn(weekday.name) then
 			self:arrive()
 		else
 			self:leave()
@@ -127,6 +122,7 @@ function Lee:arrive()
 	self.root:SetNetworkOwner(nil)
 	self.active = true
 	self.watching = false
+	ReplicatedStorage:SetAttribute("LeePresent", true) -- 화면에 "👀 이과장" 버튼과 소개 카드
 	Npc.setStatus(self.model, "📱")
 	task.spawn(function()
 		self:run(token)
@@ -138,6 +134,7 @@ function Lee:leave()
 	self.active = false
 	self.watching = false
 	self.model.Parent = nil
+	ReplicatedStorage:SetAttribute("LeePresent", false)
 end
 
 function Lee:wait(seconds: number, token: number): boolean
