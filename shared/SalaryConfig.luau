@@ -24,7 +24,7 @@ SalaryConfig.QUOTA_PENALTY = 2000 -- 업무 미달 감봉
 SalaryConfig.NEAR_MISS_BONUS = 300 -- 아슬아슬 보너스 (콤보만큼 곱해짐)
 SalaryConfig.NEAR_MISS_WINDOW = 2.5 -- 복귀한 뒤 몇 초 안에 부장이 보면 아슬아슬
 SalaryConfig.MAX_COMBO = 5
-SalaryConfig.TOILET_LIMIT = 60 -- 화장실에 이보다 오래 있으면 자리 비움이 티 남
+SalaryConfig.TOILET_LIMIT = 90 -- 화장실에 이보다 오래 있으면 자리 비움이 티 남
 SalaryConfig.COFFEE_GRACE = 40 -- 탕비실에서 이 시간까지는 커피 타는 척 가능
 SalaryConfig.DOCS_SECONDS = 40 -- 서류 들고 바쁜 척 지속 시간
 SalaryConfig.RAMEN_SECONDS = 15 -- 라면 먹는 시간
@@ -309,11 +309,11 @@ export type ItemInfo = {
 }
 
 SalaryConfig.Items = {
-	{ id = "plant", emoji = "🪴", name = "책상 화분", price = 2000, description = "마음의 안정. 의심도가 25% 더 빨리 줄어요." },
+	{ id = "plant", emoji = "🌱", name = "책상 화분", price = 2000, description = "마음의 안정. 의심도가 25% 더 빨리 줄어요." },
 	{ id = "tumbler", emoji = "🥤", name = "고급 텀블러", price = 3000, description = "탕비실에서 커피 타는 척 시간이 40초 → 90초." },
 	{ id = "cover", emoji = "🖥️", name = "모니터 가리개", price = 6000, description = "화면 농땡이(웹툰, 폰, 쇼핑)가 30% 덜 들켜요." },
 	{ id = "earphones", emoji = "🎧", name = "부장 레이더 이어폰", price = 9000, description = "발소리 감지 거리 증가 + 부장이 지금 감시 중인지 화면에 표시." },
-	{ id = "dummy", emoji = "🧸", name = "대리 출석 인형", price = 12000, description = "자리에 인형을 앉혀 둬요. 화장실 체류 한도 60초 → 150초." },
+	{ id = "dummy", emoji = "🧸", name = "대리 출석 인형", price = 12000, description = "자리에 인형을 앉혀 둬요. 화장실 체류 한도 90초 → 150초." },
 	{ id = "energy", emoji = "⚡", name = "에너지 드링크", price = 1500, consumable = true, description = "마시면 그날 하루 일하는 척 복귀 시간 절반!" },
 } :: { ItemInfo }
 

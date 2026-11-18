@@ -73,7 +73,7 @@ local function sheet(width: number, height: number): Frame
 		Position = UDim2.new(1, 10, 0, -10),
 		Size = UDim2.fromOffset(36, 36),
 		BackgroundColor3 = Color3.fromRGB(225, 225, 228),
-		Text = "✕",
+		Text = "X", -- ✕ 기호는 로블록스 글꼴에 없어서 네모로 보여요
 		TextColor3 = Color3.fromRGB(60, 60, 70),
 		Font = Enum.Font.GothamBlack,
 		TextSize = 18,
@@ -280,7 +280,11 @@ function Panels.showShop()
 	local items = SalaryConfig.Items
 	local frame = sheet(560, 130 + #items * 64)
 	line(frame, 0, 30, "🛒 사내 매점", { Font = Enum.Font.GothamBlack, TextSize = 24 })
-	local balance = line(frame, 0, 30, "", { TextXAlignment = Enum.TextXAlignment.Right, Font = Enum.Font.GothamBold })
+	local balance = line(frame, 0, 30, "", {
+		TextXAlignment = Enum.TextXAlignment.Right,
+		Font = Enum.Font.GothamBold,
+		Size = UDim2.new(1, -44, 0, 30), -- 오른쪽 위 닫기 버튼 자리는 비워 둬요
+	})
 	local message = line(frame, 30 + #items * 64 + 14, 22, "", { TextSize = 15, TextColor3 = MUTED })
 
 	local rows = {}

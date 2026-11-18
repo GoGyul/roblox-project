@@ -238,7 +238,9 @@ local function refresh()
 	end
 
 	local realized = player:GetAttribute("StockProfitTotal") or 0
-	footerText.Text = `누적 실현 손익 {signed(realized)}원 · ⚠️ 화장실에 오래 있으면 자리 비움이 티 나요! (게임 속 가짜 주식)`
+	local left = player:GetAttribute("ToiletLeft") or 0
+	local warning = if left > 0 then `⏰ 자리 비움 들키기까지 {left}초` else "🚨 자리 비운 게 티 나요! 얼른 자리로!"
+	footerText.Text = `누적 실현 손익 {signed(realized)}원 · {warning} (게임 속 가짜 주식)`
 end
 
 -- 화면 크기에 맞추기: 폰에서는 가운데에, 화면에 들어가게 줄여요

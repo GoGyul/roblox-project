@@ -14,9 +14,14 @@ local TimeTravel = require(script.TimeTravel)
 local Puzzles = require(script.Puzzles)
 local Places = require(ReplicatedStorage.Shared.Places)
 local Teleport = require(ReplicatedStorage.Shared.Teleport)
+local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 
 -- 광장으로 돌아가기 (탈출 성공 화면의 버튼)
+local allowReturn = RateLimit.new(5) -- 순간이동 요청 연타 방지
 Remotes.ReturnToLobby.OnServerEvent:Connect(function(player)
+	if not allowReturn(player) then
+		return
+	end
 	local ok, message = Teleport.send(Places.LOBBY, { player }, false)
 	if not ok and message then
 		Remotes.Notify:FireClient(player, message)

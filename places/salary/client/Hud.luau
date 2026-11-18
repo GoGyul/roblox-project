@@ -162,6 +162,7 @@ local saveText = Ui.make("TextButton", {
 	TextSize = 18,
 	AutoButtonColor = false,
 	Visible = false,
+	ZIndex = 60, -- 행동 버튼보다 위에 (설명 말풍선이 가려지지 않게)
 	Parent = gui,
 }, { Ui.corner(17), Ui.stroke(Color3.fromRGB(220, 90, 80), 2) })
 local saveTip = text({
@@ -173,6 +174,7 @@ local saveTip = text({
 	TextSize = 14,
 	Text = "  저장 꺼짐: 나가면 오늘 진행이 사라져요 (스튜디오 테스트 중)",
 	Visible = false,
+	ZIndex = 61,
 	Parent = saveText,
 })
 Ui.corner(8).Parent = saveTip
@@ -432,6 +434,17 @@ local function phaseName(phase: string?): string
 	return ""
 end
 
+-- ⚠️ 해고 직전(경고 2/3)이면 화면 테두리가 빨갛게 깜빡여요
+local dangerBorder = Ui.make("Frame", {
+	Size = UDim2.fromScale(1, 1),
+	BackgroundTransparency = 1,
+	Visible = false,
+	ZIndex = 49,
+	Parent = gui,
+}, { Ui.stroke(COLORS.bad, 8) })
+local dangerStroke = dangerBorder:FindFirstChildOfClass("UIStroke") :: UIStroke
+local quotaWarnedDay: any = nil -- 퇴근 전 업무 미달 알림을 보낸 날
+
 RunService.RenderStepped:Connect(function()
 	-- 시계
 	local minute = ReplicatedStorage:GetAttribute("SalaryMinute") or SalaryConfig.START_MINUTE
@@ -476,7 +489,25 @@ RunService.RenderStepped:Connect(function()
 	workFill.Size = UDim2.fromScale(math.clamp(work / quota, 0, 1), 1)
 
 	local warnings = player:GetAttribute("Warnings") or 0
+	local onEdge = warnings >= SalaryConfig.MAX_WARNINGS - 1 and player:GetAttribute("Fired") ~= true
 	warningText.Text = `경고 {string.rep("🟥", warnings)}{string.rep("⬜", math.max(0, SalaryConfig.MAX_WARNINGS - warnings))} ({warnings}/{SalaryConfig.MAX_WARNINGS})`
+		.. (if onEdge then " 한 번 더면 해고!" else "")
+	warningText.TextColor3 = if onEdge then COLORS.bad else C.text
+	dangerBorder.Visible = onEdge and phase ~= "offwork"
+	if dangerBorder.Visible then
+		dangerStroke.Transparency = 0.35 + 0.35 * math.sin(os.clock() * 4)
+	end
+
+	-- 퇴근 1시간 전인데 업무를 못 채웠으면 미리 알려 줘요 (못 채우면 경고가 쌓여요)
+	local day = ReplicatedStorage:GetAttribute("SalaryDay")
+	if phase == "work" and minute >= SalaryConfig.END_MINUTE - 60 and quotaWarnedDay ~= day and player:GetAttribute("Fired") ~= true then
+		quotaWarnedDay = day
+		if work < quota then
+			Sounds.play("caught", 0.4)
+			local outcome = if onEdge then "못 채우면 해고예요!!" else "못 채우면 경고 1개!"
+			Ui.toast(`⏰ 퇴근 1시간 전! 업무가 {quota - work}초 남았어요. {outcome}`)
+		end
+	end
 	local combo = player:GetAttribute("Combo") or 1
 	local comboLine = if combo > 1 then `🔥 콤보 x{combo}` else ""
 	local heldSnack = SalaryConfig.getSnack(player:GetAttribute("HeldSnack") or "")
@@ -583,6 +614,11 @@ Remotes:WaitForChild("Caught").OnClientEvent:Connect(function(line: string, warn
 	TweenService:Create(flash, TweenInfo.new(0.8), { BackgroundTransparency = 1 }):Play()
 	Hud.popup(`🚨 적발! "{line}"`, COLORS.bad, 3)
 	Ui.toast(`경고 {warnings}/{SalaryConfig.MAX_WARNINGS} · 시말서 감봉 -{comma(SalaryConfig.CAUGHT_PENALTY)}원`)
+	if warnings == SalaryConfig.MAX_WARNINGS - 1 then
+		task.delay(2, function()
+			Hud.popup("⚠️ 한 번만 더 걸리면 해고!", COLORS.bad, 3.5)
+		end)
+	end
 end)
 
 Remotes:WaitForChild("Bonus").OnClientEvent:Connect(function(message: string, amount: number)
