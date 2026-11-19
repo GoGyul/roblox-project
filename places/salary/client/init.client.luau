@@ -18,6 +18,7 @@ if arrivingGui then
 end
 
 require(script.Hud)
+require(script.Prompts).start() -- 💬 [E] 안내창을 작게
 require(script.Poses).start()
 require(script.StockPanel).start()
 local Panels = require(script.Panels)

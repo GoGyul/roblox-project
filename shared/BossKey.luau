@@ -215,7 +215,7 @@ local function buildDesign(parent: Instance)
 		make("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center }),
 		make("UIPadding", { PaddingTop = UDim.new(0, 10) }),
 	})
-	for _, icon in { "↖", "▭", "◯", "✎", "T", "✂", "◐", "✋", "🔍" } do
+	for _, icon in { "👆", "⬜", "⭕", "✏️", "T", "✂️", "🎨", "✋", "🔍" } do
 		label({ Size = UDim2.fromOffset(30, 30), Text = icon, TextSize = 18, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, Parent = tools })
 	end
 

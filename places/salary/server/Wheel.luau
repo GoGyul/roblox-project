@@ -1,5 +1,5 @@
 -- 🎡 돌림판 (뽑기 천국 가게)
---   금액 고르고 숫자에 걸기(여러 개 가능) → [🎡 돌리기] → 4초 뒤 결과
+--   💰 금액 하나 + 🎯 숫자 하나 고르기 → [🎡 돌리기] 누를 때 걸려요 → 4초 뒤 결과
 --   멈춘 숫자에 건 돈 × (숫자 + 1)을 받아요. 뒷벽 큰 돌림판은 마지막으로 누가 돌린 판을 보여 줘요.
 --
 -- 🛡️ 결과는 서버가 정해요. 화면은 서버가 알려 준 시작·끝 각도로 똑같이 돌기만 해요.
@@ -75,7 +75,6 @@ function Wheel.start(office, remotes, hooks)
 	end
 	buildWheelGui(wheel.disc)
 
-	local bets: { [Player]: { [number]: number } } = {}
 	local spinning: { [Player]: boolean } = {}
 	local rotation = 0 -- 뒷벽 돌림판 각도
 
@@ -97,85 +96,56 @@ function Wheel.start(office, remotes, hooks)
 		return root ~= nil and (root.Position - wheel.kiosk.Position).Magnitude <= RANGE
 	end
 
-	local function totalBet(player: Player): number
-		local sum = 0
-		for _, amount in bets[player] or {} do
-			sum += amount
-		end
-		return sum
-	end
-
-	-- 숫자 키 표는 통신 중에 깨질 수 있어서 [숫자, 금액] 목록으로 보내요
-	local function betList(player: Player)
-		local list = {}
-		for n, a in bets[player] or {} do
-			table.insert(list, { n, a })
-		end
-		return list
-	end
-
+	-- 🎡 돌리기: 고른 금액 하나 + 숫자 하나를 이때 한 번에 걸어요
 	remotes.WheelBet.OnServerInvoke = function(player: Player, action: any, amount: any, number: any)
 		if not allowBet(player) then
 			return { ok = false, message = "천천히 눌러 주세요." }
 		end
+		if action ~= "spin" then
+			return { ok = false, message = "잘못된 요청이에요." }
+		end
 		if spinning[player] then
-			return { ok = false, message = "돌아가는 중이에요! 멈추면 다시 걸어 주세요." }
+			return { ok = false, message = "돌아가는 중이에요! 멈추면 다시 해 주세요." }
 		end
 		if not near(player) then
 			return { ok = false, message = "돌림판 앞에서 해 주세요!" }
 		end
-
-		if action == "bet" then
-			if typeof(amount) ~= "number" or not table.find(SalaryConfig.WHEEL_BETS, amount) then
-				return { ok = false, message = "잘못된 금액이에요." }
-			end
-			if typeof(number) ~= "number" or not table.find(SalaryConfig.WHEEL_NUMBERS, number) then
-				return { ok = false, message = "잘못된 숫자예요." }
-			end
-			if totalBet(player) + amount > SalaryConfig.WHEEL_MAX_ROUND then
-				return { ok = false, message = `한 판에 {SalaryConfig.WHEEL_MAX_ROUND}원까지만 걸 수 있어요.` }
-			end
-			local ok, message = hooks.charge(player, amount)
-			if not ok then
-				return { ok = false, message = message }
-			end
-			bets[player] = bets[player] or {}
-			bets[player][number] = (bets[player][number] or 0) + amount
-			return { ok = true, bets = betList(player) }
-		elseif action == "spin" then
-			local stake = totalBet(player)
-			if stake <= 0 then
-				return { ok = false, message = "먼저 숫자에 걸어 주세요!" }
-			end
-			-- 결과 정하기 (칸 하나를 무작위로) → 그 칸이 맨 위(바늘)에 오도록 회전
-			local index = math.random(1, #SalaryConfig.WHEEL_SEGMENTS)
-			local result = SalaryConfig.WHEEL_SEGMENTS[index]
-			local from = rotation % 360
-			local finalAngle = (360 - (index - 1) * SEGMENT_ANGLE) % 360 -- (칸 각도 + R) ≡ 0
-			local to = from + ((finalAngle - from) % 360) + 360 * 4 -- 시계 방향으로 4바퀴 더
-			rotation = to
-			local spinStart = workspace:GetServerTimeNow()
-			ReplicatedStorage:SetAttribute("WheelFrom", from)
-			ReplicatedStorage:SetAttribute("WheelTo", to)
-			ReplicatedStorage:SetAttribute("WheelSpinStart", spinStart)
-
-			local win = (bets[player][result] or 0) * (result + 1)
-			bets[player] = nil
-			spinning[player] = true
-			-- 돌림판이 멈출 때 돈을 줘요
-			task.delay(SalaryConfig.WHEEL_SPIN_SECONDS, function()
-				spinning[player] = nil
-				if win > 0 and player.Parent then
-					hooks.payout(player, win, result)
-				end
-			end)
-			return { ok = true, number = result, from = from, to = to, spinStart = spinStart, stake = stake, win = win }
+		if typeof(amount) ~= "number" or not table.find(SalaryConfig.WHEEL_BETS, amount) then
+			return { ok = false, message = "💰 금액을 골라 주세요." }
 		end
-		return { ok = false, message = "잘못된 요청이에요." }
+		if typeof(number) ~= "number" or not table.find(SalaryConfig.WHEEL_NUMBERS, number) then
+			return { ok = false, message = "🎯 숫자를 골라 주세요." }
+		end
+		local ok, message = hooks.charge(player, amount)
+		if not ok then
+			return { ok = false, message = message }
+		end
+
+		-- 결과 정하기 (칸 하나를 무작위로) → 그 칸이 맨 위(바늘)에 오도록 회전
+		local index = math.random(1, #SalaryConfig.WHEEL_SEGMENTS)
+		local result = SalaryConfig.WHEEL_SEGMENTS[index]
+		local from = rotation % 360
+		local finalAngle = (360 - (index - 1) * SEGMENT_ANGLE) % 360 -- (칸 각도 + R) ≡ 0
+		local to = from + ((finalAngle - from) % 360) + 360 * 4 -- 시계 방향으로 4바퀴 더
+		rotation = to
+		local spinStart = workspace:GetServerTimeNow()
+		ReplicatedStorage:SetAttribute("WheelFrom", from)
+		ReplicatedStorage:SetAttribute("WheelTo", to)
+		ReplicatedStorage:SetAttribute("WheelSpinStart", spinStart)
+
+		local win = if result == number then amount * (number + 1) else 0
+		spinning[player] = true
+		-- 돌림판이 멈출 때 돈을 줘요
+		task.delay(SalaryConfig.WHEEL_SPIN_SECONDS, function()
+			spinning[player] = nil
+			if win > 0 and player.Parent then
+				hooks.payout(player, win, result)
+			end
+		end)
+		return { ok = true, number = result, from = from, to = to, spinStart = spinStart, stake = amount, win = win }
 	end
 
 	Players.PlayerRemoving:Connect(function(player)
-		bets[player] = nil
 		spinning[player] = nil
 	end)
 end

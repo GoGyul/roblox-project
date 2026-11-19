@@ -347,7 +347,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	end
 	B:part(Vector3.new(14.5, 0.4, 12.5), v(candyX, 8.2, candyZ), { Color = Color3.fromRGB(200, 220, 230), Material = Enum.Material.Glass, Transparency = 0.4 })
 	local candySign = B:part(Vector3.new(7, 1.6, 0.2), v(candyX, 6.6, candyZ + 5.9), { Color = Color3.fromRGB(255, 240, 245) })
-	Build.surfaceText(candySign, Enum.NormalId.Back, "🍭 흡연구역 (※ 금연! 사탕만 허용)", {
+	Build.surfaceText(candySign, Enum.NormalId.Back, "🍭 흡연구역 (금연! 사탕만 허용)", {
 		Font = Enum.Font.GothamBold,
 		TextColor3 = Color3.fromRGB(200, 60, 120),
 	})
@@ -523,6 +523,8 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	shops.store = storeSpot -- 🏪 사내 매점 (뒤쪽 오른쪽 방)
 	-- 📦 택배 상자 (출입문 옆)
 	local packageBox = helpers.buildPackage(B, -8, -27)
+	-- 🚪 엘리베이터 (왼쪽 벽: 회의실과 카페 라운지 사이)
+	local elevator = helpers.buildElevator(B, -HW, -5)
 	B:part(Vector3.new(4, 1, 4), v(0, -0.4, -HD + 5), {
 		ClassName = "SpawnLocation",
 		Transparency = 1,
@@ -584,6 +586,11 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		candyZone = candyZone,
 		shops = shops, -- 🏙️ 눈치 스트리트 가게들 + 🏪 사내 매점 (계산대, 사장님 자리)
 		packageBox = packageBox,
+		elevator = elevator,
+		insideOffice = function(position: Vector3): boolean
+			-- 건물 안만 (출입문 밖 공원·눈치 스트리트, 하늘 위 옥상은 밖)
+			return math.abs(position.X) <= HW + 1 and position.Z >= -HD - 0.5 and position.Z <= HD + 1 and position.Y < FLOOR_Y + 20
+		end,
 		packageSpots = { v(-8, 0, -24), v(-40, 0, 24), v(42, 0, 26), v(0, 0, -50), v(-44, 0, -22), v(30, 0, -8), v(0, 0, 16), v(44, 0, -24) },
 		clawMachines = clawMachines, -- 🧸 인형뽑기 기계
 		wheel = { disc = wheelDisc, kiosk = wheelKiosk }, -- 🎡 다 같이 돌림판

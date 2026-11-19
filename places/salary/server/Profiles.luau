@@ -30,6 +30,18 @@ export type Profile = {
 	lastCompany: string, -- 🏢 지난번에 다닌 회사 (바뀌면 이직/좌천 안내)
 	missionsDone: { [string]: boolean }, -- 📋 성공한 긴급 프로젝트 종류
 	lastHongsamDay: number, -- 🎁 홍삼 선물을 마지막으로 드린 날
+	decorOwned: { [string]: boolean }, -- 🪑 산 꾸미기 아이템
+	decorEquipped: { [string]: string }, -- 🪑 칸(slot)별 장착한 아이템 ID
+	title: string, -- 🏆 장착한 칭호 ID
+	catPets: number, -- 🐱 월급냥 쓰다듬은 횟수
+	elevatorNinja: number, -- 🚪 부장님 엘리베이터에서 눈 안 마주친 횟수
+	planeBest: number, -- ✈️ 종이비행기 최고 기록 (m)
+	garden: { { seed: string, growth: number, watered: number, missed: number } }, -- 🌱 옥상 텃밭 (칸마다)
+	harvests: number, -- 🌱 수확한 횟수
+	scenes: { [string]: boolean }, -- 🔭 관찰 일지에 기록한 장면
+	sunsetPhotos: number, -- 🌅 노을 사진 앨범 (하루 한 장)
+	pigeonFeeds: number, -- 🐦 옥상 비둘기 친밀도 (모이 준 횟수, 안 주면 조금씩 줄어요)
+	pigeons: { [string]: number }, -- 🐦 만난 비둘기 (종류 → 만난 횟수)
 	arcadeBest: { [string]: number }, -- 🕹️ 게임별 내 최고 점수
 	stats: { days: number, nearMiss: number, caught: number, fired: number, stockProfit: number },
 }
@@ -54,6 +66,18 @@ function Profiles.default(): Profile
 		lastCompany = "",
 		missionsDone = {},
 		lastHongsamDay = -100,
+		decorOwned = {},
+		decorEquipped = {},
+		title = "newbie",
+		catPets = 0,
+		elevatorNinja = 0,
+		planeBest = 0,
+		garden = {},
+		harvests = 0,
+		scenes = {},
+		sunsetPhotos = 0,
+		pigeonFeeds = 0,
+		pigeons = {},
 		arcadeBest = {},
 		stats = { days = 0, nearMiss = 0, caught = 0, fired = 0, stockProfit = 0 },
 	}

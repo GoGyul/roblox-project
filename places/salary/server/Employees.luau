@@ -33,7 +33,8 @@ local DESK_PRIORITY = { 5, 4, 6, 2, 1, 3 }
 local TICK = 0.1
 local AUTOSAVE_SECONDS = 60
 local GAME_MINUTES_PER_SECOND = (SalaryConfig.END_MINUTE - SalaryConfig.START_MINUTE) / SalaryConfig.DAY_SECONDS
-local PAYSLIP_ORDER = { "work", "blank", "webtoon", "phone", "shopping", "sleep", "recline", "toilet", "candy", "coffee", "meeting", "docs", "chat", "ramen" }
+-- (명세서에 없는 상태로 번 돈은 통장에 안 들어가요! 새 농땡이를 만들면 여기에 꼭 추가)
+local PAYSLIP_ORDER = { "work", "blank", "webtoon", "phone", "shopping", "sleep", "recline", "snack", "video", "toilet", "candy", "coffee", "meeting", "rooftop", "lounger", "hiding", "docs", "chat", "ramen" }
 local MOBILE_STATES = { "docs", "chat", "ramen" }
 local MAX_TRADE = 1000 -- 한 번에 사고팔 수 있는 최대 주식 수
 
@@ -57,6 +58,14 @@ type DayRecord = {
 	snacksEaten: number,
 	stockProfit: number, -- 오늘 주식으로 번(잃은) 돈 (통장에 바로 반영돼서 명세서 합계엔 안 들어가요)
 	settled: boolean, -- 오늘 번 돈을 이미 통장에 넣었나 (퇴근 명세서 또는 해고)
+	nearMissCount: number?,
+	photos: number?, -- 📸 농땡이하다 감사관에게 찍힌 사진
+	emptyPhotos: number?, -- 🪑 경고 뒤 도망쳐서 빈자리가 찍힌 사진 (따로 세요)
+	accuseWrong: number?, -- 🕶️ 엉뚱한 동료를 감사관으로 의심한 횟수
+	shapesPrizes: number?, -- 🧩 오늘 도형 맞추기 상금 받은 횟수
+	baseballPrizes: number?, -- ⚾ 오늘 숫자 야구 상금 받은 횟수
+	planePrizes: number?, -- ✈️ 오늘 종이비행기 상금 받은 횟수
+	hoopPrizes: number?, -- 🏀 오늘 옥상 농구 상금 받은 횟수
 }
 
 type EmployeeData = {
@@ -71,6 +80,18 @@ type EmployeeData = {
 	combo: number,
 	lastReturnEnd: number?,
 	nearMissUsed: boolean,
+	slackSince: number?, -- 🕵️ 농땡이로 돈 벌기 시작한 시각 (부장님 감시 확률)
+	pigeonFedToday: boolean?, -- 🐦 오늘 비둘기에게 모이를 줬나 (안 주면 친밀도가 조금 줄어요)
+	photoAimUntil: number?, -- 📷 감사관이 카메라를 든 상태 (이 시각에 찰칵)
+	sunsetDay: number?, -- 🌅 노을 힐링을 받은 날 (하루 한 번)
+	hideTime: number?, -- 📦 상자 속에 있은 시간
+	hideCooldownUntil: number?, -- 📦 튀어나온 뒤 다시 숨을 수 있는 시각
+	sunsetPhotoDay: number?, -- 📸 노을 사진 상금을 받은 날
+	photoCooldownUntil: number?,
+	photoWatcher: any?, -- 카메라를 든 감사관
+	suspicionDanger: boolean?, -- 의심도가 NEAR_MISS_DANGER를 넘었었나 (안 걸리고 내려오면 아슬아슬 탈출)
+	hongsamDay: number?, -- 🎁 오늘 홍삼을 드린 날 (하루 한 번)
+	lastNearMiss: number?, -- 마지막 아슬아슬 보너스 시각 (쿨타임)
 	toiletTime: number,
 	away: number, -- 🖥️ 자리 부재 게이지 (0~100)
 	awayWarned: boolean, -- 자동 감지 경보를 보냈나
@@ -82,6 +103,14 @@ type EmployeeData = {
 	heldGift: string?, -- 🎁 들고 있는 부장님 선물 (hongsam, flowers, choco)
 	flowerDay: number, -- 💐 꽃다발 효과가 있는 날
 	ready: boolean, -- 🏢 오늘 출근하기를 눌렀나
+	videoQ: { id: number, correct: number, deadline: number }?, -- 🎧 지금 받은 화상회의 질문
+	videoNext: number, -- 다음 질문 시각
+	videoStreak: number, -- 연속으로 잘 대답한 횟수
+	petCooldown: number, -- 🐱 다음에 쓰다듬을 수 있는 시각
+	roofCaughtVisit: number, -- 🚪 옥상 순찰에 마지막으로 걸린 순찰 번호
+	speed: number, -- ⚡ 오늘의 의심도 속도 (매일 1로 리셋, 사건마다 곱해져요)
+	speedLog: { { label: string, delta: number } }, -- 오늘 속도가 바뀐 이유들
+	nextDayFactors: { { label: string, delta: number } }, -- 내일 아침에 적용될 것 (회식, 홍삼)
 	bossMood: number, -- 🍻 회식 결과: 다음 날 의심도 배율 (1보다 작으면 너그러움)
 	bossMoodDay: number, -- 그 배율이 적용되는 날
 	coffeeTime: number,
@@ -95,7 +124,7 @@ type EmployeeData = {
 }
 
 local function newDay(): DayRecord
-	return { earned = {}, seconds = {}, nearMiss = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, eventBonus = 0, snacksEaten = 0, stockProfit = 0, settled = false }
+	return { earned = {}, seconds = {}, nearMiss = 0, nearMissCount = 0, photos = 0, emptyPhotos = 0, accuseWrong = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, eventBonus = 0, snacksEaten = 0, stockProfit = 0, settled = false }
 end
 
 local function inZone(zone: BasePart, position: Vector3): boolean
@@ -108,8 +137,14 @@ local function pick<T>(list: { T }): T
 end
 
 function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee)
+	-- 지금 사무실 건물 안에 있나? (사무실에서 벌어지는 일 알림은 안에 있는 사람만)
+	function Employees.inOffice(player: Player): boolean
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		return root ~= nil and office.insideOffice(root.Position)
+	end
 	Employees.hooks = {} :: { printer: ((Player) -> boolean)?, caught: ((Player) -> ())? } -- Missions가 채워요
 	local data: { [Player]: EmployeeData } = {}
+	local videoFail: (Player, EmployeeData, string) -> () -- 🎧 아래에서 정의
 	local deskOwner: { [number]: Player } = {}
 
 	---------------------------------------------------------------- 도우미
@@ -126,13 +161,19 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		return if hasItem(d, "dummy") then 150 else SalaryConfig.AWAY_SECONDS
 	end
 
+	-- 📸 오늘 감사 보고서(처벌)가 정해졌나? 농땡이 사진 2장 이상 또는 빈자리 사진 3장 이상
+	local function auditReported(d: EmployeeData): boolean
+		return (d.today.photos or 0) >= SalaryConfig.AUDIT_REPORT_AT or (d.today.emptyPhotos or 0) >= SalaryConfig.AUDIT_EMPTY_REPORT_AT
+	end
+
 	-- 오늘 지금까지 번 돈 (기본급 빼고, 아직 통장에 안 들어간 돈)
 	local function runningTotal(d: EmployeeData): number
 		local total = 0
 		for _, amount in d.today.earned do
 			total += amount
 		end
-		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus + d.today.eventBonus - d.today.caught * SalaryConfig.caughtPenalty(d.profile.rank)
+		local auditReport = if auditReported(d) then SalaryConfig.caughtPenalty(d.profile.rank) else 0
+		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus + d.today.eventBonus - d.today.caught * SalaryConfig.caughtPenalty(d.profile.rank) - auditReport
 	end
 
 	local function getHumanoid(player: Player): Humanoid?
@@ -219,6 +260,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		player:SetAttribute("WorkQuota", rankOf(d).quota)
 		player:SetAttribute("DailyTarget", SalaryConfig.dailyTarget(profile.rank))
 		player:SetAttribute("Combo", d.combo)
+		player:SetAttribute("AccuseLeft", math.max(0, SalaryConfig.AUDIT_WRONG_MAX - (d.today.accuseWrong or 0))) -- 🕶️ 감사관 카드
+		local showPhotos = events:is("audit") or (d.today.photos or 0) > 0 or (d.today.emptyPhotos or 0) > 0
+		player:SetAttribute("AuditPhotos", if showPhotos then d.today.photos or 0 else -1) -- 📸 (-1이면 안 보여요)
+		player:SetAttribute("AuditEmptyPhotos", d.today.emptyPhotos or 0) -- 🪑
+		player:SetAttribute("AuditReported", auditReported(d))
+		player:SetAttribute("NearMissLeft", math.max(0, SalaryConfig.NEAR_MISS_DAILY_MAX - (d.today.nearMissCount or 0))) -- 🔥 콤보 설명창
 		player:SetAttribute("Seated", isSeated(player, d))
 		player:SetAttribute("Fired", d.fired)
 		player:SetAttribute("Rank", profile.rank)
@@ -237,7 +284,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 		player:SetAttribute("Buffs", buffText)
 		local gift = d.heldGift and SalaryConfig.getStreetItem("store", d.heldGift)
-		player:SetAttribute("HeldGift", if gift then gift.emoji else "")
+		local veggie = d.heldGift and string.match(d.heldGift, "^veggie_(.+)$")
+		local veggieSeed = veggie and SalaryConfig.getSeed(veggie)
+		player:SetAttribute("HeldGift", if gift then gift.emoji elseif veggieSeed then veggieSeed.emoji else "")
 		player:SetAttribute("HeldGiftId", d.heldGift or "")
 		player:SetAttribute("LeeWatch", math.clamp(d.leeWatch / SalaryConfig.LEE_NOTICE, 0, 1))
 		player:SetAttribute("LeeBribed", d.leeBribed)
@@ -255,6 +304,37 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	-- 도감은 자주 안 바뀌니 바뀔 때만 따로 보내요
 	local function publishCollection(player: Player, d: EmployeeData)
 		player:SetAttribute("Collection", HttpService:JSONEncode(d.profile.collection))
+		player:SetAttribute("Pigeons", HttpService:JSONEncode(d.profile.pigeons)) -- 🐦 관찰 노트
+		player:SetAttribute("PigeonFeeds", d.profile.pigeonFeeds)
+		player:SetAttribute("Garden", HttpService:JSONEncode(d.profile.garden)) -- 🌱 텃밭 (화면이 화분을 그려요)
+		player:SetAttribute("GardenToday", d.profile.stats.days)
+		player:SetAttribute("Scenes", HttpService:JSONEncode(d.profile.scenes)) -- 🔭 관찰 일지
+	end
+
+	-- ⚡ 오늘의 의심도 속도 바꾸기 (합연산: delta > 0 이면 빨라지고, < 0 이면 느려져요)
+	--   quiet: 화면 팝업 없이 (아침 출근 때 한꺼번에 적용할 때)
+	local function adjustSpeed(player: Player, d: EmployeeData, key: string, quiet: boolean?, overrideDelta: number?, overrideLabel: string?)
+		local info = SalaryConfig.SpeedFactors[key]
+		local delta = overrideDelta or (info and info.delta) or 0
+		local label = overrideLabel or (info and info.label) or key
+		if math.abs(delta) < 0.001 then
+			return
+		end
+		-- (소수점 오차가 쌓이지 않게 0.01 단위로 맞춰요)
+		d.speed = math.clamp(math.floor((d.speed + delta) * 100 + 0.5) / 100, SalaryConfig.SPEED_MIN, SalaryConfig.SPEED_MAX)
+		table.insert(d.speedLog, { label = label, delta = delta })
+		player:SetAttribute("SuspicionSpeed", d.speed)
+		player:SetAttribute("SpeedLog", HttpService:JSONEncode(d.speedLog))
+		if not quiet then
+			remotes.SpeedChange:FireClient(player, label, delta, d.speed)
+		end
+	end
+	Employees.adjustSpeed = adjustSpeed
+
+	-- 내일 아침에 적용할 속도 변화 예약 (🍻 회식, 🎁 홍삼)
+	local function reserveSpeed(d: EmployeeData, key: string, overrideDelta: number?)
+		local info = SalaryConfig.SpeedFactors[key]
+		table.insert(d.nextDayFactors, { label = info.label, delta = overrideDelta or info.delta })
 	end
 
 	-- 가진 주식도 바뀔 때만 보내요
@@ -446,6 +526,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			if not deskOwner[index] then
 				deskOwner[index] = player
 				coworkers.remove(index) -- 동료를 내보내고 그 자리에 앉아요
+				office.desks[index].seat:SetAttribute("OwnerId", player.UserId) -- 🪑 [E] 앉기는 주인만
 				return office.desks[index]
 			end
 		end
@@ -481,7 +562,15 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			leeBribed = false,
 			leeCooldownUntil = 0,
 			bossMood = 1,
+			speed = 1,
+			speedLog = {},
+			nextDayFactors = {},
 			ready = false,
+			videoQ = nil,
+			videoNext = 0,
+			videoStreak = 0,
+			petCooldown = 0,
+			roofCaughtVisit = 0,
 			incomeRate = 0,
 			buffs = {},
 			heldGift = nil,
@@ -501,6 +590,10 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		-- 🧪 스튜디오 테스트용 용돈 (저장이 꺼져 있을 때만: 진짜 저장 데이터에 섞이지 않게)
 		if RunService:IsStudio() and not canSave and SalaryConfig.TEST_MONEY > 0 then
 			profile.money = math.max(profile.money, SalaryConfig.TEST_MONEY)
+		end
+		if RunService:IsStudio() and not canSave and (SalaryConfig.TEST_RANK or 0) > 0 then
+			profile.rank = math.max(profile.rank, SalaryConfig.TEST_RANK)
+			profile.xp = math.max(profile.xp, SalaryConfig.Ranks[profile.rank].xp)
 		end
 
 		-- 지난번에 퇴근 전에 나갔다면, 그때까지 번 돈을 정산해 줘요
@@ -531,6 +624,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		publishPlushies(player, d)
 		buildDeskPlushies(d)
 		buildDeskItems(d)
+		if Employees.hooks.joined then
+			Employees.hooks.joined(player, d) -- 🪑 내 자리 꾸미기 + 🏆 칭호
+		end
 
 		-- 🏢 회사 확인: 이 서버 사무실과 내 직급의 회사가 다르면 알려 줘요
 		local here = SalaryConfig.getCompany(office.companyId)
@@ -586,6 +682,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if d then
 			endActivity(d)
 			save(player, d)
+			if Employees.hooks.left then
+				Employees.hooks.left(player, d)
+			end
 			for _, folderName in { "Plushies", "Items" } do
 				local folder = d.desk.model:FindFirstChild(folderName)
 				if folder then
@@ -593,6 +692,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				end
 			end
 			deskOwner[d.desk.index] = nil
+			d.desk.seat:SetAttribute("OwnerId", nil)
 			data[player] = nil
 		end
 	end)
@@ -949,6 +1049,42 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	end
 	Employees.startChat = startChat
 
+	---------------------------------------------------------------- 🕶️ [R] "감사팀이죠?"
+	coworkers.onAccuse = function(player: Player, coworker)
+		local d = data[player]
+		if not d or d.fired or not events:is("audit") or events.auditRevealed then
+			return
+		end
+		if (d.today.accuseWrong or 0) >= SalaryConfig.AUDIT_WRONG_MAX then
+			remotes.Notify:FireClient(player, "🙊 오늘은 더 의심했다간 사내 평판이 바닥나요… (내일 다시)")
+			return
+		end
+		if events:isDisguisedAuditor(coworker) then
+			-- 🎉 정답! 감사 끝 + 모두의 사진 폐기 + 보너스
+			events:revealAuditor(player)
+			d.today.eventBonus += SalaryConfig.AUDIT_REVEAL_BONUS
+			remotes.Bonus:FireClient(player, "🕶️ 감사관 색출!", SalaryConfig.AUDIT_REVEAL_BONUS)
+			unlockAchievement(player, d, "audit_reveal")
+			adjustSpeed(player, d, "auditReveal")
+			publishCollection(player, d)
+			for other, od in data do
+				od.today.photos = 0
+				od.today.emptyPhotos = 0
+				od.photoAimUntil = nil
+				remotes.AuditPhoto:FireClient(other, "reveal", 0)
+			end
+		else
+			-- 😠 엉뚱한 사람을 의심했어요
+			d.today.accuseWrong = (d.today.accuseWrong or 0) + 1
+			d.suspicion = math.min(99, d.suspicion + SalaryConfig.AUDIT_WRONG_SUSPICION)
+			adjustSpeed(player, d, "accuseWrong")
+			Npc.say(coworker.model, pick({ "네? 저 그냥 일하는 사람인데요…😠", "감사팀이요? 제가요? 하…", "저 이 회사 7년 차예요." }), 3)
+			local left = SalaryConfig.AUDIT_WRONG_MAX - d.today.accuseWrong
+			remotes.AuditPhoto:FireClient(player, "wrong", left)
+		end
+		publish(player, d)
+	end
+
 	---------------------------------------------------------------- 적발과 해고
 	local function fire(player: Player, d: EmployeeData)
 		d.fired = true
@@ -967,12 +1103,15 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		task.spawn(save, player, d)
 	end
 
-	local function caught(player: Player, d: EmployeeData, customLine: string?)
+	-- noScold: 사무실 부장님이 혼내러 걸어오지 않아요 (엘리베이터·옥상처럼 다른 곳에서 걸렸을 때)
+	local function caught(player: Player, d: EmployeeData, customLine: string?, noScold: boolean?)
+		adjustSpeed(player, d, "caught")
 		d.profile.warnings += 1
 		d.profile.stats.caught += 1
 		d.today.caught += 1
 		d.combo = 1
 		d.suspicion = 0
+		d.suspicionDanger = false -- 걸렸으니 탈출 아님
 		local wasEating = d.state == "snack" or (d.state == "returning" and d.deskAction == "snack")
 		if wasEating and d.heldSnack then
 			d.heldSnack = nil
@@ -1000,7 +1139,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		unlockAchievement(player, d, "caught")
 		publishCollection(player, d)
 		local line = customLine or pick(SalaryConfig.BossLines.caught)
-		if player.Character then
+		if player.Character and not noScold then
 			boss:scold(player.Character, line)
 		end
 
@@ -1013,19 +1152,77 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	end
 
 	---------------------------------------------------------------- 소음 (부장이 조사하러 올 곳)
+	-- 👔 부장님이 이번엔 누구를 확인하러 갈까?
+	--   소음(자기·라면 등) + 🕵️ 농땡이로 돈 버는 중이면 확률이 더 붙고, 오래 할수록 계속 올라가요
 	boss.noiseSource = function(): (Vector3?, number)
 		local loudest, chance = nil, 0
+		local now = os.clock()
 		for player, d in data do
+			if d.fired then
+				continue
+			end
 			local noise = States[d.state].noise or 0
+			if d.slackSince then
+				local slackFor = now - d.slackSince
+				noise += SalaryConfig.BOSS_SLACK_WATCH + slackFor * SalaryConfig.BOSS_SLACK_RAMP
+			end
+			noise = math.min(noise, SalaryConfig.BOSS_SLACK_MAX)
+			if d.state == "phone" then
+				noise *= SalaryConfig.PHONE_GAME_WATCH -- 📱 폰 게임 중엔 부장님이 잘 안 와요
+			end
 			if noise > chance then
 				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-				local atDesk = d.state ~= "chat" and d.state ~= "ramen"
-				loudest = if atDesk or not root then d.desk.behind else root.Position + Vector3.new(0, -3, 0)
-				chance = noise
+				local seated = isSeated(player, d)
+				local target: Vector3? = nil
+				if seated or not root then
+					target = d.desk.behind -- 자리에서 딴짓: 등 뒤로 와서 모니터를 봐요
+				elseif office.insideOffice(root.Position) then
+					target = root.Position + Vector3.new(0, -3, 0) -- 사무실 안(탕비실·화장실·회의실…): 그 자리로
+				end
+				-- (옥상·거리처럼 사무실 밖은 사무실 부장님이 못 따라가요)
+				if target then
+					loudest = target
+					chance = noise
+				end
 			end
 		end
 		return loudest, chance
 	end
+
+	---------------------------------------------------------------- 🎧 화상회의 질문 대답
+	videoFail = function(player: Player, d: EmployeeData, message: string)
+		d.videoQ = nil
+		d.videoStreak = 0
+		d.videoNext = os.clock() + math.random(SalaryConfig.VIDEO_GAP[1], SalaryConfig.VIDEO_GAP[2])
+		d.suspicion += SalaryConfig.VIDEO_FAIL
+		adjustSpeed(player, d, "videoFail")
+		remotes.VideoQuestion:FireClient(player, 0)
+		remotes.Notify:FireClient(player, message .. ` (의심도 +{SalaryConfig.VIDEO_FAIL}, 부장님이 와요!)`)
+		boss:callTo(d.desk.behind)
+	end
+
+	remotes.VideoAnswer.OnServerEvent:Connect(function(player, id, choice)
+		local d = data[player]
+		if not d or not d.videoQ or d.videoQ.id ~= id or typeof(choice) ~= "number" then
+			return
+		end
+		if os.clock() > d.videoQ.deadline then
+			return -- 시간 초과는 틱에서 처리
+		end
+		if choice == d.videoQ.correct then
+			d.videoQ = nil
+			d.videoStreak += 1
+			d.videoNext = os.clock() + math.random(SalaryConfig.VIDEO_GAP[1], SalaryConfig.VIDEO_GAP[2])
+			d.today.eventBonus += SalaryConfig.VIDEO_BONUS
+			remotes.Bonus:FireClient(player, "🎧 그럴듯한 대답!", SalaryConfig.VIDEO_BONUS)
+			if d.videoStreak >= 5 then
+				unlockAchievement(player, d, "video_pro")
+				publishCollection(player, d)
+			end
+		else
+			videoFail(player, d, `😱 "{player.DisplayName} 씨… 지금 뭐라고요?"`)
+		end
+	end)
 
 	---------------------------------------------------------------- 매 틱 계산
 	local function tick(player: Player, d: EmployeeData, dt: number)
@@ -1084,8 +1281,43 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 
 			local onMeetingSeat = seatPart ~= nil and seatPart.Name == "MeetingSeat" and humanoid ~= nil and humanoid.SeatPart == seatPart
-			if onMeetingSeat then
+			local onLounger = seatPart ~= nil and seatPart.Name == "Lounger" and humanoid ~= nil and humanoid.SeatPart == seatPart
+			local inHideBox = seatPart ~= nil and seatPart.Name == "HideSeat" and humanoid ~= nil and humanoid.SeatPart == seatPart
+			if inHideBox then
+				d.state = "hiding" -- 📦 옥상 상자 속 (밖에서 안 보여요)
+				d.hideTime = (d.hideTime or 0) + dt
+				local tooSoon = now < (d.hideCooldownUntil or 0)
+				if tooSoon or d.hideTime >= SalaryConfig.HIDE_MAX then
+					-- 답답해서 못 참고 튀어나와요
+					d.hideTime = 0
+					if not tooSoon then
+						d.hideCooldownUntil = now + SalaryConfig.HIDE_COOLDOWN
+					end
+					for _, child in (seatPart :: BasePart):GetChildren() do
+						if child:IsA("Weld") and child.Name == "SeatWeld" then
+							child:Destroy()
+						end
+					end
+					(humanoid :: Humanoid).Sit = false
+					(humanoid :: Humanoid).Jump = true
+					remotes.Notify:FireClient(
+						player,
+						if tooSoon
+							then `📦 아직 숨이 차요… {math.ceil((d.hideCooldownUntil :: number) - now)}초 뒤에 다시 숨을 수 있어요`
+							else `📦 너무 답답해서 상자 밖으로 튀어나왔어요! ({SalaryConfig.HIDE_COOLDOWN}초 동안은 못 들어가요)`
+					)
+				end
+			else
+				d.hideTime = 0
+			end
+			if inHideBox then
+				-- (위에서 정했어요)
+			elseif onMeetingSeat then
 				d.state = "meeting" -- 📊 유리 회의실에서 회의하는 척 졸기
+			elseif onLounger then
+				d.state = "lounger" -- 🏖️ 옥상 선베드 일광욕
+			elseif Employees.hooks.onRoof and Employees.hooks.onRoof(root.Position) then
+				d.state = "rooftop" -- 🌬️ 옥상 바람 쐬기
 			elseif inZone(office.toiletZone, root.Position) then
 				d.state = "toilet"
 				d.toiletTime += dt
@@ -1104,6 +1336,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 		end
 		local info = States[d.state]
+		-- 🕵️‍ 농땡이로 돈 버는 중이면 시작 시각을 기억해요 (오래 할수록 부장님이 확인하러 올 확률 ↑)
+		if d.state ~= "work" and d.state ~= "returning" and (info.income or 0) > 0 then
+			d.slackSince = d.slackSince or now
+		else
+			d.slackSince = nil
+		end
 		if d.state ~= previous then
 			updateBubble(player, d.state)
 			if info.payLabel and d.state ~= "work" then
@@ -1136,6 +1374,43 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			unlockAchievement(player, d, "lunch_nap")
 		end
 
+		-- 1.5 🎧 화상회의 하는 척: 가끔 질문이 와요
+		if d.state == "video" and dayCycle.phase == "work" then
+			if not d.videoQ and now >= d.videoNext then
+				if d.videoNext == 0 then
+					d.videoNext = now + math.random(SalaryConfig.VIDEO_GAP[1], SalaryConfig.VIDEO_GAP[2]) -- 막 시작했으면 조금 있다가
+				else
+					local question = SalaryConfig.VideoQuestions[math.random(1, #SalaryConfig.VideoQuestions)]
+					local order = { 1, 2, 3 }
+					for i = #order, 2, -1 do
+						local j = math.random(1, i)
+						order[i], order[j] = order[j], order[i]
+					end
+					local options = {}
+					for _, index in order do
+						table.insert(options, question[2][index])
+					end
+					local id = math.random(1, 1000000000)
+					d.videoQ = { id = id, correct = table.find(order, 1) :: number, deadline = now + SalaryConfig.VIDEO_ANSWER }
+					local text = string.gsub(question[1], "{name}", player.DisplayName)
+					remotes.VideoQuestion:FireClient(player, id, text, options, SalaryConfig.VIDEO_ANSWER)
+				end
+			elseif d.videoQ and now > d.videoQ.deadline then
+				videoFail(player, d, "🎧 대답을 못 했어요! 회의에서 멍때리다 걸렸어요…")
+			end
+		elseif d.videoQ or d.videoNext ~= 0 then
+			-- 회의에서 나가면 질문도 끝
+			if d.videoQ then
+				remotes.VideoQuestion:FireClient(player, 0)
+			end
+			d.videoQ, d.videoNext = nil, 0
+		end
+
+		-- 😺 월급냥이 부장님 정신을 빼놓은 사이에 농땡이!
+		if boss.distractedUntil and now < boss.distractedUntil and d.state ~= "work" and (States[d.state].income or 0) > 0 then
+			unlockAchievement(player, d, "cat_distract")
+		end
+
 		-- 2. 돈 벌기 (농땡이는 직급 배율을 받아요)
 		local multiplier = if d.state == "work" then 1 else rankOf(d).bonus
 		if events:is("audit") and d.state ~= "work" then
@@ -1149,7 +1424,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local income = info.income * multiplier * dt
 		d.today.earned[d.state] = (d.today.earned[d.state] or 0) + income
 		d.today.seconds[d.state] = (d.today.seconds[d.state] or 0) + dt
-		if d.state == "work" and not blackout then
+		local catOnKeyboard = Employees.hooks.catOn ~= nil and Employees.hooks.catOn(d.desk) -- 🐾 월급냥이 키보드 위에!
+		if d.state == "work" and not blackout and not catOnKeyboard then
 			d.workSeconds += dt * (if d.buffs.americano then SalaryConfig.AMERICANO_WORK else 1) -- ☕ 아메리카노
 		end
 		if d.state == "snack" then
@@ -1196,6 +1472,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 
 		-- 3. 의심도 (점심시간에는 부장이 없어서 안전)
 		local decay = SalaryConfig.SUSPICION_DECAY * (if hasItem(d, "plant") then 1.25 else 1)
+			* (if ReplicatedStorage:GetAttribute("Sunset") == true and Employees.hooks.onRoof and Employees.hooks.onRoof(root.Position) then SalaryConfig.SUNSET_DECAY else 1) -- 🌅 노을 보며 힐링
 			* (if d.buffs.latte then SalaryConfig.LATTE_DECAY else 1) -- 🥛 바닐라 라떼
 		if dayCycle.phase == "work" and boss.active then
 			local rate = info.detect
@@ -1209,25 +1486,78 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			if blackout and (d.state == "sleep" or d.state == "recline") then
 				rate = 0 -- 💡 어두워서 자는 게 안 보여요
 			end
-			if d.bossMoodDay == dayCycle.day then
-				rate *= d.bossMood -- 🍻 어제 회식 결과
+			if d.state == "phone" then
+				rate *= SalaryConfig.PHONE_GAME_SUSPICION -- 📱 폰 게임은 느긋하게 (10배 느리게)
 			end
-			if d.flowerDay == dayCycle.day then
-				rate *= SalaryConfig.FLOWER_DETECT -- 💐 오늘 꽃다발 드림
-			end
+			rate *= d.speed -- ⚡ 오늘의 의심도 속도 (회식·꽃다발·적발·감사관 의심… 다 여기에 들어 있어요)
 			local raised = false
 			if rate > 0 then
 				local seen, distance = boss:canSee(character)
 				if seen and blackout and distance > boss.range * 0.5 then
 					seen = false -- 어두워서 멀리는 안 보여요
 				end
-				if not seen then
-					seen, distance = events:auditorSees(character) -- 🔍 감사팀
+				local roofMultiplier = 1
+				if not seen and Employees.hooks.roofSees then
+					-- 🚪 옥상까지 올라온 부장님: 보이면 의심도가 ROOF_DETECT_MULTIPLIER배로 차요 (지금은 평소보다 조금 느리게)
+					seen, distance = Employees.hooks.roofSees(character)
+					if seen then
+						roofMultiplier = SalaryConfig.ROOF_DETECT_MULTIPLIER
+					end
 				end
 				if seen then
 					local closeness = math.clamp(1.5 - distance / boss.range, 0.5, 1.5)
-					d.suspicion += rate * closeness * dt
+					d.suspicion += rate * closeness * roofMultiplier * SalaryConfig.SUSPICION_SPEED * dt
 					raised = true
+				end
+			end
+
+			-- 📸 감사관: 농땡이를 보면 📷 카메라를 들고 → 그때도 농땡이 중이면 찰칵!
+			--   (내 자리 농땡이 + 화장실·회의실·수다만! 어슬렁·탕비실 등은 봐줘요. 일하기를 누르면 허둥지둥 복귀 중도 안전)
+			if events:is("audit") then
+				local deskSlacking = rate > 0
+					and d.state ~= "work"
+					and d.state ~= "returning"
+					and (isSeated(player, d) or SalaryConfig.AUDIT_PHOTO_STATES[d.state] == true) -- 🚽📊💬도 찍혀요
+				local watcher = if deskSlacking then events:auditWatcher(character) else nil
+				if d.photoAimUntil then
+					if now >= d.photoAimUntil then
+						d.photoAimUntil = nil
+						d.photoCooldownUntil = now + SalaryConfig.AUDIT_PHOTO_COOLDOWN
+						-- 카메라를 이미 겨눴으니, 그때까지 농땡이 중이면 찰칵!
+						--   일하기(허둥지둥 복귀 포함)만 안전. 자리를 떠서 도망가면 🪑 빈자리가 찍혀요
+						local working = d.state == "work" or d.state == "returning"
+						local fled = not working and not deskSlacking
+						if (deskSlacking or fled) and not events.auditRevealed and d.photoWatcher then
+							watcher = d.photoWatcher
+							local wasReported = auditReported(d)
+							local count
+							if fled then
+								d.today.emptyPhotos = (d.today.emptyPhotos or 0) + 1
+								count = d.today.emptyPhotos
+								Npc.say(watcher.model, "빈자리라… 찰칵.", 1.5)
+							else
+								d.today.photos = (d.today.photos or 0) + 1
+								count = d.today.photos
+								Npc.say(watcher.model, "찰칵.", 1.5)
+							end
+							remotes.AuditPhoto:FireClient(player, if fled then "empty" else "shot", count)
+							adjustSpeed(player, d, "auditPhoto")
+							if not wasReported and auditReported(d) then
+								remotes.Notify:FireClient(
+									player,
+									(if fled then `🪑 빈자리 사진 {count}장!` else `📸 농땡이 사진 {count}장!`)
+										.. ` 감사 보고서가 올라가요 → 퇴근 때 감봉 -{SalaryConfig.caughtPenalty(d.profile.rank)}원 + 경고 1개 (감사관 정체를 밝히면 폐기!)`
+								)
+							end
+						else
+							remotes.AuditPhoto:FireClient(player, "miss", d.today.photos or 0)
+						end
+					end
+				elseif watcher and now >= (d.photoCooldownUntil or 0) and not auditReported(d) then -- (처벌이 정해지면 그날은 그만 찍어요)
+					d.photoAimUntil = now + SalaryConfig.AUDIT_PHOTO_WINDUP
+					d.photoWatcher = watcher
+					events:auditAim(watcher, SalaryConfig.AUDIT_CAMERA_SHOW) -- 📷는 잠깐만 (눈치껏 봐야 해요)
+					remotes.AuditPhoto:FireClient(player, "aim", d.today.photos or 0)
 				end
 			end
 
@@ -1247,6 +1577,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 						publishCollection(player, d)
 					else
 						d.suspicion += SalaryConfig.LEE_TATTLE
+						adjustSpeed(player, d, "leeTattle")
 						raised = true
 						lee:say(`부장님~ {player.DisplayName} 씨 또 놀아요~`, 3)
 						boss:callTo(root.Position)
@@ -1266,25 +1597,53 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 
 			-- 4. 아슬아슬 보너스
-			if d.state == "work" and not d.nearMissUsed and d.lastReturnEnd and now - d.lastReturnEnd <= SalaryConfig.NEAR_MISS_WINDOW then
+			--   (하루 NEAR_MISS_DAILY_MAX번까지, 한 번 받으면 NEAR_MISS_COOLDOWN초 쉬어요)
+			--   ① 복귀하자마자 부장님이 봤을 때  ② 의심도가 NEAR_MISS_DANGER 넘게 찼다가 안 걸리고 NEAR_MISS_SAFE 밑으로 내려왔을 때
+			local function nearMissReady(): boolean
+				return (d.today.nearMissCount or 0) < SalaryConfig.NEAR_MISS_DAILY_MAX
+					and now - (d.lastNearMiss or -999) >= SalaryConfig.NEAR_MISS_COOLDOWN
+			end
+			local function awardNearMiss(label: string)
+				d.lastNearMiss = now
+				d.today.nearMissCount = (d.today.nearMissCount or 0) + 1
+				local bonus = SalaryConfig.NEAR_MISS_BONUS * d.combo
+				d.today.nearMiss += bonus
+				d.profile.stats.nearMiss += 1
+				remotes.NearMiss:FireClient(player, bonus, d.combo, SalaryConfig.NEAR_MISS_DAILY_MAX - d.today.nearMissCount, label)
+				unlockAchievement(player, d, "near_miss")
+				if d.combo >= SalaryConfig.MAX_COMBO then
+					unlockAchievement(player, d, "combo_max")
+				end
+				publishCollection(player, d)
+				d.combo = math.min(d.combo + 1, SalaryConfig.MAX_COMBO)
+			end
+			if
+				d.state == "work"
+				and not d.nearMissUsed
+				and d.lastReturnEnd
+				and now - d.lastReturnEnd <= SalaryConfig.NEAR_MISS_WINDOW
+				and nearMissReady()
+			then
 				local seen, distance = boss:canSee(character)
 				if seen and distance < 25 then
 					d.nearMissUsed = true
-					local bonus = SalaryConfig.NEAR_MISS_BONUS * d.combo
-					d.today.nearMiss += bonus
-					d.profile.stats.nearMiss += 1
-					remotes.NearMiss:FireClient(player, bonus, d.combo)
-					unlockAchievement(player, d, "near_miss")
-					if d.combo >= SalaryConfig.MAX_COMBO then
-						unlockAchievement(player, d, "combo_max")
-					end
-					publishCollection(player, d)
-					d.combo = math.min(d.combo + 1, SalaryConfig.MAX_COMBO)
+					awardNearMiss("아슬아슬!")
+				end
+			end
+			-- ② 의심도 탈출
+			if d.suspicion >= SalaryConfig.NEAR_MISS_DANGER and d.suspicion < 100 then
+				d.suspicionDanger = true
+			elseif d.suspicionDanger and d.suspicion <= SalaryConfig.NEAR_MISS_SAFE then
+				d.suspicionDanger = false
+				if nearMissReady() then
+					awardNearMiss("아슬아슬 탈출!")
 				end
 			end
 
 			if d.suspicion >= 100 then
-				caught(player, d)
+				-- 옥상에서 걸렸으면 사무실 부장님이 하늘까지 걸어오지 않게 (옥상 부장님이 혼내요)
+				local onRoof = Employees.hooks.onRoof ~= nil and Employees.hooks.onRoof(root.Position)
+				caught(player, d, if onRoof then "옥상에서 놀고 있었나?! 딱 걸렸어!" else nil, onRoof)
 			end
 		else
 			d.suspicion = math.max(0, d.suspicion - decay * dt)
@@ -1408,6 +1767,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		d.today.eventBonus += bonus
 		remotes.Bonus:FireClient(player, if place == 1 then "🌸 무궁화 1등!" else `🌸 골인! ({place}등)`, bonus)
 		if place == 1 then
+			adjustSpeed(player, d, "workshopWin")
 			unlockAchievement(player, d, "workshop_winner")
 			publishCollection(player, d)
 		end
@@ -1521,6 +1881,91 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	end
 
 	---------------------------------------------------------------- 🎡 돌림판 / 🎈 풍선 다트 (Wheel, Dart 모듈이 불러요)
+	-- 🎡 돌림판 베팅 취소 → 건 돈 그대로 돌려주기
+	function Employees.refundMoney(player: Player, amount: number)
+		local d = data[player]
+		if d then
+			d.profile.money += amount
+			publish(player, d)
+		end
+	end
+
+	-- 📱 폰 게임 농땡이 중인가? (내 자리에 앉아서 [폰 게임]을 고른 상태)
+	function Employees.isPhoneGaming(player: Player): boolean
+		local d = data[player]
+		return d ~= nil
+			and not d.fired
+			and dayCycle.phase ~= "offwork"
+			and d.deskAction == "phone"
+			and d.returnUntil == nil
+			and isSeated(player, d)
+	end
+
+	-- 지금 직급 번호 (없으면 1)
+	function Employees.rankOf(player: Player): number
+		local d = data[player]
+		return if d then d.profile.rank else 1
+	end
+
+	-- 📱 폰 게임 상태: "playing" 게임 중 / "returning" 내가 일하기를 눌러 복귀 중 / "off" 적발·자리 이탈 등
+	function Employees.phoneGameStatus(player: Player): string
+		local d = data[player]
+		if not d or d.fired or d.deskAction ~= "phone" or not isSeated(player, d) then
+			return "off"
+		end
+		return if d.returnUntil then "returning" else "playing"
+	end
+
+	-- 🧩 도형 맞추기 상금 (하루 SHAPES_DAILY_PRIZES번까지) → (준 돈, 오늘 남은 횟수)
+	function Employees.payShapes(player: Player, amount: number): (number, number)
+		local d = data[player]
+		if not d then
+			return 0, 0
+		end
+		local used = d.today.shapesPrizes or 0
+		if used >= SalaryConfig.SHAPES_DAILY_PRIZES then
+			return 0, 0
+		end
+		d.today.shapesPrizes = used + 1
+		d.profile.money += amount
+		publish(player, d)
+		task.spawn(save, player, d)
+		return amount, SalaryConfig.SHAPES_DAILY_PRIZES - d.today.shapesPrizes
+	end
+
+	-- ⚾ 숫자 야구 상금 (하루 BASEBALL_DAILY_PRIZES번까지) → (준 돈, 오늘 남은 횟수)
+	function Employees.payBaseball(player: Player, amount: number): (number, number)
+		local d = data[player]
+		if not d then
+			return 0, 0
+		end
+		local used = d.today.baseballPrizes or 0
+		if used >= SalaryConfig.BASEBALL_DAILY_PRIZES then
+			return 0, 0
+		end
+		d.today.baseballPrizes = used + 1
+		d.profile.money += amount
+		publish(player, d)
+		task.spawn(save, player, d)
+		return amount, SalaryConfig.BASEBALL_DAILY_PRIZES - d.today.baseballPrizes
+	end
+
+	-- 💣 폰 게임 당첨금 → 통장으로 바로 (도박이라 경력·실적 목표에는 안 들어가요)
+	function Employees.payPhoneGame(player: Player, amount: number, multiplier: number)
+		local d = data[player]
+		if not d or amount <= 0 then
+			return
+		end
+		d.profile.money += amount
+		if multiplier >= 10 then
+			for _, other in Players:GetPlayers() do
+				remotes.Notify:FireClient(other, `💣 {player.DisplayName} 님이 지뢰 피하기 x{string.format("%.1f", multiplier)} 대박! +{amount}원`)
+			end
+		end
+		publish(player, d)
+		task.spawn(save, player, d)
+	end
+
 	function Employees.payWheel(player: Player, amount: number, number: number)
 		local d = data[player]
 		if not d then
@@ -1645,6 +2090,366 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		task.spawn(save, player, d)
 	end)
 
+	---------------------------------------------------------------- 🐱 사무실 고양이 (Cat 모듈이 불러요)
+	Employees.catHooks = {
+		-- [E] 쓰다듬기: 의심도 감소 (사람마다 쿨타임)
+		pet = function(player: Player): boolean
+			local d = data[player]
+			if not d then
+				return false
+			end
+			local now = os.clock()
+			if now < d.petCooldown then
+				remotes.Notify:FireClient(player, `🐱 월급냥이 귀찮아해요… {math.ceil(d.petCooldown - now)}초 뒤에 다시`)
+				return false
+			end
+			d.petCooldown = now + SalaryConfig.CAT_PET_COOLDOWN
+			d.suspicion = math.max(0, d.suspicion - SalaryConfig.CAT_PET_RELIEF)
+			d.profile.catPets += 1
+			remotes.Notify:FireClient(player, `😺 골골골… 힐링! 의심도 -{SalaryConfig.CAT_PET_RELIEF} (쓰다듬은 횟수 {d.profile.catPets})`)
+			if d.profile.catPets >= 10 then
+				unlockAchievement(player, d, "cat_lover")
+				publishCollection(player, d)
+			end
+			publish(player, d)
+			return true
+		end,
+		-- 사람이 앉아 일하는 책상들 (월급냥이 키보드 위에 앉을 곳)
+		occupiedDesks = function()
+			local list = {}
+			for player, d in data do
+				if not d.fired then
+					table.insert(list, { desk = d.desk, player = player })
+				end
+			end
+			return list
+		end,
+	}
+
+	---------------------------------------------------------------- 🏢 옥상 / 🚪 엘리베이터 (Rooftop 모듈이 불러요)
+	---------------------------------------------------------------- 🌱 옥상 텃밭 (RoofGarden 모듈이 불러요)
+	local function ensureGarden(profile)
+		for i = 1, SalaryConfig.GARDEN_SLOTS do
+			if typeof(profile.garden[i]) ~= "table" then
+				profile.garden[i] = { seed = "", growth = 0, watered = -1, missed = 0 }
+			end
+		end
+	end
+	-- action: "plant"(씨앗 ID) / "water" / "sell" / "gift" / "clear"
+	function Employees.gardenAction(player: Player, action: string, slotIndex: number, arg: any): (boolean, string)
+		local d = data[player]
+		if not d then
+			return false, "잠시 후 다시 해 주세요."
+		end
+		local profile = d.profile
+		ensureGarden(profile)
+		local slot = profile.garden[slotIndex]
+		if not slot then
+			return false, "그 화분은 없어요."
+		end
+		local today = profile.stats.days
+		local seed = SalaryConfig.getSeed(slot.seed)
+		local message = ""
+		if action == "plant" then
+			if slot.seed ~= "" then
+				return false, "이미 뭔가 자라고 있어요."
+			end
+			local newSeed = SalaryConfig.getSeed(if typeof(arg) == "string" then arg else "")
+			if not newSeed then
+				return false, "씨앗을 골라 주세요."
+			end
+			if profile.money < newSeed.price then
+				return false, `통장 잔고가 부족해요. 😢 ({newSeed.price}원 필요)`
+			end
+			profile.money -= newSeed.price
+			profile.garden[slotIndex] = { seed = newSeed.id, growth = 0, watered = -1, missed = 0 }
+			message = `🌱 {newSeed.emoji} {newSeed.name} 씨앗을 심었어요! 매일 💧 물을 주면 {newSeed.days}일 뒤 수확`
+		elseif action == "water" then
+			if not seed or slot.missed >= 2 then
+				return false, "물 줄 식물이 없어요."
+			end
+			if slot.growth >= seed.days then
+				return false, "다 자랐어요! 🧺 수확하세요."
+			end
+			if slot.watered == today then
+				return false, "💧 오늘은 이미 물을 줬어요. 내일 또 와요!"
+			end
+			slot.watered = today
+			message = `💧 {seed.emoji} {seed.name}에 물을 줬어요! 퇴근하면 자라요`
+		elseif action == "sell" or action == "gift" then
+			if not seed or slot.growth < seed.days or slot.missed >= 2 then
+				return false, "아직 수확할 수 없어요."
+			end
+			if action == "gift" then
+				if d.heldGift then
+					return false, "🎁 들고 있는 선물부터 부장님께 드려요! (한 번에 하나만)"
+				end
+				d.heldGift = `veggie_{seed.id}`
+				message = `🎁 {seed.emoji} {seed.name}을(를) 챙겼어요! 부장님께 [E] 드리면 오늘의 의심도 속도 {SalaryConfig.GARDEN_GIFT_DELTA}`
+			else
+				profile.money += seed.sell -- (텃밭 수익은 경력·실적 목표에는 안 들어가요)
+				message = `💰 {seed.emoji} {seed.name}을(를) 팔았어요! +{seed.sell}원`
+			end
+			profile.harvests += 1
+			unlockAchievement(player, d, "garden_first")
+			if seed.id == "strawberry" then
+				unlockAchievement(player, d, "garden_strawberry")
+			end
+			profile.garden[slotIndex] = { seed = "", growth = 0, watered = -1, missed = 0 }
+		elseif action == "clear" then
+			if slot.seed == "" then
+				return false, "빈 화분이에요."
+			end
+			profile.garden[slotIndex] = { seed = "", growth = 0, watered = -1, missed = 0 }
+			message = "🧹 화분을 비웠어요."
+		else
+			return false, "잘못된 요청이에요."
+		end
+		publishCollection(player, d)
+		publish(player, d)
+		task.spawn(save, player, d)
+		return true, message
+	end
+
+	-- 퇴근할 때 자라요: 오늘 물을 줬으면 +1일, 안 줬으면 시들고(1) → 이틀 연속이면 말라 죽어요(2)
+	local function growGarden(d: EmployeeData)
+		local profile = d.profile
+		ensureGarden(profile)
+		local today = profile.stats.days
+		for _, slot in profile.garden do
+			local seed = SalaryConfig.getSeed(slot.seed)
+			if seed and slot.missed < 2 and slot.growth < seed.days then
+				if slot.watered == today then
+					slot.growth += 1
+					slot.missed = 0
+				else
+					slot.missed += 1
+				end
+			end
+		end
+	end
+
+	Employees.roofHooks = {
+		-- 🏀 옥상 농구 상금 (하루 HOOP_DAILY_PRIZES번까지) → (준 돈, 남은 횟수)
+		hoopPrize = function(player: Player, amount: number): (number, number)
+			local d = data[player]
+			if not d then
+				return 0, 0
+			end
+			local used = d.today.hoopPrizes or 0
+			if used >= SalaryConfig.HOOP_DAILY_PRIZES then
+				return 0, 0
+			end
+			d.today.hoopPrizes = used + 1
+			d.profile.money += amount
+			publish(player, d)
+			task.spawn(save, player, d)
+			return amount, SalaryConfig.HOOP_DAILY_PRIZES - d.today.hoopPrizes
+		end,
+		-- 🌅 노을을 충분히 감상했어요 (하루 한 번) → 의심도 0 + 오늘의 의심도 속도 ↓
+		sunsetWatched = function(player: Player): boolean
+			local d = data[player]
+			if not d or d.fired or d.sunsetDay == dayCycle.day then
+				return false
+			end
+			d.sunsetDay = dayCycle.day
+			d.suspicion = 0
+			adjustSpeed(player, d, "sunset", false, SalaryConfig.SUNSET_DELTA, "🌅 노을 보며 힐링")
+			unlockAchievement(player, d, "sunset_watch")
+			publishCollection(player, d)
+			publish(player, d)
+			return true
+		end,
+		-- 📸 노을 사진 → (오늘 첫 장인가, 앨범 장수, 상금)
+		sunsetPhoto = function(player: Player): (boolean, number, number)
+			local d = data[player]
+			if not d then
+				return false, 0, 0
+			end
+			unlockAchievement(player, d, "sunset_photo")
+			if d.sunsetPhotoDay == dayCycle.day then
+				publishCollection(player, d)
+				return false, d.profile.sunsetPhotos, 0
+			end
+			d.sunsetPhotoDay = dayCycle.day
+			d.profile.sunsetPhotos += 1
+			d.profile.money += SalaryConfig.SUNSET_PHOTO_PRIZE
+			if d.profile.sunsetPhotos >= 5 then
+				unlockAchievement(player, d, "sunset_album")
+			end
+			publishCollection(player, d)
+			publish(player, d)
+			task.spawn(save, player, d)
+			return true, d.profile.sunsetPhotos, SalaryConfig.SUNSET_PHOTO_PRIZE
+		end,
+		-- 🔭 관찰 일지에 장면 기록 → (처음인가, 보상)
+		sceneFound = function(player: Player, sceneId: string): (boolean, number)
+			local d = data[player]
+			local scene = SalaryConfig.getScopeScene(sceneId)
+			if not d or not scene or d.profile.scenes[sceneId] then
+				return false, 0
+			end
+			d.profile.scenes[sceneId] = true
+			local reward = SalaryConfig.ScopeRewards[scene.rarity] or 0
+			d.profile.money += reward
+			local count = 0
+			for _ in d.profile.scenes do
+				count += 1
+			end
+			unlockAchievement(player, d, "scope_first")
+			if count >= 10 then
+				unlockAchievement(player, d, "scope_ten")
+			end
+			if count >= #SalaryConfig.ScopeScenes then
+				unlockAchievement(player, d, "scope_all")
+			end
+			publishCollection(player, d)
+			publish(player, d)
+			task.spawn(save, player, d)
+			return true, reward
+		end,
+		gardenAction = function(player: Player, action: string, slotIndex: number, arg: any): (boolean, string)
+			return Employees.gardenAction(player, action, slotIndex, arg)
+		end,
+		-- ✈️ 종이비행기 상금 (하루 PLANE_DAILY_PRIZES번까지) → (준 돈, 오늘 남은 횟수)
+		planePrize = function(player: Player, amount: number): (number, number)
+			local d = data[player]
+			if not d then
+				return 0, 0
+			end
+			local used = d.today.planePrizes or 0
+			if used >= SalaryConfig.PLANE_DAILY_PRIZES then
+				return 0, 0
+			end
+			d.today.planePrizes = used + 1
+			d.profile.money += amount
+			publish(player, d)
+			task.spawn(save, player, d)
+			return amount, SalaryConfig.PLANE_DAILY_PRIZES - d.today.planePrizes
+		end,
+		-- ✈️ 되돌아온 종이비행기가 옥상 부장님 머리에 꽂혔어요!
+		planeBossHit = function(player: Player)
+			local d = data[player]
+			if not d or d.fired then
+				return
+			end
+			unlockAchievement(player, d, "plane_boss")
+			publishCollection(player, d)
+			d.suspicion = math.min(99, d.suspicion + SalaryConfig.PLANE_BOSS_HIT_SUSPICION)
+			remotes.Notify:FireClient(player, `🤕 "이거 누구 보고서야?!" 의심도 +{SalaryConfig.PLANE_BOSS_HIT_SUSPICION}`)
+			publish(player, d)
+		end,
+		-- ✈️ 내 최고 기록 → (새 기록인가, 최고 기록)
+		planeBest = function(player: Player, distance: number): (boolean, number)
+			local d = data[player]
+			if not d then
+				return false, 0
+			end
+			local rounded = math.floor(distance)
+			if rounded > d.profile.planeBest then
+				d.profile.planeBest = rounded
+				task.spawn(save, player, d)
+				return true, rounded
+			end
+			return false, d.profile.planeBest
+		end,
+		-- 🐦 비둘기 모이 값
+		charge = function(player: Player, price: number): (boolean, string)
+			return Employees.chargeClaw(player, price)
+		end,
+		-- 🐦 모이를 줬어요 → 친밀도 +1
+		pigeonFed = function(player: Player): number
+			local d = data[player]
+			if not d then
+				return 0
+			end
+			d.profile.pigeonFeeds += 1
+			d.pigeonFedToday = true
+			unlockAchievement(player, d, "pigeon_friend")
+			publishCollection(player, d)
+			publish(player, d)
+			task.spawn(save, player, d)
+			return d.profile.pigeonFeeds
+		end,
+		-- 🐦 비둘기를 만났어요 → 관찰 노트 (처음이면 true)
+		pigeonSeen = function(player: Player, pigeonId: string): boolean
+			local d = data[player]
+			if not d then
+				return false
+			end
+			local first = (d.profile.pigeons[pigeonId] or 0) == 0
+			d.profile.pigeons[pigeonId] = (d.profile.pigeons[pigeonId] or 0) + 1
+			if pigeonId == "white" then
+				unlockAchievement(player, d, "pigeon_white")
+			elseif pigeonId == "crown" or pigeonId == "rainbow" then
+				unlockAchievement(player, d, "pigeon_legend")
+			end
+			local all = true
+			for _, kind in SalaryConfig.Pigeons do
+				if (d.profile.pigeons[kind.id] or 0) == 0 then
+					all = false
+				end
+			end
+			if all then
+				unlockAchievement(player, d, "pigeon_all")
+			end
+			publishCollection(player, d)
+			publish(player, d)
+			return first
+		end,
+		-- 🚪 엘리베이터 미니게임 실패 → 의심도 + (100이 되면 적발)
+		stare = function(player: Player, line: string)
+			local d = data[player]
+			if not d or d.fired then
+				return
+			end
+			d.suspicion += SalaryConfig.ELEVATOR_FAIL
+			adjustSpeed(player, d, "elevatorFail")
+			publish(player, d)
+			if d.suspicion >= 100 then
+				caught(player, d, line, true)
+			end
+		end,
+		ninja = function(player: Player): number
+			local d = data[player]
+			if not d then
+				return 0
+			end
+			d.profile.elevatorNinja += 1
+			adjustSpeed(player, d, "elevatorNinja")
+			task.spawn(save, player, d)
+			return d.profile.elevatorNinja
+		end,
+		unlock = function(player: Player, achievementId: string)
+			local d = data[player]
+			if d then
+				unlockAchievement(player, d, achievementId)
+				publishCollection(player, d)
+			end
+		end,
+	}
+
+	---------------------------------------------------------------- 🪑 내 자리 꾸미기 (Decor 모듈이 불러요)
+	Employees.decorApi = {
+		hooks = Employees.hooks,
+		get = function(player: Player): EmployeeData?
+			return data[player]
+		end,
+		list = function()
+			return data
+		end,
+		charge = function(player: Player, price: number): (boolean, string)
+			return Employees.chargeClaw(player, price)
+		end,
+		unlock = function(player: Player, d: EmployeeData, achievementId: string)
+			unlockAchievement(player, d, achievementId)
+			publishCollection(player, d)
+		end,
+		save = function(player: Player, d: EmployeeData)
+			task.spawn(save, player, d)
+		end,
+	}
+
 	---------------------------------------------------------------- 📋 긴급 프로젝트 / 🎁 선물 (Missions 모듈이 불러요)
 	Employees.missionApi = {
 		get = function(player: Player): EmployeeData?
@@ -1655,6 +2460,13 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			return d ~= nil and isSeated(player, d)
 		end,
 		-- 성공 보상: 경고가 있으면 -1, 없으면 보너스
+		-- 📋 프로젝트 실패 → 부장님 눈이 더 날카로워져요
+		failed = function(player: Player)
+			local d = data[player]
+			if d and not d.fired then
+				adjustSpeed(player, d, "missionFail")
+			end
+		end,
 		reward = function(player: Player, missionId: string): string
 			local d = data[player]
 			if not d then
@@ -1670,6 +2482,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				text = `보너스 +{SalaryConfig.MISSION_BONUS}원 (퇴근 때 지급)`
 			end
 			profile.missionsDone[missionId] = true
+			adjustSpeed(player, d, "missionSuccess")
 			unlockAchievement(player, d, "mission_clear")
 			local all = true
 			for id, mission in SalaryConfig.Missions do
@@ -1694,9 +2507,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			local giftId = d.heldGift :: string
 			local profile = d.profile
 			if giftId == "hongsam" then
-				if dayCycle.day - profile.lastHongsamDay < SalaryConfig.GIFT_HONGSAM_DAYS then
-					return false, "허허, 저번에도 받았잖아~ 다음에 줘.", `🎁 홍삼은 {SalaryConfig.GIFT_HONGSAM_DAYS}일에 한 번만 통해요.`
+				-- 🎁 하루에 한 번만 (예전엔 '5일에 한 번'이었는데, 서버가 바뀌면 날짜가 꼬여서 하루 단위로 바꿨어요)
+				if d.hongsamDay == dayCycle.day then
+					return false, "허허, 오늘 벌써 받았잖아~ 내일 줘.", "🎁 홍삼은 하루에 한 번만 통해요."
 				end
+				d.hongsamDay = dayCycle.day
 				profile.lastHongsamDay = dayCycle.day
 				d.heldGift = nil
 				local text
@@ -1706,20 +2521,31 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 					publishCollection(player, d)
 					text = `🎁 경고 -1! (남은 경고 {profile.warnings}/{SalaryConfig.MAX_WARNINGS})`
 				else
-					d.bossMood, d.bossMoodDay = 0.85, dayCycle.day + 1
-					text = "🎁 경고가 없어서 대신 내일 부장님이 너그러워요 (의심도 -15%)"
+					reserveSpeed(d, "hongsam")
+					text = `🎁 경고가 없어서 대신 내일 의심도 속도 {SalaryConfig.SpeedFactors.hongsam.delta}`
 				end
 				publish(player, d)
 				task.spawn(save, player, d)
 				return true, "어허, 뭘 이런 걸 다~ 😊 (홍삼 최고지)", text
 			elseif giftId == "flowers" then
 				d.heldGift = nil
-				d.flowerDay = dayCycle.day
+				adjustSpeed(player, d, "flowers")
 				publish(player, d)
-				return true, "오~ 꽃이네? 사무실이 환해졌어 💐", "💐 오늘 하루 의심도가 15% 덜 올라요"
+				return true, "오~ 꽃이네? 사무실이 환해졌어 💐", `💐 오늘 의심도 속도 {SalaryConfig.SpeedFactors.flowers.delta}`
+			elseif string.match(giftId, "^veggie_") then
+				-- 🥬 직접 기른 채소 → 오늘의 의심도 속도 ↓
+				local seed = SalaryConfig.getSeed(string.match(giftId, "^veggie_(.+)$") or "")
+				d.heldGift = nil
+				adjustSpeed(player, d, "veggie", false, SalaryConfig.GARDEN_GIFT_DELTA, `{if seed then seed.emoji else "🥬"} 직접 기른 채소 선물`)
+				unlockAchievement(player, d, "garden_gift")
+				publishCollection(player, d)
+				publish(player, d)
+				local name = if seed then seed.name else "채소"
+				return true, `오~ {name}? 직접 길렀다고? 건강하네! 🌱`, `🥬 오늘의 의심도 속도 {SalaryConfig.GARDEN_GIFT_DELTA}`
 			elseif giftId == "choco" then
 				d.heldGift = nil
 				d.suspicion = math.max(0, d.suspicion - SalaryConfig.CHOCO_SUSPICION)
+				adjustSpeed(player, d, "choco")
 				publish(player, d)
 				return true, "초콜릿? 당 떨어졌는데 잘됐네 🍫", `🍫 의심도 -{SalaryConfig.CHOCO_SUSPICION}`
 			end
@@ -1745,6 +2571,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local mood = if score >= 6 then 0.75 elseif score >= 3 then 0.9 elseif score <= -2 then 1.15 else 1
 		d.bossMood = mood
 		d.bossMoodDay = dayCycle.day + 1
+		if mood ~= 1 then
+			reserveSpeed(d, "dinner", mood - 1) -- 🍻 내일 아침 의심도 속도에 반영 (0.75 → -0.25)
+		end
 		local bonus = math.max(0, score) * SalaryConfig.DINNER_POINT
 		if bonus > 0 then
 			d.profile.money += bonus
@@ -1762,8 +2591,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 
 	---------------------------------------------------------------- 🎲 돌발 이벤트 연결
 	events.snacks = snacks
-	events.notifyAll = function(message: string)
+	events.notifyAll = function(message: string, officeOnly: boolean?)
 		for player in data do
+			if officeOnly and not Employees.inOffice(player) then
+				continue -- 사무실 밖(옥상·공원·거리)에 있으면 사무실 소식은 안 보내요
+			end
 			remotes.Notify:FireClient(player, message)
 		end
 	end
@@ -1778,6 +2610,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			if root and isInZone(root.Position) then
 				d.today.eventBonus += SalaryConfig.DRILL_BONUS
 				remotes.Bonus:FireClient(player, "🚒 모범 대피!", SalaryConfig.DRILL_BONUS)
+				adjustSpeed(player, d, "drill")
 				unlockAchievement(player, d, "drill_hero")
 				publishCollection(player, d)
 			else
@@ -1801,6 +2634,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 			d.today = newDay()
 			d.suspicion, d.workSeconds, d.combo = 0, 0, 1
+			d.suspicionDanger = false
 			d.deskAction, d.state, d.returnUntil = "work", "work", nil
 			d.energyActive = false
 			endActivity(d)
@@ -1809,17 +2643,37 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			d.leeWatch, d.leeBribed = 0, false
 			d.away, d.awayWarned = 0, false
 			d.buffs = {} -- 카페 음료 효과는 하루만
-			if d.bossMoodDay == dayCycle.day and d.bossMood ~= 1 then
-				remotes.Notify:FireClient(
-					player,
-					if d.bossMood < 1
-						then `🍻 어제 회식 덕분에 부장님이 너그러워요! (의심도 {math.floor((1 - d.bossMood) * 100 + 0.5)}% 덜 올라요)`
-						else "🍻 어제 회식 때 서운하셨는지 부장님이 예민해요… (의심도 더 올라요)"
-				)
+			-- 🐦 어제 모이를 안 줬으면 비둘기 친밀도가 조금 줄어요
+			if d.profile.pigeonFeeds > 0 and not d.pigeonFedToday and dayCycle.day > 1 then
+				d.profile.pigeonFeeds = math.max(0, d.profile.pigeonFeeds - SalaryConfig.PIGEON_DECAY)
+				publishCollection(player, d)
+			end
+			d.pigeonFedToday = false
+
+			-- ⚡ 오늘의 의심도 속도: 기준 x1로 리셋 → 요일 + 어제 예약(회식·홍삼) 적용
+			d.speed = 1
+			d.speedLog = {}
+			local weekdaySpeed = SalaryConfig.WeekdaySpeed[weekday.name]
+			if weekdaySpeed then
+				adjustSpeed(player, d, "weekday", true, weekdaySpeed.delta, weekdaySpeed.label)
+			end
+			for _, reserved in d.nextDayFactors do
+				adjustSpeed(player, d, "reserved", true, reserved.delta, reserved.label)
+			end
+			d.nextDayFactors = {}
+			player:SetAttribute("SuspicionSpeed", d.speed)
+			player:SetAttribute("SpeedLog", HttpService:JSONEncode(d.speedLog))
+			if d.speed ~= 1 then
+				local reasons = {}
+				for _, entry in d.speedLog do
+					table.insert(reasons, `{entry.label} {if entry.delta > 0 then "+" else ""}{string.format("%.2f", entry.delta)}`)
+				end
+				remotes.Notify:FireClient(player, `⚡ 오늘의 의심도 속도 x{string.format("%.2f", d.speed)} ({table.concat(reasons, ", ")})`)
 			end
 			updateBubble(player, "work")
 			task.spawn(seatPlayer, player, d)
 			remotes.Notify:FireClient(player, `🏢 {weekday.name} 출근! 오늘 부장님은 "{weekday.mood}"`)
+
 		end
 	end)
 
@@ -1871,6 +2725,13 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			if d.today.caught > 0 then
 				table.insert(lines, { label = `시말서 감봉 ({d.today.caught}회)`, amount = -d.today.caught * SalaryConfig.caughtPenalty(profile.rank) })
 			end
+			if auditReported(d) then
+				table.insert(lines, {
+					label = `📸 감사 보고서 (농땡이 {d.today.photos or 0}장 · 🪑빈자리 {d.today.emptyPhotos or 0}장, 경고 +1)`,
+					amount = -SalaryConfig.caughtPenalty(profile.rank),
+				})
+				profile.warnings += 1 -- 📸 감사 보고서 = 경고 (3개면 해고)
+			end
 			local quotaOk = d.workSeconds >= rank.quota
 			if not quotaOk then
 				table.insert(lines, { label = "업무 미달 감봉", amount = -SalaryConfig.quotaPenalty(profile.rank) })
@@ -1892,10 +2753,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			profile.money = math.max(0, profile.money + dayTotal)
 			profile.xp += math.max(0, dayTotal)
 			d.today.settled = true
+			growGarden(d) -- 🌱 오늘 물 준 화분이 자라요
 			profile.stats.days += 1
 
 			-- 업적
-			if d.today.caught == 0 and events.todayId == "audit" then
+			if d.today.caught == 0 and not auditReported(d) and events.todayId == "audit" then
 				unlockAchievement(player, d, "audit_survivor")
 			end
 			if d.today.caught == 0 and quotaOk and d.today.nearMiss > 0 then

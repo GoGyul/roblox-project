@@ -49,6 +49,9 @@ local POSES: { [string]: Pose } = {
 	docs = { rShoulder = 20, rElbow = 70, lShoulder = 20, lElbow = 70, prop = "folder" },
 	chat = { neck = 5, rShoulder = 35, rElbow = 50, waves = { { "rShoulder", "z", 15, 2 }, { "neck", "y", 8, 1 } } },
 	candy = { neck = 12, rShoulder = 75, rElbow = 125, waves = { { "neck", "y", 8, 0.4 } }, prop = "lollipop" }, -- 사탕 물고 먼 산 보기
+	video = { neck = -6, rShoulder = 60, rElbow = 120, lShoulder = 40, lElbow = 30, waves = { { "neck", "x", 6, 0.6 } } }, -- 헤드셋 누르며 끄덕끄덕
+	rooftop = { neck = 12, rShoulder = 150, rElbow = 20, lShoulder = 150, lElbow = 20, waves = { { "rShoulder", "z", 8, 0.4 } } }, -- 기지개 쭉~
+	lounger = { waist = 30, neck = 25, rShoulder = 150, rElbow = 110, lShoulder = 150, lElbow = 110, waves = { { "waist", "x", 2, 0.3 } } }, -- 머리 뒤로 손 깍지
 	meeting = { waist = -6, neck = -24, rShoulder = 30, rElbow = 60, lShoulder = 30, lElbow = 60, waves = { { "neck", "x", 10, 0.7 } } }, -- 꾸벅꾸벅
 	ramen = { neck = -15, rShoulder = 50, rElbow = 95, lShoulder = 30, lElbow = 60, prop = "bowl", waves = { { "rElbow", "x", 15, 4 } } },
 }
@@ -247,7 +250,7 @@ local function setSleepFace(model: Model, sleeping: boolean)
 		eyes.Size = UDim2.fromScale(1, 0.5)
 		eyes.Position = UDim2.fromScale(0, 0.18)
 		eyes.BackgroundTransparency = 1
-		eyes.Text = "︶   ︶"
+		eyes.Text = "-   -"
 		eyes.TextScaled = true
 		eyes.Font = Enum.Font.GothamBlack
 		eyes.TextColor3 = Color3.fromRGB(30, 25, 25)

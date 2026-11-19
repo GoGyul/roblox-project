@@ -34,6 +34,32 @@ local function shuffle<T>(list: { T }): { T }
 end
 
 -- 🧮 계산 문제 (두세 자리 덧셈·뺄셈·곱셈)
+-- 🧠 퀴즈 하나 고르기 (방금 나온 문제는 빼고, 보기 순서는 섞어요)
+local function makeQuiz(avoid: number?)
+	local questions = SalaryConfig.QuizQuestions
+	local index = math.random(1, #questions)
+	if avoid and #questions > 1 then
+		while index == avoid do
+			index = math.random(1, #questions)
+		end
+	end
+	local question = questions[index]
+	local order = {}
+	for i = 1, #question.choices do
+		table.insert(order, i)
+	end
+	order = shuffle(order)
+	local choices = {}
+	local correct = 1
+	for slot, original in order do
+		choices[slot] = question.choices[original]
+		if original == question.answer then
+			correct = slot
+		end
+	end
+	return { kind = "quiz", index = index, text = question.q, choices = choices, correct = correct, lockUntil = 0, wrongs = 0 }
+end
+
 local function makeMath(count: number)
 	local problems = {}
 	for _ = 1, count do
@@ -107,6 +133,9 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 			remotes.Notify:FireClient(player, `📋 {state.mission.name} 성공! {text}`)
 		else
 			remotes.Notify:FireClient(player, `📋 {state.mission.name} 실패… {reason or ""}`)
+			if api.failed then
+				api.failed(player) -- ⚡ 의심도 속도 ↑
+			end
 			if boss.model.Parent and boss.active then
 				boss:say("에휴… 다음엔 잘해 봐.", 3)
 			end
@@ -324,8 +353,8 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 
 	---------------------------------------------------------------- 🧩 퍼즐
 	-- 이 퍼즐은 어디서 풀어야 하나?
-	local function puzzlePlaceOk(player: Player, d, kind: string): (boolean, string?)
-		if kind == "order" then
+	local function puzzlePlaceOk(player: Player, d, kind: string, place: string?): (boolean, string?)
+		if kind == "order" or place == "meeting" then
 			return d.state == "meeting", "📊 회의실 의자에 앉아서 풀어요!"
 		end
 		return api.isSeated(player), "⌨️ 내 자리에 앉아서 풀어요!"
@@ -342,10 +371,10 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 			return { ok = false, message = "지금은 풀 퍼즐이 없어요." }
 		end
 		local kind = step.kind
-		if kind ~= "typing" and kind ~= "math" and kind ~= "memory" and kind ~= "order" then
+		if kind ~= "typing" and kind ~= "math" and kind ~= "memory" and kind ~= "order" and kind ~= "quiz" then
 			return { ok = false, message = "지금 단계는 퍼즐이 아니에요." }
 		end
-		local placeOk, placeMessage = puzzlePlaceOk(player, d, kind)
+		local placeOk, placeMessage = puzzlePlaceOk(player, d, kind, step.place)
 		if not placeOk then
 			return { ok = false, message = placeMessage }
 		end
@@ -359,6 +388,8 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 					state.puzzle = { kind = kind, problems = makeMath(step.count or 8), index = 1 }
 				elseif kind == "memory" then
 					state.puzzle = { kind = kind, code = tostring(math.random(10000, 99999)), shownAt = workspace:GetServerTimeNow(), held = 0 }
+				elseif kind == "quiz" then
+					state.puzzle = makeQuiz(nil)
 				elseif kind == "order" then
 					local numbers = {}
 					for i = 1, step.count or 6 do
@@ -382,6 +413,8 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 					showUntil = puzzle.shownAt + SalaryConfig.MEMORY_SHOW,
 					hold = SalaryConfig.MEMORY_HOLD,
 				}
+			elseif kind == "quiz" then
+				return { ok = true, kind = kind, text = puzzle.text, choices = puzzle.choices, lockUntil = puzzle.lockUntil }
 			else
 				return { ok = true, kind = kind, numbers = puzzle.numbers }
 			end
@@ -428,6 +461,36 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 				if tostring(answer) ~= puzzle.code then
 					finish(player, state, false, `주문번호를 틀렸어요! (정답 {puzzle.code})`)
 					return { ok = true, correct = false, done = true, message = `❌ 정답은 {puzzle.code}… 거래처가 화났어요` }
+				end
+				advance(player, state)
+				return { ok = true, correct = true, done = true }
+			elseif kind == "quiz" then
+				local now = workspace:GetServerTimeNow()
+				if now < puzzle.lockUntil then
+					return { ok = true, correct = false, message = `🔒 {math.ceil(puzzle.lockUntil - now)}초 뒤에 다시 풀 수 있어요`, text = puzzle.text, choices = puzzle.choices, lockUntil = puzzle.lockUntil }
+				end
+				if answer ~= puzzle.correct then
+					-- 두 번 연속 틀리면 프로젝트 실패!
+					local wrongs = (puzzle.wrongs or 0) + 1
+					if wrongs >= SalaryConfig.QUIZ_MAX_WRONG then
+						finish(player, state, false, `퀴즈를 {wrongs}번 연속 틀렸어요!`)
+						return { ok = true, correct = false, done = true, message = `❌ {wrongs}번 연속 오답… 프로젝트 실패!` }
+					end
+					-- 틀리면 잠깐 잠기고 다른 문제로 (찍어서 맞히기 방지)
+					local nextQuiz = makeQuiz(puzzle.index)
+					nextQuiz.wrongs = wrongs
+					nextQuiz.lockUntil = now + SalaryConfig.QUIZ_WRONG_LOCK
+					state.puzzle = nextQuiz
+					state.progressText = "❌ 틀림! 다른 문제로"
+					publish(player, state)
+					return {
+						ok = true,
+						correct = false,
+						message = `❌ 틀렸어요! 한 번 더 틀리면 실패! ({SalaryConfig.QUIZ_WRONG_LOCK}초 뒤 다른 문제)`,
+						text = nextQuiz.text,
+						choices = nextQuiz.choices,
+						lockUntil = nextQuiz.lockUntil,
+					}
 				end
 				advance(player, state)
 				return { ok = true, correct = true, done = true }

@@ -86,6 +86,8 @@ export type Office = {
 	candyZone: BasePart?, -- 🍭 흡연구역(사탕) — 눈치물산 공원에만
 	shops: { [string]: { counter: BasePart, clerkSpot: Vector3 } }, -- 🏙️ 눈치 스트리트 가게 + 🏪 사내 매점
 	packageBox: BasePart, -- 📦 (장식) 출입문 옆 택배 상자
+	elevator: { door: BasePart, exit: Vector3 }, -- 🚪 옥상 가는 엘리베이터
+	insideOffice: (Vector3) -> boolean, -- 사무실 건물 안인가? (옥상·공원·거리는 밖)
 	packageSpots: { Vector3 }, -- 📦 긴급 프로젝트 "택배 대란" 상자가 놓일 수 있는 곳 (바닥)
 	clawMachines: { BasePart }, -- 🧸 인형뽑기 기계
 	arcade: any?, -- 🕹️ 오락실 (눈치물산만)
@@ -121,9 +123,9 @@ local function buildDesk(B, index: number, x: number, z: number): Desk
 		return B:part(size, position, options)
 	end
 
-	p(Vector3.new(6, 2.5, 3), v(x, 1.25, z), { Color = COLORS.desk, Material = Enum.Material.Wood })
+	local top = p(Vector3.new(6, 2.5, 3), v(x, 1.25, z), { Name = "DeskTop", Color = COLORS.desk, Material = Enum.Material.Wood })
 	-- 모니터
-	p(Vector3.new(2.6, 1.8, 0.3), v(x, 3.6, z - 0.8), { Color = COLORS.monitor })
+	local monitor = p(Vector3.new(2.6, 1.8, 0.3), v(x, 3.6, z - 0.8), { Name = "Monitor", Color = COLORS.monitor })
 	local screen = p(Vector3.new(2.3, 1.5, 0.05), v(x, 3.6, z - 0.62), {
 		Color = COLORS.screen,
 		Material = Enum.Material.Neon,
@@ -143,10 +145,25 @@ local function buildDesk(B, index: number, x: number, z: number): Desk
 		Name = "Seat",
 		Color = COLORS.chair,
 	}) :: Seat
-	p(Vector3.new(2, 2.4, 0.3), v(x, 2.7, z + 3.5), { Color = COLORS.chair })
+	local chairBack = p(Vector3.new(2, 2.4, 0.3), v(x, 2.7, z + 3.5), { Name = "ChairBack", Color = COLORS.chair })
 
 	-- seatHome: 의자 원래 자리 (혹시 밀려나면 되돌려요)
-	return { index = index, model = model, seat = seat, seatHome = seat.CFrame, behind = v(x, 0, z + 6.5) }
+	-- top/monitor/chairBack + 기본 색: 🪑 내 자리 꾸미기가 바꿨다가 되돌릴 때 써요
+	return {
+		index = index,
+		model = model,
+		seat = seat,
+		seatHome = seat.CFrame,
+		behind = v(x, 0, z + 6.5),
+		top = top,
+		monitor = monitor,
+		chairBack = chairBack,
+		base = {
+			deskColor = top.Color,
+			deskMaterial = top.Material,
+			chairColor = seat.Color,
+		},
+	}
 end
 
 -- 🚒 소방 훈련 집결지 (훈련 때만 초록색으로 보여요). 회사마다 위치만 달라요.
@@ -227,6 +244,20 @@ local function decorateStore(B, info)
 	Build.surfaceText(sign, info.signFace, "🏪 사내 매점")
 end
 
+-- 🚪 엘리베이터 문 (왼쪽 벽에 붙어요, 사무실 쪽 +X를 봐요) → Rooftop 모듈이 [E]를 붙여요
+local function buildElevator(B, wallX: number, z: number): { door: BasePart, exit: Vector3 }
+	local metal = { Color = Color3.fromRGB(170, 175, 185), Material = Enum.Material.Metal }
+	B:part(Vector3.new(0.5, 9, 6.4), v(wallX + 0.25, 4.5, z), { Color = Color3.fromRGB(110, 115, 125), Material = Enum.Material.Metal }) -- 틀
+	local door = B:part(Vector3.new(0.3, 8, 5), v(wallX + 0.55, 4, z), { Name = "ElevatorDoor", Color = metal.Color, Material = metal.Material, Reflectance = 0.15 })
+	B:part(Vector3.new(0.32, 8, 0.08), v(wallX + 0.56, 4, z), { Color = Color3.fromRGB(80, 85, 95) }) -- 가운데 틈
+	local panel = B:part(Vector3.new(0.2, 1.2, 0.6), v(wallX + 0.4, 4.2, z + 3.6), { Color = Color3.fromRGB(40, 40, 45) }) -- 호출 버튼
+	B:part(Vector3.new(0.22, 0.35, 0.35), v(wallX + 0.45, 4.4, z + 3.6), { Color = Color3.fromRGB(255, 200, 80), Material = Enum.Material.Neon, Shape = Enum.PartType.Ball })
+	local sign = B:part(Vector3.new(0.2, 1.2, 5), v(wallX + 0.45, 9.6, z), { Color = Color3.fromRGB(30, 35, 45) })
+	Build.surfaceText(sign, Enum.NormalId.Right, "🚪 엘리베이터 · 옥상 ▲", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 220, 120) })
+	local _ = panel
+	return { door = door, exit = v(wallX + 4, 0, z) }
+end
+
 -- 📦 택배 상자 (긴급 프로젝트 "급한 택배"에서 들고 가요)
 local function buildPackage(B, x: number, z: number): BasePart
 	local box = B:part(Vector3.new(2.2, 2, 2.2), v(x, 1, z), { Name = "PackageBox", Color = Color3.fromRGB(190, 140, 90), Material = Enum.Material.Cardboard })
@@ -265,6 +296,7 @@ function OfficeBuilder.build(companyId: string?): Office
 			makeAssembly = makeAssembly,
 			buildStore = buildStore,
 			decorateStore = decorateStore,
+			buildElevator = buildElevator,
 			buildPackage = buildPackage,
 			FLOOR_Y = FLOOR_Y,
 		})
@@ -437,6 +469,8 @@ function OfficeBuilder.build(companyId: string?): Office
 	})
 	-- 📦 택배 상자 (출입문 옆)
 	local packageBox = buildPackage(B, 7, -19.5)
+	-- 🚪 엘리베이터 (왼쪽 벽 가운데: 매점 방과 화장실 사이)
+	local elevator = buildElevator(B, -HALF_WIDTH, -1)
 
 	-- 시작 지점 (출입문 안쪽)
 	B:part(Vector3.new(4, 1, 4), v(0, -0.4, -19), {
@@ -495,6 +529,10 @@ function OfficeBuilder.build(companyId: string?): Office
 		candyZone = nil,
 		shops = { store = store }, -- 🏪 사내 매점
 		packageBox = packageBox,
+		elevator = elevator,
+		insideOffice = function(position: Vector3): boolean
+			return math.abs(position.X) <= HALF_WIDTH + 1 and math.abs(position.Z) <= 23 and position.Y < FLOOR_Y + 20
+		end,
 		packageSpots = { v(7, 0, -16), v(-30, 0, -11), v(30, 0, 16), v(-21, 0, 3), v(0, 0, 11), v(-31, 0, 11), v(17, 0, -17), v(-6, 0, -3.5) },
 		clawMachines = {},
 		arcade = nil,

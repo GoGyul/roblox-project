@@ -56,6 +56,8 @@ function Events.new(office, boss, dayCycle, remotes, coworkers)
 		lastId = nil :: string?,
 		todayId = nil :: string?, -- 오늘 있었던 이벤트 (퇴근 명세서 때도 남아 있어요)
 		auditors = {} :: { any },
+		disguised = nil :: any, -- 🕶️ 동료로 위장한 감사관 { coworker, watcher }
+		auditRevealed = false, -- 정체가 밝혀졌으면 감사 끝 (농땡이 수입 ×2는 그대로)
 		saved = nil :: any, -- 정전 전에 원래 조명 값을 기억해 둬요
 		-- Employees가 채워 줘요
 		snacks = nil :: any,
@@ -84,19 +86,53 @@ function Events:is(eventId: string): boolean
 	return self.active and self.current ~= nil and self.current.id == eventId
 end
 
--- 감사팀 중 누가 이 캐릭터를 보고 있나? (본 사람 중 가장 가까운 거리)
-function Events:auditorSees(character: Model): (boolean, number)
-	if not self:is("audit") then
-		return false, math.huge
+-- 📸 감사관 중 누가 이 캐릭터를 보고 있나? → 보고 있는 감사관 (없으면 nil)
+--   (감사관은 의심도를 올리지 않고, 대신 증거 사진을 찍어요 → Employees)
+function Events:auditWatcher(character: Model): any?
+	if not self:is("audit") or self.auditRevealed then
+		return nil
 	end
-	local best = math.huge
-	for _, auditor in self.auditors do
-		local seen, distance = Boss.canSee(auditor, character)
-		if seen and distance < best then
-			best = distance
+	local watchers = table.clone(self.auditors)
+	if self.disguised and self.disguised.coworker.model.Parent then
+		table.insert(watchers, self.disguised.watcher)
+	end
+	for _, watcher in watchers do
+		if Boss.canSee(watcher, character) then
+			return watcher
 		end
 	end
-	return best < math.huge, best
+	return nil
+end
+
+-- 📷 감사관이 카메라를 들어요 (머리 위 📷)
+function Events:auditAim(watcher: any, seconds: number)
+	if self.disguised and watcher == self.disguised.watcher then
+		self.coworkers.aim(self.disguised.coworker, seconds)
+	else
+		Npc.setStatus(watcher.model, "📷")
+		task.delay(seconds, function()
+			if watcher.model.Parent then
+				Npc.setStatus(watcher.model, "🔍")
+			end
+		end)
+	end
+end
+
+-- 이 동료가 위장 감사관인가?
+function Events:isDisguisedAuditor(coworker: any): boolean
+	return self:is("audit") and not self.auditRevealed and self.disguised ~= nil and self.disguised.coworker == coworker
+end
+
+-- 🕶️ 정체 폭로! 감사관은 떠나고, 오늘 감사는 끝
+function Events:revealAuditor(revealer: Player)
+	if not self.disguised or self.auditRevealed then
+		return
+	end
+	self.auditRevealed = true
+	self:publish("revealed", 0) -- (화면 위쪽 알림 바꾸기)
+	self.coworkers.setAuditMode(false)
+	self.coworkers.revealAuditor(self.disguised.coworker, `…{revealer.DisplayName} 씨, 눈썰미가 좋군요. 오늘 감사는 여기까지 하죠.`)
+	self:notify(`🕶️ {revealer.DisplayName}님이 위장 감사관의 정체를 밝혀냈어요! 감사 끝, 📸 사진도 모두 폐기!`, true)
 end
 
 ---------------------------------------------------------------------------
@@ -108,9 +144,10 @@ function Events:publish(stage: string, seconds: number)
 	ReplicatedStorage:SetAttribute("SalaryEventEndsAt", if seconds > 0 then workspace:GetServerTimeNow() + seconds else 0)
 end
 
-function Events:notify(message: string)
+-- officeOnly: 사무실 안에서만 알 수 있는 소식 (옥상·공원에 있으면 안 보내요)
+function Events:notify(message: string, officeOnly: boolean?)
 	if self.notifyAll then
-		self.notifyAll(message)
+		self.notifyAll(message, officeOnly)
 	end
 end
 
@@ -207,6 +244,11 @@ function Events:cleanup()
 		auditor.model:Destroy()
 	end
 	table.clear(self.auditors)
+	if self.coworkers then
+		self.coworkers.setAuditMode(false) -- 🕶️ 위장 감사관도 원래 동료로
+	end
+	self.disguised = nil
+	self.auditRevealed = false
 	self:restoreLights()
 	self.office.setAssemblyVisible(false)
 	if self.coworkers then
@@ -229,8 +271,32 @@ end
 ---------------------------------------------------------------------------
 function Events:startAudit(token: number)
 	self.active = true
+	self.auditRevealed = false
 	self:publish("active", 0)
-	self:notify("🔍 오늘은 감사 기간! 감사팀이 순찰해요. 대신 농땡이 수입 ×2!")
+	-- 🕶️ 동료 중 한 명이 몰래 감사관!
+	local coworker = self.coworkers and self.coworkers.pickAuditor()
+	if coworker then
+		self.disguised = {
+			coworker = coworker,
+			-- Boss.canSee가 쓰는 값들
+			watcher = {
+				active = true,
+				watching = true,
+				model = coworker.model,
+				head = coworker.model:FindFirstChild("Head"),
+				root = coworker.root,
+				range = AUDITOR_RANGE,
+				fovCos = AUDITOR_FOV,
+			},
+		}
+		self.coworkers.setAuditMode(true)
+		self:notify(
+			"🔍 감사 기간! 감사관이 동료 중 한 명으로 위장했대요… 📸 농땡이를 찍히면 안 돼요! (수상한 동료에게 [R]) 대신 농땡이 수입 ×2!"
+		)
+		return
+	end
+	-- 동료가 아무도 없으면 (모든 자리에 플레이어) 예전처럼 검은 정장 감사팀이 와요
+	self:notify("🔍 오늘은 감사 기간! 감사팀이 순찰하며 📸 농땡이를 찍어요. 대신 농땡이 수입 ×2!")
 	local names = { "감사팀 최감사" } -- 감사팀은 한 명이면 충분해요
 	for i, name in names do
 		local model = Npc.create(name, {
@@ -294,7 +360,7 @@ end
 function Events:runBlackout(token: number)
 	self.active = true
 	self:publish("active", SalaryConfig.BLACKOUT_SECONDS)
-	self:notify("💡 정전! 컴퓨터가 꺼졌어요. 일해도 돈이 안 나오지만, 어두워서 자도 안 들켜요!")
+	self:notify("💡 정전! 컴퓨터가 꺼졌어요. 일해도 돈이 안 나오지만, 어두워서 자도 안 들켜요!", true)
 	self.boss:say("뭐야, 정전이야?!", 3)
 
 	local saved = {
@@ -333,7 +399,7 @@ function Events:runBlackout(token: number)
 		self:restoreLights()
 		self.active = false
 		self:publish("done", 0)
-		self:notify("💡 전기가 돌아왔어요! 컴퓨터 다시 켜짐.")
+		self:notify("💡 전기가 돌아왔어요! 컴퓨터 다시 켜짐.", true)
 		self.boss:say("자자, 다시 일들 해요!", 3)
 	end
 end
@@ -373,7 +439,7 @@ function Events:runCake()
 		self.snacks.placeExtra("birthday", self.office.cakeSpots)
 	end
 	local who = pick({ "옆자리 박대리", "경리팀 윤주임", "막내 인턴 한사원", "김부장님 따님" })
-	self:notify(`🎂 {who} 생일이래요! 탕비실 조리대에 케이크 {#self.office.cakeSpots}조각! 먼저 먹는 사람이 임자`)
+	self:notify(`🎂 {who} 생일이래요! 탕비실 조리대에 케이크 {#self.office.cakeSpots}조각! 먼저 먹는 사람이 임자`, true)
 end
 
 ---------------------------------------------------------------------------

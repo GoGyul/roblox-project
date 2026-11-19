@@ -47,7 +47,7 @@ function Walker.walkTo(humanoid: Humanoid, root: BasePart, target: Vector3, isCa
 			elseif os.clock() - stuckSince > 1 then
 				local toward = Vector3.new(point.X - root.Position.X, 0, point.Z - root.Position.Z)
 				if toward.Magnitude > 0.1 and not humanoid.SeatPart then -- 의자에 붙어 있으면 의자까지 끌려가니까 안 밀어요
-					root.CFrame += toward.Unit * 1 + Vector3.new(0, 0.3, 0)
+					root.CFrame += toward.Unit * 1 -- (위로 띄우면 물건 속에 끼었다가 하늘로 튕겨서, 옆으로만)
 				end
 				stuckSince = os.clock()
 			end

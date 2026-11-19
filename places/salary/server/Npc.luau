@@ -2,8 +2,94 @@
 -- 로블록스 기본 아바타 몸에 색만 입혀서 만들고, 머리 위에 상태 이모지와 말풍선을 달아요.
 
 local Players = game:GetService("Players")
+local PhysicsService = game:GetService("PhysicsService")
 
 local Npc = {}
+
+---------------------------------------------------------------------------
+-- 🚀 NPC가 하늘로 날아가지 않게
+--   원인: NPC가 플레이어(누운 의자·해먹 위 등)나 다른 NPC와 몸이 겹치면
+--         물리 엔진이 서로를 밀어내면서 위로 튕겨 올려요.
+--   1) NPC는 플레이어·다른 NPC와 부딪히지 않아요 (통과해서 지나가요)
+--   2) 지킴이: 위로 튀는 속도는 없애고, 바닥에서 너무 떠 있으면 바닥으로 내려 줘요
+---------------------------------------------------------------------------
+local NPC_GROUP = "SalaryNpc"
+local CHARACTER_GROUP = "SalaryCharacter"
+local FLOAT_LIMIT = 7 -- 바닥에서 이만큼(스터드) 넘게 떠 있으면 내려 줘요
+local STAND_HEIGHT = 3 -- 서 있을 때 몸통 중심의 바닥 위 높이
+
+pcall(function()
+	PhysicsService:RegisterCollisionGroup(NPC_GROUP)
+	PhysicsService:RegisterCollisionGroup(CHARACTER_GROUP)
+end)
+PhysicsService:CollisionGroupSetCollidable(NPC_GROUP, CHARACTER_GROUP, false)
+PhysicsService:CollisionGroupSetCollidable(NPC_GROUP, NPC_GROUP, false)
+
+local function setGroup(instance: Instance, group: string)
+	if instance:IsA("BasePart") then
+		instance.CollisionGroup = group
+	end
+end
+
+-- 플레이어 캐릭터는 CHARACTER_GROUP으로
+local function watchCharacter(character: Model)
+	for _, part in character:GetDescendants() do
+		setGroup(part, CHARACTER_GROUP)
+	end
+	character.DescendantAdded:Connect(function(part)
+		setGroup(part, CHARACTER_GROUP)
+	end)
+end
+local function watchPlayer(player: Player)
+	if player.Character then
+		watchCharacter(player.Character)
+	end
+	player.CharacterAdded:Connect(watchCharacter)
+end
+Players.PlayerAdded:Connect(watchPlayer)
+for _, player in Players:GetPlayers() do
+	watchPlayer(player)
+end
+
+local tracked: { [Model]: boolean } = {}
+local groundParams = RaycastParams.new()
+groundParams.CollisionGroup = NPC_GROUP -- (플레이어·NPC 몸은 바닥으로 안 쳐요)
+groundParams.RespectCanCollide = true
+
+task.spawn(function()
+	while true do
+		task.wait(0.25)
+		for model in tracked do
+			if not model.Parent then
+				tracked[model] = nil
+				continue
+			end
+			local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local humanoid = model:FindFirstChildOfClass("Humanoid")
+			if not root or not humanoid or root.Anchored or humanoid.SeatPart then
+				continue
+			end
+			local velocity = root.AssemblyLinearVelocity
+			if velocity.Y > 8 then
+				root.AssemblyLinearVelocity = Vector3.new(velocity.X, 0, velocity.Z)
+				root.AssemblyAngularVelocity = Vector3.zero
+			end
+			groundParams.FilterDescendantsInstances = { model }
+			local hit = workspace:Raycast(root.Position, Vector3.new(0, -500, 0), groundParams)
+			if hit and root.Position.Y - hit.Position.Y > FLOAT_LIMIT then
+				local look = root.CFrame.LookVector
+				local flat = Vector3.new(look.X, 0, look.Z)
+				if flat.Magnitude < 0.1 then
+					flat = Vector3.new(0, 0, -1)
+				end
+				local landing = Vector3.new(root.Position.X, hit.Position.Y + STAND_HEIGHT, root.Position.Z)
+				model:PivotTo(CFrame.lookAt(landing, landing + flat))
+				root.AssemblyLinearVelocity = Vector3.zero
+				root.AssemblyAngularVelocity = Vector3.zero
+			end
+		end
+	end
+end)
 
 export type Look = {
 	skin: Color3,
@@ -36,18 +122,22 @@ function Npc.create(name: string, look: Look, parent: Instance): Model
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
 	-- 팔다리가 의자·책상에 부딪혀 덜덜 떨지 않게, 몸통 중심(HumanoidRootPart)만 충돌해요
 	for _, part in model:GetDescendants() do
-		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-			part.CanCollide = false
+		if part:IsA("BasePart") then
+			part.CollisionGroup = NPC_GROUP -- 🚀 플레이어·다른 NPC와 부딪혀 튕기지 않게
+			if part.Name ~= "HumanoidRootPart" then
+				part.CanCollide = false
+			end
 		end
 	end
+	tracked[model] = true
 
 	-- 머리 위 표시: 이름 / 상태 이모지 / 말풍선
 	local head = model:WaitForChild("Head") :: BasePart
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "Bubble"
-	billboard.Size = UDim2.fromOffset(260, 110)
-	billboard.StudsOffset = Vector3.new(0, 3.2, 0)
-	billboard.MaxDistance = 90
+	billboard.Size = UDim2.fromOffset(190, 78) -- (예전 260×110: 너무 커서 줄였어요)
+	billboard.StudsOffset = Vector3.new(0, 2.8, 0)
+	billboard.MaxDistance = 60
 	billboard.Parent = head
 
 	local function label(labelName: string, y: number, height: number, textSize: number): TextLabel
@@ -66,17 +156,17 @@ function Npc.create(name: string, look: Look, parent: Instance): Model
 		text.Parent = billboard
 		return text
 	end
-	local speech = label("Speech", 0, 44, 18)
+	local speech = label("Speech", 0, 32, 13)
 	speech.BackgroundTransparency = 0.1
 	speech.BackgroundColor3 = Color3.new(1, 1, 1)
 	speech.TextColor3 = Color3.fromRGB(30, 30, 30)
 	speech.TextStrokeTransparency = 1
 	speech.Visible = false
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 10)
+	corner.CornerRadius = UDim.new(0, 8)
 	corner.Parent = speech
-	label("Status", 48, 36, 30)
-	label("NameTag", 84, 22, 16).Text = name
+	label("Status", 34, 26, 21)
+	label("NameTag", 60, 16, 12).Text = name
 
 	model.Parent = parent
 	return model

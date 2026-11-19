@@ -44,6 +44,7 @@ function Boss.new(office)
 		fovCos = math.cos(math.rad(58)),
 		noiseSource = nil :: (() -> (Vector3?, number))?,
 		summon = nil :: Vector3?, -- 이과장이 고자질한 위치
+		distractedUntil = 0, -- 😺 고양이한테 정신 팔린 시각까지 (감시 멈춤)
 	}, Boss)
 
 	-- 빨간 넥타이
@@ -301,6 +302,20 @@ function Boss:leaveWork()
 	self.model.Parent = nil
 end
 
+-- 😺 고양이한테 정신이 팔렸어요: seconds 동안 멈춰서 고양이만 봐요 (감시 안 함)
+function Boss:distract(seconds: number, lookAt: Vector3)
+	if not self.active or self.scolding then
+		return
+	end
+	self.token += 1
+	self.distractedUntil = os.clock() + seconds
+	self.watching = false
+	self.footsteps.Playing = false
+	self:face(lookAt - self.root.Position)
+	self:status("😻")
+	self:say("어머, 고양이다~ 쮸쮸쮸 😺", seconds)
+end
+
 -- 👀 이과장이 고자질하면 하던 걸 멈추고 그 자리로 바로 와요
 function Boss:callTo(position: Vector3)
 	if not self.active or self.scolding then
@@ -365,6 +380,11 @@ function Boss:run()
 	task.spawn(function()
 		while true do
 			if not self.active or self.scolding then
+				task.wait(0.2)
+				continue
+			end
+			if os.clock() < self.distractedUntil then
+				self.watching = false -- 😺 고양이 보는 중
 				task.wait(0.2)
 				continue
 			end

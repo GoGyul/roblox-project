@@ -2,6 +2,7 @@
 
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -138,7 +139,7 @@ local WELCOME_PAGES = {
 		lines = {
 			"💰 목표: 일은 최소로, 월급은 최대로!",
 			"🪑 자리에 앉아 숫자키 [1]~[8]로 농땡이를 골라요",
-			"👔 김부장에게 들키면 의심도 ↑, 100%면 🚨 적발",
+			"👔 김부장에게 들키면 의심도 ⬆️, 100%면 🚨 적발",
 			"👀 부장 머리 위를 보세요: 🖥️ 안전 / 👀 위험",
 			"⚠️ 하루 업무는 꼭 채우기! 경고 3번이면 📦 해고",
 		},
@@ -146,7 +147,7 @@ local WELCOME_PAGES = {
 	{
 		title = "💡 월급루팡 꿀팁",
 		lines = {
-			"😮‍💨 아슬아슬하게 복귀하면 보너스 + 콤보",
+			"😅 아슬아슬하게 복귀하면 보너스 + 콤보",
 			"🚶 서류 들기 · 동료와 수다 · 탕비실 라면",
 			"🍪 탕비실 간식을 챙겨서 자리에서 [8]로 몰래 먹기",
 			"🚽 화장실 변기에 앉으면 📈 주식 거래 (가짜 주식)",
@@ -548,6 +549,269 @@ function Panels.showBag()
 end
 
 ---------------------------------------------------------------------------
+-- 🪑 내 자리 꾸미기 + 🏆 칭호 (온라인 주문 → 바로 배송)
+---------------------------------------------------------------------------
+local function decodeAttr(name: string, fallback: any): any
+	local ok, value = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute(name) or "")
+	end)
+	return if ok and typeof(value) == "table" then value else fallback
+end
+
+function Panels.showDecor(startTab: string?)
+	local frame = sheet(640, 600)
+	line(frame, 0, 32, "🪑 내 자리 꾸미기", { Font = Enum.Font.GothamBlack, TextSize = 26 })
+	local balance = line(frame, 0, 32, "", { TextXAlignment = Enum.TextXAlignment.Right, Font = Enum.Font.GothamBold, Size = UDim2.new(1, -44, 0, 32) })
+	local scoreText = line(frame, 34, 22, "", { TextSize = 15, TextColor3 = MUTED })
+	local message = line(frame, 0, 22, "온라인 주문하면 택배로 바로 와요 📦 꾸민 자리는 다른 사람도 볼 수 있어요!", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, -56),
+		TextSize = 14,
+		TextColor3 = MUTED,
+	})
+
+	-- 탭: 칸 5개 + 칭호
+	local tabs = {}
+	for _, slot in SalaryConfig.DecorSlots do
+		table.insert(tabs, { id = slot.id, text = `{slot.emoji} {slot.name}` })
+	end
+	table.insert(tabs, { id = "title", text = "🏆 칭호" })
+	local tabButtons: { [string]: TextButton } = {}
+	local list = Ui.make("ScrollingFrame", {
+		Position = UDim2.fromOffset(0, 104),
+		Size = UDim2.new(1, 0, 1, -170),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 6,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ZIndex = 31,
+		Parent = frame,
+	}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local selected = startTab or "chair"
+	local rowButtons: { [string]: TextButton } = {}
+
+	local function row(order: number, title: string, description: string, onClick: () -> ()): TextButton
+		local r = Ui.make("Frame", {
+			Size = UDim2.new(1, -10, 0, 56),
+			BackgroundColor3 = Color3.fromRGB(240, 240, 236),
+			LayoutOrder = order,
+			ZIndex = 32,
+			Parent = list,
+		}, { Ui.corner(8), Ui.padding(6) })
+		line(r, 0, 22, title, { Font = Enum.Font.GothamBold, TextSize = 16, ZIndex = 33, Size = UDim2.new(1, -130, 0, 22) })
+		line(r, 22, 22, description, { TextSize = 13, ZIndex = 33, TextColor3 = MUTED, Size = UDim2.new(1, -130, 0, 22) })
+		local b = Ui.button({
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, 0, 0.5, 0),
+			Size = UDim2.fromOffset(120, 36),
+			TextSize = 14,
+			ZIndex = 34,
+			Parent = r,
+		})
+		b.Activated:Connect(onClick)
+		return b
+	end
+
+	local function request(action: string, id: string)
+		local result = Remotes.Decor:InvokeServer(action, id)
+		message.Text = result.message
+		message.TextColor3 = if result.ok then Color3.fromRGB(40, 140, 70) else RED
+		if result.ok then
+			Sounds.play("ping", 0.6, 1.2)
+		end
+	end
+
+	local function render()
+		for _, child in list:GetChildren() do
+			if child:IsA("Frame") then
+				child:Destroy()
+			end
+		end
+		table.clear(rowButtons)
+		for id, b in tabButtons do
+			b.BackgroundColor3 = if id == selected then Color3.fromRGB(255, 200, 80) else Color3.fromRGB(205, 205, 210)
+		end
+		if selected == "title" then
+			for i, title in SalaryConfig.Titles do
+				local requirement = ""
+				if title.achievement then
+					for _, achievement in SalaryConfig.Achievements do
+						if achievement.id == title.achievement then
+							requirement = `업적 "{achievement.emoji} {achievement.name}": {achievement.description}`
+						end
+					end
+				else
+					requirement = "기본 칭호"
+				end
+				rowButtons[title.id] = row(i, title.text, requirement, function()
+					request("title", title.id)
+				end)
+			end
+		else
+			for _, slot in SalaryConfig.DecorSlots do
+				if slot.id == selected then
+					for i, option in slot.options do
+						rowButtons[option.id] = row(i, `{option.emoji} {option.name}` .. (if option.price > 0 then ` · {comma(option.price)}원` else " · 기본"), option.description, function()
+							local owned = decodeAttr("DecorOwned", {})
+							request(if option.price == 0 or owned[option.id] then "equip" else "buy", option.id)
+						end)
+					end
+				end
+			end
+		end
+	end
+
+	for i, tab in tabs do
+		local b = Ui.button({
+			Position = UDim2.fromOffset((i - 1) * 99, 62),
+			Size = UDim2.fromOffset(94, 34),
+			Text = tab.text,
+			TextSize = 14,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		b.Activated:Connect(function()
+			selected = tab.id
+			Sounds.play("click", 0.4)
+			render()
+		end)
+		tabButtons[tab.id] = b
+	end
+	render()
+
+	-- 버튼 글씨 갱신 (구매 / 장착 / 장착 중 / 잠김)
+	task.spawn(function()
+		while current == frame do
+			balance.Text = `🏦 {comma(player:GetAttribute("TotalMoney") or 0)}원`
+			scoreText.Text = `🪑 인테리어 점수 {player:GetAttribute("DecorScore") or 0}점 · 칭호 {player:GetAttribute("TitleText") or ""}`
+			local owned = decodeAttr("DecorOwned", {})
+			local equipped = decodeAttr("DecorEquipped", {})
+			local collection = decodeAttr("Collection", {})
+			if selected == "title" then
+				local myTitle = player:GetAttribute("Title") or "newbie"
+				for _, title in SalaryConfig.Titles do
+					local b = rowButtons[title.id]
+					if b then
+						local unlocked = title.achievement == nil or collection[title.achievement] == true
+						b.Text = if title.id == myTitle then "장착 중 ✅" elseif unlocked then "장착" else "🔒 잠김"
+						b.BackgroundColor3 = if title.id == myTitle then Color3.fromRGB(150, 220, 150) elseif unlocked then Ui.COLORS.brass else Color3.fromRGB(200, 200, 200)
+					end
+				end
+			else
+				for _, slot in SalaryConfig.DecorSlots do
+					if slot.id ~= selected then
+						continue
+					end
+					local wearing = equipped[slot.id] or slot.options[1].id
+					for _, option in slot.options do
+						local b = rowButtons[option.id]
+						if b then
+							local has = option.price == 0 or owned[option.id] == true
+							b.Text = if option.id == wearing then "장착 중 ✅" elseif has then "장착" else `주문 {comma(option.price)}원`
+							b.BackgroundColor3 = if option.id == wearing then Color3.fromRGB(150, 220, 150) else Ui.COLORS.brass
+						end
+					end
+				end
+			end
+			task.wait(0.3)
+		end
+	end)
+
+	button(frame, 0, "닫기", close)
+	Sounds.play("swoosh", 0.4)
+end
+
+-- 👀 남의 자리 구경 (책상 명패 [E])
+local function showDeskVisit(owner: Player)
+	local frame = sheet(480, 420)
+	line(frame, 0, 32, `👀 {owner.DisplayName} 님 자리`, { Font = Enum.Font.GothamBlack, TextSize = 24 })
+	line(frame, 38, 26, `{owner:GetAttribute("TitleText") or "🌱 신입 루팡"}`, { Font = Enum.Font.GothamBold, TextSize = 18, TextColor3 = Color3.fromRGB(200, 140, 0) })
+	line(frame, 66, 24, `🪑 인테리어 점수 {owner:GetAttribute("DecorScore") or 0}점 · 직급 {(SalaryConfig.Ranks[owner:GetAttribute("Rank") or 1] or SalaryConfig.Ranks[1]).name}`, { TextSize = 16 })
+	local ok, equipped = pcall(function()
+		return HttpService:JSONDecode(owner:GetAttribute("DecorEquipped") or "{}")
+	end)
+	local lines = {}
+	for _, slot in SalaryConfig.DecorSlots do
+		local id = (ok and equipped[slot.id]) or slot.options[1].id
+		local option = SalaryConfig.getDecor(id)
+		if option then
+			table.insert(lines, `{slot.emoji} {slot.name}: {option.emoji} {option.name}`)
+		end
+	end
+	line(frame, 104, 200, table.concat(lines, "\n"), { TextSize = 17 })
+	button(frame, 0, "닫기", close)
+	Sounds.play("swoosh", 0.4)
+end
+
+-- 👀 "자리 구경" 안내는 내 자리 명패엔 안 뜨고, 내가 자리에 앉아 있을 땐 옆자리 것도 숨겨요 (화면이 거슬리지 않게)
+local deskPrompts: { [ProximityPrompt]: boolean } = {}
+local function watchPrompt(instance: Instance)
+	if instance:IsA("ProximityPrompt") and instance:GetAttribute("OwnerId") then
+		deskPrompts[instance] = true
+	end
+end
+task.spawn(function()
+	local office = workspace:WaitForChild("Office", 60)
+	if not office then
+		return
+	end
+	for _, instance in office:GetDescendants() do
+		watchPrompt(instance)
+	end
+	office.DescendantAdded:Connect(watchPrompt)
+	while true do
+		local seated = player:GetAttribute("Seated") == true
+		for prompt in deskPrompts do
+			if prompt.Parent then
+				prompt.Enabled = prompt:GetAttribute("OwnerId") ~= player.UserId and not seated
+			else
+				deskPrompts[prompt] = nil
+			end
+		end
+		task.wait(0.3)
+	end
+end)
+
+-- 🪑 [E] 앉기: 이미 앉아 있으면 숨기고, 책상 의자는 내 자리에만 떠요
+task.spawn(function()
+	local sitPrompts: { [ProximityPrompt]: boolean } = {}
+	local function watchSit(instance: Instance)
+		if instance:IsA("ProximityPrompt") and instance.Name == "SitPrompt" then
+			sitPrompts[instance] = true
+		end
+	end
+	for _, instance in workspace:GetDescendants() do
+		watchSit(instance)
+	end
+	workspace.DescendantAdded:Connect(watchSit)
+	while true do
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		local sitting = humanoid ~= nil and humanoid.SeatPart ~= nil
+		for prompt in sitPrompts do
+			local seat = prompt.Parent
+			if seat and seat:IsA("Seat") then
+				local mine = seat.Name ~= "Seat" or seat:GetAttribute("OwnerId") == player.UserId
+				prompt.Enabled = mine and not sitting and seat.Occupant == nil
+			else
+				sitPrompts[prompt] = nil
+			end
+		end
+		task.wait(0.2)
+	end
+end)
+
+game:GetService("ProximityPromptService").PromptTriggered:Connect(function(prompt)
+	local ownerId = prompt:GetAttribute("OwnerId")
+	if ownerId then
+		local owner = Players:GetPlayerByUserId(ownerId)
+		if owner then
+			showDeskVisit(owner)
+		end
+	end
+end)
+
+---------------------------------------------------------------------------
 -- 📖 도감
 ---------------------------------------------------------------------------
 function Panels.showCollection()
@@ -565,7 +829,7 @@ function Panels.showCollection()
 			table.insert(actions, actionId)
 		end
 	end
-	for _, stateId in { "toilet", "candy", "coffee", "meeting", "docs", "chat", "ramen" } do
+	for _, stateId in { "toilet", "candy", "coffee", "meeting", "rooftop", "lounger", "hiding", "docs", "chat", "ramen" } do
 		table.insert(actions, stateId)
 	end
 
@@ -684,6 +948,13 @@ toolButton("📖 도감", 76, function()
 		Panels.showCollection()
 	end
 end)
+toolButton("🪑", 46, function()
+	if current then
+		close()
+	else
+		Panels.showDecor()
+	end
+end)
 toolButton("🎒", 46, function()
 	if current then
 		close()
@@ -723,7 +994,7 @@ local PEOPLE: { [string]: Person } = {
 		lines = {
 			"🪑 칸막이가 낮아요. 부장님 눈에 더 잘 띄어요!",
 			"📊 유리 회의실 의자에 앉으면 '회의하는 척 졸기' (안전한 편)",
-			"🌳 출입문 밖 공원 · 🍭 흡연구역(※ 금연, 사탕만!)에서 농땡이",
+			"🌳 출입문 밖 공원 · 🍭 흡연구역(금연! 사탕만!)에서 농땡이",
 			"🏙️ 공원 정문 밖 눈치 스트리트: ☕ 카페 · 🍰 디저트 · 🧸 인형뽑기 · 🕹️ 오락실 (근무 중 외출 OK, 자리 부재 주의!)",
 			"😎 이과장은 대충상사에 남았어요! 감시에서 해방",
 			"💰 직급이 높아서 농땡이 수입도 커요",
@@ -742,11 +1013,11 @@ local PEOPLE: { [string]: Person } = {
 }
 
 local function showCard(person: Person)
-	local frame = sheet(520, 110 + #person.lines * 40 + 60)
+	local frame = sheet(620, 110 + #person.lines * 40 + 60)
 	line(frame, 0, 34, person.title, { Font = Enum.Font.GothamBlack, TextSize = 26 })
-	line(frame, 36, 22, person.subtitle, { TextSize = 15, TextColor3 = MUTED })
+	line(frame, 36, 22, person.subtitle, { TextSize = 15, TextColor3 = MUTED, TextWrapped = true })
 	for i, text in person.lines do
-		line(frame, 70 + (i - 1) * 40, 36, text, { TextSize = 18 })
+		line(frame, 70 + (i - 1) * 40, 36, text, { TextSize = 17, TextWrapped = true })
 	end
 	button(frame, 0, "알겠어요", close)
 	Sounds.play("swoosh", 0.4)
@@ -804,6 +1075,1288 @@ leeChip.Activated:Connect(function()
 		Panels.showPerson("lee")
 	end
 end)
+
+-- 🕶️ 감사 기간 소개 카드 (지금 내 사진 수·남은 지목 기회까지 보여 줘요)
+local function auditPerson(): Person
+	local revealed = ReplicatedStorage:GetAttribute("SalaryEventStage") == "revealed"
+	local photos = math.max(0, player:GetAttribute("AuditPhotos") or 0)
+	local emptyPhotos = player:GetAttribute("AuditEmptyPhotos") or 0
+	local accuseLeft = player:GetAttribute("AccuseLeft") or SalaryConfig.AUDIT_WRONG_MAX
+	return {
+		title = "🕶️ 위장 감사관",
+		subtitle = if revealed
+			then "✅ 정체가 밝혀졌어요! 오늘 감사는 끝 · 농땡이 수입 ×2는 계속"
+			else `동료 중 한 명이 몰래 감사관 · 📸 {photos}/{SalaryConfig.AUDIT_REPORT_AT} · 🪑 {emptyPhotos}/{SalaryConfig.AUDIT_EMPTY_REPORT_AT} · 지목 기회 {accuseLeft}번`,
+		lines = {
+			"🔎 단서: 농땡이 절대 안 함 · 자주 돌아다님 · 📝 메모",
+			`📷 농땡이를 보면 카메라를 들어요 → {SalaryConfig.AUDIT_PHOTO_WINDUP}초 안에 일하기! (도망가면 🪑 빈자리가 찍혀요)`,
+			"📸 찍히는 곳: 내 자리 · 🚽 화장실 · 📊 회의실 · 💬 수다 (어슬렁·탕비실은 OK)",
+			`⚖️ 농땡이 사진 {SalaryConfig.AUDIT_REPORT_AT}장 또는 🪑 빈자리 {SalaryConfig.AUDIT_EMPTY_REPORT_AT}장 → 퇴근 때 감봉 + 경고 1개 (한 번만)`,
+			`[R] "감사팀이죠?" 맞히면 감사 끝 · 모두의 사진 폐기 · +{comma(SalaryConfig.AUDIT_REVEAL_BONUS)}원`,
+			`😠 틀리면 의심도 +{SalaryConfig.AUDIT_WRONG_SUSPICION} · 의심도 속도 +{string.format("%.2f", SalaryConfig.SpeedFactors.accuseWrong.delta)}`,
+			`💰 대신 오늘 농땡이 수입 ×{SalaryConfig.AUDIT_INCOME}!`,
+		},
+	}
+end
+
+---------------------------------------------------------------------------
+-- ✈️ 옥상 종이비행기
+--   [준비] → 🌬️ 바람 보고 → ① 각도 멈추기 → ② 힘 멈추기 (클릭 또는 Enter)
+---------------------------------------------------------------------------
+-- 종이비행기 비행 (모든 사람 화면에 똑같이 날아가요)
+Remotes:WaitForChild("PlaneFlight").OnClientEvent:Connect(function(info)
+	local plane = Instance.new("Model")
+	plane.Name = "PaperPlane"
+	local function wing(offset: CFrame, size: Vector3): WedgePart
+		local w = Instance.new("WedgePart")
+		w.Size = size
+		w.Color = Color3.fromRGB(252, 252, 250)
+		w.Material = Enum.Material.SmoothPlastic
+		w.Anchored = true
+		w.CanCollide = false
+		w.CanQuery = false
+		w.CanTouch = false
+		w:SetAttribute("Offset", offset)
+		w.Parent = plane
+		return w
+	end
+	-- 두 날개 (쐐기 모양을 마주 붙여 화살촉처럼)
+	local parts = {
+		wing(CFrame.new(-0.35, 0, 0) * CFrame.Angles(0, 0, math.rad(-12)), Vector3.new(0.05, 0.7, 2.2)),
+		wing(CFrame.new(0.35, 0, 0) * CFrame.Angles(0, 0, math.rad(12)), Vector3.new(0.05, 0.7, 2.2)),
+		wing(CFrame.new(0, -0.2, 0.15), Vector3.new(0.05, 0.4, 1.8)),
+	}
+	plane.Parent = workspace
+	local trail = Instance.new("Attachment")
+	trail.Parent = parts[3]
+	local function bezier(t: number): Vector3
+		local a = info.start:Lerp(info.control, t)
+		local b = info.control:Lerp(info.finish, t)
+		return a:Lerp(b, t)
+	end
+	local started = os.clock()
+	local connection
+	connection = game:GetService("RunService").RenderStepped:Connect(function()
+		local t = math.clamp((os.clock() - started) / info.duration, 0, 1)
+		local eased = 1 - (1 - t) ^ 1.6 -- 처음엔 빠르게, 나중엔 사뿐히
+		local position = bezier(eased)
+		local ahead = bezier(math.min(1, eased + 0.02))
+		local direction = ahead - position
+		local cf = if direction.Magnitude > 0.01 then CFrame.lookAt(position, position + direction) else CFrame.new(position)
+		-- 살짝 흔들흔들
+		cf *= CFrame.Angles(0, 0, math.sin(os.clock() * 7) * 0.25 * (1 - t))
+		for _, part in parts do
+			part.CFrame = cf * (part:GetAttribute("Offset") :: CFrame) * CFrame.Angles(0, math.pi, 0)
+		end
+		if t >= 1 then
+			connection:Disconnect()
+			task.delay(8, function()
+				plane:Destroy()
+			end)
+		end
+	end)
+end)
+
+local function windText(wind): string
+	local forward = wind.forward
+	local side = wind.side
+	local f = if forward > 0.05 then `⬆️ 뒷바람 {string.format("%.1f", forward)}` elseif forward < -0.05 then `⬇️ 맞바람 {string.format("%.1f", -forward)}` else "바람 없음"
+	local s = if side > 0.05 then `➡️ 오른쪽 {string.format("%.1f", side)}` elseif side < -0.05 then `⬅️ 왼쪽 {string.format("%.1f", -side)}` else "옆바람 없음"
+	return `🌬️ {f} · {s}`
+end
+
+function Panels.showPlane()
+	local frame = sheet(360, 400)
+	frame.AnchorPoint = Vector2.new(1, 0.5)
+	frame.Position = UDim2.new(1, -20, 0.5, 0)
+	line(frame, 0, 30, "✈️ 종이비행기", { Font = Enum.Font.GothamBlack, TextSize = 24 })
+	line(frame, 32, 20, `🎯 {SalaryConfig.PLANE_TARGET_DISTANCE}m 과녁 명중 +{comma(SalaryConfig.PLANE_TARGET_PRIZE)}원 · 25° 근처가 가장 멀리 가요`, { TextSize = 12, TextColor3 = MUTED })
+	local windLabel = line(frame, 56, 24, "🌬️ 바람: [준비]를 누르면 알 수 있어요", { TextSize = 15, Font = Enum.Font.GothamBold })
+
+	-- 게이지 두 개
+	local function gauge(y: number, title: string): (TextLabel, Frame, Frame)
+		local label = line(frame, y, 20, title, { TextSize = 14, Font = Enum.Font.GothamBold })
+		local back = Ui.make("Frame", {
+			Position = UDim2.fromOffset(0, y + 22),
+			Size = UDim2.new(1, 0, 0, 22),
+			BackgroundColor3 = Color3.fromRGB(220, 222, 230),
+			ZIndex = 31,
+			Parent = frame,
+		}, { Ui.corner(6) })
+		local marker = Ui.make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0, 0.5),
+			Size = UDim2.new(0, 6, 1, 8),
+			BackgroundColor3 = Color3.fromRGB(40, 40, 50),
+			ZIndex = 33,
+			Parent = back,
+		}, { Ui.corner(3) })
+		return label, back, marker
+	end
+	local angleLabel, angleBack, angleMarker = gauge(90, "① 각도")
+	-- 25° 근처 (가장 멀리 가는 곳) 표시
+	Ui.make("Frame", {
+		Position = UDim2.fromScale((20 - 5) / 55, 0),
+		Size = UDim2.fromScale(10 / 55, 1),
+		BackgroundColor3 = Color3.fromRGB(150, 220, 150),
+		ZIndex = 32,
+		Parent = angleBack,
+	}, { Ui.corner(6) })
+	local powerLabel, powerBack, powerMarker = gauge(150, "② 힘")
+	Ui.make("UIGradient", {
+		Color = ColorSequence.new(Color3.fromRGB(150, 200, 255), Color3.fromRGB(255, 120, 100)),
+		Parent = powerBack,
+	})
+	local result = line(frame, 210, 60, "", { TextSize = 15, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Center })
+
+	local stage = "idle" -- idle → angle → power → flying
+	local angleStart, powerStart = 0, 0
+	local lockedAngle: number? = nil
+	local busy = false
+
+	local mainButton = Ui.button({
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, 0),
+		Size = UDim2.new(1, 0, 0, 50),
+		Text = "✈️ 준비 (Enter)",
+		TextSize = 18,
+		ZIndex = 31,
+		Parent = frame,
+	})
+
+	local function act()
+		if busy then
+			return
+		end
+		if stage == "idle" then
+			busy = true
+			local r = Remotes.PlaneThrow:InvokeServer("begin")
+			busy = false
+			if current ~= frame then
+				return
+			end
+			if not r.ok then
+				result.Text = r.message
+				result.TextColor3 = RED
+				return
+			end
+			windLabel.Text = windText(r.wind)
+			windLabel.TextColor3 = INK
+			angleStart = r.angleStart
+			lockedAngle = nil
+			angleLabel.Text = "① 각도"
+			powerLabel.Text = "② 힘"
+			powerMarker.Position = UDim2.fromScale(0, 0.5)
+			result.Text = "바람을 보고 각도를 멈춰요!"
+			result.TextColor3 = MUTED
+			stage = "angle"
+			mainButton.Text = "① 각도 멈추기 (Enter)"
+			Sounds.play("swoosh", 0.3)
+		elseif stage == "angle" then
+			local press = workspace:GetServerTimeNow()
+			stage = "wait"
+			busy = true
+			local r = Remotes.PlaneThrow:InvokeServer("angle", press)
+			busy = false
+			if current ~= frame then
+				return
+			end
+			if not r.ok then
+				result.Text = r.message
+				result.TextColor3 = RED
+				stage = "idle"
+				mainButton.Text = "✈️ 준비 (Enter)"
+				return
+			end
+			lockedAngle = r.angle
+			angleMarker.Position = UDim2.fromScale((r.angle - 5) / 55, 0.5)
+			angleLabel.Text = `① 각도 {math.floor(r.angle + 0.5)}°`
+			powerStart = r.powerStart
+			stage = "power"
+			mainButton.Text = "② 힘 멈추기 (Enter)"
+			Sounds.play("click", 0.4, 1.1)
+		elseif stage == "power" then
+			local press = workspace:GetServerTimeNow()
+			stage = "flying"
+			busy = true
+			local r = Remotes.PlaneThrow:InvokeServer("power", press)
+			busy = false
+			if current ~= frame then
+				return
+			end
+			if not r.ok then
+				result.Text = r.message
+				result.TextColor3 = RED
+				stage = "idle"
+				mainButton.Text = "✈️ 준비 (Enter)"
+				return
+			end
+			powerMarker.Position = UDim2.fromScale((r.power - 0.2) / 0.8, 0.5)
+			powerLabel.Text = `② 힘 {math.floor(r.power * 100 + 0.5)}%`
+			mainButton.Text = "✈️ 슈웅~"
+			Sounds.play("swoosh", 0.7, 1.2)
+			result.Text = "✈️ 날아가는 중…"
+			result.TextColor3 = MUTED
+			task.delay(r.duration, function()
+				if current ~= frame then
+					return
+				end
+				local lines = { r.label }
+				if r.distance > 0 then
+					table.insert(lines, `{math.floor(r.distance)}m` .. (if r.record then " · 🏆 내 최고 기록!" else ` · 내 최고 {r.best or 0}m`))
+				end
+				if r.prize > 0 then
+					table.insert(lines, `+{comma(r.prize)}원 (오늘 상금 {r.prizesLeft}번 더)`)
+				elseif r.hitTarget or (r.distance >= SalaryConfig.PlanePrizes[#SalaryConfig.PlanePrizes].distance) then
+					table.insert(lines, "(오늘 상금은 다 받았어요)")
+				end
+				result.Text = table.concat(lines, "\n")
+				result.TextColor3 = if r.hitTarget then Color3.fromRGB(40, 140, 70) elseif r.boomerang then RED else INK
+				if r.hitTarget then
+					Sounds.play("ping", 0.9, 1.5)
+				elseif r.hitBoss then
+					Sounds.play("caught", 0.6, 1.2)
+				else
+					Sounds.play("ping", 0.4, 1.1)
+				end
+				stage = "idle"
+				mainButton.Text = "✈️ 한 번 더 (Enter)"
+			end)
+		end
+	end
+	mainButton.Activated:Connect(act)
+	local keyConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if not gameProcessed and current == frame and (input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter) then
+			act()
+		end
+	end)
+
+	-- 게이지 움직이기 (서버와 같은 식)
+	task.spawn(function()
+		while current == frame do
+			local now = workspace:GetServerTimeNow()
+			if stage == "angle" then
+				local angle = SalaryConfig.planeAngle(math.max(0, now - angleStart))
+				angleMarker.Position = UDim2.fromScale((angle - 5) / 55, 0.5)
+				angleLabel.Text = `① 각도 {math.floor(angle + 0.5)}°`
+			elseif stage == "power" then
+				local power = SalaryConfig.planePower(math.max(0, now - powerStart))
+				powerMarker.Position = UDim2.fromScale((power - 0.2) / 0.8, 0.5)
+				powerLabel.Text = `② 힘 {math.floor(power * 100 + 0.5)}%`
+			end
+			task.wait()
+		end
+		keyConnection:Disconnect()
+	end)
+	local _ = lockedAngle
+	Sounds.play("swoosh", 0.4)
+end
+Remotes:WaitForChild("PlaneOpen").OnClientEvent:Connect(function()
+	Panels.showPlane()
+end)
+
+---------------------------------------------------------------------------
+-- 🌱 옥상 텃밭: 내 화분 창 + 화분 위에 내 식물 그리기 (내 화면에만 보여요)
+---------------------------------------------------------------------------
+local function readGarden(): ({ any }, number)
+	local ok, garden = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("Garden") or "[]")
+	end)
+	garden = if ok and typeof(garden) == "table" then garden else {}
+	for i = 1, SalaryConfig.GARDEN_SLOTS do
+		if typeof(garden[i]) ~= "table" then
+			garden[i] = { seed = "", growth = 0, watered = -1, missed = 0 }
+		end
+	end
+	return garden, player:GetAttribute("GardenToday") or 0
+end
+
+-- 화분 상태: "empty" / "dead" / "ripe" / "wilted" / "growing"
+local function slotState(slot): string
+	local seed = SalaryConfig.getSeed(slot.seed)
+	if not seed then
+		return "empty"
+	elseif slot.missed >= 2 then
+		return "dead"
+	elseif slot.growth >= seed.days then
+		return "ripe"
+	elseif slot.missed == 1 then
+		return "wilted"
+	end
+	return "growing"
+end
+
+-- 🪴 화분 위 식물 그리기
+local gardenFolder = Instance.new("Folder")
+gardenFolder.Name = "MyGarden"
+gardenFolder.Parent = workspace
+local function renderGarden()
+	gardenFolder:ClearAllChildren()
+	local ok, slots = pcall(function()
+		return HttpService:JSONDecode(ReplicatedStorage:GetAttribute("GardenSlots") or "[]")
+	end)
+	if not ok or typeof(slots) ~= "table" then
+		return
+	end
+	local garden, today = readGarden()
+	for i, pos in slots do
+		local slot = garden[i]
+		local seed = slot and SalaryConfig.getSeed(slot.seed)
+		if not seed then
+			continue
+		end
+		local base = Vector3.new(pos[1], pos[2], pos[3])
+		local state = slotState(slot)
+		local function piece(size: Vector3, offset: Vector3, color: Color3, shape: Enum.PartType?)
+			local p = Instance.new("Part")
+			p.Size = size
+			p.Shape = shape or Enum.PartType.Block
+			p.Color = color
+			p.Material = Enum.Material.SmoothPlastic
+			p.Anchored = true
+			p.CanCollide = false
+			p.CanQuery = false
+			p.CanTouch = false
+			p.Position = base + offset
+			p.Parent = gardenFolder
+			return p
+		end
+		local leaf = if state == "wilted" then Color3.fromRGB(150, 140, 70) else Color3.fromRGB(80, 170, 70)
+		local ratio = math.clamp(slot.growth / seed.days, 0, 1)
+		if state == "dead" then
+			piece(Vector3.new(0.12, 0.9, 0.12), Vector3.new(0, 0.45, 0), Color3.fromRGB(110, 80, 50))
+			piece(Vector3.new(0.5, 0.08, 0.3), Vector3.new(0.15, 0.85, 0), Color3.fromRGB(130, 100, 60))
+		elseif slot.growth == 0 then
+			-- 🌱 새싹
+			piece(Vector3.new(0.08, 0.35, 0.08), Vector3.new(0, 0.18, 0), leaf)
+			piece(Vector3.new(0.35, 0.06, 0.18), Vector3.new(-0.15, 0.36, 0), leaf)
+			piece(Vector3.new(0.35, 0.06, 0.18), Vector3.new(0.15, 0.38, 0), leaf)
+		else
+			local height = 0.6 + ratio * 1.1
+			piece(Vector3.new(0.12, height, 0.12), Vector3.new(0, height / 2, 0), Color3.fromRGB(90, 140, 60))
+			local bush = 0.7 + ratio * 0.9
+			piece(Vector3.new(bush, bush * 0.8, bush), Vector3.new(0, height, 0), leaf, Enum.PartType.Ball)
+			if state == "ripe" then
+				-- 🍅 열매 주렁주렁 (상추는 큼직한 잎)
+				if seed.id == "lettuce" then
+					piece(Vector3.new(1.6, 1, 1.6), Vector3.new(0, height, 0), seed.color, Enum.PartType.Ball)
+				else
+					for k = 1, 5 do
+						local angle = k / 5 * math.pi * 2
+						local fruit = piece(Vector3.new(0.32, 0.32, 0.32), Vector3.new(math.cos(angle) * bush * 0.45, height - 0.1 + (k % 2) * 0.25, math.sin(angle) * bush * 0.45), seed.color, Enum.PartType.Ball)
+						fruit.Material = Enum.Material.Glass
+					end
+				end
+			end
+		end
+		-- 머리 위 표시: 다 자랐어요 / 목말라요
+		local mark = if state == "ripe" then `✨{seed.emoji}` elseif state == "dead" then "💀" elseif slot.watered ~= today then "💧?" else nil
+		if mark then
+			local holder = piece(Vector3.new(0.2, 0.2, 0.2), Vector3.new(0, 2.6, 0), Color3.new(1, 1, 1))
+			holder.Transparency = 1
+			local gui = Instance.new("BillboardGui")
+			gui.Size = UDim2.fromOffset(46, 24)
+			gui.MaxDistance = 40
+			gui.Parent = holder
+			local text = Instance.new("TextLabel")
+			text.Size = UDim2.fromScale(1, 1)
+			text.BackgroundTransparency = 1
+			text.Text = mark
+			text.TextScaled = true
+			text.Font = Enum.Font.GothamBold
+			text.TextColor3 = Color3.new(1, 1, 1)
+			text.TextStrokeTransparency = 0.3
+			text.Parent = gui
+		end
+	end
+end
+player:GetAttributeChangedSignal("Garden"):Connect(renderGarden)
+player:GetAttributeChangedSignal("GardenToday"):Connect(renderGarden)
+ReplicatedStorage:GetAttributeChangedSignal("GardenSlots"):Connect(renderGarden)
+task.defer(renderGarden)
+
+function Panels.showGarden()
+	local frame = sheet(380, 560)
+	frame.AnchorPoint = Vector2.new(1, 0.5)
+	frame.Position = UDim2.new(1, -20, 0.5, 0)
+	line(frame, 0, 30, "🌱 직장인 텃밭", { Font = Enum.Font.GothamBlack, TextSize = 24 })
+	line(frame, 32, 20, "심고 → 매일 💧 물 주기 → 퇴근하면 자라요 → 🧺 수확 (이틀 안 주면 💀)", { TextSize = 12, TextColor3 = MUTED })
+	local message = line(frame, 0, 24, "", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, 0),
+		TextSize = 14,
+		Font = Enum.Font.GothamBold,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
+	local busy = false
+	local cards = {}
+	local CARD_W, CARD_H = 165, 210
+
+	local function act(action: string, index: number, seedId: string?)
+		if busy then
+			return
+		end
+		busy = true
+		local result = Remotes.GardenAction:InvokeServer(action, index, seedId)
+		busy = false
+		if current ~= frame then
+			return
+		end
+		message.Text = result.message
+		message.TextColor3 = if result.ok then Color3.fromRGB(40, 140, 70) else RED
+		Sounds.play(if result.ok then "ping" else "bass", 0.4, if action == "water" then 1.4 else 1.1)
+	end
+
+	local function rebuild()
+		for _, card in cards do
+			card:Destroy()
+		end
+		table.clear(cards)
+		local garden, today = readGarden()
+		for i = 1, SalaryConfig.GARDEN_SLOTS do
+			local slot = garden[i]
+			local seed = SalaryConfig.getSeed(slot.seed)
+			local state = slotState(slot)
+			local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
+			local card = Ui.make("Frame", {
+				Position = UDim2.fromOffset(col * (CARD_W + 10), 58 + row * (CARD_H + 10)),
+				Size = UDim2.fromOffset(CARD_W, CARD_H),
+				BackgroundColor3 = if state == "ripe" then Color3.fromRGB(235, 250, 225) elseif state == "dead" then Color3.fromRGB(235, 225, 215) else Color3.fromRGB(240, 238, 232),
+				ZIndex = 31,
+				Parent = frame,
+			}, { Ui.corner(10), Ui.padding(8) })
+			table.insert(cards, card)
+			local function label(y: number, h: number, text: string, size: number, color: Color3?)
+				return Ui.make("TextLabel", {
+					Position = UDim2.fromOffset(0, y),
+					Size = UDim2.new(1, 0, 0, h),
+					BackgroundTransparency = 1,
+					Text = text,
+					TextSize = size,
+					TextWrapped = true,
+					Font = Enum.Font.GothamBold,
+					TextColor3 = color or INK,
+					ZIndex = 32,
+					Parent = card,
+				})
+			end
+			local function smallButton(x: number, y: number, w: number, text: string, color: Color3, onClick: () -> ())
+				local b = Ui.button({
+					Position = UDim2.fromOffset(x, y),
+					Size = UDim2.fromOffset(w, 32),
+					Text = text,
+					TextSize = 12,
+					TextWrapped = true,
+					BackgroundColor3 = color,
+					ZIndex = 33,
+					Parent = card,
+				})
+				b.Activated:Connect(onClick)
+				return b
+			end
+			if not seed then
+				label(0, 34, "🪴", 28)
+				label(36, 20, `{i}번 화분 · 비었어요`, 13, MUTED)
+				for k, option in SalaryConfig.GardenSeeds do
+					local cx, cy = ((k - 1) % 2) * 76, 62 + math.floor((k - 1) / 2) * 38
+					smallButton(cx, cy, 72, `{option.emoji} {option.price}원\n{option.days}일`, Color3.fromRGB(210, 235, 200), function()
+						act("plant", i, option.id)
+					end)
+				end
+				label(140, 50, "씨앗을 골라 심어요", 11, MUTED)
+			else
+				local stageEmoji = if state == "dead" then "💀" elseif state == "ripe" then seed.emoji elseif slot.growth == 0 then "🌱" elseif state == "wilted" then "🥀" else "🌿"
+				label(0, 34, stageEmoji, 28)
+				label(36, 20, `{seed.emoji} {seed.name}`, 14)
+				local statusText = if state == "dead"
+					then "말라 죽었어요…"
+					elseif state == "ripe" then "🧺 다 자랐어요!"
+					elseif state == "wilted" then "🥀 시들었어요! 오늘 꼭 물을"
+					elseif slot.watered == today then `✅ 오늘 물 줌 ({slot.growth}/{seed.days}일)`
+					else `💧 목말라요 ({slot.growth}/{seed.days}일)`
+				label(58, 32, statusText, 12, if state == "wilted" or state == "dead" then RED else MUTED)
+				-- 자란 정도 막대
+				local back = Ui.make("Frame", { Position = UDim2.fromOffset(0, 94), Size = UDim2.new(1, 0, 0, 8), BackgroundColor3 = Color3.fromRGB(215, 215, 210), ZIndex = 32, Parent = card }, { Ui.corner(4) })
+				Ui.make("Frame", { Size = UDim2.fromScale(math.clamp(slot.growth / seed.days, 0, 1), 1), BackgroundColor3 = Color3.fromRGB(110, 190, 90), ZIndex = 33, Parent = back }, { Ui.corner(4) })
+				if state == "dead" then
+					smallButton(0, 112, CARD_W - 16, "🧹 뽑고 비우기", Color3.fromRGB(225, 210, 195), function()
+						act("clear", i)
+					end)
+				elseif state == "ripe" then
+					smallButton(0, 112, CARD_W - 16, `💰 팔기 +{comma(seed.sell)}원`, Color3.fromRGB(255, 215, 110), function()
+						act("sell", i)
+					end)
+					smallButton(0, 150, CARD_W - 16, "🎁 부장님 선물로 챙기기", Color3.fromRGB(200, 225, 255), function()
+						act("gift", i)
+					end)
+				else
+					local watered = slot.watered == today
+					local waterButton = smallButton(0, 112, CARD_W - 16, if watered then "✅ 오늘은 충분해요" else "💧 물 주기", if watered then Color3.fromRGB(215, 215, 215) else Color3.fromRGB(150, 205, 255), function()
+						act("water", i)
+					end)
+					waterButton.AutoButtonColor = not watered
+					label(150, 40, `다 자라면 {comma(seed.sell)}원 · {seed.description}`, 11, MUTED)
+				end
+			end
+		end
+	end
+	rebuild()
+	local connections = {
+		player:GetAttributeChangedSignal("Garden"):Connect(function()
+			if current == frame then
+				rebuild()
+			end
+		end),
+		player:GetAttributeChangedSignal("GardenToday"):Connect(function()
+			if current == frame then
+				rebuild()
+			end
+		end),
+	}
+	task.spawn(function()
+		while current == frame do
+			task.wait(0.5)
+		end
+		for _, connection in connections do
+			connection:Disconnect()
+		end
+	end)
+	Sounds.play("swoosh", 0.4)
+end
+Remotes:WaitForChild("GardenOpen").OnClientEvent:Connect(function()
+	Panels.showGarden()
+end)
+
+---------------------------------------------------------------------------
+-- 🔭 건너편 빌딩 관찰 일지
+--   동그란 렌즈로 (주)야근물산 창문을 둘러봐요: 🖱️ 드래그 / ⌨️ WASD·방향키
+--   창문에 장면이 보이면 렌즈 가운데(+)에 맞추고 잠깐 기다리면 📒 기록!
+---------------------------------------------------------------------------
+local function readScenes(): { [string]: boolean }
+	local ok, scenes = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("Scenes") or "{}")
+	end)
+	return if ok and typeof(scenes) == "table" then scenes else {}
+end
+
+local RARITY_TEXT = { common = "흔함", rare = "희귀", legend = "전설" }
+
+function Panels.showScopeLog()
+	local frame = sheet(600, 520)
+	local found = readScenes()
+	local count = 0
+	for _ in found do
+		count += 1
+	end
+	line(frame, 0, 30, `📒 건너편 빌딩 관찰 일지 ({count}/{#SalaryConfig.ScopeScenes})`, { Font = Enum.Font.GothamBlack, TextSize = 22 })
+	line(frame, 32, 20, "시간대마다 보이는 장면이 달라요 (오전 · 점심 · 오후)", { TextSize = 13, TextColor3 = MUTED })
+	for i, scene in SalaryConfig.ScopeScenes do
+		local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
+		local text = if found[scene.id]
+			then `✅ {scene.emoji} {scene.name}`
+			else `❔ ??? ({RARITY_TEXT[scene.rarity]})`
+		line(frame, 60 + row * 40, 38, text, {
+			Position = UDim2.fromOffset(col * 285, 60 + row * 40),
+			Size = UDim2.fromOffset(280, 38),
+			TextSize = 14,
+			Font = Enum.Font.GothamBold,
+			TextColor3 = if found[scene.id] then INK elseif scene.rarity == "legend" then Color3.fromRGB(190, 140, 30) else MUTED,
+		})
+	end
+	Sounds.play("swoosh", 0.4)
+end
+
+function Panels.showScope()
+	close()
+	local overlay = Ui.make("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(5, 5, 10),
+		BackgroundTransparency = 0.25,
+		ZIndex = 30,
+		Parent = gui,
+	})
+	current = overlay
+	local LENS = 440
+	local lens = Ui.make("CanvasGroup", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.47),
+		Size = UDim2.fromOffset(LENS, LENS),
+		BackgroundColor3 = Color3.fromRGB(150, 185, 225),
+		ZIndex = 31,
+		Parent = overlay,
+	}, { Ui.corner(LENS), Ui.make("UIScale", { Scale = fitScale(LENS + 60, LENS + 160) }) })
+	-- 건너편 빌딩 앞면
+	local COLS, ROWS = SalaryConfig.SCOPE_COLUMNS, SalaryConfig.SCOPE_ROWS
+	local WIN_W, WIN_H, GAP, TOP = 130, 105, 24, 80
+	local FACADE_W = COLS * WIN_W + (COLS + 1) * GAP
+	local FACADE_H = TOP + ROWS * WIN_H + (ROWS + 1) * GAP
+	local facade = Ui.make("Frame", {
+		Size = UDim2.fromOffset(FACADE_W, FACADE_H),
+		BackgroundColor3 = Color3.fromRGB(120, 125, 140),
+		ZIndex = 32,
+		Parent = lens,
+	})
+	Ui.make("TextLabel", {
+		Position = UDim2.fromOffset(0, 16),
+		Size = UDim2.new(1, 0, 0, 50),
+		BackgroundColor3 = Color3.fromRGB(40, 40, 50),
+		Text = "(주)야근물산",
+		TextColor3 = Color3.fromRGB(255, 130, 100),
+		Font = Enum.Font.GothamBlack,
+		TextSize = 34,
+		ZIndex = 33,
+		Parent = facade,
+	})
+	local windows = {}
+	for w = 1, COLS * ROWS do
+		local col, row = (w - 1) % COLS, math.floor((w - 1) / COLS)
+		local x, y = GAP + col * (WIN_W + GAP), TOP + GAP + row * (WIN_H + GAP)
+		local win = Ui.make("Frame", {
+			Position = UDim2.fromOffset(x, y),
+			Size = UDim2.fromOffset(WIN_W, WIN_H),
+			BackgroundColor3 = if (w % 3 == 0) then Color3.fromRGB(255, 240, 190) else Color3.fromRGB(190, 215, 235),
+			ZIndex = 33,
+			Parent = facade,
+		}, { Ui.stroke(Color3.fromRGB(70, 75, 90), 3) })
+		-- 블라인드 줄무늬
+		for k = 1, 3 do
+			Ui.make("Frame", { Position = UDim2.fromOffset(0, k * 24), Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = Color3.fromRGB(160, 170, 185), BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 34, Parent = win })
+		end
+		local emoji = Ui.make("TextLabel", { Size = UDim2.new(1, 0, 0, 72), BackgroundTransparency = 1, Text = "", TextSize = 46, Font = Enum.Font.GothamBold, ZIndex = 35, Parent = win })
+		local caption = Ui.make("TextLabel", { Position = UDim2.fromOffset(0, 74), Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = "", TextSize = 13, TextWrapped = true, Font = Enum.Font.GothamBold, TextColor3 = INK, ZIndex = 35, Parent = win })
+		windows[w] = { frame = win, emoji = emoji, caption = caption, x = x, y = y }
+	end
+	-- 렌즈 가운데 + 표시
+	for _, size in { Vector2.new(40, 3), Vector2.new(3, 40) } do
+		Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(size.X, size.Y), BackgroundColor3 = Color3.fromRGB(255, 60, 60), BorderSizePixel = 0, ZIndex = 40, Parent = lens })
+	end
+	Ui.make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 41, Parent = lens }, { Ui.corner(LENS), Ui.stroke(Color3.fromRGB(20, 20, 25), 14) })
+
+	-- 아래 안내 + 초점 막대 + 버튼
+	local focusBack = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.47, LENS / 2 + 12), Size = UDim2.fromOffset(260, 10), BackgroundColor3 = Color3.fromRGB(60, 60, 70), ZIndex = 31, Parent = overlay }, { Ui.corner(5) })
+	local focusFill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.fromRGB(255, 210, 80), ZIndex = 32, Parent = focusBack }, { Ui.corner(5) })
+	local status = Ui.make("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0.47, LENS / 2 + 28),
+		Size = UDim2.fromOffset(600, 26),
+		BackgroundTransparency = 1,
+		TextColor3 = Color3.new(1, 1, 1),
+		TextStrokeTransparency = 0.4,
+		Font = Enum.Font.GothamBold,
+		TextSize = 16,
+		Text = "",
+		ZIndex = 31,
+		Parent = overlay,
+	})
+	local logButton = Ui.button({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(0.5, -6, 0.47, LENS / 2 + 60), Size = UDim2.fromOffset(150, 40), Text = "📒 관찰 일지", TextSize = 16, ZIndex = 31, Parent = overlay })
+	local quitButton = Ui.button({ AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0.5, 6, 0.47, LENS / 2 + 60), Size = UDim2.fromOffset(150, 40), Text = "🔭 그만 보기", TextSize = 16, ZIndex = 31, Parent = overlay })
+	logButton.Activated:Connect(function()
+		Panels.showScopeLog()
+	end)
+	quitButton.Activated:Connect(close)
+
+	-- 보는 동안 캐릭터는 제자리 (WASD는 렌즈를 움직여요)
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	local oldSpeed = if humanoid then humanoid.WalkSpeed else 16
+	if humanoid then
+		humanoid.WalkSpeed = 0
+	end
+
+	-- 둘러보기: pan = 렌즈 가운데가 보는 빌딩 위 좌표
+	local pan = Vector2.new(FACADE_W / 2, FACADE_H / 2)
+	local dragging = false
+	local held: { [Enum.KeyCode]: boolean } = {}
+	local connections = {}
+	table.insert(connections, lens.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+		end
+	end))
+	table.insert(connections, UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+		held[input.KeyCode] = nil
+	end))
+	table.insert(connections, UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			pan -= Vector2.new(input.Delta.X, input.Delta.Y)
+		end
+	end))
+	table.insert(connections, UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if not gameProcessed then
+			held[input.KeyCode] = true
+		end
+	end))
+
+	local focusTime = 0
+	local focusKey = ""
+	local spotted: { [string]: boolean } = {} -- 이번에 이미 확인한 (창문·장면·끝시각)
+	local busy = false
+	local lastTick = os.clock()
+	task.spawn(function()
+		while current == overlay do
+			local dt = os.clock() - lastTick
+			lastTick = os.clock()
+			-- 키보드로 둘러보기
+			local move = Vector2.zero
+			if held[Enum.KeyCode.A] or held[Enum.KeyCode.Left] then move -= Vector2.new(1, 0) end
+			if held[Enum.KeyCode.D] or held[Enum.KeyCode.Right] then move += Vector2.new(1, 0) end
+			if held[Enum.KeyCode.W] or held[Enum.KeyCode.Up] then move -= Vector2.new(0, 1) end
+			if held[Enum.KeyCode.S] or held[Enum.KeyCode.Down] then move += Vector2.new(0, 1) end
+			pan += move * 420 * dt
+			pan = Vector2.new(math.clamp(pan.X, 0, FACADE_W), math.clamp(pan.Y, 0, FACADE_H))
+			facade.Position = UDim2.fromOffset(LENS / 2 - pan.X, LENS / 2 - pan.Y)
+
+			-- 지금 보이는 장면들 그리기
+			local ok, showing = pcall(function()
+				return HttpService:JSONDecode(ReplicatedStorage:GetAttribute("ScopeScenes") or "[]")
+			end)
+			showing = if ok and typeof(showing) == "table" then showing else {}
+			local now = workspace:GetServerTimeNow()
+			local found = readScenes()
+			local byWindow = {}
+			for _, item in showing do
+				if item.u > now then
+					byWindow[item.w] = item
+				end
+			end
+			for w, win in windows do
+				local item = byWindow[w]
+				local scene = item and SalaryConfig.getScopeScene(item.s)
+				win.emoji.Text = if scene then scene.emoji else ""
+				win.caption.Text = if scene and found[scene.id] then `✅ {scene.name}` elseif scene then "???" else ""
+				win.frame.BackgroundColor3 = if scene then Color3.fromRGB(255, 250, 225) elseif w % 3 == 0 then Color3.fromRGB(255, 240, 190) else Color3.fromRGB(190, 215, 235)
+			end
+
+			-- 렌즈 가운데에 있는 창문
+			local aimed = nil
+			for w, win in windows do
+				if pan.X >= win.x and pan.X <= win.x + WIN_W and pan.Y >= win.y and pan.Y <= win.y + WIN_H then
+					aimed = w
+				end
+			end
+			local item = aimed and byWindow[aimed]
+			local count = 0
+			for _ in found do
+				count += 1
+			end
+			if item then
+				local key = `{item.w}:{item.s}:{item.u}`
+				if key ~= focusKey then
+					focusKey = key
+					focusTime = 0
+				end
+				if not spotted[key] and not busy then
+					focusTime += dt
+					status.Text = "🔍 초점 맞추는 중…"
+					if focusTime >= SalaryConfig.SCOPE_FOCUS then
+						spotted[key] = true
+						busy = true
+						task.spawn(function()
+							local result = Remotes.ScopeSpot:InvokeServer(item.w, item.s)
+							busy = false
+							if current ~= overlay or not result.ok then
+								if result and result.message and current == overlay then
+									status.Text = result.message
+								end
+								return
+							end
+							if result.first then
+								Sounds.play("ping", 0.8, if result.rarity == "legend" then 1.6 else 1.3)
+								Hud.popup(`📒 새 장면! {result.emoji} {result.name} +{comma(result.reward)}원`, if result.rarity == "legend" then Color3.fromRGB(255, 210, 80) else Color3.fromRGB(150, 230, 150), 3)
+								Ui.toast(`{result.emoji} {result.name} — {result.description}`)
+							else
+								Sounds.play("click", 0.4, 1.2)
+								Hud.popup(`📒 이미 기록한 장면: {result.emoji} {result.name}`, Color3.fromRGB(220, 220, 220), 2)
+							end
+						end)
+					end
+				else
+					status.Text = `📒 관찰 일지 {count}/{#SalaryConfig.ScopeScenes} · 다른 창문도 둘러봐요`
+				end
+			else
+				focusKey = ""
+				focusTime = 0
+				status.Text = `📒 관찰 일지 {count}/{#SalaryConfig.ScopeScenes} · 🖱️ 드래그 / ⌨️ WASD로 둘러보기`
+			end
+			focusFill.Size = UDim2.fromScale(math.clamp(focusTime / SalaryConfig.SCOPE_FOCUS, 0, 1), 1)
+			task.wait()
+		end
+		for _, connection in connections do
+			connection:Disconnect()
+		end
+		if humanoid and humanoid.Parent then
+			humanoid.WalkSpeed = oldSpeed
+		end
+	end)
+	Sounds.play("swoosh", 0.5, 0.8)
+end
+Remotes:WaitForChild("ScopeOpen").OnClientEvent:Connect(function()
+	Panels.showScope()
+end)
+
+---------------------------------------------------------------------------
+-- 🌅 노을 타임 (옥상에 있을 때만 내 화면 하늘이 주황빛으로)
+---------------------------------------------------------------------------
+do
+	local Lighting = game:GetService("Lighting")
+	local SUNSET_CLOCK = 17.55
+	local tint: ColorCorrectionEffect? = nil
+	local sun: Part? = nil
+	local applied = false
+	local savedClock = 13
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local onRoof = root ~= nil and root.Position.Y > 280
+			local want = onRoof and ReplicatedStorage:GetAttribute("Sunset") == true and ReplicatedStorage:GetAttribute("SalaryEvent") ~= "blackout"
+			if want and not applied then
+				applied = true
+				savedClock = Lighting.ClockTime
+				TweenService:Create(Lighting, TweenInfo.new(3), { ClockTime = SUNSET_CLOCK }):Play()
+				tint = Instance.new("ColorCorrectionEffect")
+				tint.Name = "SunsetTint"
+				tint.TintColor = Color3.fromRGB(255, 255, 255)
+				tint.Parent = Lighting
+				TweenService:Create(tint :: ColorCorrectionEffect, TweenInfo.new(3), { TintColor = Color3.fromRGB(255, 212, 175), Saturation = 0.18, Contrast = 0.05 }):Play()
+				-- 지평선 위 커다란 해
+				local s = Instance.new("Part")
+				s.Shape = Enum.PartType.Ball
+				s.Size = Vector3.new(36, 36, 36)
+				s.Color = Color3.fromRGB(255, 140, 60)
+				s.Material = Enum.Material.Neon
+				s.Anchored = true
+				s.CanCollide = false
+				s.CanQuery = false
+				s.CastShadow = false
+				s.Position = Vector3.new(-120, 312, -260)
+				s.Parent = workspace
+				sun = s
+				TweenService:Create(s, TweenInfo.new(60, Enum.EasingStyle.Linear), { Position = Vector3.new(-120, 296, -260) }):Play() -- 천천히 지는 해
+			elseif not want and applied then
+				applied = false
+				if math.abs(Lighting.ClockTime - SUNSET_CLOCK) < 0.01 then
+					TweenService:Create(Lighting, TweenInfo.new(2), { ClockTime = savedClock }):Play()
+				end
+				if tint then
+					local old = tint
+					TweenService:Create(old, TweenInfo.new(2), { TintColor = Color3.new(1, 1, 1), Saturation = 0, Contrast = 0 }):Play()
+					task.delay(2.1, function()
+						old:Destroy()
+					end)
+					tint = nil
+				end
+				if sun then
+					sun:Destroy()
+					sun = nil
+				end
+			end
+		end
+	end)
+end
+
+-- 🌅 "오늘 하루도 고생했다…" 연출 (영화처럼 위아래 검은 띠)
+Remotes:WaitForChild("SunsetMoment").OnClientEvent:Connect(function()
+	local layer = Ui.make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 60, Parent = gui })
+	local bars = {}
+	for _, top in { true, false } do
+		local bar = Ui.make("Frame", {
+			AnchorPoint = Vector2.new(0, if top then 0 else 1),
+			Position = UDim2.fromScale(0, if top then 0 else 1),
+			Size = UDim2.new(1, 0, 0, 0),
+			BackgroundColor3 = Color3.new(0, 0, 0),
+			BorderSizePixel = 0,
+			ZIndex = 60,
+			Parent = layer,
+		})
+		table.insert(bars, bar)
+		TweenService:Create(bar, TweenInfo.new(1.2, Enum.EasingStyle.Quad), { Size = UDim2.new(1, 0, 0.12, 0) }):Play()
+	end
+	local title = Ui.make("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.42),
+		Size = UDim2.fromOffset(700, 60),
+		BackgroundTransparency = 1,
+		Text = "🌅 오늘 하루도 고생했다…",
+		TextColor3 = Color3.fromRGB(255, 225, 190),
+		TextStrokeTransparency = 0.5,
+		TextTransparency = 1,
+		Font = Enum.Font.GothamBold,
+		TextSize = 34,
+		ZIndex = 61,
+		Parent = layer,
+	})
+	local sub = Ui.make("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.49),
+		Size = UDim2.fromOffset(700, 30),
+		BackgroundTransparency = 1,
+		Text = `의심도가 사르르 녹았어요 · 오늘의 의심도 속도 {string.format("%.2f", SalaryConfig.SUNSET_DELTA)}`,
+		TextColor3 = Color3.fromRGB(255, 240, 220),
+		TextStrokeTransparency = 0.6,
+		TextTransparency = 1,
+		Font = Enum.Font.GothamMedium,
+		TextSize = 18,
+		ZIndex = 61,
+		Parent = layer,
+	})
+	Sounds.play("ping", 0.5, 0.8)
+	task.delay(0.8, function()
+		TweenService:Create(title, TweenInfo.new(1.5), { TextTransparency = 0 }):Play()
+		task.wait(0.8)
+		TweenService:Create(sub, TweenInfo.new(1.2), { TextTransparency = 0 }):Play()
+	end)
+	task.delay(5.5, function()
+		TweenService:Create(title, TweenInfo.new(1.2), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+		TweenService:Create(sub, TweenInfo.new(1.2), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+		for _, bar in bars do
+			TweenService:Create(bar, TweenInfo.new(1.2), { Size = UDim2.new(1, 0, 0, 0) }):Play()
+		end
+		task.wait(1.3)
+		layer:Destroy()
+	end)
+end)
+
+-- 📸 노을 사진: 찰칵! → 폴라로이드
+Remotes:WaitForChild("SunsetPhoto").OnClientEvent:Connect(function(first: boolean, count: number, prize: number)
+	local flash = Ui.make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.05, ZIndex = 62, Parent = gui })
+	TweenService:Create(flash, TweenInfo.new(0.7), { BackgroundTransparency = 1 }):Play()
+	task.delay(0.8, function()
+		flash:Destroy()
+	end)
+	Sounds.play("click", 0.8, 0.7)
+	local card = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 1.3),
+		Size = UDim2.fromOffset(260, 310),
+		Rotation = -4,
+		BackgroundColor3 = Color3.fromRGB(252, 250, 244),
+		ZIndex = 63,
+		Parent = gui,
+	}, { Ui.corner(4), Ui.stroke(Color3.fromRGB(200, 195, 185), 2) })
+	local photo = Ui.make("Frame", {
+		Position = UDim2.fromOffset(14, 14),
+		Size = UDim2.new(1, -28, 0, 220),
+		ZIndex = 64,
+		Parent = card,
+	})
+	Ui.make("UIGradient", {
+		Rotation = 90,
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 90, 170)),
+			ColorSequenceKeypoint.new(0.55, Color3.fromRGB(255, 140, 90)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 205, 120)),
+		}),
+		Parent = photo,
+	})
+	Ui.make("TextLabel", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.6), Size = UDim2.fromOffset(120, 80), BackgroundTransparency = 1, Text = "🌅", TextSize = 70, ZIndex = 65, Parent = photo })
+	Ui.make("TextLabel", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 1), Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1, Text = "🏢🏢🏬🏢🏙️🏢", TextSize = 22, ZIndex = 65, Parent = photo })
+	Ui.make("TextLabel", {
+		Position = UDim2.fromOffset(10, 240),
+		Size = UDim2.new(1, -20, 0, 30),
+		BackgroundTransparency = 1,
+		Text = `{player.DisplayName}의 {count}번째 노을`,
+		TextColor3 = Color3.fromRGB(70, 60, 50),
+		Font = Enum.Font.GothamBold,
+		TextSize = 17,
+		ZIndex = 64,
+		Parent = card,
+	})
+	Ui.make("TextLabel", {
+		Position = UDim2.fromOffset(10, 268),
+		Size = UDim2.new(1, -20, 0, 24),
+		BackgroundTransparency = 1,
+		Text = if first then `🖼️ 앨범에 저장! +{comma(prize)}원` else "(오늘 사진은 이미 앨범에 있어요)",
+		TextColor3 = if first then Color3.fromRGB(40, 140, 70) else Color3.fromRGB(130, 125, 120),
+		Font = Enum.Font.GothamMedium,
+		TextSize = 14,
+		ZIndex = 64,
+		Parent = card,
+	})
+	TweenService:Create(card, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.5, 0.5) }):Play()
+	task.delay(4.5, function()
+		TweenService:Create(card, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.fromScale(0.5, 1.3) }):Play()
+		task.wait(0.6)
+		card:Destroy()
+	end)
+end)
+
+---------------------------------------------------------------------------
+-- 🏀 옥상 농구
+---------------------------------------------------------------------------
+-- 공이 날아가는 모습 (모든 사람 화면에)
+Remotes:WaitForChild("HoopShot").OnClientEvent:Connect(function(info)
+	local ball = Instance.new("Part")
+	ball.Shape = Enum.PartType.Ball
+	ball.Size = Vector3.new(1, 1, 1)
+	ball.Color = Color3.fromRGB(230, 110, 40)
+	ball.Material = Enum.Material.SmoothPlastic
+	ball.Anchored = true
+	ball.CanCollide = false
+	ball.CanQuery = false
+	ball.Position = info.from
+	ball.Parent = workspace
+	local rim: Vector3 = info.rim
+	local floorY = rim.Y - 10 + 0.5
+	local toBoard = Vector3.new(0, 0, 1) -- 골대 판 쪽
+	-- 어디로 가나
+	local target = rim
+	if info.result == "make" then
+		target = rim + Vector3.new(0.55, 0.15, 0)
+	elseif info.result == "rim" then
+		target = rim + Vector3.new(if math.random() < 0.5 then -1.1 else 1.1, 0.2, -0.3)
+	elseif info.result == "miss" then
+		target = rim + Vector3.new(math.random(-25, 25) / 10, -1.5, if math.random() < 0.5 then -1.8 else 0.6)
+	end
+	-- 경로 단계들: (끝 위치, 걸리는 시간, 포물선 높이)
+	local steps = { { target, 0.95, 7 } }
+	if info.result == "swish" or info.result == "make" then
+		table.insert(steps, { rim + Vector3.new(0, -2.6, 0), 0.35, 0 }) -- 그물 통과 슉
+		table.insert(steps, { Vector3.new(rim.X, floorY, rim.Z) - toBoard * 1.5, 0.3, 0 })
+		table.insert(steps, { Vector3.new(rim.X, floorY, rim.Z) - toBoard * 5, 0.6, 2 })
+	elseif info.result == "rim" then
+		local away = target + (target - rim) * 2.5 - toBoard * 2
+		table.insert(steps, { Vector3.new(away.X, floorY, away.Z), 0.7, 2.5 }) -- 땡! 튕겨 나감
+		table.insert(steps, { Vector3.new(away.X, floorY, away.Z) - toBoard * 4, 0.6, 1.2 })
+	else
+		table.insert(steps, { Vector3.new(target.X, floorY, target.Z - 2), 0.5, 0 })
+		table.insert(steps, { Vector3.new(target.X, floorY, target.Z - 7), 0.7, 1.5 })
+	end
+	task.spawn(function()
+		for index, step in steps do
+			local from = ball.Position
+			local to: Vector3, duration: number, arc: number = step[1], step[2], step[3]
+			local started = os.clock()
+			while true do
+				local t = math.clamp((os.clock() - started) / duration, 0, 1)
+				ball.Position = from:Lerp(to, t) + Vector3.new(0, math.sin(t * math.pi) * arc, 0)
+				ball.Orientation += Vector3.new(8, 0, 0)
+				if t >= 1 then
+					break
+				end
+				task.wait()
+			end
+			if index == 1 and (info.result == "rim") then
+				Sounds.play("click", 0.6, 0.6) -- 땡!
+			end
+		end
+		task.wait(2.5)
+		ball:Destroy()
+	end)
+end)
+
+local HOOP_TEXT = { swish = "🎯 클린슛!", make = "🏀 골인!", rim = "😫 림 맞고 튕김…", miss = "💨 에어볼…" }
+
+function Panels.showHoop()
+	local frame = sheet(340, 380)
+	frame.AnchorPoint = Vector2.new(1, 0.5)
+	frame.Position = UDim2.new(1, -20, 0.5, 0)
+	line(frame, 0, 30, "🏀 옥상 농구", { Font = Enum.Font.GothamBlack, TextSize = 24 })
+	line(frame, 32, 20, "🎯 초록 +3 · 🟡 노랑 +2 · 🔥 연속 +1 · 🔊 공 소리 조심!", { TextSize = 12, TextColor3 = MUTED })
+	local ballsText = line(frame, 58, 30, "", { TextSize = 22, TextXAlignment = Enum.TextXAlignment.Center })
+	local scoreText = line(frame, 92, 26, "", { TextSize = 18, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Center })
+	-- 슛 게이지
+	local back = Ui.make("Frame", { Position = UDim2.fromOffset(0, 130), Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = Color3.fromRGB(215, 218, 226), ZIndex = 31, Parent = frame }, { Ui.corner(6) })
+	local function zone(half: number, color: Color3, z: number)
+		Ui.make("Frame", {
+			Position = UDim2.fromScale(SalaryConfig.HOOP_TARGET - half, 0),
+			Size = UDim2.fromScale(half * 2, 1),
+			BackgroundColor3 = color,
+			BorderSizePixel = 0,
+			ZIndex = z,
+			Parent = back,
+		})
+	end
+	zone(SalaryConfig.HOOP_RIM, Color3.fromRGB(250, 190, 120), 32)
+	zone(SalaryConfig.HOOP_GOOD, Color3.fromRGB(250, 225, 110), 33)
+	zone(SalaryConfig.HOOP_PERFECT, Color3.fromRGB(110, 210, 110), 34)
+	local marker = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0, 0.5), Size = UDim2.new(0, 6, 1, 10), BackgroundColor3 = Color3.fromRGB(30, 30, 40), ZIndex = 36, Parent = back }, { Ui.corner(3) })
+	local result = line(frame, 172, 70, "", { TextSize = 16, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Center })
+	local mainButton = Ui.button({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.new(1, 0, 0, 50), Text = "", TextSize = 18, ZIndex = 31, Parent = frame })
+
+	local playing = false
+	local busy = false
+	local shot = 0
+	local gaugeStart = 0
+	local score, streak = 0, 0
+	local history: { string } = {}
+	local function refresh()
+		local balls = {}
+		for i = 1, SalaryConfig.HOOP_SHOTS do
+			balls[i] = history[i] or "🏀"
+		end
+		ballsText.Text = table.concat(balls, " ")
+		scoreText.Text = `점수 {score}` .. (if streak >= 2 then `  🔥 {streak}연속` else "")
+	end
+	local function start()
+		busy = true
+		local r = Remotes.HoopPlay:InvokeServer("start")
+		busy = false
+		if current ~= frame then
+			return
+		end
+		if not r.ok then
+			result.Text = r.message
+			result.TextColor3 = RED
+			return
+		end
+		playing, shot, score, streak = true, 0, 0, 0
+		table.clear(history)
+		gaugeStart = r.gaugeStart
+		result.Text = "초록에 멈추면 🎯 클린슛!"
+		result.TextColor3 = MUTED
+		mainButton.Text = "🏀 슛! (Enter)"
+		Sounds.play("swoosh", 0.4)
+		refresh()
+	end
+	local function shoot()
+		if busy then
+			return
+		end
+		if not playing then
+			start()
+			return
+		end
+		if workspace:GetServerTimeNow() < gaugeStart then
+			return -- 공 받는 중
+		end
+		local press = workspace:GetServerTimeNow()
+		busy = true
+		local r = Remotes.HoopPlay:InvokeServer("shoot", press)
+		busy = false
+		if current ~= frame then
+			return
+		end
+		if not r.ok then
+			result.Text = r.message
+			result.TextColor3 = RED
+			return
+		end
+		shot, score, streak, gaugeStart = r.shot, r.score, r.streak, r.gaugeStart
+		marker.Position = UDim2.fromScale(r.gauge, 0.5)
+		history[shot] = if r.result == "swish" then "🎯" elseif r.result == "make" then "✅" else "❌"
+		result.Text = HOOP_TEXT[r.result] .. (if r.points > 0 then ` +{r.points}` else "")
+		result.TextColor3 = if r.points > 0 then Color3.fromRGB(40, 140, 70) else RED
+		Sounds.play(if r.points > 0 then "ping" else "bass", 0.5, if r.result == "swish" then 1.5 else 1.1)
+		refresh()
+		if r.done then
+			playing = false
+			task.delay(1.2, function()
+				if current ~= frame then
+					return
+				end
+				local prizeText = if r.prize > 0 then `\n+{comma(r.prize)}원 (오늘 상금 {r.prizesLeft}번 더)` elseif score >= SalaryConfig.HoopPrizes[#SalaryConfig.HoopPrizes].score then "\n(오늘 상금은 다 받았어요)" else ""
+				result.Text = `{r.label}\n최종 {score}점{prizeText}`
+				result.TextColor3 = if r.prize > 0 then Color3.fromRGB(40, 140, 70) else INK
+				mainButton.Text = "🏀 한 판 더 (Enter)"
+			end)
+		end
+	end
+	mainButton.Activated:Connect(shoot)
+	local keyConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if not gameProcessed and current == frame and (input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter) then
+			shoot()
+		end
+	end)
+	task.spawn(function()
+		while current == frame do
+			if playing then
+				local now = workspace:GetServerTimeNow()
+				if now >= gaugeStart then
+					marker.Position = UDim2.fromScale(SalaryConfig.hoopGauge(now - gaugeStart, shot + 1), 0.5)
+					marker.BackgroundTransparency = 0
+				else
+					marker.BackgroundTransparency = 0.6 -- 공 받는 중
+				end
+			end
+			task.wait()
+		end
+		keyConnection:Disconnect()
+	end)
+	mainButton.Text = "🏀 시작 (Enter)"
+	refresh()
+	start()
+end
+Remotes:WaitForChild("HoopOpen").OnClientEvent:Connect(function()
+	Panels.showHoop()
+end)
+
+-- 🐦 옥상 비둘기 관찰 노트
+Remotes:WaitForChild("PigeonBook").OnClientEvent:Connect(function()
+	local ok, seen = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("Pigeons") or "{}")
+	end)
+	seen = if ok and typeof(seen) == "table" then seen else {}
+	local feeds = player:GetAttribute("PigeonFeeds") or 0
+	local levelIndex, level = SalaryConfig.pigeonLevel(feeds)
+	local nextLevel = SalaryConfig.PigeonLevels[levelIndex + 1]
+	local lines = {}
+	local found = 0
+	for _, kind in SalaryConfig.Pigeons do
+		local count = seen[kind.id] or 0
+		if count > 0 then
+			found += 1
+			table.insert(lines, `{kind.emoji} {kind.name} ×{count} — {kind.description}`)
+		else
+			local hint = if kind.minLevel > levelIndex then ` (💕 {SalaryConfig.PigeonLevels[kind.minLevel].name}부터)` else ""
+			table.insert(lines, `❔ ??? 아직 못 만났어요{hint}`)
+		end
+	end
+	showCard({
+		title = `📒 비둘기 관찰 노트 ({found}/{#SalaryConfig.Pigeons})`,
+		subtitle = `💕 친밀도: {level.name} (모이 {feeds}번 · 한 번에 {level.flock}마리)`
+			.. (if nextLevel then ` · 다음 단계까지 {nextLevel.feeds - feeds}번` else " · 최고 단계!"),
+		lines = lines,
+	})
+end)
+
+-- 🐦 비둘기가 놀라서 날아갔어요 = 부장님이 곧 와요!
+Remotes:WaitForChild("PigeonScare").OnClientEvent:Connect(function()
+	Sounds.play("swoosh", 0.8, 1.6)
+	Hud.popup("🐦 푸드덕!! 누가 올라온다!", Color3.fromRGB(255, 200, 80), 2.5)
+end)
+
+-- 시계 옆 "🕶️ 감사관" 버튼: 감사 기간에만 보여요 (이과장 출근일엔 감사가 없어서 같은 자리)
+local auditChip = Ui.button({
+	AnchorPoint = Vector2.new(0, 0),
+	Position = UDim2.new(1, 18, 0, -10),
+	Size = UDim2.fromOffset(104, 34),
+	Text = "🕶️ 감사관",
+	TextSize = 15,
+	Visible = false,
+	Parent = Hud.clockPanel,
+})
+auditChip.Activated:Connect(function()
+	if current then
+		close()
+	else
+		showCard(auditPerson())
+	end
+end)
+local auditIntroDay = nil
+local function onAuditChanged()
+	local isAudit = ReplicatedStorage:GetAttribute("SalaryEvent") == "audit"
+	auditChip.Visible = isAudit
+	auditChip.Text = if ReplicatedStorage:GetAttribute("SalaryEventStage") == "revealed" then "✅ 감사 끝" else "🕶️ 감사관"
+	local day = ReplicatedStorage:GetAttribute("SalaryDay")
+	if isAudit and auditIntroDay ~= day then
+		auditIntroDay = day -- 감사 기간이 시작된 날 한 번 자동으로 보여 줘요
+		task.spawn(function()
+			task.wait(1.5)
+			while current ~= nil do
+				task.wait(0.5)
+			end
+			if ReplicatedStorage:GetAttribute("SalaryEvent") == "audit" then
+				showCard(auditPerson())
+			end
+		end)
+	end
+end
+ReplicatedStorage:GetAttributeChangedSignal("SalaryEvent"):Connect(onAuditChanged)
+ReplicatedStorage:GetAttributeChangedSignal("SalaryEventStage"):Connect(onAuditChanged)
+onAuditChanged()
 
 -- 처음 출근한 날에는 소개 카드를 자동으로 한 번 띄워요 (다른 창이 열려 있으면 닫힌 뒤에)
 local leeIntroShown = false
@@ -877,6 +2430,7 @@ local function showDinner(seconds: number)
 	})
 	dinnerLine = talk
 
+	local predictedGlassUntil = 0 -- 이 시각까지는 잔을 가득 찬 것으로 먼저 보여 줘요
 	local function bigButton(x: number, text: string, action: string): TextButton
 		local b = Ui.button({
 			AnchorPoint = Vector2.new(0.5, 1),
@@ -890,6 +2444,18 @@ local function showDinner(seconds: number)
 		b.Activated:Connect(function()
 			Sounds.play("click", 0.5)
 			Remotes.Dinner:FireServer(action)
+			-- ⚡ 서버 답을 기다리지 않고 화면부터 바로 반응 (판정은 서버가 해요)
+			if action == "pour" then
+				local before = player:GetAttribute("DinnerGlass") or 1
+				predictedGlassUntil = os.clock() + 0.6
+				talk.Text = if before < 0.35 then "🎤 센스 있네~ 😊" elseif before >= 0.7 then "🎤 아직 남았잖아… 😑" else "🎤 (콸콸콸)"
+				Sounds.play("swoosh", 0.4, 1.4)
+			elseif action == "cheers" then
+				talk.Text = if player:GetAttribute("DinnerCheers") then "🎤 위하여~! 🥂" else "🎤 혼자 건배…?"
+			end
+			-- 눌린 느낌
+			b.Size = UDim2.fromOffset(190, 50)
+			TweenService:Create(b, TweenInfo.new(0.12), { Size = UDim2.fromOffset(200, 54) }):Play()
 		end)
 		return b
 	end
@@ -898,7 +2464,7 @@ local function showDinner(seconds: number)
 
 	task.spawn(function()
 		while current == frame do
-			local glass = player:GetAttribute("DinnerGlass") or 1
+			local glass = if os.clock() < predictedGlassUntil then 1 else (player:GetAttribute("DinnerGlass") or 1)
 			fill.Size = UDim2.fromScale(1, math.clamp(glass, 0, 1))
 			fill.BackgroundColor3 = if glass < 0.35 then Color3.fromRGB(240, 110, 90) else Color3.fromRGB(250, 220, 120)
 			scoreText.Text = `점수 {player:GetAttribute("DinnerScore") or 0}점`
@@ -1015,7 +2581,7 @@ local function showClaw()
 	Ui.make("TextLabel", { -- 상자 위쪽 = 기계 안쪽
 		Size = UDim2.new(1, 0, 0, 18),
 		BackgroundTransparency = 1,
-		Text = "↑ 안쪽 (전설 인형은 깊숙이!)",
+		Text = "⬆️ 안쪽 (전설 인형은 깊숙이!)",
 		TextSize = 12,
 		TextColor3 = MUTED,
 		Font = Enum.Font.GothamMedium,
@@ -1029,7 +2595,7 @@ local function showClaw()
 		Size = UDim2.fromOffset(56, 40),
 		BackgroundColor3 = Color3.fromRGB(60, 60, 70),
 		TextColor3 = Color3.new(1, 1, 1),
-		Text = "출구\n⬇",
+		Text = "출구\n⬇️",
 		TextSize = 13,
 		Font = Enum.Font.GothamBold,
 		ZIndex = 32,
@@ -1055,7 +2621,7 @@ local function showClaw()
 	Ui.make("TextLabel", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
-		Text = "✚",
+		Text = "+",
 		TextScaled = true,
 		TextColor3 = Color3.fromRGB(230, 60, 60),
 		ZIndex = 36,
@@ -1281,7 +2847,7 @@ function Panels.showPlushies()
 					info.icon.Text = info.plush.emoji
 					info.label.Text = `{info.plush.name} x{count}\n{if shown then "📌 책상에 진열 중" else (info.rarity and info.rarity.name or "")}`
 				else
-					info.icon.Text = "❔"
+					info.icon.Text = "❓"
 					info.label.Text = `???\n{info.rarity and info.rarity.name or ""}`
 				end
 				info.card.BackgroundColor3 = if shown then Color3.fromRGB(200, 240, 200) elseif count then Color3.fromRGB(250, 250, 248) else Color3.fromRGB(220, 220, 220)
@@ -1718,30 +3284,22 @@ local function showWheel()
 		amountButtons[value] = b
 	end
 
-	local message = line(frame, 0, 24, "여러 숫자에 걸 수 있어요. 멈춘 숫자에 건 돈 × (숫자+1)!", {
+	local message = line(frame, 0, 24, "💰 금액 하나, 🎯 숫자 하나를 고르고 [🎡 돌리기]! 멈춘 숫자를 맞히면 건 돈 × (숫자+1)", {
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 0, 1, -58),
-		TextSize = 15,
+		TextSize = 14,
 		TextColor3 = MUTED,
 		TextXAlignment = Enum.TextXAlignment.Center,
 	})
-	local myBetsText = line(frame, 0, 26, "내 베팅: 없음", {
+	local choiceText = line(frame, 0, 26, "", {
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 0, 1, -84),
-		TextSize = 16,
+		TextSize = 17,
 		Font = Enum.Font.GothamBold,
 		TextXAlignment = Enum.TextXAlignment.Center,
 	})
-	local myBets: { [number]: number } = {}
-	local function showMyBets()
-		local parts = {}
-		for _, number in SalaryConfig.WHEEL_NUMBERS do
-			if myBets[number] then
-				table.insert(parts, `[{number}] {comma(myBets[number])}원`)
-			end
-		end
-		myBetsText.Text = if #parts > 0 then "내 베팅: " .. table.concat(parts, " · ") else "내 베팅: 없음"
-	end
+	local selectedNumber: number? = nil
+	local numberButtons: { [number]: TextButton } = {}
 	for i, number in SalaryConfig.WHEEL_NUMBERS do
 		local count = 0
 		for _, n in SalaryConfig.WHEEL_SEGMENTS do
@@ -1760,21 +3318,10 @@ local function showWheel()
 			ZIndex = 31,
 			Parent = frame,
 		})
+		numberButtons[number] = b
 		b.Activated:Connect(function()
-			local result = Remotes.WheelBet:InvokeServer("bet", amount, number)
-			if result.ok then
-				myBets = {}
-				for _, pair in result.bets do
-					myBets[pair[1]] = pair[2]
-				end
-				showMyBets()
-				Sounds.play("ping", 0.5, 1.2)
-				message.Text = `[{number}]에 {comma(amount)}원 걸었어요!`
-				message.TextColor3 = Color3.fromRGB(40, 140, 70)
-			else
-				message.Text = result.message
-				message.TextColor3 = RED
-			end
+			selectedNumber = number -- 같은 걸 또 눌러도 그대로 선택돼 있어요
+			Sounds.play("click", 0.4)
 		end)
 	end
 
@@ -1794,7 +3341,12 @@ local function showWheel()
 		if spinState then
 			return
 		end
-		local result = Remotes.WheelBet:InvokeServer("spin")
+		if not selectedNumber then
+			message.Text = "🎯 먼저 숫자를 골라 주세요!"
+			message.TextColor3 = RED
+			return
+		end
+		local result = Remotes.WheelBet:InvokeServer("spin", amount, selectedNumber)
 		if not result.ok then
 			message.Text = result.message
 			message.TextColor3 = RED
@@ -1824,8 +3376,6 @@ local function showWheel()
 				phaseText.Text = `😢 {result.number}에 멈췄어요… (-{comma(result.stake)}원)`
 				phaseText.TextColor3 = RED
 			end
-			myBets = {}
-			showMyBets()
 			spinState = nil
 		end)
 	end)
@@ -1839,6 +3389,18 @@ local function showWheel()
 				b.BackgroundColor3 = if value == amount then Color3.fromRGB(255, 200, 80) else Color3.fromRGB(200, 200, 205)
 			end
 			spinButton.Text = if spinState then "🌀 돌아가는 중…" else "🎡 돌리기!"
+			-- 고른 숫자는 흰 테두리로, 고른 내용은 아래에 보여 줘요
+			for number, b in numberButtons do
+				local stroke = b:FindFirstChild("PickStroke") :: UIStroke?
+				if number == selectedNumber and not stroke then
+					Ui.make("UIStroke", { Name = "PickStroke", ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Color = Color3.fromRGB(40, 40, 50), Thickness = 4, Parent = b }) -- (Border: 글자 말고 버튼 테두리에)
+				elseif number ~= selectedNumber and stroke then
+					stroke:Destroy()
+				end
+			end
+			choiceText.Text = if selectedNumber
+				then `선택: 🎯 {selectedNumber} · 💰 {comma(amount)}원 → 맞히면 {comma(amount * (selectedNumber + 1))}원!`
+				else `선택: 💰 {comma(amount)}원 · 🎯 숫자를 골라 주세요`
 			task.wait()
 		end
 	end)
@@ -1897,7 +3459,7 @@ local function showDart()
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(34, 34),
 		BackgroundTransparency = 1,
-		Text = "⊕",
+		Text = "+",
 		TextScaled = true,
 		TextColor3 = Color3.fromRGB(220, 30, 30),
 		Visible = false,
@@ -2025,7 +3587,7 @@ Remotes:WaitForChild("DartOpen").OnClientEvent:Connect(showDart)
 ---------------------------------------------------------------------------
 -- 🧩 긴급 프로젝트 퍼즐 (타자·계산·기억·순서) — 문제와 정답은 서버에 있어요
 ---------------------------------------------------------------------------
-local PUZZLE_KINDS = { typing = true, math = true, memory = true, order = true }
+local PUZZLE_KINDS = { typing = true, math = true, memory = true, order = true, quiz = true }
 
 local function currentMissionStep()
 	local mission = SalaryConfig.Missions[player:GetAttribute("MissionId") or ""]
@@ -2042,8 +3604,8 @@ function Panels.showPuzzle()
 		return
 	end
 	local kind = opened.kind
-	local frame = sheet(520, 400)
-	local titles = { typing = "⌨️ 보고서 타자", math = "🧮 엑셀 계산", memory = "🧠 주문번호 기억", order = "📊 슬라이드 순서" }
+	local frame = sheet(520, if kind == "quiz" then 470 else 400)
+	local titles = { typing = "⌨️ 보고서 타자", math = "🧮 엑셀 계산", memory = "🧠 주문번호 기억", order = "📊 슬라이드 순서", quiz = "🧠 퀴즈" }
 	line(frame, 0, 32, titles[kind] or "🧩 퍼즐", { Font = Enum.Font.GothamBlack, TextSize = 26 })
 	local info = line(frame, 36, 24, "", { TextSize = 15, TextColor3 = MUTED })
 	local big = line(frame, 70, 70, "", { TextSize = 36, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Center })
@@ -2161,6 +3723,70 @@ function Panels.showPuzzle()
 		else
 			box:CaptureFocus()
 		end
+	elseif kind == "quiz" then
+		-- 🧠 문제 + 보기 4개 (2×2). 틀리면 잠깐 잠기고 다른 문제로 바뀌어요
+		info.Text = "천천히 생각해서 골라요! " .. SalaryConfig.QUIZ_MAX_WRONG .. "번 연속 틀리면 프로젝트 실패"
+		big.Position = UDim2.fromOffset(0, 64)
+		big.Size = UDim2.new(1, 0, 0, 156)
+		big.TextSize = 22 -- (5줄짜리 문제도 들어가게)
+		big.TextWrapped = true
+		big.TextYAlignment = Enum.TextYAlignment.Center
+		big.TextXAlignment = Enum.TextXAlignment.Center
+		local data = opened
+		local busy = false
+		local choiceButtons: { TextButton } = {}
+		local function render(newData)
+			data = newData
+			big.Text = data.text
+			for i, b in choiceButtons do
+				b.Text = data.choices[i] or ""
+			end
+		end
+		for i = 1, 4 do
+			local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
+			local b = Ui.button({
+				Position = UDim2.new(col * 0.5, if col == 0 then 0 else 6, 0, 226 + row * 70),
+				Size = UDim2.new(0.5, -6, 0, 60),
+				Text = "",
+				TextSize = 22,
+				ZIndex = 32,
+				Parent = frame,
+			})
+			b.Activated:Connect(function()
+				if busy or workspace:GetServerTimeNow() < (data.lockUntil or 0) then
+					return
+				end
+				busy = true
+				Sounds.play("click", 0.4)
+				local result = Remotes.MissionPuzzle:InvokeServer("answer", i)
+				busy = false
+				if showResult(result) then
+					return
+				end
+				if result.ok and result.text then
+					render(result)
+				end
+			end)
+			table.insert(choiceButtons, b)
+		end
+		render(opened)
+		-- 🔒 잠긴 동안엔 보기를 흐리게 + 남은 초
+		task.spawn(function()
+			while current == frame do
+				local left = (data.lockUntil or 0) - workspace:GetServerTimeNow()
+				for _, b in choiceButtons do
+					b.AutoButtonColor = left <= 0
+					b.BackgroundTransparency = if left > 0 then 0.6 else 0
+				end
+				if left > 0 then
+					status.Text = `🔒 {math.ceil(left)}초 뒤에 새 문제를 풀 수 있어요`
+					status.TextColor3 = RED
+				elseif status.Text:sub(1, 4) == "🔒" then
+					status.Text = ""
+				end
+				task.wait(0.1)
+			end
+		end)
 	elseif kind == "order" then
 		info.Text = "슬라이드 1번부터 6번까지 순서대로 눌러요!"
 		local clicked = {}
@@ -2204,6 +3830,965 @@ function Panels.showPuzzle()
 		render(opened.numbers)
 	end
 	Sounds.play("swoosh", 0.4)
+end
+
+---------------------------------------------------------------------------
+-- 💣 폰 게임: 지뢰 피하기 (화면 오른쪽에 작게 → 가운데로 부장님이 오는지 볼 수 있어요)
+--   창이 열려 있는 동안 = 📱 폰 게임 농땡이. 닫으면 (게임 중이면 자동 스톱) 일하기로 복귀
+---------------------------------------------------------------------------
+local GREEN = Color3.fromRGB(40, 140, 70)
+
+-- 📱 [폰 게임] 농땡이가 서버에 반영될 때까지 잠깐 기다려요 (바로 시작하면 "폰 게임 중일 때만…"이 떴어요)
+local function waitForPhone(timeout: number): boolean
+	local finish = os.clock() + timeout
+	while os.clock() < finish do
+		if player:GetAttribute("SalaryAction") == "phone" then
+			return true
+		end
+		task.wait(0.1)
+	end
+	return player:GetAttribute("SalaryAction") == "phone"
+end
+
+local minesOnForfeit: ((mines: { number }, lost: number, payout: number?) -> ())? = nil
+
+function Panels.showMines()
+	Remotes.SetAction:FireServer("phone") -- 📱 게임을 골랐으니 이제 농땡이 시작!
+	local frame = sheet(380, 560)
+	frame.AnchorPoint = Vector2.new(1, 0.5)
+	frame.Position = UDim2.new(1, -20, 0.5, 0)
+	line(frame, 0, 30, "💣 지뢰 피하기", { Font = Enum.Font.GothamBlack, TextSize = 24 })
+	local info = line(frame, 32, 22, "빈칸을 열수록 받을 돈 ⬆️ · 지뢰를 밟으면 건 돈을 잃어요", { TextSize = 13, TextColor3 = MUTED })
+
+	local bet = SalaryConfig.MINES_BETS[1]
+	local mines = SalaryConfig.MINES_COUNTS[2] or SalaryConfig.MINES_COUNTS[1]
+	local playing = false
+	local busy = false
+	local total = 0
+	local money: TextLabel -- (아래에서 만들어요. 버튼들이 먼저 참조해서 미리 선언)
+
+	-- 💰 금액 / 💣 지뢰 수 고르기 (하나만 선택)
+	local betButtons, mineButtons = {}, {}
+	local function paintChoices()
+		local rank = player:GetAttribute("Rank") or 1
+		for value, b in betButtons do
+			local needRank = SalaryConfig.MINES_BET_RANK[value] or 1
+			local locked = rank < needRank
+			b.Text = if locked then `🔒 {SalaryConfig.Ranks[needRank].name}` else `{comma(value)}원`
+			b.BackgroundColor3 = if locked
+				then Color3.fromRGB(160, 160, 165)
+				elseif value == bet then Color3.fromRGB(255, 200, 80)
+				else Color3.fromRGB(215, 215, 220)
+			b.AutoButtonColor = not playing and not locked
+		end
+		for value, b in mineButtons do
+			b.BackgroundColor3 = if value == mines then Color3.fromRGB(240, 120, 110) else Color3.fromRGB(215, 215, 220)
+			b.AutoButtonColor = not playing
+		end
+	end
+	for i, value in SalaryConfig.MINES_BETS do
+		local b = Ui.button({
+			Position = UDim2.fromOffset((i - 1) * 86, 60),
+			Size = UDim2.fromOffset(80, 34),
+			Text = `{comma(value)}원`,
+			TextSize = 15,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		b.Activated:Connect(function()
+			if playing then
+				return
+			end
+			local needRank = SalaryConfig.MINES_BET_RANK[value] or 1
+			if (player:GetAttribute("Rank") or 1) < needRank then
+				money.Text = `🔒 {comma(value)}원은 {SalaryConfig.Ranks[needRank].name}부터 걸 수 있어요`
+				money.TextColor3 = RED
+				Sounds.play("bass", 0.3, 1.2)
+				return
+			end
+			bet = value
+			paintChoices()
+			Sounds.play("click", 0.3)
+		end)
+		betButtons[value] = b
+	end
+	for i, value in SalaryConfig.MINES_COUNTS do
+		local b = Ui.button({
+			Position = UDim2.fromOffset((i - 1) * 86, 100),
+			Size = UDim2.fromOffset(80, 34),
+			Text = `💣 {value}개`,
+			TextSize = 15,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		b.Activated:Connect(function()
+			if not playing then
+				mines = value
+				paintChoices()
+				Sounds.play("click", 0.3)
+			end
+		end)
+		mineButtons[value] = b
+	end
+
+	money = line(frame, 438, 26, "", { TextSize = 16, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Center })
+	local mainButton: TextButton
+
+	-- 5×5 칸
+	local GRID = SalaryConfig.MINES_GRID
+	local CELL_W, CELL_H, GAP = 62, 52, 5
+	local cells: { TextButton } = {}
+	local function resetCells()
+		for _, cell in cells do
+			cell.Text = "❔"
+			cell.BackgroundColor3 = Color3.fromRGB(70, 80, 100)
+			cell.TextColor3 = Color3.new(1, 1, 1)
+		end
+	end
+	local function showMines(list: { number }, boomIndex: number?)
+		for _, index in list do
+			local cell = cells[index]
+			if cell then
+				cell.Text = if index == boomIndex then "💥" else "💣"
+				cell.BackgroundColor3 = if index == boomIndex then Color3.fromRGB(220, 60, 50) else Color3.fromRGB(150, 70, 70)
+			end
+		end
+	end
+	local function refreshButton()
+		if playing then
+			mainButton.Text = `✋ 스톱 ({comma(total)}원 받기)`
+			mainButton.BackgroundColor3 = Color3.fromRGB(90, 190, 110)
+		else
+			mainButton.Text = `▶ 시작 ({comma(bet)}원 · 💣 {mines}개)`
+			mainButton.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
+		end
+		paintChoices()
+	end
+	local function finish(message: string, color: Color3)
+		playing = false
+		money.Text = message
+		money.TextColor3 = color
+		refreshButton()
+	end
+
+	for i = 1, GRID * GRID do
+		local col, row = (i - 1) % GRID, math.floor((i - 1) / GRID)
+		local cell = Ui.button({
+			Position = UDim2.fromOffset(col * (CELL_W + GAP), 146 + row * (CELL_H + GAP)),
+			Size = UDim2.fromOffset(CELL_W, CELL_H),
+			Text = "❔",
+			TextSize = 15,
+			TextWrapped = true,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		cell.Activated:Connect(function()
+			if not playing or busy or cell.Text ~= "❔" then
+				return
+			end
+			busy = true
+			local result = Remotes.MinesPlay:InvokeServer("open", i)
+			busy = false
+			if current ~= frame then
+				return
+			end
+			if not result.ok then
+				money.Text = result.message
+				money.TextColor3 = RED
+				return
+			end
+			if result.boom then
+				Sounds.play("caught", 0.6, 0.8)
+				showMines(result.mines, i)
+				finish(`💥 지뢰! -{comma(result.lost)}원`, RED)
+				return
+			end
+			-- 빈칸: 이 칸에서 늘어난 돈을 보여 줘요
+			Sounds.play("ping", 0.4, 1 + math.min(result.count, 20) * 0.04)
+			cell.Text = `+{comma(result.gain)}`
+			cell.BackgroundColor3 = Color3.fromRGB(90, 190, 110)
+			total = result.total
+			if result.done then
+				showMines(result.mines or {})
+				Sounds.play("ping", 0.8, 1.5)
+				finish(`🎉 {result.reason} +{comma(result.payout)}원 (x{string.format("%.2f", result.multiplier)})`, GREEN)
+				return
+			end
+			money.Text = `💰 스톱하면 {comma(total)}원 (x{string.format("%.2f", result.multiplier)}) · 다음 칸 +{comma(result.nextGain)}원`
+			money.TextColor3 = INK
+			refreshButton()
+		end)
+		cells[i] = cell
+	end
+
+	mainButton = Ui.button({
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, 0),
+		Size = UDim2.new(1, 0, 0, 48),
+		Text = "",
+		TextSize = 18,
+		ZIndex = 31,
+		Parent = frame,
+	})
+	mainButton.Activated:Connect(function()
+		if busy then
+			return
+		end
+		busy = true
+		if playing then
+			local result = Remotes.MinesPlay:InvokeServer("stop")
+			busy = false
+			if current ~= frame then
+				return
+			end
+			if result.ok then
+				showMines(result.mines or {})
+				Sounds.play("ping", 0.6, 1.3)
+				finish(`✋ 스톱! +{comma(result.payout)}원 받았어요`, GREEN)
+			else
+				money.Text = result.message
+				money.TextColor3 = RED
+			end
+		else
+			local result = Remotes.MinesPlay:InvokeServer("start", bet, mines)
+			busy = false
+			if current ~= frame then
+				return
+			end
+			if result.ok then
+				resetCells()
+				playing = true
+				total = result.total
+				Sounds.play("swoosh", 0.4)
+				money.Text = `💰 지금 스톱하면 {comma(total)}원 · 첫 칸 +{comma(result.nextGain)}원`
+				money.TextColor3 = INK
+				refreshButton()
+			else
+				money.Text = result.message
+				money.TextColor3 = RED
+			end
+		end
+	end)
+
+	-- 📵 적발·다른 행동 등으로 폰 게임이 꺼지면 판이 날아가요
+	minesOnForfeit = function(list: { number }, lost: number, payout: number?)
+		if current ~= frame then
+			return
+		end
+		showMines(list)
+		if payout then
+			finish(`✋ 일하기로 복귀! 자동 스톱 +{comma(payout)}원`, GREEN)
+		else
+			finish(`📵 폰 게임이 꺼졌어요… -{comma(lost)}원`, RED)
+		end
+	end
+
+	resetCells()
+	refreshButton()
+	money.Text = "💰 금액과 💣 지뢰 수를 고르고 [시작]!"
+	money.TextColor3 = MUTED
+	local _ = info
+	Sounds.play("swoosh", 0.4)
+
+	-- 창이 닫히면: 게임 중이었으면 자동 스톱 → 아직 폰 게임 중이면 일하기로 복귀
+	task.spawn(function()
+		local openedAt = os.clock()
+		while current == frame do
+			-- 폰 게임 농땡이가 아니게 되면 (적발·다른 행동·자리 이탈) 창도 닫아요
+			if os.clock() - openedAt > 3.5 and player:GetAttribute("SalaryAction") ~= "phone" then
+				task.wait(1.5) -- (📵 메시지를 잠깐 보여 주고)
+				if current == frame then
+					close()
+				end
+				break
+			end
+			task.wait(0.2)
+		end
+		if playing then
+			playing = false
+			Remotes.MinesPlay:InvokeServer("stop")
+		end
+		if player:GetAttribute("SalaryAction") == "phone" then
+			Remotes.SetAction:FireServer("work")
+		end
+	end)
+end
+
+Remotes:WaitForChild("MinesForfeit").OnClientEvent:Connect(function(list: { number }, lost: number, payout: number?)
+	if minesOnForfeit then
+		minesOnForfeit(list, lost, payout)
+	end
+	if payout then
+		Ui.toast(`✋ 일하기로 복귀하면서 💣 지뢰 피하기 자동 스톱 · +{comma(payout)}원`)
+	else
+		Ui.toast(`📵 폰 게임이 꺼져서 건 돈 {comma(lost)}원을 잃었어요`)
+	end
+end)
+
+---------------------------------------------------------------------------
+-- 🧩 폰 게임: 도형 맞추기 (화면 오른쪽에 작게)
+--   조각을 고르고 → 판의 칸을 누르면 조각의 맨 위 왼쪽 칸이 거기에 놓여요 (조각은 돌릴 수 없어요)
+--   놓인 조각을 누르면 다시 집어요. 모두 채우면 자동 제출!
+---------------------------------------------------------------------------
+local PIECE_COLORS = {
+	Color3.fromRGB(240, 110, 100),
+	Color3.fromRGB(110, 170, 240),
+	Color3.fromRGB(120, 200, 120),
+	Color3.fromRGB(245, 195, 80),
+	Color3.fromRGB(190, 130, 230),
+	Color3.fromRGB(90, 200, 200),
+	Color3.fromRGB(240, 150, 200),
+}
+
+function Panels.showShapes()
+	Remotes.SetAction:FireServer("phone") -- 📱 게임을 골랐으니 이제 농땡이 시작!
+	local frame = sheet(400, 610)
+	frame.AnchorPoint = Vector2.new(1, 0.5)
+	frame.Position = UDim2.new(1, -20, 0.5, 0)
+	local title = line(frame, 0, 30, "🧩 도형 맞추기", { Font = Enum.Font.GothamBlack, TextSize = 24 })
+	local timerText = line(frame, 32, 22, "", { TextSize = 14, Font = Enum.Font.GothamBold })
+	local message = line(frame, 0, 24, "", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, -54),
+		TextSize = 14,
+		Font = Enum.Font.GothamBold,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
+
+	local INNER_W = 360
+	local CELL, GAP = 40, 3
+	local MINI = 12
+	local boardHolder = Ui.make("Frame", { Position = UDim2.fromOffset(0, 60), Size = UDim2.fromOffset(INNER_W, 6 * (CELL + GAP)), BackgroundTransparency = 1, ZIndex = 31, Parent = frame })
+	local tray = Ui.make("Frame", { Position = UDim2.fromOffset(0, 60 + 6 * (CELL + GAP) + 8), Size = UDim2.fromOffset(INNER_W, 160), BackgroundTransparency = 1, ZIndex = 31, Parent = frame })
+
+	-- 상태
+	local boardSet: { [string]: boolean } = {}
+	local boardCells: { [string]: TextButton } = {}
+	local pieces: { { { number } } } = {} -- 지금 돌린 모양
+	local placed: { [number]: { { number } }? } = {} -- 조각 번호 → 판 위 칸들
+	local occupant: { [string]: number } = {} -- 칸 → 조각 번호
+	local selected: number? = nil
+	local hover: { number }? = nil
+	local playing = false
+	local busy = false
+	local endsAt = 0
+	local trayButtons: { TextButton } = {}
+
+	local function cellKey(x: number, y: number): string
+		return `{x},{y}`
+	end
+	local function cellsAt(pieceIndex: number, anchor: { number }): { { number } }
+		-- 조각의 맨 위 왼쪽 칸(정렬 첫 칸)이 anchor에 오도록
+		local shape = pieces[pieceIndex]
+		local first = shape[1]
+		local out = {}
+		for _, c in shape do
+			table.insert(out, { anchor[1] + c[1] - first[1], anchor[2] + c[2] - first[2] })
+		end
+		return out
+	end
+	local function fits(pieceIndex: number, cells: { { number } }): boolean
+		for _, c in cells do
+			local k = cellKey(c[1], c[2])
+			if not boardSet[k] or (occupant[k] and occupant[k] ~= pieceIndex) then
+				return false
+			end
+		end
+		return true
+	end
+
+	local function paintBoard()
+		for k, cell in boardCells do
+			local owner = occupant[k]
+			cell.BackgroundColor3 = if owner then PIECE_COLORS[(owner - 1) % #PIECE_COLORS + 1] else Color3.fromRGB(215, 215, 222)
+			cell.Text = ""
+		end
+		-- 고른 조각을 마우스 위치에 미리 보여 줘요 (초록 = 놓을 수 있음, 빨강 = 안 됨)
+		if playing and selected and hover then
+			local cells = cellsAt(selected, hover)
+			local ok = fits(selected, cells)
+			for _, c in cells do
+				local cell = boardCells[cellKey(c[1], c[2])]
+				if cell and not occupant[cellKey(c[1], c[2])] then
+					cell.BackgroundColor3 = if ok then Color3.fromRGB(150, 225, 150) else Color3.fromRGB(240, 150, 140)
+				end
+			end
+		end
+	end
+
+	local function paintTray()
+		for i, b in trayButtons do
+			b.Visible = placed[i] == nil
+			local stroke = b:FindFirstChild("PickStroke") :: UIStroke?
+			if stroke then
+				stroke.Enabled = selected == i
+			end
+			-- 조각 모양 다시 그리기 (돌리면 바뀌어요)
+			local mini = b:FindFirstChild("Mini")
+			if mini then
+				mini:ClearAllChildren()
+				local maxX, maxY = 0, 0
+				for _, c in pieces[i] do
+					maxX, maxY = math.max(maxX, c[1]), math.max(maxY, c[2])
+				end
+				local offsetX = (80 - (maxX + 1) * (MINI + 1)) / 2
+				local offsetY = (66 - (maxY + 1) * (MINI + 1)) / 2
+				for _, c in pieces[i] do
+					Ui.make("Frame", {
+						Position = UDim2.fromOffset(offsetX + c[1] * (MINI + 1), offsetY + c[2] * (MINI + 1)),
+						Size = UDim2.fromOffset(MINI, MINI),
+						BackgroundColor3 = PIECE_COLORS[(i - 1) % #PIECE_COLORS + 1],
+						BorderSizePixel = 0,
+						ZIndex = 33,
+						Parent = mini,
+					})
+				end
+			end
+		end
+	end
+
+
+	local function pickUp(pieceIndex: number)
+		local cells = placed[pieceIndex]
+		if cells then
+			for _, c in cells do
+				occupant[cellKey(c[1], c[2])] = nil
+			end
+			placed[pieceIndex] = nil
+		end
+		selected = pieceIndex
+		paintTray()
+		paintBoard()
+	end
+
+	local function submit()
+		busy = true
+		local list = {}
+		for i = 1, #pieces do
+			list[i] = placed[i]
+		end
+		local result = Remotes.ShapesPlay:InvokeServer("submit", list)
+		busy = false
+		if current ~= frame then
+			return
+		end
+		if not result.ok then
+			message.Text = result.message
+			message.TextColor3 = RED
+			return
+		end
+		playing = false
+		if result.solved then
+			Sounds.play("ping", 0.8, 1.5)
+			if result.prize > 0 then
+				message.Text = `🎉 성공! {result.seconds}초 · 상금 +{comma(result.prize)}원 (오늘 {result.prizesLeft}번 더)`
+			else
+				message.Text = `🎉 성공! {result.seconds}초 · (오늘 상금은 다 받았어요)`
+			end
+			message.TextColor3 = Color3.fromRGB(40, 140, 70)
+		else
+			message.Text = result.message
+			message.TextColor3 = RED
+		end
+	end
+
+	local function placeAt(anchor: { number })
+		if not playing or busy then
+			return
+		end
+		local k = cellKey(anchor[1], anchor[2])
+		if not selected then
+			-- 놓인 조각을 누르면 다시 집어요
+			if occupant[k] then
+				pickUp(occupant[k])
+				Sounds.play("click", 0.3, 0.9)
+			end
+			return
+		end
+		local cells = cellsAt(selected, anchor)
+		if not fits(selected, cells) then
+			if occupant[k] then
+				pickUp(occupant[k]) -- 다른 조각 위를 누르면 그 조각으로 바꿔 들어요
+			else
+				Sounds.play("bass", 0.3, 1.4)
+			end
+			return
+		end
+		for _, c in cells do
+			occupant[cellKey(c[1], c[2])] = selected
+		end
+		placed[selected] = cells
+		Sounds.play("click", 0.4, 1.1)
+		-- 다음 안 놓은 조각을 자동으로 골라요
+		selected = nil
+		for i = 1, #pieces do
+			if not placed[i] then
+				selected = i
+				break
+			end
+		end
+		paintTray()
+		paintBoard()
+		if not selected then
+			submit() -- 다 놓았어요!
+		end
+	end
+
+	local mainButton: TextButton
+	local function startPuzzle()
+		local result = Remotes.ShapesPlay:InvokeServer("start")
+		if current ~= frame then
+			return
+		end
+		if not result.ok then
+			message.Text = result.message
+			message.TextColor3 = RED
+			return
+		end
+		-- 판 다시 그리기
+		boardHolder:ClearAllChildren()
+		for _, b in trayButtons do
+			b:Destroy()
+		end
+		table.clear(trayButtons)
+		table.clear(boardSet)
+		table.clear(boardCells)
+		table.clear(occupant)
+		table.clear(placed)
+		pieces = result.pieces
+		local maxX, maxY = 0, 0
+		for _, c in result.board do
+			maxX, maxY = math.max(maxX, c[1]), math.max(maxY, c[2])
+		end
+		local offsetX = (INNER_W - (maxX + 1) * (CELL + GAP)) / 2
+		for _, c in result.board do
+			local x, y = c[1], c[2]
+			local k = cellKey(x, y)
+			boardSet[k] = true
+			local cell = Ui.make("TextButton", {
+				Position = UDim2.fromOffset(offsetX + x * (CELL + GAP), y * (CELL + GAP)),
+				Size = UDim2.fromOffset(CELL, CELL),
+				BackgroundColor3 = Color3.fromRGB(215, 215, 222),
+				AutoButtonColor = false,
+				Text = "",
+				ZIndex = 32,
+				Parent = boardHolder,
+			}, { Ui.corner(5) })
+			cell.MouseEnter:Connect(function()
+				hover = { x, y }
+				paintBoard()
+			end)
+			cell.MouseLeave:Connect(function()
+				if hover and hover[1] == x and hover[2] == y then
+					hover = nil
+					paintBoard()
+				end
+			end)
+			cell.Activated:Connect(function()
+				placeAt({ x, y })
+			end)
+			boardCells[k] = cell
+		end
+		-- 조각 보관함 (한 줄에 4개)
+		for i = 1, #pieces do
+			local col, row = (i - 1) % 4, math.floor((i - 1) / 4)
+			local b = Ui.make("TextButton", {
+				Position = UDim2.fromOffset(col * 90, row * 76),
+				Size = UDim2.fromOffset(80, 66),
+				BackgroundColor3 = Color3.fromRGB(240, 240, 244),
+				AutoButtonColor = true,
+				Text = "",
+				ZIndex = 32,
+				Parent = tray,
+			}, {
+				Ui.corner(8),
+				Ui.make("UIStroke", { Name = "PickStroke", ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Color = Color3.fromRGB(40, 40, 50), Thickness = 3, Enabled = false }),
+				Ui.make("Frame", { Name = "Mini", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 33 }),
+			})
+			b.Activated:Connect(function()
+				if playing and selected ~= i then
+					selected = i
+					Sounds.play("click", 0.3)
+					paintTray()
+					paintBoard()
+				end
+			end)
+			trayButtons[i] = b
+		end
+		selected = 1
+		hover = nil
+		playing = true
+		endsAt = result.endsAt
+		title.Text = `🧩 도형 맞추기 · {result.name}`
+		message.Text = "조각 고르기 → 판에 놓기 (조각은 돌릴 수 없어요 · 놓은 조각을 누르면 다시 집어요)"
+		message.TextColor3 = MUTED
+		Sounds.play("swoosh", 0.4)
+		paintTray()
+		paintBoard()
+	end
+
+	-- 아래 버튼: ↩️ 다 빼기 / ▶ 새 퍼즐
+	local resetButton = Ui.button({
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, 0),
+		Size = UDim2.new(0.5, -5, 0, 46),
+		Text = "↩️ 다 빼기",
+		TextSize = 17,
+		ZIndex = 31,
+		Parent = frame,
+	})
+	resetButton.Activated:Connect(function()
+		if not playing or busy then
+			return
+		end
+		table.clear(occupant)
+		table.clear(placed)
+		selected = 1
+		Sounds.play("swoosh", 0.3)
+		paintTray()
+		paintBoard()
+	end)
+	mainButton = Ui.button({
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, 0, 1, 0),
+		Size = UDim2.new(0.5, -5, 0, 46),
+		Text = "▶ 새 퍼즐",
+		TextSize = 17,
+		ZIndex = 31,
+		Parent = frame,
+	})
+	mainButton.Activated:Connect(function()
+		if busy then
+			return
+		end
+		busy = true
+		startPuzzle()
+		busy = false
+	end)
+
+	message.Text = "📱 폰 켜는 중…"
+	message.TextColor3 = MUTED
+	task.spawn(function()
+		if waitForPhone(3) and current == frame and not playing then
+			busy = true
+			startPuzzle()
+			busy = false
+		elseif current == frame then
+			message.Text = "🪑 내 자리에 앉아서 [📱 폰 게임]을 골라 주세요"
+			message.TextColor3 = RED
+		end
+	end)
+
+	-- ⏱️ 타이머 + 창이 닫히면 정리 (폰 게임 농땡이가 끝나면 창도 닫혀요)
+	task.spawn(function()
+		local openedAt = os.clock() + 2 -- (폰 켜는 시간 여유)
+		while current == frame do
+			if playing then
+				local left = math.max(0, endsAt - workspace:GetServerTimeNow())
+				local prizeNow = #pieces * SalaryConfig.SHAPES_PRIZE_PER_PIECE + math.floor(left) * SalaryConfig.SHAPES_PRIZE_PER_SECOND
+				timerText.Text = `⏱️ {math.ceil(left)}초 남음 · 지금 성공하면 +{comma(prizeNow)}원`
+				timerText.TextColor3 = if left < 15 then RED else INK
+				if left <= 0 then
+					playing = false
+					message.Text = "⏰ 시간 초과! [▶ 새 퍼즐]로 다시 도전"
+					message.TextColor3 = RED
+					Remotes.ShapesPlay:InvokeServer("quit")
+				end
+			else
+				timerText.Text = ""
+			end
+			if os.clock() - openedAt > 1.5 and player:GetAttribute("SalaryAction") ~= "phone" then
+				task.wait(0.5)
+				if current == frame then
+					close()
+				end
+				break
+			end
+			task.wait(0.1)
+		end
+		if playing then
+			Remotes.ShapesPlay:InvokeServer("quit")
+		end
+		if player:GetAttribute("SalaryAction") == "phone" then
+			Remotes.SetAction:FireServer("work")
+		end
+	end)
+end
+
+---------------------------------------------------------------------------
+-- ⚾ 폰 게임: 숫자 야구 (화면 오른쪽에 작게)
+--   숫자 버튼(또는 키보드 1~9) → [확인](Enter) · 지우기(Backspace)
+---------------------------------------------------------------------------
+local DIGIT_KEYS = {
+	[Enum.KeyCode.One] = 1, [Enum.KeyCode.Two] = 2, [Enum.KeyCode.Three] = 3,
+	[Enum.KeyCode.Four] = 4, [Enum.KeyCode.Five] = 5, [Enum.KeyCode.Six] = 6,
+	[Enum.KeyCode.Seven] = 7, [Enum.KeyCode.Eight] = 8, [Enum.KeyCode.Nine] = 9,
+	[Enum.KeyCode.KeypadOne] = 1, [Enum.KeyCode.KeypadTwo] = 2, [Enum.KeyCode.KeypadThree] = 3,
+	[Enum.KeyCode.KeypadFour] = 4, [Enum.KeyCode.KeypadFive] = 5, [Enum.KeyCode.KeypadSix] = 6,
+	[Enum.KeyCode.KeypadSeven] = 7, [Enum.KeyCode.KeypadEight] = 8, [Enum.KeyCode.KeypadNine] = 9,
+}
+
+function Panels.showBaseball()
+	Remotes.SetAction:FireServer("phone") -- 📱 게임을 골랐으니 이제 농땡이 시작!
+	local frame = sheet(360, 600)
+	frame.AnchorPoint = Vector2.new(1, 0.5)
+	frame.Position = UDim2.new(1, -20, 0.5, 0)
+	Hud.numberGame = true -- (숫자 키를 책상 행동 단축키 대신 여기서 써요)
+	local DIGITS = SalaryConfig.BASEBALL_DIGITS
+	local MAX = SalaryConfig.BASEBALL_MAX_TRIES
+	local INNER_W = 320
+
+	line(frame, 0, 30, "⚾ 숫자 야구", { Font = Enum.Font.GothamBlack, TextSize = 24 })
+	local info = line(frame, 32, 20, "", { TextSize = 13, TextColor3 = MUTED })
+
+	-- 입력 칸
+	local slots: { TextLabel } = {}
+	local slotW = 56
+	local slotsX = (INNER_W - (DIGITS * slotW + (DIGITS - 1) * 8)) / 2
+	for i = 1, DIGITS do
+		slots[i] = Ui.make("TextLabel", {
+			Position = UDim2.fromOffset(slotsX + (i - 1) * (slotW + 8), 56),
+			Size = UDim2.fromOffset(slotW, 54),
+			BackgroundColor3 = Color3.fromRGB(235, 235, 240),
+			TextColor3 = INK,
+			Font = Enum.Font.GothamBlack,
+			TextSize = 30,
+			Text = "",
+			ZIndex = 31,
+			Parent = frame,
+		}, { Ui.corner(8), Ui.make("UIStroke", { Color = Color3.fromRGB(150, 150, 160), Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }) })
+	end
+	local message = line(frame, 116, 20, "", { TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Center })
+
+	local input: { number } = {}
+	local history: { TextLabel } = {}
+	local playing = false
+	local busy = false
+	local tries = 0
+	local digitButtons: { [number]: TextButton } = {}
+
+	local function refresh()
+		for i = 1, DIGITS do
+			slots[i].Text = if input[i] then tostring(input[i]) else ""
+		end
+		for n, b in digitButtons do
+			local used = table.find(input, n) ~= nil
+			b.BackgroundColor3 = if used then Color3.fromRGB(190, 190, 195) else Color3.fromRGB(70, 80, 100)
+			b.TextColor3 = if used then Color3.fromRGB(120, 120, 125) else Color3.new(1, 1, 1)
+		end
+		local prize = SalaryConfig.BaseballPrizes[tries + 1] or 0
+		info.Text = if playing
+			then `1~9 서로 다른 숫자 {DIGITS}개 · {tries}/{MAX}번째 · 다음에 맞히면 +{comma(prize)}원`
+			else `1~9 서로 다른 숫자 {DIGITS}개를 {MAX}번 안에 맞혀요`
+	end
+
+	local function addHistory(text: string, color: Color3)
+		local label = line(frame, 326 + #history * 19, 19, text, { TextSize = 14, Font = Enum.Font.GothamBold, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center })
+		table.insert(history, label)
+	end
+
+	local mainButton: TextButton
+	local function setMain(text: string)
+		mainButton.Text = text
+	end
+
+	local function startGame()
+		local result = Remotes.BaseballPlay:InvokeServer("start")
+		if current ~= frame then
+			return
+		end
+		if not result.ok then
+			message.Text = result.message
+			message.TextColor3 = RED
+			return
+		end
+		for _, label in history do
+			label:Destroy()
+		end
+		table.clear(history)
+		table.clear(input)
+		tries = 0
+		playing = true
+		message.Text = "⚾ 스트라이크: 숫자·자리 맞음 · 🟢 볼: 숫자만 맞음"
+		message.TextColor3 = MUTED
+		setMain("✅ 확인 (Enter)")
+		Sounds.play("swoosh", 0.4)
+		refresh()
+	end
+
+	local function submit()
+		if busy then
+			return
+		end
+		if not playing then
+			busy = true
+			startGame()
+			busy = false
+			return
+		end
+		if #input < DIGITS then
+			message.Text = `숫자 {DIGITS}개를 골라 주세요`
+			message.TextColor3 = RED
+			return
+		end
+		local guess = ""
+		for _, n in input do
+			guess ..= tostring(n)
+		end
+		busy = true
+		local result = Remotes.BaseballPlay:InvokeServer("guess", guess)
+		busy = false
+		if current ~= frame then
+			return
+		end
+		if not result.ok then
+			message.Text = result.message
+			message.TextColor3 = RED
+			return
+		end
+		tries = result.tries
+		table.clear(input)
+		local hint = if result.strikes == 0 and result.balls == 0
+			then "❌ 아웃"
+			else `⚾ {result.strikes}스트라이크  🟢 {result.balls}볼`
+		if result.solved then
+			addHistory(`{result.tries}.  {result.guess}  →  🎉 홈런!`, Color3.fromRGB(40, 140, 70))
+			playing = false
+			Sounds.play("ping", 0.8, 1.5)
+			message.Text = if result.prize > 0
+				then `🎉 {result.tries}번 만에 정답! +{comma(result.prize)}원 (오늘 {result.prizesLeft}번 더)`
+				else `🎉 {result.tries}번 만에 정답! (오늘 상금은 다 받았어요)`
+			message.TextColor3 = Color3.fromRGB(40, 140, 70)
+			setMain("▶ 새 게임 (Enter)")
+		else
+			addHistory(`{result.tries}.  {result.guess}  →  {hint}`, INK)
+			Sounds.play("click", 0.4, if result.strikes > 0 then 1.3 else 0.9)
+			if result.failed then
+				playing = false
+				Sounds.play("bass", 0.5, 1)
+				message.Text = `😢 기회를 다 썼어요. 정답은 {result.answer}`
+				message.TextColor3 = RED
+				setMain("▶ 새 게임 (Enter)")
+			end
+		end
+		refresh()
+	end
+
+	local function press(n: number)
+		if not playing or #input >= DIGITS or table.find(input, n) then
+			return
+		end
+		table.insert(input, n)
+		Sounds.play("click", 0.3, 1 + n * 0.03)
+		refresh()
+	end
+	local function backspace()
+		if playing and #input > 0 then
+			table.remove(input)
+			refresh()
+		end
+	end
+
+	-- 숫자 패드 (3×3) + 지우기
+	local KEY_W, KEY_H, KEY_GAP = 72, 40, 6
+	local padX = (INNER_W - (3 * KEY_W + 2 * KEY_GAP)) / 2
+	for n = 1, 9 do
+		local col, row = (n - 1) % 3, math.floor((n - 1) / 3)
+		local b = Ui.button({
+			Position = UDim2.fromOffset(padX + col * (KEY_W + KEY_GAP), 140 + row * (KEY_H + KEY_GAP)),
+			Size = UDim2.fromOffset(KEY_W, KEY_H),
+			Text = tostring(n),
+			TextSize = 20,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		b.Activated:Connect(function()
+			press(n)
+		end)
+		digitButtons[n] = b
+	end
+	local eraseButton = Ui.button({
+		Position = UDim2.fromOffset(padX, 140 + 3 * (KEY_H + KEY_GAP)),
+		Size = UDim2.fromOffset(3 * KEY_W + 2 * KEY_GAP, KEY_H),
+		Text = "⬅️ 지우기 (Backspace)",
+		TextSize = 15,
+		ZIndex = 31,
+		Parent = frame,
+	})
+	eraseButton.Activated:Connect(backspace)
+
+	mainButton = Ui.button({
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, 0),
+		Size = UDim2.new(1, 0, 0, 46),
+		Text = "",
+		TextSize = 18,
+		ZIndex = 31,
+		Parent = frame,
+	})
+	mainButton.Activated:Connect(submit)
+
+	local keyConnection = UserInputService.InputBegan:Connect(function(input2, gameProcessed)
+		if gameProcessed or current ~= frame then
+			return
+		end
+		local n = DIGIT_KEYS[input2.KeyCode]
+		if n then
+			press(n)
+		elseif input2.KeyCode == Enum.KeyCode.Backspace then
+			backspace()
+		elseif input2.KeyCode == Enum.KeyCode.Return or input2.KeyCode == Enum.KeyCode.KeypadEnter then
+			submit()
+		end
+	end)
+
+	setMain("▶ 새 게임 (Enter)")
+	message.Text = "📱 폰 켜는 중…"
+	message.TextColor3 = MUTED
+	refresh()
+	task.spawn(function()
+		if waitForPhone(3) and current == frame and not playing then
+			busy = true
+			startGame()
+			busy = false
+		elseif current == frame then
+			message.Text = "🪑 내 자리에 앉아서 [📱 폰 게임]을 골라 주세요"
+			message.TextColor3 = RED
+		end
+	end)
+
+	-- 창이 닫히면 정리 (폰 게임 농땡이가 끝나면 창도 닫혀요)
+	task.spawn(function()
+		local openedAt = os.clock()
+		while current == frame do
+			if os.clock() - openedAt > 3.5 and player:GetAttribute("SalaryAction") ~= "phone" then
+				task.wait(0.5)
+				if current == frame then
+					close()
+				end
+				break
+			end
+			task.wait(0.2)
+		end
+		keyConnection:Disconnect()
+		Hud.numberGame = false
+		if playing then
+			Remotes.BaseballPlay:InvokeServer("quit")
+		end
+		if player:GetAttribute("SalaryAction") == "phone" then
+			Remotes.SetAction:FireServer("work")
+		end
+	end)
+end
+
+Hud.onPhoneGame = function(gameId: string)
+	if gameId == "mines" then
+		Panels.showMines()
+	elseif gameId == "shapes" then
+		Panels.showShapes()
+	elseif gameId == "baseball" then
+		Panels.showBaseball()
+	end
 end
 
 -- 📋 프로젝트 카드의 "🧩 풀기" 버튼 (퍼즐 단계일 때만)

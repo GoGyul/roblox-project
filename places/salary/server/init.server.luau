@@ -27,6 +27,11 @@ local Arcade = require(script.Arcade)
 local Wheel = require(script.Wheel)
 local Dart = require(script.Dart)
 local Missions = require(script.Missions)
+local Decor = require(script.Decor)
+local Cat = require(script.Cat)
+local Rooftop = require(script.Rooftop)
+local SeatPrompts = require(script.SeatPrompts)
+local PhoneGames = require(script.PhoneGames)
 local Profiles = require(script.Profiles)
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local Places = require(ReplicatedStorage.Shared.Places)
@@ -74,8 +79,24 @@ local lee = Lee.new(office, dayCycle) -- 👀 눈치 빠른 이과장 (수·목 
 Employees.start(office, boss, dayCycle, Remotes, coworkers, events, lee)
 Street.start(office, Remotes, Employees.buyStreet) -- 🏙️ 눈치 스트리트 가게 (눈치물산만)
 Claw.start(office, Remotes, { charge = Employees.chargeClaw, give = Employees.givePlush }) -- 🧸 인형뽑기
+Decor.start(Remotes, Employees.decorApi) -- 🪑 내 자리 꾸미기 + 🏆 칭호
+local cat = Cat.start(office, boss, dayCycle, Remotes, Employees.catHooks) -- 🐱 사무실 고양이 월급냥
+Employees.hooks.catOn = cat.sittingOn
+local rooftop = Rooftop.start(office, boss, dayCycle, Remotes, Employees.roofHooks, events) -- 🏢 옥상 + 🚪 엘리베이터
+SeatPrompts.start(Remotes) -- 🪑 의자마다 [E] 앉기
+PhoneGames.start(Remotes, { -- 📱 폰 게임 (💣 지뢰 피하기)
+	charge = Employees.chargeClaw,
+	payout = Employees.payPhoneGame,
+	isPlaying = Employees.isPhoneGaming,
+	status = Employees.phoneGameStatus,
+	rank = Employees.rankOf,
+	shapesPrize = Employees.payShapes,
+	baseballPrize = Employees.payBaseball,
+})
+Employees.hooks.onRoof = rooftop.onRoof
+Employees.hooks.roofSees = rooftop.sees
 Missions.start(office, boss, dayCycle, Remotes, Employees.missionApi, Employees.hooks, coworkers) -- 📋 긴급 프로젝트 + 🎁 선물
-Wheel.start(office, Remotes, { charge = Employees.chargeClaw, payout = Employees.payWheel }) -- 🎡 다 같이 돌림판
+Wheel.start(office, Remotes, { charge = Employees.chargeClaw, payout = Employees.payWheel }) -- 🎡 돌림판
 Dart.start(office, Remotes, { charge = Employees.chargeClaw, prize = Employees.dartPrize }) -- 🎈 풍선 다트
 Arcade.start(office, Remotes, { -- 🕹️ 오락실
 	charge = Employees.chargeClaw,

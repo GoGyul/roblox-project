@@ -15,7 +15,7 @@ local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 local Dinner = {}
 
 local CHEERS_WINDOW = 1.6
-local allowAction = RateLimit.new(0.25)
+local allowAction = RateLimit.new(0.12) -- (너무 길면 빠르게 누를 때 무시돼서 느리게 느껴져요)
 
 local LINES = {
 	good = { "센스 있네~ 😊", "역시 우리 ○○ 씨!", "캬~ 타이밍 좋고!" },
@@ -148,6 +148,8 @@ function Dinner.start(dayCycle, remotes, hooks)
 				say(player, "cheersBad")
 			end
 		end
+		-- 화면이 바로 따라오게 잔과 점수를 즉시 보내요 (0.1초 루프를 기다리지 않고)
+		player:SetAttribute("DinnerGlass", math.floor(session.glass * 100) / 100)
 		player:SetAttribute("DinnerScore", session.score)
 	end)
 
