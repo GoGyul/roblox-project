@@ -52,6 +52,11 @@ export type Office = {
 	spots: { Vector3 }, -- 동료들이 들르는 곳 (탕비실, 프린터, 창가)
 	snackSpots: { Vector3 }, -- 간식이 놓이는 자리 (테이블 윗면)
 	toiletSeats: { Seat }, -- 변기 (앉으면 주식 거래)
+	lamps: { BasePart }, -- 형광등 (정전 때 꺼져요)
+	assemblyZone: BasePart, -- 🚒 소방 훈련 집결지
+	assemblyPoint: Vector3,
+	setAssemblyVisible: (boolean) -> (),
+	cakeSpots: { Vector3 }, -- 🎂 생일 케이크 조각이 놓이는 곳 (탕비실 조리대)
 	setClock: (number, number) -> (),
 }
 
@@ -249,6 +254,7 @@ function OfficeBuilder.build(): Office
 	B:part(Vector3.new(2.6, 0.6, 1.8), v(-27, 2.8, -8), { Color = Color3.fromRGB(60, 60, 65) })
 
 	-- 형광등
+	local lamps = {}
 	for _, x in { -31, -16, 0, 16, 31 } do
 		for _, z in { -12, 2, 14 } do
 			local lamp = B:part(Vector3.new(6, 0.3, 1.2), v(x, WALL_HEIGHT - 0.2, z), {
@@ -261,7 +267,38 @@ function OfficeBuilder.build(): Office
 			light.Brightness = 0.45
 			light.Color = Color3.fromRGB(235, 245, 255)
 			light.Parent = lamp
+			table.insert(lamps, lamp)
 		end
+	end
+
+	-- 🚒 소방 훈련 집결지 (출입문 안쪽, 훈련 때만 초록색으로 보여요)
+	local assemblyPoint = v(0, 0, -19)
+	local assemblyZone = zone(B, "AssemblyZone", Vector3.new(12, 10, 8), v(0, 5, -19.5))
+	local assemblyMarker = B:part(Vector3.new(12, 0.1, 6), v(0, 0.06, -19), {
+		Name = "AssemblyMarker",
+		Color = Color3.fromRGB(60, 200, 90),
+		Material = Enum.Material.Neon,
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+	})
+	local assemblyBoard = Instance.new("BillboardGui")
+	assemblyBoard.Size = UDim2.fromOffset(220, 50)
+	assemblyBoard.StudsOffset = Vector3.new(0, 6, 0)
+	assemblyBoard.AlwaysOnTop = true
+	assemblyBoard.Enabled = false
+	assemblyBoard.Parent = assemblyMarker
+	local assemblyLabel = Instance.new("TextLabel")
+	assemblyLabel.Size = UDim2.fromScale(1, 1)
+	assemblyLabel.BackgroundColor3 = Color3.fromRGB(40, 150, 70)
+	assemblyLabel.TextColor3 = Color3.new(1, 1, 1)
+	assemblyLabel.Font = Enum.Font.GothamBlack
+	assemblyLabel.TextScaled = true
+	assemblyLabel.Text = "🚨 비상 집결지"
+	assemblyLabel.Parent = assemblyBoard
+	local function setAssemblyVisible(visible: boolean)
+		assemblyMarker.Transparency = if visible then 0.4 else 1
+		assemblyBoard.Enabled = visible
 	end
 
 	-- 시작 지점 (출입문 안쪽)
@@ -307,6 +344,11 @@ function OfficeBuilder.build(): Office
 		snackSpots = snackSpots,
 		spots = { v(34, 0, 8), v(-24, 0, -8), v(-12, 0, -18), v(12, 0, -18), v(34, 0, 17) },
 		toiletSeats = toiletSeats,
+		lamps = lamps,
+		assemblyZone = assemblyZone,
+		assemblyPoint = assemblyPoint,
+		setAssemblyVisible = setAssemblyVisible,
+		cakeSpots = { v(36.6, 3, 11.2), v(36.6, 3, 12.6), v(36.6, 3, 16.4) },
 		setClock = setClock,
 	}
 end

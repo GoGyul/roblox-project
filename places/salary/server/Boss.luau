@@ -43,6 +43,7 @@ function Boss.new(office)
 		range = 40,
 		fovCos = math.cos(math.rad(58)),
 		noiseSource = nil :: (() -> (Vector3?, number))?,
+		summon = nil :: Vector3?, -- 이과장이 고자질한 위치
 	}, Boss)
 
 	-- 빨간 넥타이
@@ -300,6 +301,39 @@ function Boss:leaveWork()
 	self.model.Parent = nil
 end
 
+-- 👀 이과장이 고자질하면 하던 걸 멈추고 그 자리로 바로 와요
+function Boss:callTo(position: Vector3)
+	if not self.active or self.scolding then
+		return
+	end
+	self.token += 1
+	self.summon = position
+end
+
+-- 🚒 소방 훈련: 감시를 멈추고 집결지로 가요
+function Boss:evacuate(position: Vector3)
+	self.token += 1
+	local token = self.token
+	self.active = false
+	self.scolding = false
+	self.watching = false
+	self:status("📢")
+	self:say("소방 훈련입니다! 다들 집결지로!", 4)
+	task.spawn(function()
+		self:walkTo(position, token)
+	end)
+end
+
+-- 훈련이 끝나면 다시 감시 시작
+function Boss:resume()
+	if self.model.Parent == nil then
+		return
+	end
+	self.token += 1
+	self.scolding = false
+	self.active = true
+end
+
 -- AI 메인 루프 (서버 시작 시 한 번 실행)
 function Boss:run()
 	task.spawn(function()
@@ -310,6 +344,14 @@ function Boss:run()
 			end
 			Npc.standUpright(self.model) -- 혹시 넘어져 있으면 바로 세워요
 			local token = self.token
+			local summon = self.summon
+			if summon then
+				self.summon = nil
+				self:say("뭐? 어디 어디!", 2)
+				self:investigate(summon, token)
+				task.wait(0.1)
+				continue
+			end
 			local noisePosition, noiseChance = nil, 0
 			if self.noiseSource then
 				noisePosition, noiseChance = self.noiseSource()

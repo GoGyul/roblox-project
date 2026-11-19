@@ -483,6 +483,78 @@ task.spawn(function()
 	end
 end)
 
+---------------------------------------------------------------------------
+-- 👤 인물 소개 카드 (지금은 이과장. 나중에 사장님 같은 새 인물도 같은 틀로)
+---------------------------------------------------------------------------
+type Person = { title: string, subtitle: string, lines: { string } }
+
+local PEOPLE: { [string]: Person } = {
+	lee = {
+		title = "👀 눈치 빠른 이과장",
+		subtitle = "수요일·목요일 출근 · 보라색 조끼",
+		lines = {
+			"📱 휴대폰 볼 때는 아무것도 안 봐요",
+			"❗ 머리 위에 뜨면 곧 휙 뒤돌아봐요!",
+			"🗣️ 농땡이를 들키면 부장님께 고자질 (의심도 +35, 부장님 출동)",
+			`☕ [E] 커피 상납({comma(SalaryConfig.LEE_BRIBE_COST)}원)하면 그날 한 번 눈감아 줘요`,
+		},
+	},
+}
+
+function Panels.showPerson(personId: string)
+	local person = PEOPLE[personId]
+	if not person then
+		return
+	end
+	local frame = sheet(520, 110 + #person.lines * 40 + 60)
+	line(frame, 0, 34, person.title, { Font = Enum.Font.GothamBlack, TextSize = 26 })
+	line(frame, 36, 22, person.subtitle, { TextSize = 15, TextColor3 = MUTED })
+	for i, text in person.lines do
+		line(frame, 70 + (i - 1) * 40, 36, text, { TextSize = 18 })
+	end
+	button(frame, 0, "알겠어요", close)
+	Sounds.play("swoosh", 0.4)
+end
+
+-- 시계 옆 "👀 이과장" 버튼: 출근한 날에만 보이고, 누르면 소개 카드
+local leeChip = Ui.button({
+	AnchorPoint = Vector2.new(0, 0),
+	Position = UDim2.new(1, 18, 0, -10), -- 시계 창 오른쪽 바깥 (창 안쪽 여백 10 고려)
+	Size = UDim2.fromOffset(104, 34),
+	Text = "👀 이과장",
+	TextSize = 15,
+	Visible = false,
+	Parent = Hud.clockPanel,
+})
+leeChip.Activated:Connect(function()
+	if current then
+		close()
+	else
+		Panels.showPerson("lee")
+	end
+end)
+
+-- 처음 출근한 날에는 소개 카드를 자동으로 한 번 띄워요 (다른 창이 열려 있으면 닫힌 뒤에)
+local leeIntroShown = false
+local function onLeePresent()
+	local present = ReplicatedStorage:GetAttribute("LeePresent") == true
+	leeChip.Visible = present
+	if present and not leeIntroShown then
+		leeIntroShown = true
+		task.spawn(function()
+			task.wait(1.5) -- 새 날이 시작되며 창이 닫히는 것과 겹치지 않게
+			while current ~= nil do
+				task.wait(0.5)
+			end
+			if ReplicatedStorage:GetAttribute("LeePresent") == true then
+				Panels.showPerson("lee")
+			end
+		end)
+	end
+end
+ReplicatedStorage:GetAttributeChangedSignal("LeePresent"):Connect(onLeePresent)
+onLeePresent()
+
 -- 새 날이 시작되면 열려 있던 창은 자동으로 닫아요
 ReplicatedStorage:GetAttributeChangedSignal("SalaryPhase"):Connect(function()
 	if ReplicatedStorage:GetAttribute("SalaryPhase") == "work" and current then
