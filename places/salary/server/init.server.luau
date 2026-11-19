@@ -24,6 +24,8 @@ local Dinner = require(script.Dinner)
 local Street = require(script.Street)
 local Claw = require(script.Claw)
 local Arcade = require(script.Arcade)
+local Wheel = require(script.Wheel)
+local Dart = require(script.Dart)
 local Profiles = require(script.Profiles)
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local Places = require(ReplicatedStorage.Shared.Places)
@@ -67,6 +69,8 @@ local lee = Lee.new(office, dayCycle) -- 👀 눈치 빠른 이과장 (수·목 
 Employees.start(office, boss, dayCycle, Remotes, coworkers, events, lee)
 Street.start(office, Remotes, Employees.buyStreet) -- 🏙️ 눈치 스트리트 가게 (눈치물산만)
 Claw.start(office, Remotes, { charge = Employees.chargeClaw, give = Employees.givePlush }) -- 🧸 인형뽑기
+Wheel.start(office, Remotes, { charge = Employees.chargeClaw, payout = Employees.payWheel }) -- 🎡 다 같이 돌림판
+Dart.start(office, Remotes, { charge = Employees.chargeClaw, prize = Employees.dartPrize }) -- 🎈 풍선 다트
 Arcade.start(office, Remotes, { -- 🕹️ 오락실
 	charge = Employees.chargeClaw,
 	reward = Employees.rewardArcade,

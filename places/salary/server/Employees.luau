@@ -1341,6 +1341,68 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		return best, isBest
 	end
 
+	---------------------------------------------------------------- 🎡 돌림판 / 🎈 풍선 다트 (Wheel, Dart 모듈이 불러요)
+	function Employees.payWheel(player: Player, amount: number, number: number)
+		local d = data[player]
+		if not d then
+			return
+		end
+		d.profile.money += amount -- 도박 당첨금은 경력(승진)에는 안 들어가요
+		if number == 20 then
+			unlockAchievement(player, d, "wheel_20")
+			publishCollection(player, d)
+			for _, other in Players:GetPlayers() do
+				remotes.Notify:FireClient(other, `🎡 {player.DisplayName} 님이 돌림판 20 대박! +{amount}원`)
+			end
+		end
+		publish(player, d)
+		task.spawn(save, player, d)
+	end
+
+	-- 풍선 속 경품 지급 → 화면에 보여 줄 이름
+	function Employees.dartPrize(player: Player, prizeId: string): string
+		local d = data[player]
+		if not d then
+			return ""
+		end
+		local info = nil
+		for _, prize in SalaryConfig.DartPrizes do
+			if prize.id == prizeId then
+				info = prize
+			end
+		end
+		if prizeId == "legend" then
+			local legends = {}
+			for _, plush in SalaryConfig.Plushies do
+				if plush.rarity == "legend" then
+					table.insert(legends, plush)
+				end
+			end
+			local plush = legends[math.random(1, #legends)]
+			Employees.givePlush(player, plush.id)
+			unlockAchievement(player, d, "dart_legend")
+			publishCollection(player, d)
+			return `🌟 전설 인형 {plush.emoji} {plush.name}!!`
+		elseif not info or prizeId == "none" then
+			return "💨 꽝!"
+		elseif info.money then
+			d.profile.money += info.money
+			publish(player, d)
+			task.spawn(save, player, d)
+			return `{info.emoji} {info.name}`
+		elseif info.tickets then
+			d.profile.tickets += info.tickets
+			publishPlushies(player, d)
+			task.spawn(save, player, d)
+			return `{info.emoji} {info.name}`
+		elseif info.plush then
+			local plush = SalaryConfig.rollClawPlush()
+			Employees.givePlush(player, plush.id)
+			return `🧸 {plush.emoji} {plush.name}`
+		end
+		return ""
+	end
+
 	-- 🎟️ 경품 교환
 	function Employees.exchangeArcade(player: Player, prizeId: string): (boolean, string)
 		local d = data[player]

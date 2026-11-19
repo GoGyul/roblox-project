@@ -370,6 +370,8 @@ SalaryConfig.Achievements = {
 	{ id = "plush_all", emoji = "📚", name = "인형 수집가", description = "인형 10종을 모두 모으기 (오락실 한정 포함)" },
 	{ id = "arcade_first", emoji = "🕹️", name = "오락실 데뷔", description = "오락실 게임 처음 해 보기" },
 	{ id = "arcade_champ", emoji = "🏆", name = "오락실 챔피언", description = "두더지 30점 또는 타이밍 13점 이상" },
+	{ id = "wheel_20", emoji = "🎡", name = "대박 돌림판", description = "돌림판 20에 걸어서 맞히기" },
+	{ id = "dart_legend", emoji = "🎈", name = "풍선 속 전설", description = "풍선 다트로 전설 인형 터뜨리기" },
 	{ id = "dragon_plush", emoji = "🐲", name = "용용이 입양", description = "티켓으로 오락실 한정 인형 용용이 받기" },
 	{ id = "street_cafe", emoji = "☕", name = "카페인 수혈", description = "눈치 스트리트 카페에서 음료 사 마시기" },
 	{ id = "dessert_lover", emoji = "🍰", name = "디저트 탐방", description = "디저트집 디저트를 자리에서 끝까지 몰래 먹기" },
@@ -606,8 +608,9 @@ end
 
 ---------------------------------------------------------------------------
 -- 🧸 인형뽑기 (눈치 스트리트)
---   한 판 CLAW_PRICE원. 좌우로 움직이는 집게를 노리는 인형 위에서 내리면 성공!
---   딱 맞춰도 가끔 미끄러져요 (CLAW_GRIP 확률로만 잡아요). 뽑은 인형은 책상에 3개까지 진열할 수 있어요.
+--   한 판 CLAW_PRICE원. 좌우 → 앞뒤 두 번 멈춰서 원하는 인형 위에 집게를 내려요.
+--   걸려도 들어 올리다 미끄러지거나 옮기다 떨어질 수 있어요 (희귀할수록 미끄러워요).
+--   뽑은 인형은 책상에 3개까지 진열할 수 있어요.
 ---------------------------------------------------------------------------
 export type PlushInfo = { id: string, emoji: string, name: string, rarity: string, color: Color3 }
 
@@ -633,8 +636,14 @@ SalaryConfig.PlushRarity = {
 }
 
 SalaryConfig.CLAW_PRICE = 500
-SalaryConfig.CLAW_HIT = 0.07 -- 집게와 인형 위치 차이가 이 안이면 명중 (0~1 범위 기준)
-SalaryConfig.CLAW_GRIP = 0.75 -- 명중해도 이 확률로만 꽉 잡아요
+-- 🕹️ 조작: ① 집게가 좌우로 움직일 때 [멈춤] → ② 앞뒤로 움직일 때 [내리기]
+--   기계 안에는 인형 CLAW_PLUSH_COUNT개가 흩어져 있고, 집게 바로 아래 인형만 잡혀요 (위에서 본 0~1 좌표)
+SalaryConfig.CLAW_PLUSH_COUNT = 6
+SalaryConfig.CLAW_RADIUS = 0.07 -- 집게 중심과 인형 중심 거리가 이 안이어야 집게가 걸려요
+SalaryConfig.CLAW_GAP = 0.4 -- [멈춤] 뒤 앞뒤 움직임이 시작되기까지 (초)
+-- 들어 올릴 때 버티는 확률 (정중앙일수록 잘 잡혀요: 정확도에 따라 60~100%가 곱해져요)
+SalaryConfig.CLAW_GRIP = { common = 0.8, rare = 0.6, legend = 0.4 }
+SalaryConfig.CLAW_CARRY = 0.85 -- 출구까지 옮기다 떨어뜨리지 않을 기본 확률 (정확할수록 높아요)
 SalaryConfig.DESK_PLUSH_MAX = 3
 
 function SalaryConfig.getPlush(plushId: string): PlushInfo?
@@ -689,7 +698,7 @@ SalaryConfig.ArcadeGames = {
 }
 SalaryConfig.MOLE_SECONDS = 20
 SalaryConfig.TIMING_ROUNDS = 5
-SalaryConfig.TIMING_PAUSE = 0.8 -- 라운드 사이 쉬는 시간
+SalaryConfig.TIMING_PAUSE = 1.8 -- 라운드 사이 쉬는 시간 (멈춘 결과를 보여 주는 시간)
 SalaryConfig.TIMING_PERFECT = 0.035 -- 정중앙 ±이 안이면 퍼펙트(3점)
 SalaryConfig.TIMING_GOOD = 0.09 -- ±이 안이면 굿(1점)
 
@@ -707,5 +716,57 @@ SalaryConfig.ArcadePrizes = {
 	{ id = "plush", emoji = "🧸", name = "랜덤 인형", tickets = 80, description = "인형뽑기에서 나오는 인형 중 하나 (전설 포함!)" },
 	{ id = "dragon", emoji = "🐲", name = "용용이 (오락실 한정 인형)", tickets = 250, description = "여기서만 받을 수 있는 인형" },
 } :: { ArcadePrize }
+
+---------------------------------------------------------------------------
+-- 🎡 돌림판 (뽑기 천국 가게): 숫자에 걸고 [돌리기]! 직접 돌려서 4초 만에 결과
+--   멈춘 숫자에 건 돈 × (숫자 + 1)을 받아요
+--   예) 10에 1,000원 → 10에 멈추면 11,000원 받아요. 오래 하면 조금씩 손해 보게 맞춰 놨어요.
+---------------------------------------------------------------------------
+SalaryConfig.WHEEL_SEGMENTS = { 1, 3, 1, 5, 1, 3, 1, 10, 1, 5, 1, 3, 20, 3, 1, 5, 1, 3, 1, 10, 1, 5, 3, 1, 1 } -- 25칸 (1×12, 3×6, 5×4, 10×2, 20×1)
+SalaryConfig.WHEEL_NUMBERS = { 1, 3, 5, 10, 20 }
+SalaryConfig.WHEEL_BETS = { 500, 1000, 5000 }
+SalaryConfig.WHEEL_MAX_ROUND = 20000 -- 한 판에 걸 수 있는 최대 금액
+SalaryConfig.WHEEL_SPIN_SECONDS = 4 -- 돌아가는 시간 (자리 부재 게이지가 차니까 짧게)
+SalaryConfig.WHEEL_COLORS = {
+	[1] = Color3.fromRGB(150, 150, 160),
+	[3] = Color3.fromRGB(80, 180, 100),
+	[5] = Color3.fromRGB(70, 140, 230),
+	[10] = Color3.fromRGB(170, 90, 220),
+	[20] = Color3.fromRGB(250, 190, 40),
+}
+
+-- 돌림판 회전 각도 (시계 방향 도). 서버가 정한 시작·끝 각도로 모든 화면이 똑같이 돌아요
+function SalaryConfig.wheelRotation(from: number, to: number, elapsed: number): number
+	local t = math.clamp(elapsed / SalaryConfig.WHEEL_SPIN_SECONDS, 0, 1)
+	local eased = 1 - (1 - t) ^ 4 -- 처음엔 빠르게, 끝엔 천천히
+	return from + (to - from) * eased
+end
+
+---------------------------------------------------------------------------
+-- 🎈 풍선 다트 (인형뽑기 가게): DART_PRICE원에 다트 3개
+--   벽의 풍선 12개 뒤에 경품이 숨어 있어요. 조준점이 저절로 흔들리니 타이밍 맞춰 던지기!
+---------------------------------------------------------------------------
+SalaryConfig.DART_PRICE = 1000
+SalaryConfig.DART_COUNT = 3
+SalaryConfig.DART_COLS = 4
+SalaryConfig.DART_ROWS = 3
+SalaryConfig.DART_HIT_X = 0.09 -- 풍선 중심에서 이만큼(가로, 0~1) 안이면 터져요
+SalaryConfig.DART_HIT_Y = 0.12 -- 세로
+-- 판마다 풍선 12개에 섞어 넣는 경품 (꽝 포함). legend는 아주 드물게 하나가 섞여요
+SalaryConfig.DartPrizes = {
+	{ id = "none", emoji = "💨", name = "꽝", count = 4 },
+	{ id = "cash300", emoji = "💰", name = "300원", count = 3, money = 300 },
+	{ id = "cash1000", emoji = "💵", name = "1,000원", count = 2, money = 1000 },
+	{ id = "tickets", emoji = "🎟️", name = "티켓 10장", count = 2, tickets = 10 },
+	{ id = "plush", emoji = "🧸", name = "랜덤 인형", count = 1, plush = true },
+}
+SalaryConfig.DART_LEGEND_CHANCE = 0.05 -- 판마다 꽝 하나가 🦄 전설 인형으로 바뀔 확률
+
+-- 조준점 위치 (0~1). 서버와 화면이 같은 식을 써요 (a, b, p, q는 판마다 달라요)
+function SalaryConfig.dartAim(elapsed: number, aim: { a: number, b: number, p: number, q: number }): (number, number)
+	local x = 0.5 + 0.46 * math.sin(aim.a * elapsed + aim.p)
+	local y = 0.5 + 0.44 * math.sin(aim.b * elapsed + aim.q)
+	return x, y
+end
 
 return SalaryConfig

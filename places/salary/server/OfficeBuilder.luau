@@ -86,6 +86,8 @@ export type Office = {
 	shops: { [string]: { counter: BasePart, clerkSpot: Vector3 } }, -- 🏙️ 눈치 스트리트 가게
 	clawMachines: { BasePart }, -- 🧸 인형뽑기 기계
 	arcade: any?, -- 🕹️ 오락실 (눈치물산만)
+	wheel: any?, -- 🎡 돌림판 (눈치물산만)
+	dart: any?, -- 🎈 풍선 다트 (눈치물산만)
 	dinnerSeats: { Seat }, -- 🍻 회식 자리 (없으면 화면 미니게임만)
 	dinnerBoss: Vector3?,
 	dinnerLook: Vector3?,
@@ -420,6 +422,8 @@ function OfficeBuilder.build(companyId: string?): Office
 		shops = {},
 		clawMachines = {},
 		arcade = nil,
+		wheel = nil,
+		dart = nil,
 		dinnerSeats = {}, -- 대충상사는 회식 장소가 없어서 화면 미니게임만
 		dinnerBoss = nil,
 		dinnerLook = nil,

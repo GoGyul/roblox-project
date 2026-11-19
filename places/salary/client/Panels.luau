@@ -801,61 +801,79 @@ local function rarityText(plush): string
 end
 
 local function showClaw()
-	local frame = sheet(520, 400)
+	local BOX = 300 -- 기계 안 (위에서 본 모습) 크기
+	local frame = sheet(520, 560)
 	line(frame, 0, 32, "🧸 인형뽑기", { Font = Enum.Font.GothamBlack, TextSize = 26 })
-	line(frame, 34, 40, `집게가 노리는 인형 바로 위에 왔을 때 [내리기]! 한 판 {comma(SalaryConfig.CLAW_PRICE)}원\n(딱 맞춰도 가끔 미끄러져요 😅)`, {
+	line(frame, 34, 40, `① 좌우로 움직일 때 [멈춤] → ② 앞뒤로 움직일 때 [내리기]! 한 판 {comma(SalaryConfig.CLAW_PRICE)}원\n정중앙을 노려야 잘 잡혀요. 희귀할수록 미끄러워요 😅`, {
 		TextSize = 14,
 		TextColor3 = MUTED,
 	})
 	local box = Ui.make("Frame", {
-		Position = UDim2.fromOffset(0, 82),
-		Size = UDim2.new(1, 0, 0, 170),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 82),
+		Size = UDim2.fromOffset(BOX, BOX),
 		BackgroundColor3 = Color3.fromRGB(215, 235, 250),
+		ClipsDescendants = false,
 		ZIndex = 31,
 		Parent = frame,
-	}, { Ui.corner(10), Ui.stroke(Color3.fromRGB(120, 150, 180), 2) })
-	-- 집게 (줄 + ▼)
-	local claw = Ui.make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromScale(0, 0),
-		Size = UDim2.fromOffset(30, 60),
+	}, { Ui.corner(10), Ui.stroke(Color3.fromRGB(120, 150, 180), 3) })
+	Ui.make("TextLabel", { -- 상자 위쪽 = 기계 안쪽
+		Size = UDim2.new(1, 0, 0, 18),
 		BackgroundTransparency = 1,
-		ZIndex = 33,
-		Parent = box,
-	})
-	local rope = Ui.make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromScale(0.5, 0),
-		Size = UDim2.new(0, 3, 0, 30),
-		BackgroundColor3 = Color3.fromRGB(120, 120, 130),
-		ZIndex = 33,
-		Parent = claw,
-	})
-	local hook = Ui.make("TextLabel", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 26),
-		Size = UDim2.fromOffset(30, 30),
-		BackgroundTransparency = 1,
-		Text = "▼",
-		TextScaled = true,
-		TextColor3 = Color3.fromRGB(90, 90, 100),
-		ZIndex = 34,
-		Parent = claw,
-	})
-	local prize = Ui.make("TextLabel", {
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -8),
-		Size = UDim2.fromOffset(48, 48),
-		BackgroundTransparency = 1,
-		TextScaled = true,
-		Text = "🎁",
+		Text = "↑ 안쪽 (전설 인형은 깊숙이!)",
+		TextSize = 12,
+		TextColor3 = MUTED,
+		Font = Enum.Font.GothamMedium,
 		ZIndex = 32,
 		Parent = box,
 	})
-	local status = line(frame, 262, 52, "▶ 시작을 눌러 주세요!", { TextSize = 18, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Center })
+	-- 출구 (왼쪽 아래 바깥)
+	local chute = Ui.make("TextLabel", {
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(0, -8, 1, 0),
+		Size = UDim2.fromOffset(56, 40),
+		BackgroundColor3 = Color3.fromRGB(60, 60, 70),
+		TextColor3 = Color3.new(1, 1, 1),
+		Text = "출구\n⬇",
+		TextSize = 13,
+		Font = Enum.Font.GothamBold,
+		ZIndex = 32,
+		Parent = box,
+	}, { Ui.corner(8) })
 
-	local session: any = nil
-	local dropping = false
+	-- 0~1 좌표 → 상자 안 위치 (z가 클수록 위쪽 = 안쪽)
+	local function toBox(x: number, z: number): UDim2
+		return UDim2.fromOffset(x * BOX, (1 - z) * BOX)
+	end
+
+	-- 집게 (가운데 십자 + 잡히는 범위 원)
+	local clawSize = SalaryConfig.CLAW_RADIUS * 2 * BOX
+	local claw = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = toBox(0, 0),
+		Size = UDim2.fromOffset(clawSize, clawSize),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 0.6,
+		ZIndex = 35,
+		Parent = box,
+	}, { Ui.corner(clawSize), Ui.stroke(Color3.fromRGB(230, 60, 60), 3) })
+	Ui.make("TextLabel", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Text = "✚",
+		TextScaled = true,
+		TextColor3 = Color3.fromRGB(230, 60, 60),
+		ZIndex = 36,
+		Parent = claw,
+	})
+
+	local status = line(frame, 0, 40, "▶ 시작을 눌러 주세요!", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, -62),
+		TextSize = 17,
+		Font = Enum.Font.GothamBold,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
 	local function bigButton(x: number, text: string): TextButton
 		return Ui.button({
 			AnchorPoint = Vector2.new(0.5, 1),
@@ -868,10 +886,44 @@ local function showClaw()
 		})
 	end
 	local startButton = bigButton(-110, `▶ 시작 ({comma(SalaryConfig.CLAW_PRICE)}원)`)
-	local dropButton = bigButton(110, "⬇️ 내리기")
+	local actionButton = bigButton(110, "⏸ 멈춤")
+
+	local plushLabels: { [any]: TextLabel } = {}
+	local session: any = nil
+	local stage = "idle" -- idle → x(좌우) → z(앞뒤) → busy(판정·연출)
+	local stopX: number? = nil
+
+	local function clearLayout()
+		for _, label in plushLabels do
+			label:Destroy()
+		end
+		table.clear(plushLabels)
+	end
+
+	local function drawLayout(layout)
+		clearLayout()
+		for _, item in layout do
+			local plush = SalaryConfig.getPlush(item.id)
+			if not plush then
+				continue
+			end
+			local legend = plush.rarity == "legend"
+			plushLabels[item] = Ui.make("TextLabel", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = toBox(item.x, item.z),
+				Size = UDim2.fromOffset(40, 40),
+				BackgroundColor3 = if legend then Color3.fromRGB(255, 220, 120) else Color3.fromRGB(255, 255, 255),
+				BackgroundTransparency = if legend then 0.2 else 1,
+				Text = plush.emoji,
+				TextScaled = true,
+				ZIndex = 33,
+				Parent = box,
+			}, { Ui.corner(20) })
+		end
+	end
 
 	startButton.Activated:Connect(function()
-		if session or dropping then
+		if stage == "busy" or stage == "x" or stage == "z" then
 			return
 		end
 		Sounds.play("click", 0.5)
@@ -881,61 +933,114 @@ local function showClaw()
 			status.TextColor3 = RED
 			return
 		end
-		local plush = SalaryConfig.getPlush(result.plushId)
-		session = result
-		rope.Size = UDim2.new(0, 3, 0, 30)
-		hook.Position = UDim2.new(0.5, 0, 0, 26)
-		prize.Text = if plush then plush.emoji else "🎁"
-		prize.Position = UDim2.new(0.06 + result.target * 0.88, 0, 1, -8)
-		status.Text = if plush then `노리는 인형: {plush.emoji} {plush.name} ({rarityText(plush)})` else ""
-		status.TextColor3 = if plush and plush.rarity == "legend" then Color3.fromRGB(220, 140, 0) else INK
+		session, stopX = result, nil
+		drawLayout(result.layout)
+		claw.Size = UDim2.fromOffset(clawSize, clawSize)
+		stage = "x"
+		actionButton.Text = "⏸ 멈춤"
+		status.Text = "① 좌우로 움직이는 중… 원하는 인형 줄에서 [멈춤]!"
+		status.TextColor3 = INK
 	end)
 
-	dropButton.Activated:Connect(function()
-		if not session or dropping then
-			return
+	actionButton.Activated:Connect(function()
+		if stage == "x" then
+			local now = workspace:GetServerTimeNow()
+			if now < session.start then
+				return
+			end
+			stage = "z"
+			stopX = now
+			actionButton.Text = "⬇️ 내리기"
+			status.Text = "② 앞뒤로 움직이는 중… 인형 바로 위에서 [내리기]!"
+			Sounds.play("click", 0.5, 1.2)
+			task.spawn(function()
+				local result = Remotes.Claw:InvokeServer("stop", now)
+				if result.ok then
+					stopX = result.stopX
+				end
+			end)
+		elseif stage == "z" and stopX then
+			local now = workspace:GetServerTimeNow()
+			if now < stopX + SalaryConfig.CLAW_GAP then
+				return
+			end
+			stage = "busy"
+			local result = Remotes.Claw:InvokeServer("drop", now)
+			if not result.ok then
+				stage = "idle"
+				status.Text = result.message
+				status.TextColor3 = RED
+				return
+			end
+			-- 집게가 판정된 위치로 가서 내려가요
+			claw.Position = toBox(result.x, result.z)
+			Sounds.play("swoosh", 0.4)
+			TweenService:Create(claw, TweenInfo.new(0.5), { Size = UDim2.fromOffset(clawSize * 0.6, clawSize * 0.6) }):Play()
+			task.wait(0.6)
+			local caughtLabel: TextLabel? = nil
+			for item, label in plushLabels do
+				if item.id == result.plushId and math.abs(item.x - result.x) < 0.2 and math.abs(item.z - result.z) < 0.2 then
+					caughtLabel = label
+				end
+			end
+			local plush = result.plushId and SalaryConfig.getPlush(result.plushId)
+			TweenService:Create(claw, TweenInfo.new(0.4), { Size = UDim2.fromOffset(clawSize, clawSize) }):Play()
+			if result.outcome == "miss" or not plush or not caughtLabel then
+				status.Text = "빈손… 😢 집게 아래에 인형이 없었어요"
+				status.TextColor3 = RED
+			else
+				local label = caughtLabel :: TextLabel
+				-- 들어 올리기
+				TweenService:Create(label, TweenInfo.new(0.4), { Size = UDim2.fromOffset(52, 52) }):Play()
+				task.wait(0.5)
+				if result.outcome == "slip" then
+					TweenService:Create(label, TweenInfo.new(0.25), { Size = UDim2.fromOffset(40, 40) }):Play()
+					Sounds.play("bass", 0.4, 1.4)
+					status.Text = `앗! {plush.emoji} 들어 올리다 미끄러졌어요… (정확도 {result.accuracy}%)`
+					status.TextColor3 = RED
+				else
+					-- 출구로 옮기기 (떨어뜨리면 중간에 툭)
+					local goal = UDim2.fromOffset(-30, BOX - 10)
+					local halfway = UDim2.new(0, (label.Position.X.Offset - 30) / 2, 0, (label.Position.Y.Offset + BOX - 10) / 2)
+					local target = if result.outcome == "drop" then halfway else goal
+					TweenService:Create(label, TweenInfo.new(0.8), { Position = target }):Play()
+					TweenService:Create(claw, TweenInfo.new(0.8), { Position = target }):Play()
+					task.wait(0.85)
+					if result.outcome == "drop" then
+						TweenService:Create(label, TweenInfo.new(0.25), { Size = UDim2.fromOffset(40, 40) }):Play()
+						Sounds.play("bass", 0.4, 1.4)
+						status.Text = `아까워! {plush.emoji} 출구 앞에서 툭 떨어뜨렸어요 😭`
+						status.TextColor3 = RED
+					else
+						Sounds.play("ping", 0.7, 1.3)
+						status.Text = `🎉 {plush.emoji} {plush.name} 획득! ({rarityText(plush)})`
+						status.TextColor3 = Color3.fromRGB(40, 140, 70)
+						Hud.popup(`🧸 {plush.emoji} {plush.name} 획득!`, Color3.fromRGB(255, 210, 80), 2.5)
+						label.Visible = false
+					end
+				end
+			end
+			startButton.Text = `▶ 한 판 더 ({comma(SalaryConfig.CLAW_PRICE)}원)`
+			actionButton.Text = "⏸ 멈춤"
+			stage = "idle"
 		end
-		dropping = true
-		local result = Remotes.Claw:InvokeServer("drop", workspace:GetServerTimeNow())
-		session = nil
-		if not result.ok then
-			dropping = false
-			status.Text = result.message
-			return
-		end
-		-- 집게를 판정된 위치에 두고 내려가는 연출
-		claw.Position = UDim2.fromScale(0.06 + result.position * 0.88, 0)
-		TweenService:Create(rope, TweenInfo.new(0.5), { Size = UDim2.new(0, 3, 0, 100) }):Play()
-		TweenService:Create(hook, TweenInfo.new(0.5), { Position = UDim2.new(0.5, 0, 0, 96) }):Play()
-		Sounds.play("swoosh", 0.4)
-		task.wait(0.7)
-		local plush = SalaryConfig.getPlush(result.plushId)
-		if result.caught and plush then
-			Sounds.play("ping", 0.7, 1.3)
-			status.Text = `🎉 {plush.emoji} {plush.name} 획득! ({rarityText(plush)})`
-			status.TextColor3 = Color3.fromRGB(40, 140, 70)
-			Hud.popup(`🧸 {plush.emoji} {plush.name} 획득!`, Color3.fromRGB(255, 210, 80), 2.5)
-		elseif result.hit then
-			status.Text = "앗! 잡았는데 미끄러졌다… 😭"
-			status.TextColor3 = RED
-		else
-			status.Text = "빗나갔어요… 조금만 더 정확하게!"
-			status.TextColor3 = RED
-		end
-		startButton.Text = `▶ 한 판 더 ({comma(SalaryConfig.CLAW_PRICE)}원)`
-		dropping = false
 	end)
 
+	-- 집게 움직이기 (서버와 같은 식)
 	task.spawn(function()
 		while current == frame do
-			if session and not dropping then
-				local elapsed = workspace:GetServerTimeNow() - session.start
-				local position = SalaryConfig.clawPosition(math.max(0, elapsed), session.period)
-				claw.Position = UDim2.fromScale(0.06 + position * 0.88, 0)
+			if session and stage == "x" then
+				local x = SalaryConfig.clawPosition(math.max(0, workspace:GetServerTimeNow() - session.start), session.periodX)
+				claw.Position = toBox(x, 0)
+			elseif session and stage == "z" and stopX then
+				local x = SalaryConfig.clawPosition(stopX - session.start, session.periodX)
+				local z = SalaryConfig.clawPosition(math.max(0, workspace:GetServerTimeNow() - stopX - SalaryConfig.CLAW_GAP), session.periodZ)
+				claw.Position = toBox(x, z)
 			end
 			task.wait()
 		end
 	end)
+	local _ = chute
 	Sounds.play("swoosh", 0.4)
 end
 
@@ -1173,6 +1278,7 @@ local function showTiming()
 	local presses = {}
 	local roundStart = 0
 	local score = 0
+	local frozen: any = nil -- 방금 멈춘 결과 (다음 라운드 시작 전까지 그대로 보여 줘요)
 
 	local function round(): number
 		return #presses + 1
@@ -1188,13 +1294,20 @@ local function showTiming()
 			status.TextColor3 = RED
 			return
 		end
-		run, presses, score, roundStart = result, {}, 0, result.start
+		run, presses, score, roundStart, frozen = result, {}, 0, result.start, nil
 		status.Text = ""
 		startButton.Text = "게임 중…"
 		task.spawn(function()
 			while current == frame and run == result do
 				local r = result.rounds[round()]
-				if r then
+				if frozen and workspace:GetServerTimeNow() < roundStart then
+					-- 쉬는 시간: 멈춘 자리와 그 라운드 목표를 그대로 보여 줘요
+					good.Position = UDim2.fromScale(frozen.target, 0)
+					marker.Position = UDim2.new(frozen.position, 0, 0, -6)
+					marker.BackgroundColor3 = frozen.color
+				elseif r then
+					frozen = nil
+					marker.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 					good.Position = UDim2.fromScale(r.target, 0)
 					local position = SalaryConfig.clawPosition(math.max(0, workspace:GetServerTimeNow() - roundStart), r.period)
 					marker.Position = UDim2.new(position, 0, 0, -6)
@@ -1216,18 +1329,24 @@ local function showTiming()
 		end
 		local position = SalaryConfig.clawPosition(now - roundStart, r.period)
 		local gap = math.abs(position - r.target)
+		local color
 		if gap <= SalaryConfig.TIMING_PERFECT then
 			score += 3
 			status.Text = "🌟 퍼펙트! +3"
+			color = Color3.fromRGB(255, 220, 90)
 			Sounds.play("ping", 0.6, 1.5)
 		elseif gap <= SalaryConfig.TIMING_GOOD then
 			score += 1
 			status.Text = "👍 굿! +1"
+			color = Color3.fromRGB(90, 200, 110)
 			Sounds.play("ping", 0.5, 1.1)
 		else
 			status.Text = "😵 미스!"
+			color = Color3.fromRGB(230, 70, 70)
 			Sounds.play("bass", 0.4, 1.3)
 		end
+		frozen = { position = position, target = r.target, color = color }
+		roundText.Text = `라운드 {round()}/{SalaryConfig.TIMING_ROUNDS} · 점수 {score}점 · 다음 라운드 준비…`
 		status.TextColor3 = INK
 		table.insert(presses, now)
 		roundStart = now + SalaryConfig.TIMING_PAUSE
@@ -1288,6 +1407,425 @@ Remotes:WaitForChild("ArcadeOpen").OnClientEvent:Connect(function(kind: string)
 		showPrizes()
 	end
 end)
+
+---------------------------------------------------------------------------
+-- 🎡 다 같이 돌림판 (결과는 서버가 정하고, 모든 화면이 같은 각도로 돌아요)
+---------------------------------------------------------------------------
+local SEGMENT_ANGLE = 360 / #SalaryConfig.WHEEL_SEGMENTS
+
+local function currentWheelRotation(): number
+	local from = ReplicatedStorage:GetAttribute("WheelFrom") or 0
+	local to = ReplicatedStorage:GetAttribute("WheelTo") or 0
+	local start = ReplicatedStorage:GetAttribute("WheelSpinStart") or 0
+	return SalaryConfig.wheelRotation(from, to, workspace:GetServerTimeNow() - start) -- 다 돌면 끝 각도에 멈춰 있어요
+end
+
+-- 뒷벽 큰 돌림판도 내 화면에서 돌려요 (서버가 정한 각도라 모두에게 똑같이 보여요)
+task.spawn(function()
+	local spin: Frame? = nil
+	while true do
+		if not spin or not spin.Parent then
+			local office = workspace:FindFirstChild("Office")
+			local disc = office and office:FindFirstChild("WheelDisc")
+			local gui = disc and disc:FindFirstChild("WheelGui")
+			spin = gui and gui:FindFirstChild("Spin") :: Frame?
+		end
+		if spin then
+			spin.Rotation = currentWheelRotation()
+			task.wait()
+		else
+			task.wait(2)
+		end
+	end
+end)
+
+local function showWheel()
+	local frame = sheet(560, 580)
+	line(frame, 0, 32, "🎡 돌림판", { Font = Enum.Font.GothamBlack, TextSize = 26 })
+	local phaseText = line(frame, 34, 24, "금액을 고르고 숫자에 건 다음 [🎡 돌리기]!", { TextSize = 16, Font = Enum.Font.GothamBold })
+	local historyText = line(frame, 34, 24, "", { TextSize = 14, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, -44, 0, 24) })
+
+	-- 작은 돌림판 (내가 돌린 판)
+	local WHEEL = 210
+	local holder = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 70),
+		Size = UDim2.fromOffset(WHEEL, WHEEL),
+		BackgroundColor3 = Color3.fromRGB(40, 40, 50),
+		ZIndex = 31,
+		Parent = frame,
+	}, { Ui.corner(WHEEL) })
+	local spin = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		ZIndex = 32,
+		Parent = holder,
+	})
+	for i, number in SalaryConfig.WHEEL_SEGMENTS do
+		local angle = math.rad((i - 1) * SEGMENT_ANGLE)
+		Ui.make("TextLabel", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5 + 0.41 * math.sin(angle), 0.5 - 0.41 * math.cos(angle)),
+			Size = UDim2.fromOffset(24, 24),
+			Rotation = (i - 1) * SEGMENT_ANGLE,
+			BackgroundColor3 = SalaryConfig.WHEEL_COLORS[number],
+			TextColor3 = Color3.new(1, 1, 1),
+			Font = Enum.Font.GothamBlack,
+			TextScaled = true,
+			Text = tostring(number),
+			ZIndex = 33,
+			Parent = spin,
+		}, { Ui.corner(6) })
+	end
+	Ui.make("TextLabel", { -- ▼ 바늘
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 0, 4),
+		Size = UDim2.fromOffset(26, 22),
+		BackgroundTransparency = 1,
+		Text = "▼",
+		TextScaled = true,
+		TextColor3 = Color3.fromRGB(230, 50, 50),
+		ZIndex = 34,
+		Parent = holder,
+	})
+	local resultText = Ui.make("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.4, 0.4),
+		BackgroundColor3 = Color3.fromRGB(30, 30, 40),
+		TextColor3 = Color3.fromRGB(255, 220, 120),
+		Font = Enum.Font.GothamBlack,
+		TextScaled = true,
+		Text = "🎡",
+		ZIndex = 35,
+		Parent = holder,
+	}, { Ui.corner(60) })
+
+	-- 베팅 금액 고르기
+	local amount = SalaryConfig.WHEEL_BETS[1]
+	local amountButtons = {}
+	for i, value in SalaryConfig.WHEEL_BETS do
+		local b = Ui.button({
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, (i - 2) * 130, 0, 292),
+			Size = UDim2.fromOffset(120, 36),
+			Text = `{comma(value)}원`,
+			TextSize = 16,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		b.Activated:Connect(function()
+			amount = value
+			Sounds.play("click", 0.4)
+		end)
+		amountButtons[value] = b
+	end
+
+	local message = line(frame, 0, 24, "여러 숫자에 걸 수 있어요. 멈춘 숫자에 건 돈 × (숫자+1)!", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, -58),
+		TextSize = 15,
+		TextColor3 = MUTED,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
+	local myBetsText = line(frame, 0, 26, "내 베팅: 없음", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, -84),
+		TextSize = 16,
+		Font = Enum.Font.GothamBold,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
+	local myBets: { [number]: number } = {}
+	local function showMyBets()
+		local parts = {}
+		for _, number in SalaryConfig.WHEEL_NUMBERS do
+			if myBets[number] then
+				table.insert(parts, `[{number}] {comma(myBets[number])}원`)
+			end
+		end
+		myBetsText.Text = if #parts > 0 then "내 베팅: " .. table.concat(parts, " · ") else "내 베팅: 없음"
+	end
+	for i, number in SalaryConfig.WHEEL_NUMBERS do
+		local count = 0
+		for _, n in SalaryConfig.WHEEL_SEGMENTS do
+			if n == number then
+				count += 1
+			end
+		end
+		local b = Ui.button({
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, (i - 3) * 100, 0, 340),
+			Size = UDim2.fromOffset(92, 64),
+			BackgroundColor3 = SalaryConfig.WHEEL_COLORS[number],
+			TextColor3 = Color3.new(1, 1, 1),
+			Text = `{number}\n×{number + 1} · {count * 4}%`,
+			TextSize = 15,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		b.Activated:Connect(function()
+			local result = Remotes.WheelBet:InvokeServer("bet", amount, number)
+			if result.ok then
+				myBets = {}
+				for _, pair in result.bets do
+					myBets[pair[1]] = pair[2]
+				end
+				showMyBets()
+				Sounds.play("ping", 0.5, 1.2)
+				message.Text = `[{number}]에 {comma(amount)}원 걸었어요!`
+				message.TextColor3 = Color3.fromRGB(40, 140, 70)
+			else
+				message.Text = result.message
+				message.TextColor3 = RED
+			end
+		end)
+	end
+
+	-- 🎡 돌리기
+	local spinState: any = nil -- 내가 돌린 판 { from, to, spinStart, number, win, stake }
+	local history = {}
+	local spinButton = Ui.button({
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, 0),
+		Size = UDim2.fromOffset(260, 52),
+		Text = "🎡 돌리기!",
+		TextSize = 22,
+		ZIndex = 31,
+		Parent = frame,
+	})
+	spinButton.Activated:Connect(function()
+		if spinState then
+			return
+		end
+		local result = Remotes.WheelBet:InvokeServer("spin")
+		if not result.ok then
+			message.Text = result.message
+			message.TextColor3 = RED
+			return
+		end
+		Sounds.play("swoosh", 0.5)
+		spinState = result
+		resultText.Text = "🌀"
+		phaseText.Text = "🌀 돌아가는 중… 두근두근"
+		task.delay(SalaryConfig.WHEEL_SPIN_SECONDS, function()
+			if current ~= frame then
+				return
+			end
+			resultText.Text = tostring(result.number)
+			table.insert(history, 1, tostring(result.number))
+			if #history > 8 then
+				table.remove(history)
+			end
+			historyText.Text = "최근: " .. table.concat(history, " ")
+			if result.win > 0 then
+				Sounds.play("ping", 0.8, 1.4)
+				phaseText.Text = `🎉 {result.number} 당첨! +{comma(result.win)}원`
+				phaseText.TextColor3 = Color3.fromRGB(40, 140, 70)
+				Hud.popup(`🎡 {result.number} 당첨! +{comma(result.win)}원`, Color3.fromRGB(255, 210, 80), 3)
+			else
+				Sounds.play("bass", 0.5, 1.2)
+				phaseText.Text = `😢 {result.number}에 멈췄어요… (-{comma(result.stake)}원)`
+				phaseText.TextColor3 = RED
+			end
+			myBets = {}
+			showMyBets()
+			spinState = nil
+		end)
+	end)
+
+	task.spawn(function()
+		while current == frame do
+			if spinState then
+				spin.Rotation = SalaryConfig.wheelRotation(spinState.from, spinState.to, workspace:GetServerTimeNow() - spinState.spinStart)
+			end
+			for value, b in amountButtons do
+				b.BackgroundColor3 = if value == amount then Color3.fromRGB(255, 200, 80) else Color3.fromRGB(200, 200, 205)
+			end
+			spinButton.Text = if spinState then "🌀 돌아가는 중…" else "🎡 돌리기!"
+			task.wait()
+		end
+	end)
+	Sounds.play("swoosh", 0.4)
+end
+
+Remotes:WaitForChild("WheelOpen").OnClientEvent:Connect(showWheel)
+
+---------------------------------------------------------------------------
+-- 🎈 풍선 다트 (서버가 경품과 조준점 움직임을 정하고, 화면은 던진 시각만 보내요)
+---------------------------------------------------------------------------
+local function showDart()
+	local W, H = 420, 300
+	local frame = sheet(520, 560)
+	line(frame, 0, 32, "🎈 풍선 다트", { Font = Enum.Font.GothamBlack, TextSize = 26 })
+	line(frame, 34, 40, `{comma(SalaryConfig.DART_PRICE)}원에 다트 {SalaryConfig.DART_COUNT}개! 흔들리는 조준점이 풍선 위에 올 때 [던지기]\n풍선 속엔 꽝, 돈, 티켓, 인형… 아주 가끔 전설 인형도!`, {
+		TextSize = 14,
+		TextColor3 = MUTED,
+	})
+	local board = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 82),
+		Size = UDim2.fromOffset(W, H),
+		BackgroundColor3 = Color3.fromRGB(240, 230, 210),
+		ZIndex = 31,
+		Parent = frame,
+	}, { Ui.corner(10), Ui.stroke(Color3.fromRGB(150, 110, 70), 3) })
+	local colors = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 200, 60), Color3.fromRGB(90, 180, 255), Color3.fromRGB(120, 220, 120) }
+	local balloons = {}
+	local function resetBalloons()
+		for _, b in balloons do
+			b:Destroy()
+		end
+		table.clear(balloons)
+		for row = 0, SalaryConfig.DART_ROWS - 1 do
+			for col = 0, SalaryConfig.DART_COLS - 1 do
+				local index = row * SalaryConfig.DART_COLS + col + 1
+				balloons[index] = Ui.make("TextLabel", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale((col + 0.5) / SalaryConfig.DART_COLS, (row + 0.5) / SalaryConfig.DART_ROWS),
+					Size = UDim2.fromOffset(SalaryConfig.DART_HIT_X * 2 * W, SalaryConfig.DART_HIT_Y * 2 * H),
+					BackgroundColor3 = colors[(row + col) % #colors + 1],
+					TextColor3 = Color3.fromRGB(40, 30, 30),
+					Font = Enum.Font.GothamBold,
+					TextScaled = true,
+					Text = "",
+					ZIndex = 32,
+					Parent = board,
+				}, { Ui.corner(40) })
+			end
+		end
+	end
+	resetBalloons()
+	local crosshair = Ui.make("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(34, 34),
+		BackgroundTransparency = 1,
+		Text = "⊕",
+		TextScaled = true,
+		TextColor3 = Color3.fromRGB(220, 30, 30),
+		Visible = false,
+		ZIndex = 36,
+		Parent = board,
+	})
+	local status = line(frame, 0, 40, "▶ 시작을 눌러 주세요!", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, -62),
+		TextSize = 17,
+		Font = Enum.Font.GothamBold,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
+	local function bigButton(x: number, text: string): TextButton
+		return Ui.button({
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, x, 1, 0),
+			Size = UDim2.fromOffset(210, 52),
+			Text = text,
+			TextSize = 20,
+			ZIndex = 31,
+			Parent = frame,
+		})
+	end
+	local startButton = bigButton(-110, `▶ 시작 ({comma(SalaryConfig.DART_PRICE)}원)`)
+	local throwButton = bigButton(110, "🎯 던지기")
+	local run: any = nil
+	local throwing = false
+	local PRIZE_EMOJI = { legend = "🌟" }
+	for _, prize in SalaryConfig.DartPrizes do
+		PRIZE_EMOJI[prize.id] = prize.emoji
+	end
+
+	startButton.Activated:Connect(function()
+		if run or throwing then
+			return
+		end
+		local result = Remotes.Dart:InvokeServer("start")
+		if not result.ok then
+			status.Text = result.message
+			status.TextColor3 = RED
+			return
+		end
+		resetBalloons()
+		run = result
+		crosshair.Visible = true
+		throwButton.Text = `🎯 던지기 ({SalaryConfig.DART_COUNT})`
+		status.Text = "조준점이 풍선 위에 올 때 던져요!"
+		status.TextColor3 = INK
+	end)
+
+	throwButton.Activated:Connect(function()
+		if not run or throwing then
+			return
+		end
+		local now = workspace:GetServerTimeNow()
+		if now < run.start then
+			return
+		end
+		throwing = true
+		Sounds.play("swoosh", 0.4, 1.3)
+		local result = Remotes.Dart:InvokeServer("throw", now)
+		throwing = false
+		if not result.ok then
+			status.Text = result.message
+			status.TextColor3 = RED
+			return
+		end
+		-- 다트 자국
+		Ui.make("TextLabel", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(result.x, result.y),
+			Size = UDim2.fromOffset(22, 22),
+			BackgroundTransparency = 1,
+			Text = "📍",
+			TextScaled = true,
+			ZIndex = 37,
+			Parent = board,
+		})
+		local balloon = result.balloon and balloons[result.balloon]
+		if balloon then
+			Sounds.play(if result.prizeId == "none" then "bass" else "ping", 0.6, 1.3)
+			balloon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			balloon.BackgroundTransparency = 0.3
+			balloon.Text = PRIZE_EMOJI[result.prizeId] or "?"
+			status.Text = `💥 펑! {result.prizeName}`
+			status.TextColor3 = if result.prizeId == "none" then MUTED else Color3.fromRGB(40, 140, 70)
+			if result.prizeId == "legend" then
+				Hud.popup(`🎈 {result.prizeName}`, Color3.fromRGB(255, 210, 80), 3)
+			end
+		else
+			status.Text = "빗나갔어요! 벽에 콕 😅"
+			status.TextColor3 = RED
+		end
+		throwButton.Text = `🎯 던지기 ({result.left})`
+		if result.left <= 0 then
+			run = nil
+			crosshair.Visible = false
+			-- 남은 풍선 속 공개
+			for index, prizeId in result.reveal or {} do
+				local b = balloons[index]
+				if b and b.Text == "" then
+					b.Text = PRIZE_EMOJI[prizeId] or ""
+					b.BackgroundTransparency = 0.6
+				end
+			end
+			startButton.Text = `▶ 한 판 더 ({comma(SalaryConfig.DART_PRICE)}원)`
+		end
+	end)
+
+	task.spawn(function()
+		while current == frame do
+			if run then
+				local x, y = SalaryConfig.dartAim(math.max(0, workspace:GetServerTimeNow() - run.start), run.aim)
+				crosshair.Position = UDim2.fromScale(x, y)
+			end
+			task.wait()
+		end
+	end)
+	Sounds.play("swoosh", 0.4)
+end
+
+Remotes:WaitForChild("DartOpen").OnClientEvent:Connect(showDart)
 
 -- 새 날이 시작되면 열려 있던 창은 자동으로 닫아요
 ReplicatedStorage:GetAttributeChangedSignal("SalaryPhase"):Connect(function()

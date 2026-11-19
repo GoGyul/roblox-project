@@ -434,19 +434,19 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	end
 	shops.dessert = { counter = dessertCounter, clerkSpot = v(-13, 0, -127) }
 
-	-- 🧸 인형뽑기 (기계 3대)
-	shopBuilding(13, "🧸 인형뽑기", Color3.fromRGB(255, 220, 120), Color3.fromRGB(240, 90, 90), true)
+	-- 🧸 뽑기 가게: 인형뽑기 1대 + 🎡 다 같이 돌림판 + 🎈 풍선 다트
+	shopBuilding(13, "🧸 뽑기 천국", Color3.fromRGB(255, 220, 120), Color3.fromRGB(240, 90, 90), true)
 	local clawMachines = {}
-	local machineColors = { Color3.fromRGB(255, 120, 170), Color3.fromRGB(110, 190, 255), Color3.fromRGB(150, 220, 120) }
-	for i, dx in { -6, 0, 6 } do
-		local mx, mz = 13 + dx, -125
-		local cabinet = B:part(Vector3.new(3.4, 3, 3.4), v(mx, 1.5, mz), { Name = "ClawMachine", Color = machineColors[i] })
+	do
+		local mx, mz = 5.2, -125
+		local color = Color3.fromRGB(255, 120, 170)
+		local cabinet = B:part(Vector3.new(3.4, 3, 3.4), v(mx, 1.5, mz), { Name = "ClawMachine", Color = color })
 		B:part(Vector3.new(3.4, 3.6, 3.4), v(mx, 4.8, mz), { Color = Color3.fromRGB(220, 240, 255), Material = Enum.Material.Glass, Transparency = 0.6 })
-		B:part(Vector3.new(3.6, 0.6, 3.6), v(mx, 6.9, mz), { Color = machineColors[i], Material = Enum.Material.Neon })
+		B:part(Vector3.new(3.6, 0.6, 3.6), v(mx, 6.9, mz), { Color = color, Material = Enum.Material.Neon })
 		B:part(Vector3.new(0.15, 1.4, 0.15), v(mx, 5.9, mz), { Color = Color3.fromRGB(200, 200, 205), Material = Enum.Material.Metal, CanCollide = false }) -- 집게 줄
 		B:part(Vector3.new(0.7, 0.3, 0.7), v(mx, 5.1, mz), { Color = Color3.fromRGB(200, 200, 205), Material = Enum.Material.Metal, CanCollide = false }) -- 집게
 		for j = 1, 7 do -- 안에 쌓인 인형들
-			local plush = SalaryConfig.Plushies[(i + j) % #SalaryConfig.Plushies + 1]
+			local plush = SalaryConfig.Plushies[j % #SalaryConfig.Plushies + 1]
 			B:part(Vector3.new(0.8, 0.8, 0.8), v(mx + math.random(-10, 10) / 10, 3.4 + (j % 2) * 0.5, mz + math.random(-10, 10) / 10), {
 				Shape = Enum.PartType.Ball,
 				Color = plush.color,
@@ -455,6 +455,36 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		end
 		table.insert(clawMachines, cabinet)
 	end
+
+	-- 🎡 돌림판 (뒷벽에 세운 큰 원판, 글씨·회전은 Wheel 모듈이 그려요)
+	local wheelX = 11.3
+	local wheelDisc = B:part(Vector3.new(0.6, 9, 9), nil, {
+		Name = "WheelDisc",
+		Shape = Enum.PartType.Cylinder,
+		CFrame = CFrame.new(v(wheelX, 6.6, -131.1)) * CFrame.Angles(0, math.rad(90), 0), -- 원판 면이 가게 앞쪽(+Z)을 봐요
+		Color = Color3.fromRGB(40, 40, 50),
+	})
+	B:part(Vector3.new(0.8, 1.2, 0.8), v(wheelX, 11.5, -130.6), { Color = Color3.fromRGB(230, 50, 50), Material = Enum.Material.Neon }) -- ▼ 바늘
+	local wheelKiosk = B:part(Vector3.new(5, 3.5, 1.6), v(wheelX, 1.75, -125.5), { Name = "WheelKiosk", Color = Color3.fromRGB(250, 200, 80) })
+	local wheelSign = B:part(Vector3.new(5, 0.9, 0.2), v(wheelX, 4, -124.6), { Color = Color3.fromRGB(30, 30, 40) })
+	Build.surfaceText(wheelSign, Enum.NormalId.Front, "🎡 다 같이 돌림판", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 230, 120) })
+
+	-- 🎈 풍선 다트판 (뒷벽 오른쪽)
+	local dartX = 19.8
+	local dartBoard = B:part(Vector3.new(6.2, 5, 0.4), v(dartX, 6.2, -131.1), { Name = "DartBoard", Color = Color3.fromRGB(240, 230, 210), Material = Enum.Material.Wood })
+	local balloonColors = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 200, 60), Color3.fromRGB(90, 180, 255), Color3.fromRGB(120, 220, 120) }
+	for row = 0, SalaryConfig.DART_ROWS - 1 do
+		for col = 0, SalaryConfig.DART_COLS - 1 do
+			B:part(Vector3.new(1.1, 1.3, 0.8), v(dartX - 2.25 + col * 1.5, 7.8 - row * 1.6, -130.6), {
+				Shape = Enum.PartType.Ball,
+				Color = balloonColors[(row + col) % #balloonColors + 1],
+				CanCollide = false,
+			})
+		end
+	end
+	local dartCounter = B:part(Vector3.new(5, 3.5, 1.6), v(dartX, 1.75, -125.5), { Name = "DartCounter", Color = Color3.fromRGB(120, 200, 255) })
+	local dartSign = B:part(Vector3.new(5, 0.9, 0.2), v(dartX, 4, -124.6), { Color = Color3.fromRGB(30, 30, 40) })
+	Build.surfaceText(dartSign, Enum.NormalId.Front, "🎈 풍선 다트", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 230, 120) })
 
 	-- 🕹️ 오락실: 게임기 2대 + 경품 교환대 + 최고 기록판
 	shopBuilding(39, "🕹️ 오락실", Color3.fromRGB(60, 60, 110), Color3.fromRGB(150, 80, 230), true)
@@ -544,6 +574,8 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		candyZone = candyZone,
 		shops = shops, -- 🏙️ 눈치 스트리트 가게들 (계산대, 사장님 자리)
 		clawMachines = clawMachines, -- 🧸 인형뽑기 기계
+		wheel = { disc = wheelDisc, kiosk = wheelKiosk }, -- 🎡 다 같이 돌림판
+		dart = { board = dartBoard, counter = dartCounter }, -- 🎈 풍선 다트
 		arcade = arcade, -- 🕹️ 오락실 (게임기, 경품 교환대, 기록판)
 		dinnerSeats = dinnerSeats, -- 🍻 회식은 공원 식탁에서
 		dinnerBoss = v(dinnerX - 8.5, 0, dinnerZ), -- 부장님은 식탁 끝 상석
