@@ -335,9 +335,27 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if not (character and humanoid) or humanoid.Health <= 0 then
 			return
 		end
-		character:PivotTo(d.desk.seat.CFrame + Vector3.new(0, 3, 0))
+		local seat = d.desk.seat
+		if humanoid.SeatPart == seat then
+			return -- 이미 내 자리에 앉아 있어요
+		end
+		-- ⚠️ 의자에 앉은 채로 캐릭터를 순간이동하면, 붙어 있는 의자까지 같이 끌려가요!
+		--    (아침마다 의자가 위로 떠오르던 버그) → 먼저 의자 고정을 풀어요
+		if humanoid.SeatPart then
+			for _, child in humanoid.SeatPart:GetChildren() do
+				if child:IsA("Weld") and child.Name == "SeatWeld" then
+					child:Destroy()
+				end
+			end
+			humanoid.Sit = false
+			task.wait(0.1)
+		end
+		if not seat.Occupant then
+			seat.CFrame = d.desk.seatHome -- 혹시 밀려나 있던 의자도 제자리로
+		end
+		character:PivotTo(seat.CFrame + Vector3.new(0, 3, 0))
 		task.wait(0.1)
-		d.desk.seat:Sit(humanoid)
+		seat:Sit(humanoid)
 	end
 
 	---------------------------------------------------------------- 자리 배정 / 입장 / 퇴장

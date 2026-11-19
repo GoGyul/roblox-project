@@ -113,6 +113,10 @@ function Npc.standUpright(model: Model)
 	if not root or root.CFrame.UpVector.Y > 0.8 then
 		return
 	end
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.SeatPart then
+		return -- 앉아 있을 땐 건드리지 않아요 (의자까지 같이 돌아가 버려요)
+	end
 	local look = root.CFrame.LookVector
 	local flat = Vector3.new(look.X, 0, look.Z)
 	if flat.Magnitude < 0.1 then
@@ -178,6 +182,15 @@ end
 function Npc.sit(model: Model, seat: Seat)
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true) -- 이 의자에만 앉도록 잠깐 허용
+	-- 다른 의자에 붙어 있으면 먼저 떼요 (안 그러면 순간이동할 때 그 의자까지 끌려가요)
+	local current = humanoid.SeatPart
+	if current and current ~= seat then
+		for _, child in current:GetChildren() do
+			if child:IsA("Weld") and child.Name == "SeatWeld" then
+				child:Destroy()
+			end
+		end
+	end
 	model:PivotTo(seat.CFrame + Vector3.new(0, 3, 0))
 	seat:Sit(humanoid)
 	Npc.setSitPose(model, true)

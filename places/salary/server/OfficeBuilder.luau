@@ -55,6 +55,7 @@ export type Desk = {
 	model: Model,
 	seat: Seat,
 	behind: Vector3, -- 부장이 뒤에서 들여다볼 위치
+	seatHome: CFrame, -- 의자 원래 위치
 }
 
 export type Office = {
@@ -142,7 +143,8 @@ local function buildDesk(B, index: number, x: number, z: number): Desk
 	}) :: Seat
 	p(Vector3.new(2, 2.4, 0.3), v(x, 2.7, z + 3.5), { Color = COLORS.chair })
 
-	return { index = index, model = model, seat = seat, behind = v(x, 0, z + 6.5) }
+	-- seatHome: 의자 원래 자리 (혹시 밀려나면 되돌려요)
+	return { index = index, model = model, seat = seat, seatHome = seat.CFrame, behind = v(x, 0, z + 6.5) }
 end
 
 -- 🚒 소방 훈련 집결지 (훈련 때만 초록색으로 보여요). 회사마다 위치만 달라요.
