@@ -5,13 +5,25 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 
 local Ui = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Ui"))
+local SalaryConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SalaryConfig"))
 
 local Prompts = {}
 
 local player = Players.LocalPlayer
+
+-- 🤝 "수다 떨기 · 이대리" 옆에 친밀도 ❤️ (서버가 Friendship 속성으로 알려 줘요)
+local function friendText(name: string): string
+	local points = 0
+	pcall(function()
+		points = HttpService:JSONDecode(player:GetAttribute("Friendship") or "{}")[name] or 0
+	end)
+	local level = SalaryConfig.friendLevel(points)
+	return if level > 0 then " " .. string.rep("❤️", level) else ""
+end
 
 local function makeCustom(instance: Instance)
 	if instance:IsA("ProximityPrompt") then
@@ -44,7 +56,8 @@ function Prompts.start()
 		board.Adornee = adornee
 		board.AlwaysOnTop = true
 		board.Active = true -- 폰에서 눌러지도록
-		board.Size = UDim2.fromOffset(170, 30)
+		local isChat = prompt.ActionText == "수다 떨기"
+		board.Size = UDim2.fromOffset(if isChat then 210 else 170, 30)
 		-- 같은 대상에 [E]·[R] 두 개가 뜨면 겹치지 않게 [E]가 아닌 건 위로
 		board.StudsOffsetWorldSpace = Vector3.new(0, if prompt.KeyboardKeyCode == Enum.KeyCode.E then 2.2 else 3.6, 0)
 		board.Parent = playerGui
@@ -83,7 +96,8 @@ function Prompts.start()
 			TextSize = 13,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextTruncate = Enum.TextTruncate.AtEnd,
-			Text = if prompt.ObjectText ~= "" then `{prompt.ActionText} · {prompt.ObjectText}` else prompt.ActionText,
+			Text = (if prompt.ObjectText ~= "" then `{prompt.ActionText} · {prompt.ObjectText}` else prompt.ActionText)
+				.. (if isChat then friendText(prompt.ObjectText) else ""),
 			Parent = pill,
 		})
 		local _ = keyBox

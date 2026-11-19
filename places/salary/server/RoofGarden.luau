@@ -30,7 +30,7 @@ function RoofGarden.start(boxes: { BasePart }, remotes, hooks)
 		prompt.RequiresLineOfSight = false
 		prompt.Parent = box
 		prompt.Triggered:Connect(function(player)
-			remotes.GardenOpen:FireClient(player)
+			remotes.GardenOpen:FireClient(player, box.Position) -- 🚪 화분에서 멀어지면 창이 닫혀요
 		end)
 	end
 	ReplicatedStorage:SetAttribute("GardenSlots", HttpService:JSONEncode(slots))

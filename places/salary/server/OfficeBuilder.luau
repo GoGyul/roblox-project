@@ -8,7 +8,9 @@
 --   │🚪엘리베이터 🖨️ [책상4]      [책상5]      [책상6]  ┌──────┤  (플레이어는 보통 5번, z 5)
 --   ├──────────┐     🪑           🪑           🪑     │ 탕비실│
 --   │  화장실  │            [김부장 자리]             │       │  ← 부장은 직원들 등 뒤에 앉아요 (z 19)
---   └──────────┴──────────────────────────────────────┴───────┘
+--   └──────────┴──[문 x -22]───────────────────────────┴───────┘
+--              │ 🏋️ 체력 단련실 (별관)  │  ← 뒷벽 문으로 들어가요: x -40~-4 / z 32~60
+--              └────────────────────────┘
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Build = require(ReplicatedStorage.Shared.Build)
@@ -75,6 +77,8 @@ export type Office = {
 	toiletSeats: { Seat }, -- 변기 (앉으면 주식 거래)
 	meetingSeats: { Seat }, -- 📊 유리 회의실 의자 (눈치물산만, 없으면 빈 목록)
 	meetingZone: BasePart?,
+	gymSeats: { Seat }, -- 🏋️ 체력 단련실 운동기구 (GymSeat)
+	gymZone: BasePart,
 	companyId: string,
 	lamps: { BasePart }, -- 형광등 (정전 때 꺼져요)
 	assemblyZone: BasePart, -- 🚒 소방 훈련 집결지
@@ -93,7 +97,7 @@ export type Office = {
 	clawMachines: { BasePart }, -- 🧸 인형뽑기 기계
 	arcade: any?, -- 🕹️ 오락실 (눈치물산만)
 	wheel: any?, -- 🎡 돌림판 (눈치물산만)
-	dart: any?, -- 🎈 풍선 다트 (눈치물산만)
+	dart: any?, -- 🎯 풍선 다트 (눈치물산만)
 	dinnerSeats: { Seat }, -- 🍻 회식 자리 (없으면 화면 미니게임만)
 	dinnerBoss: Vector3?,
 	dinnerLook: Vector3?,
@@ -271,6 +275,232 @@ local function buildPackage(B, x: number, z: number): BasePart
 	return box
 end
 
+-- 🏋️ 체력 단련실 안쪽 꾸미기 (방 벽·문은 회사마다 따로 짓고, 안은 여기서 똑같이 채워요)
+--   cx, cz: 방 바닥 가운데 / hx, hz: 방 안쪽 가로·세로 절반 / wallHeight: 천장 높이
+--   문은 -Z 쪽(사무실 쪽), 큰 거울은 +Z 벽. 운동기구 5대는 모두 거울을 보고 써요.
+--   운동기구마다 Seat(이름 "GymSeat", 속성 Machine)가 있어요 → [E] 앉기(SeatPrompts) → Employees가 "gym" 상태로
+--   🧍 서서 하는 운동(러닝머신·샌드백)은 보이지 않는 의자를 허리 높이에 둬요 (Poses가 다리를 쭉 펴 줘요)
+local STAND_SEAT_HEIGHT = 1.6 -- 서서 하는 운동: 발판 윗면에서 의자 윗면까지 (다리 길이쯤)
+local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { BasePart }, spot: Vector3 }
+	local cx, cz, hx, hz = info.cx, info.cz, info.hx, info.hz
+	local wallHeight = info.wallHeight
+	local accent = info.accent or Color3.fromRGB(230, 120, 60)
+	local function at(x: number, y: number, z: number): Vector3
+		return v(cx + x, y, cz + z)
+	end
+	local function turned(x: number, y: number, z: number, rx: number, ry: number, rz: number): CFrame
+		return CFrame.new(at(x, y, z)) * CFrame.Angles(rx, ry, rz)
+	end
+	local black = Color3.fromRGB(35, 35, 40)
+	local silver = Color3.fromRGB(180, 185, 195)
+	local function metal(size: Vector3, position: Vector3, props: { [string]: any }?): BasePart
+		local options = { Color = silver, Material = Enum.Material.Metal }
+		for key, value in props or {} do
+			options[key] = value
+		end
+		return B:part(size, position, options)
+	end
+	local FACE = CFrame.Angles(0, math.pi, 0) -- 의자 앞쪽이 거울(+Z)을 봐요
+	local seats = {}
+	local function gymSeat(machineId: string, cframe: CFrame, size: Vector3, props: { [string]: any }?): Seat
+		local machine = SalaryConfig.GymMachines[machineId]
+		local options: { [string]: any } = {
+			ClassName = "Seat",
+			Name = "GymSeat",
+			CFrame = cframe,
+			Color = black,
+			Material = Enum.Material.Leather,
+		}
+		for key, value in props or {} do
+			options[key] = value
+		end
+		local seat = B:part(size, nil, options) :: Seat
+		seat:SetAttribute("Machine", machineId)
+		seat:SetAttribute("PromptText", `{machine.emoji} {machine.name}`)
+		table.insert(seats, seat)
+		return seat
+	end
+
+	-- 바닥: 고무 매트 + 가운데 노란 안전선
+	B:part(Vector3.new(hx * 2, 0.12, hz * 2), at(0, 0.06, 0), { Color = Color3.fromRGB(55, 58, 64), Material = Enum.Material.Rubber, CanCollide = false })
+	B:part(Vector3.new(hx * 2 - 4, 0.14, 0.4), at(0, 0.07, -5), { Color = Color3.fromRGB(240, 200, 60), CanCollide = false })
+
+	-- 거울 벽 (+Z) + 위에 표어
+	B:part(Vector3.new(hx * 2 - 6, 7, 0.2), at(0, 4.6, hz - 0.15), {
+		Color = Color3.fromRGB(205, 225, 240),
+		Material = Enum.Material.Glass,
+		Reflectance = 0.45,
+		CanQuery = false,
+	})
+	local motto = B:part(Vector3.new(20, 2.2, 0.2), at(0, wallHeight - 2, hz - 0.2), { Color = Color3.fromRGB(190, 35, 45) })
+	Build.surfaceText(motto, Enum.NormalId.Front, "💪 체력은 국력! 칼퇴도 체력에서 나온다", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 230, 120) })
+	-- 옆벽 포스터 2장
+	local posterL = B:part(Vector3.new(0.2, 3, 6), at(-hx + 0.15, 6.5, -4), { Color = Color3.fromRGB(30, 35, 45) })
+	Build.surfaceText(posterL, Enum.NormalId.Right, "🏃 땀은 배신하지 않는다\n(월급은 배신해도)", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 255, 255) })
+	local posterR = B:part(Vector3.new(0.2, 3, 6), at(hx - 0.15, 6.5, -4), { Color = accent })
+	Build.surfaceText(posterR, Enum.NormalId.Left, "🍗 운동 끝나고 먹는 치킨은\n0칼로리", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 255, 255) })
+	-- 문 밖(사무실 쪽) 간판
+	local sign = B:part(Vector3.new(7, 1.5, 0.2), at(0, 10.2, -hz - 1.15), { Color = Color3.fromRGB(30, 35, 45) })
+	Build.surfaceText(sign, Enum.NormalId.Front, "🏋️ 체력 단련실", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 220, 120) })
+
+	-- 💧 정수기 (문 옆 왼쪽 구석)
+	B:part(Vector3.new(1.4, 3.4, 1.4), at(-hx + 1.2, 1.7, -hz + 2.5), { Color = Color3.fromRGB(240, 240, 245) })
+	B:part(Vector3.new(1.6, 1.1, 1.1), nil, {
+		Shape = Enum.PartType.Cylinder,
+		CFrame = turned(-hx + 1.2, 4.2, -hz + 2.5, 0, 0, math.rad(90)),
+		Color = Color3.fromRGB(120, 190, 255),
+		Material = Enum.Material.Glass,
+		Transparency = 0.3,
+	}) -- 물통
+	B:part(Vector3.new(0.3, 0.3, 0.3), at(-hx + 1.95, 2.6, -hz + 2.5), { Color = Color3.fromRGB(60, 140, 230) }) -- 꼭지
+	-- 🧺 수건 선반 (문 옆 오른쪽 구석)
+	B:part(Vector3.new(1.4, 3, 4), at(hx - 0.7, 1.5, -hz + 3), { Color = Color3.fromRGB(150, 110, 80), Material = Enum.Material.Wood })
+	for i, color in { Color3.fromRGB(250, 250, 250), Color3.fromRGB(120, 190, 240), Color3.fromRGB(250, 170, 190) } do
+		for layer = 0, 1 do
+			B:part(Vector3.new(1.1, 0.35, 1.1), at(hx - 0.7, 3.18 + layer * 0.36, -hz + 1.8 + (i - 1) * 1.2), { Color = color, Material = Enum.Material.Fabric, CanCollide = false })
+		end
+	end
+	-- 덤벨 거치대 (오른쪽 벽 안쪽, 장식)
+	B:part(Vector3.new(1.6, 2.4, 6), at(hx - 0.8, 1.2, hz - 5), { Color = black, Material = Enum.Material.Metal })
+	for i = 0, 4 do
+		local z = hz - 7.4 + i * 1.2
+		metal(Vector3.new(1.2, 0.25, 0.25), at(hx - 0.8, 2.75, z), { Shape = Enum.PartType.Cylinder, CanCollide = false })
+		for _, dx in { -0.5, 0.5 } do
+			B:part(Vector3.new(0.3, 0.5 + i * 0.08, 0.5 + i * 0.08), at(hx - 0.8 + dx, 2.75, z), { Shape = Enum.PartType.Cylinder, Color = black, CanCollide = false })
+		end
+	end
+	-- 짐볼 (왼쪽 뒤 구석)
+	B:part(Vector3.new(2.6, 2.6, 2.6), at(-hx + 1.6, 1.3, hz - 1.6), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(80, 150, 230) })
+
+	-- 운동기구 자리 (가로로 5대, 거울을 봐요)
+	local slots = { -0.8 * hx, -0.4 * hx, 0, 0.4 * hx, 0.8 * hx }
+
+	-- 🏃 러닝머신 (서서 달려요)
+	do
+		local mx = slots[1]
+		B:part(Vector3.new(3.4, 0.6, 7), at(mx, 0.3, 0), { Color = black })
+		B:part(Vector3.new(2.8, 0.1, 6.4), at(mx, 0.65, -0.2), { Color = Color3.fromRGB(20, 20, 22), Material = Enum.Material.Rubber })
+		for _, side in { -1, 1 } do
+			B:part(Vector3.new(0.3, 0.2, 7), at(mx + side * 1.55, 0.7, 0), { Color = accent })
+			metal(Vector3.new(0.3, 4, 0.3), at(mx + side * 1.5, 2.6, 3.2))
+			metal(Vector3.new(0.25, 0.25, 2.6), at(mx + side * 1.5, 3.8, 2)) -- 손잡이
+		end
+		local console = B:part(Vector3.new(3.4, 1.1, 0.6), nil, { CFrame = turned(mx, 4.6, 3.2, math.rad(25), 0, 0), Color = black })
+		B:part(Vector3.new(2, 0.6, 0.05), nil, { CFrame = console.CFrame * CFrame.new(0, 0, -0.32), Color = Color3.fromRGB(90, 230, 200), Material = Enum.Material.Neon, CanCollide = false })
+		B:part(Vector3.new(0.15, 1.2, 1), at(mx + 1.62, 3.3, 1.6), { Color = Color3.fromRGB(250, 250, 250), Material = Enum.Material.Fabric, CanCollide = false }) -- 걸어 둔 수건
+		gymSeat("treadmill", CFrame.new(at(mx, 0.7 + STAND_SEAT_HEIGHT - 0.1, -0.6)) * FACE, Vector3.new(1.6, 0.2, 1.6), { Transparency = 1, CanCollide = false })
+	end
+
+	-- 🏋️ 벤치프레스 (뒤로 비스듬히 기댄 인클라인 벤치 + 바벨 거치대)
+	do
+		local mx = slots[2]
+		local seatCFrame = CFrame.new(at(mx, 1.6, -0.3)) * FACE * CFrame.Angles(math.rad(30), 0, 0)
+		local red = Color3.fromRGB(170, 40, 45)
+		gymSeat("bench", seatCFrame, Vector3.new(1.8, 0.5, 2.2), { Color = red })
+		B:part(Vector3.new(1.8, 3.4, 0.4), nil, { CFrame = seatCFrame * CFrame.new(0, 1.6, 1.15), Color = red, Material = Enum.Material.Leather }) -- 등받이
+		metal(Vector3.new(0.5, 0.2, 4.6), at(mx, 0.1, -1.2), { Color = black })
+		metal(Vector3.new(0.4, 1.3, 0.4), at(mx, 0.65, -0.3), { Color = black })
+		metal(Vector3.new(0.4, 2.2, 0.4), at(mx, 1.1, -2.4), { Color = black })
+		for _, side in { -1, 1 } do
+			metal(Vector3.new(0.35, 6.2, 0.35), at(mx + side * 2.4, 3.1, -1.6)) -- 거치대 기둥
+			metal(Vector3.new(0.35, 0.2, 0.6), at(mx + side * 2.4, 5.6, -1.4)) -- 걸이
+			B:part(Vector3.new(0.35, 1.9, 1.9), at(mx + side * 2.85, 5.8, -1.6), { Shape = Enum.PartType.Cylinder, Color = black, CanCollide = false }) -- 원판
+		end
+		metal(Vector3.new(6.4, 0.25, 0.25), at(mx, 5.8, -1.6), { Shape = Enum.PartType.Cylinder, CanCollide = false }) -- 바벨
+	end
+
+	-- 🚴 실내 자전거
+	do
+		local mx = slots[3]
+		B:part(Vector3.new(0.6, 0.3, 4.4), at(mx, 0.15, 0), { Color = black })
+		for _, dz in { -2, 2 } do
+			B:part(Vector3.new(2.6, 0.3, 0.5), at(mx, 0.15, dz), { Color = black })
+		end
+		metal(Vector3.new(0.5, 2.2, 2.2), at(mx, 1.6, 1.5), { Shape = Enum.PartType.Cylinder }) -- 바퀴
+		B:part(Vector3.new(0.7, 1.1, 1.1), at(mx, 1.6, 1.5), { Shape = Enum.PartType.Cylinder, Color = accent })
+		metal(Vector3.new(0.4, 2.2, 0.4), at(mx, 1.2, -0.7), { Color = black }) -- 안장 기둥
+		metal(Vector3.new(0.4, 3.6, 0.4), at(mx, 1.8, 2.8), { Color = black }) -- 핸들 기둥
+		metal(Vector3.new(2.4, 0.25, 0.25), at(mx, 3.7, 2.6), { Shape = Enum.PartType.Cylinder, CanCollide = false }) -- 핸들
+		B:part(Vector3.new(1.2, 0.8, 0.15), at(mx, 4.1, 2.95), { Color = Color3.fromRGB(90, 230, 200), Material = Enum.Material.Neon })
+		B:part(Vector3.new(1.6, 0.2, 0.2), at(mx, 1.1, 0.4), { Color = black, CanCollide = false }) -- 크랭크
+		for _, side in { -1, 1 } do
+			B:part(Vector3.new(0.5, 0.15, 0.8), at(mx + side * 0.8, 1.1, 0.4), { Color = black, CanCollide = false }) -- 페달
+		end
+		gymSeat("bike", CFrame.new(at(mx, 2.5, -0.7)) * FACE, Vector3.new(1.4, 0.4, 1.6))
+	end
+
+	-- 🚣 로잉머신 (낮은 레일 위 미끄러지는 의자 + 앞쪽 바람 바퀴)
+	do
+		local mx = slots[4]
+		metal(Vector3.new(0.6, 0.3, 8), at(mx, 0.45, -0.5))
+		for _, dz in { -4.3, 3.3 } do
+			B:part(Vector3.new(2, 0.3, 0.5), at(mx, 0.15, dz), { Color = black })
+		end
+		B:part(Vector3.new(1.8, 1.8, 1.4), at(mx, 1.2, 3.5), { Color = black })
+		B:part(Vector3.new(1.9, 1.5, 1.5), at(mx, 1.2, 3.5), { Shape = Enum.PartType.Cylinder, Color = accent }) -- 바람 바퀴 덮개
+		for _, side in { -1, 1 } do
+			B:part(Vector3.new(0.8, 0.2, 1.1), nil, { CFrame = turned(mx + side * 0.55, 1, 2.2, math.rad(-35), 0, 0), Color = black }) -- 발판
+		end
+		B:part(Vector3.new(1.8, 0.2, 0.2), at(mx, 1.4, 2.7), { Shape = Enum.PartType.Cylinder, Color = black, CanCollide = false }) -- 손잡이
+		gymSeat("rowing", CFrame.new(at(mx, 0.85, -1.2)) * FACE, Vector3.new(1.4, 0.5, 1.4))
+	end
+
+	-- 🥊 샌드백 (천장에 매달린 빨간 샌드백 앞에 서서 펀치!)
+	do
+		local mx = slots[5]
+		B:part(Vector3.new(4, 0.14, 5), at(mx, 0.13, 0), { Color = Color3.fromRGB(50, 90, 160), Material = Enum.Material.Rubber, CanCollide = false })
+		metal(Vector3.new(2, 0.3, 2), at(mx, wallHeight - 0.15, 1.6), { Color = black })
+		local chain = wallHeight - 6.3
+		metal(Vector3.new(0.2, chain, 0.2), at(mx, 6 + chain / 2, 1.6), { CanCollide = false })
+		B:part(Vector3.new(4, 2, 2), nil, {
+			Name = "Sandbag",
+			Shape = Enum.PartType.Cylinder,
+			CFrame = turned(mx, 4, 1.6, 0, 0, math.rad(90)),
+			Color = Color3.fromRGB(190, 40, 40),
+			Material = Enum.Material.Leather,
+		})
+		gymSeat("sandbag", CFrame.new(at(mx, STAND_SEAT_HEIGHT - 0.1, -0.4)) * FACE, Vector3.new(1.6, 0.2, 1.6), { Transparency = 1, CanCollide = false })
+	end
+
+	-- 🤸 스트레칭 매트 (입구 쪽 왼편, 바닥에 앉아서) · ⚖️ 밸런스 볼 (입구 쪽 오른편, 공 위에 앉아서)
+	--   (가운데 입구 길은 비워 둬요)
+	do
+		local mx, mz = -0.6 * hx, -hz + 6
+		B:part(Vector3.new(3, 0.12, 6.5), at(mx, 0.16, mz), { Color = Color3.fromRGB(150, 90, 200), Material = Enum.Material.Rubber, CanCollide = false }) -- 요가 매트
+		B:part(Vector3.new(3, 0.5, 0.5), at(mx, 0.35, mz + 3.4), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 90, 0), Color = Color3.fromRGB(120, 70, 170), Material = Enum.Material.Rubber, CanCollide = false }) -- 말아 둔 매트 끝
+		gymSeat("stretch", CFrame.new(at(mx, 0.45, mz + 1.2)) * FACE, Vector3.new(2, 0.3, 2), { Transparency = 1, CanCollide = false })
+		local signPart = B:part(Vector3.new(2.6, 0.9, 0.1), at(mx, 0.6, mz - 3.4), { Color = Color3.fromRGB(250, 245, 255), CanCollide = false })
+		Build.surfaceText(signPart, Enum.NormalId.Back, "🤸 스트레칭", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(120, 70, 170) })
+	end
+	do
+		local mx, mz = 0.6 * hx, -hz + 6
+		B:part(Vector3.new(3.2, 3.2, 3.2), at(mx, 1.6, mz), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(240, 120, 60), Material = Enum.Material.Rubber })
+		B:part(Vector3.new(3.6, 0.1, 3.6), at(mx, 0.12, mz), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(70, 70, 80), CanCollide = false }) -- 받침 매트
+		gymSeat("balance", CFrame.new(at(mx, 3.3, mz)) * FACE, Vector3.new(1.6, 0.2, 1.6), { Transparency = 1, CanCollide = false })
+	end
+
+	-- 조명 (정전 때 같이 꺼지게 lamps로 돌려줘요)
+	local lamps = {}
+	for _, x in { -hx / 2, hx / 2 } do
+		for _, z in { -hz / 2, hz / 2 } do
+			local lamp = B:part(Vector3.new(6, 0.3, 1.4), at(x, wallHeight - 0.2, z), {
+				Color = Color3.fromRGB(245, 250, 255),
+				Material = Enum.Material.Neon,
+				CanCollide = false,
+			})
+			local light = Instance.new("PointLight")
+			light.Range = 22
+			light.Brightness = 0.5
+			light.Color = Color3.fromRGB(235, 245, 255)
+			light.Parent = lamp
+			table.insert(lamps, lamp)
+		end
+	end
+
+	local gymZone = zone(B, "GymZone", Vector3.new(hx * 2, 10, hz * 2), at(0, 5, 0))
+	return { seats = seats, zone = gymZone, lamps = lamps, spot = at(0, 0, -hz + 4) }
+end
+
 function OfficeBuilder.build(companyId: string?): Office
 	local company = SalaryConfig.getCompany(companyId or "daechung")
 	local theme = THEMES[company.id] or THEMES.daechung
@@ -304,6 +534,7 @@ function OfficeBuilder.build(companyId: string?): Office
 			decorateStore = decorateStore,
 			buildElevator = buildElevator,
 			buildPackage = buildPackage,
+			buildGym = buildGym,
 			FLOOR_Y = FLOOR_Y,
 		})
 	end
@@ -315,13 +546,26 @@ function OfficeBuilder.build(companyId: string?): Office
 	B:part(Vector3.new(HALF_WIDTH * 2 + 2, 1, floorDepth), Vector3.new(0, FLOOR_Y - 0.5, 0), { Color = COLORS.floor, Material = Enum.Material.Carpet })
 	B:part(Vector3.new(HALF_WIDTH * 2 + 2, 1, floorDepth), v(0, WALL_HEIGHT + 0.5, 0), { Color = COLORS.wall })
 	B:wall("X", -HALF_DEPTH, -HALF_WIDTH - 1, HALF_WIDTH + 1, FLOOR_Y, WALL_HEIGHT, { { center = 0, width = 6, height = 8 } }, wall) -- 앞 (출입문)
-	B:wall("X", HALF_DEPTH, -HALF_WIDTH - 1, HALF_WIDTH + 1, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 뒤
+	-- 🏋️ 체력 단련실 별관 (뒷벽 너머, 안쪽 x -40~-4 / z 32~60 — 화장실·탕비실·부장님 자리와 안 겹쳐요)
+	local GYM_X, GYM_HX, GYM_HZ = -22, 18, 14
+	local GYM_Z = HALF_DEPTH + 0.5 + GYM_HZ -- 46
+	B:wall("X", HALF_DEPTH, -HALF_WIDTH - 1, HALF_WIDTH + 1, FLOOR_Y, WALL_HEIGHT, { { center = GYM_X, width = 8, height = 9 } }, wall) -- 뒤 (🏋️ 체력 단련실 문)
 	B:wall("Z", -HALF_WIDTH - 0.5, -HALF_DEPTH + 0.5, HALF_DEPTH - 0.5, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 왼쪽
 	B:wall("Z", HALF_WIDTH + 0.5, -HALF_DEPTH + 0.5, HALF_DEPTH - 0.5, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 오른쪽
 	-- 출입문 바깥은 막아 둬요 (나가 버리지 않게)
 	B:part(Vector3.new(8, WALL_HEIGHT, 1), v(0, WALL_HEIGHT / 2, -HALF_DEPTH - 2.5), wall)
 	B:part(Vector3.new(1, WALL_HEIGHT, 3), v(-4, WALL_HEIGHT / 2, -HALF_DEPTH - 1.5), wall)
 	B:part(Vector3.new(1, WALL_HEIGHT, 3), v(4, WALL_HEIGHT / 2, -HALF_DEPTH - 1.5), wall)
+
+	-- 🏋️ 체력 단련실 별관: 바닥·천장·벽 3개 (사무실 뒷벽과 이어져서 밖은 막혀 있어요)
+	local gymFar = GYM_Z + GYM_HZ -- 안쪽 뒷벽 (z 60)
+	local gymNear = HALF_DEPTH + 0.5 -- 사무실 뒷벽 안쪽 면 (z 32)
+	B:part(Vector3.new(GYM_HX * 2 + 2, 1, gymFar + 1 - gymNear), Vector3.new(GYM_X, FLOOR_Y - 0.5, (gymNear + gymFar + 1) / 2), { Color = COLORS.floor, Material = Enum.Material.Carpet })
+	B:part(Vector3.new(GYM_HX * 2 + 2, 1, gymFar + 1 - gymNear), v(GYM_X, WALL_HEIGHT + 0.5, (gymNear + gymFar + 1) / 2), { Color = COLORS.wall })
+	B:wall("Z", GYM_X - GYM_HX - 0.5, gymNear, gymFar + 1, FLOOR_Y, WALL_HEIGHT, nil, wall)
+	B:wall("Z", GYM_X + GYM_HX + 0.5, gymNear, gymFar + 1, FLOOR_Y, WALL_HEIGHT, nil, wall)
+	B:wall("X", gymFar + 0.5, GYM_X - GYM_HX - 1, GYM_X + GYM_HX + 1, FLOOR_Y, WALL_HEIGHT, nil, wall)
+	local gym = buildGym(B, { cx = GYM_X, cz = GYM_Z, hx = GYM_HX, hz = GYM_HZ, wallHeight = WALL_HEIGHT, accent = COLORS.accent })
 
 	-- 창문 (앞 벽 안쪽에 붙은 유리)
 	local frontInner = -HALF_DEPTH + 0.5 -- 앞 벽 안쪽 면 (z -31)
@@ -458,6 +702,9 @@ function OfficeBuilder.build(companyId: string?): Office
 			table.insert(lamps, lamp)
 		end
 	end
+	for _, lamp in gym.lamps do
+		table.insert(lamps, lamp) -- 🏋️ 체력 단련실 조명도 정전 때 꺼져요
+	end
 
 	-- 🚒 소방 훈련 집결지 (출입문 안쪽, 훈련 때만 초록색으로 보여요)
 	local assemblyZone, assemblyPoint, setAssemblyVisible = makeAssembly(B, 0, -28)
@@ -516,6 +763,7 @@ function OfficeBuilder.build(companyId: string?): Office
 		v(38, 0, 13), -- 탕비실 문 앞 (안을 들여다봐요)
 		v(-52, 0, -1), -- 왼쪽 끝 (프린터·엘리베이터 쪽)
 		v(54, 0, -6), -- 오른쪽 끝
+		v(-22, 0, 36), -- 🏋️ 체력 단련실 (가끔 들여다봐요)
 	}
 
 	return {
@@ -534,6 +782,8 @@ function OfficeBuilder.build(companyId: string?): Office
 		toiletSeats = toiletSeats,
 		meetingSeats = {}, -- 대충상사엔 회의실이 없어요
 		meetingZone = nil,
+		gymSeats = gym.seats, -- 🏋️ 체력 단련실
+		gymZone = gym.zone,
 		companyId = company.id,
 		lamps = lamps,
 		assemblyZone = assemblyZone,
@@ -548,7 +798,14 @@ function OfficeBuilder.build(companyId: string?): Office
 		packageBox = packageBox,
 		elevator = elevator,
 		insideOffice = function(position: Vector3): boolean
-			return math.abs(position.X) <= HALF_WIDTH + 1 and math.abs(position.Z) <= HALF_DEPTH + 1 and position.Y < FLOOR_Y + 20
+			if position.Y >= FLOOR_Y + 20 then
+				return false
+			end
+			if math.abs(position.X) <= HALF_WIDTH + 1 and math.abs(position.Z) <= HALF_DEPTH + 1 then
+				return true
+			end
+			-- 🏋️ 체력 단련실 별관도 건물 안
+			return math.abs(position.X - GYM_X) <= GYM_HX + 1 and position.Z > HALF_DEPTH and position.Z <= GYM_Z + GYM_HZ + 1
 		end,
 		packageSpots = { v(10, 0, -24), v(-53, 0, -15), v(55, 0, 22), v(-34, 0, 4), v(0, 0, 13.5), v(-55, 0, 18), v(30, 0, -20), v(-10, 0, -3.5) },
 		clawMachines = {},

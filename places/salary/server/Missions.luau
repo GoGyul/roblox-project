@@ -34,15 +34,23 @@ local function shuffle<T>(list: { T }): { T }
 end
 
 -- 🧮 계산 문제 (두세 자리 덧셈·뺄셈·곱셈)
--- 🧠 퀴즈 하나 고르기 (방금 나온 문제는 빼고, 보기 순서는 섞어요)
+-- 🧠 퀴즈 하나 고르기: 섞어 둔 카드 더미에서 한 장씩 (다 쓸 때까지 같은 문제가 다시 안 나와요). 보기 순서도 섞어요
+local quizDeck: { number } = {}
 local function makeQuiz(avoid: number?)
 	local questions = SalaryConfig.QuizQuestions
-	local index = math.random(1, #questions)
-	if avoid and #questions > 1 then
-		while index == avoid do
-			index = math.random(1, #questions)
+	if #quizDeck == 0 then
+		for i = 1, #questions do
+			quizDeck[i] = i
+		end
+		for i = #quizDeck, 2, -1 do
+			local j = math.random(1, i)
+			quizDeck[i], quizDeck[j] = quizDeck[j], quizDeck[i]
+		end
+		if avoid and #quizDeck > 1 and quizDeck[#quizDeck] == avoid then
+			quizDeck[1], quizDeck[#quizDeck] = quizDeck[#quizDeck], quizDeck[1] -- (새 더미 첫 장이 방금 문제면 바꿔요)
 		end
 	end
+	local index = table.remove(quizDeck) :: number
 	local question = questions[index]
 	local order = {}
 	for i = 1, #question.choices do
@@ -304,7 +312,14 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 			return true
 		end
 		table.remove(state.stamps, index)
-		remotes.Notify:FireClient(player, `🖊️ {coworker.name}: "쾅! 결재 도장 찍었어요"`)
+		-- 🤝 단짝(❤️❤️❤️❤️) 동료는 남은 도장 하나를 더 받아다 줘요 (도장 2개 몫)
+		local bestie = api.friendLevel ~= nil and api.friendLevel(player, coworker.name) >= SalaryConfig.FRIEND_STAMP_LEVEL
+		if bestie and #state.stamps > 0 then
+			local other = table.remove(state.stamps, math.random(1, #state.stamps))
+			remotes.Notify:FireClient(player, `🖊️ {coworker.name}: "쾅! 우리 사이에~ {other} 도장도 제가 받아 올게요!" (🤝 단짝 보너스)`)
+		else
+			remotes.Notify:FireClient(player, `🖊️ {coworker.name}: "쾅! 결재 도장 찍었어요"`)
+		end
 		if #state.stamps == 0 then
 			advance(player, state)
 		else
@@ -486,7 +501,7 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 					return {
 						ok = true,
 						correct = false,
-						message = `❌ 틀렸어요! 한 번 더 틀리면 실패! ({SalaryConfig.QUIZ_WRONG_LOCK}초 뒤 다른 문제)`,
+						message = "❌ 틀렸어요! 한 번 더 틀리면 실패! (다른 문제로 바뀌었어요)",
 						text = nextQuiz.text,
 						choices = nextQuiz.choices,
 						lockUntil = nextQuiz.lockUntil,

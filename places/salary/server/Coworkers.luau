@@ -474,6 +474,17 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 		end)
 	end
 
+	-- 지금 사무실에 있는 동료들 (🤝 친한 동료 귓속말용)
+	function api.list(): { Coworker }
+		local result = {}
+		for _, c in list do
+			if not c.removed then
+				table.insert(result, c)
+			end
+		end
+		return result
+	end
+
 	function api.setChatting(c: Coworker, on: boolean)
 		if c.removed then
 			return

@@ -45,7 +45,7 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = stand
 	prompt.Triggered:Connect(function(player)
-		remotes.PlaneOpen:FireClient(player)
+		remotes.PlaneOpen:FireClient(player, launch) -- 🚪 화면이 발사대에서 멀어지면 창을 닫게 위치도 같이
 	end)
 
 	---------------------------------------------------------------- 건너편 빌딩 + 🎯 과녁
@@ -159,7 +159,8 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 				throw = { wind = { forward = roundWind(), side = roundWind() } }
 				throws[player] = throw
 			end
-			return { ok = true, wind = throw.wind, start = start, launch = launch, roofY = roofY }
+			-- (forward·target = 🎥 발사 시점 카메라가 건너편 빌딩·과녁을 보게)
+			return { ok = true, wind = throw.wind, start = start, launch = launch, roofY = roofY, forward = FORWARD, target = targetCenter }
 		elseif action ~= "throw" then
 			return { ok = false, message = "잘못된 요청이에요." }
 		end
@@ -242,6 +243,10 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 				-- 🎯 과녁과 얼마나 차이 났는지 (다음 던지기 보정용): 앞뒤(+넘어감 / -짧음), 좌우(+오른쪽)
 				missLong = forward - SalaryConfig.PLANE_TARGET_DISTANCE,
 				missSide = side,
+				-- 🗺️ 지도에 떨어진 곳 표시용 (발사대 기준 앞으로 m, 좌우 m, 건너편 옥상 위인가)
+				forward = forward,
+				side = side,
+				onBuilding = onBuilding,
 				drift = drift,
 				duration = duration,
 				hitTarget = hitTarget,

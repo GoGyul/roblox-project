@@ -11,7 +11,9 @@
 --   │ ☕ 카페 라운지 │                                 │ 🏪 사내 매점  │
 --   │ x -72~-44.5   │        [김부장 자리] (z 22)      │ x 49~72     │
 --   │ z 11.5~42     │                                 │ z 19~42     │
---   └──────────────┴──────────── 원목 벽 ──────────────┴──────────────┘  z 42
+--   └──────────────┴──[문 x -20]── 원목 벽 ─────────────┴──────────────┘  z 42
+--                  │ 🏋️ 체력 단련실 (별관) │  x -40~0 / z 43~73
+--                  └──────────────────────┘
 --   책상 x -24 / 0 / 24. 출입문 밖(z -43 ~ -96)은 🌳 공원, 그 너머(z -96 ~ -144)는 🏙️ 눈치 스트리트
 --
 -- 반환하는 값(Office)은 대충상사와 똑같은 모양이라, 부장·동료·이벤트 코드는 그대로 동작해요.
@@ -66,10 +68,21 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	-- 업무 공간 카펫
 	B:part(Vector3.new(86, 0.1, 50), v(0, 0.05, -9), { Color = C.rug, Material = Enum.Material.Carpet, CanCollide = false })
 	B:wall("X", -HD - 0.5, -HW - 1, HW + 1, FLOOR_Y, WALL_HEIGHT, { { center = 0, width = 6, height = 9 } }, wall) -- 앞 (출입문)
-	B:wall("X", HD + 0.5, -HW - 1, HW + 1, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 뒤
+	-- 🏋️ 체력 단련실 별관 (뒷벽 너머, 안쪽 x -40~0 / z 43~73): 카페 라운지(x ≤ -44.5)·매점(x ≥ 49)·부장님 자리와 안 겹쳐요
+	local GYM_X, GYM_HX, GYM_HZ = -20, 20, 15
+	local GYM_Z = HD + 1 + GYM_HZ -- 58
+	B:wall("X", HD + 0.5, -HW - 1, HW + 1, FLOOR_Y, WALL_HEIGHT, { { center = GYM_X, width = 8, height = 9 } }, wall) -- 뒤 (🏋️ 체력 단련실 문)
 	B:wall("Z", -HW - 0.5, -HD, HD, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 왼쪽
 	B:wall("Z", HW + 0.5, -HD, HD, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 오른쪽
 	-- 출입문 바깥은 🌳 잔디 공원이에요 (아래에서 지어요)
+	-- 🏋️ 체력 단련실 별관: 바닥·천장·벽 3개 (사무실 뒷벽과 이어져서 밖은 막혀 있어요)
+	local gymNear, gymFar = HD + 1, GYM_Z + GYM_HZ -- z 43 ~ 73
+	B:part(Vector3.new(GYM_HX * 2 + 2, 1, gymFar + 1 - gymNear), Vector3.new(GYM_X, FLOOR_Y - 0.5, (gymNear + gymFar + 1) / 2), { Color = C.floor, Material = Enum.Material.Marble })
+	B:part(Vector3.new(GYM_HX * 2 + 2, 1, gymFar + 1 - gymNear), v(GYM_X, WALL_HEIGHT + 0.5, (gymNear + gymFar + 1) / 2), { Color = C.wall })
+	B:wall("Z", GYM_X - GYM_HX - 0.5, gymNear, gymFar + 1, FLOOR_Y, WALL_HEIGHT, nil, wall)
+	B:wall("Z", GYM_X + GYM_HX + 0.5, gymNear, gymFar + 1, FLOOR_Y, WALL_HEIGHT, nil, wall)
+	B:wall("X", gymFar + 0.5, GYM_X - GYM_HX - 1, GYM_X + GYM_HX + 1, FLOOR_Y, WALL_HEIGHT, nil, wall)
+	local gym = helpers.buildGym(B, { cx = GYM_X, cz = GYM_Z, hx = GYM_HX, hz = GYM_HZ, wallHeight = WALL_HEIGHT, accent = C.accent })
 
 	-- 통유리창 (앞 벽 안쪽)
 	for x = -66, 66, 12 do
@@ -81,8 +94,10 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 			})
 		end
 	end
-	-- 뒷벽 원목 패널
-	B:part(Vector3.new(84, WALL_HEIGHT - 2, 0.3), v(0, WALL_HEIGHT / 2, HD - 0.2), { Color = C.wood, Material = Enum.Material.WoodPlanks })
+	-- 뒷벽 원목 패널 (x -42~42, 🏋️ 체력 단련실 문(x -24~-16) 자리는 비워요)
+	for _, span in { { -42, GYM_X - 5 }, { GYM_X + 5, 42 } } do
+		B:part(Vector3.new(span[2] - span[1], WALL_HEIGHT - 2, 0.3), v((span[1] + span[2]) / 2, WALL_HEIGHT / 2, HD - 0.2), { Color = C.wood, Material = Enum.Material.WoodPlanks })
+	end
 
 	-- 사훈, 벽시계, 회사 로고 (앞 벽 창문 위)
 	local banner = B:part(Vector3.new(20, 2.5, 0.2), v(0, 11.5, -HD + 0.15), { Color = C.accent })
@@ -257,6 +272,9 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 			light.Parent = lamp
 			table.insert(lamps, lamp)
 		end
+	end
+	for _, lamp in gym.lamps do
+		table.insert(lamps, lamp) -- 🏋️ 체력 단련실 조명도 정전 때 꺼져요
 	end
 
 	---------------------------------------------------------------- 🌳 1층 잔디 공원 (출입문 밖, z -43 ~ -96)
@@ -447,7 +465,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	end
 	shops.dessert = { counter = dessertCounter, clerkSpot = v(-13, 0, -139) }
 
-	-- 🧸 뽑기 가게: 인형뽑기 1대 + 🎡 다 같이 돌림판 + 🎈 풍선 다트
+	-- 🧸 뽑기 가게: 인형뽑기 1대 + 🎡 다 같이 돌림판 + 🎯 풍선 다트
 	shopBuilding(13, "🧸 뽑기 천국", Color3.fromRGB(255, 220, 120), Color3.fromRGB(240, 90, 90), true)
 	local clawMachines = {}
 	do
@@ -482,22 +500,26 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	local wheelSign = B:part(Vector3.new(5, 0.9, 0.2), v(wheelX, 4, -136.6), { Color = Color3.fromRGB(30, 30, 40) })
 	Build.surfaceText(wheelSign, Enum.NormalId.Front, "🎡 다 같이 돌림판", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 230, 120) })
 
-	-- 🎈 풍선 다트판 (뒷벽 오른쪽)
+	-- 🎯 풍선 다트 벽 (뒷벽 오른쪽): 창 속 풍선 자리(DART_SLOTS) 그대로 알록달록 풍선 장식 (실제 경품은 창에서 서버가 섞어요)
 	local dartX = 19.8
-	local dartBoard = B:part(Vector3.new(6.2, 5, 0.4), v(dartX, 6.2, -143.1), { Name = "DartBoard", Color = Color3.fromRGB(240, 230, 210), Material = Enum.Material.Wood })
-	local balloonColors = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 200, 60), Color3.fromRGB(90, 180, 255), Color3.fromRGB(120, 220, 120) }
-	for row = 0, SalaryConfig.DART_ROWS - 1 do
-		for col = 0, SalaryConfig.DART_COLS - 1 do
-			B:part(Vector3.new(1.1, 1.3, 0.8), v(dartX - 2.25 + col * 1.5, 7.8 - row * 1.6, -142.6), {
-				Shape = Enum.PartType.Ball,
-				Color = balloonColors[(row + col) % #balloonColors + 1],
-				CanCollide = false,
-			})
-		end
+	local dartBoard = B:part(Vector3.new(6.2, 5, 0.4), v(dartX, 6.2, -143.1), { Name = "DartBoard", Color = Color3.fromRGB(165, 220, 255), Material = Enum.Material.Wood })
+	local balloonColors = {}
+	for _, info in SalaryConfig.DartPrizes do
+		table.insert(balloonColors, info.color)
+	end
+	for i, slot in SalaryConfig.DART_SLOTS do
+		local x = dartX - 2.8 + slot.x / SalaryConfig.DART_FIELD_W * 5.6
+		local y = 8.4 - (slot.y - 40) / 150 * 3.6
+		B:part(Vector3.new(0.85, 0.95, 0.8), v(x, y, -142.6), {
+			Shape = Enum.PartType.Ball,
+			Color = balloonColors[i % #balloonColors + 1],
+			CanCollide = false,
+		})
+		B:part(Vector3.new(0.05, 0.6, 0.05), v(x, y - 0.75, -142.75), { Color = Color3.fromRGB(110, 110, 120), CanCollide = false }) -- 풍선 끈
 	end
 	local dartCounter = B:part(Vector3.new(5, 3.5, 1.6), v(dartX, 1.75, -137.5), { Name = "DartCounter", Color = Color3.fromRGB(120, 200, 255) })
 	local dartSign = B:part(Vector3.new(5, 0.9, 0.2), v(dartX, 4, -136.6), { Color = Color3.fromRGB(30, 30, 40) })
-	Build.surfaceText(dartSign, Enum.NormalId.Front, "🎈 풍선 다트", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 230, 120) })
+	Build.surfaceText(dartSign, Enum.NormalId.Front, "🎯 풍선 다트", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 230, 120) })
 
 	-- 🕹️ 오락실: 게임기 2대 + 경품 교환대 + 최고 기록판
 	shopBuilding(39, "🕹️ 오락실", Color3.fromRGB(60, 60, 110), Color3.fromRGB(150, 80, 230), true)
@@ -564,6 +586,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		v(-62, 0, -6), -- 엘리베이터 앞
 		v(48.5, 0, -32), -- 화장실 문 앞
 		v(45.5, 0, 29.5), -- 매점 문 앞
+		v(-20, 0, 50), -- 🏋️ 체력 단련실 (가끔 들여다봐요)
 		v(0, 0, -56), -- 🌳 공원 (가끔 나가 봐요)
 		v(28, 0, -76), -- 흡연구역 근처
 		v(-20, 0, -112), -- 🏙️ 눈치 스트리트 (근무 중 외출 감시!)
@@ -586,6 +609,8 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		toiletSeats = toiletSeats,
 		meetingSeats = meetingSeats,
 		meetingZone = meetingZone,
+		gymSeats = gym.seats, -- 🏋️ 체력 단련실
+		gymZone = gym.zone,
 		companyId = company.id,
 		lamps = lamps,
 		assemblyZone = assemblyZone,
@@ -595,9 +620,13 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		workshopStart = v(0, 0, PARK_FAR + 6), -- 🌸 공원 맨 끝에서 출발
 		-- 👮 경비원: 경비실 앞(정문 옆) + 공원·거리 순찰 지점 (나무·벤치·분수·회식 테이블·흡연구역을 피해서)
 		guardPost = v(26, 0, -87.5),
+		-- 🛍️ 눈치 스트리트 위에 있나 (공원 정문 밖 거리, 가게 안 포함)
+		inStreet = function(position: Vector3): boolean
+			return position.Z < PARK_FAR - 0.5 and position.Z > STREET_FAR - 1 and math.abs(position.X) <= HW + 1 and position.Y < FLOOR_Y + 20 and position.Y > FLOOR_Y - 10
+		end,
 		guardPatrol = {
 			v(0, 0, -50), v(-28, 0, -50), v(30, 0, -48), v(-52, 0, -56), v(-50, 0, -78), v(-14, 0, -72),
-			v(20, 0, -72), v(52, 0, -72), v(26, 0, -87.5),
+			v(20, 0, -72), v(52, 0, -72), v(10, 0, -84),
 			v(-40, 0, -104), v(0, 0, -104), v(40, 0, -104), v(-30, 0, -120), v(30, 0, -120),
 		},
 		workshopBoss = v(0, 0, -HD - 4), -- 부장님은 건물 출입문 바로 앞에서 술래
@@ -608,12 +637,19 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		elevator = elevator,
 		insideOffice = function(position: Vector3): boolean
 			-- 건물 안만 (출입문 밖 공원·눈치 스트리트, 하늘 위 옥상은 밖)
-			return math.abs(position.X) <= HW + 1 and position.Z >= -HD - 0.5 and position.Z <= HD + 1 and position.Y < FLOOR_Y + 20
+			if position.Y >= FLOOR_Y + 20 then
+				return false
+			end
+			if math.abs(position.X) <= HW + 1 and position.Z >= -HD - 0.5 and position.Z <= HD + 1 then
+				return true
+			end
+			-- 🏋️ 체력 단련실 별관도 건물 안
+			return math.abs(position.X - GYM_X) <= GYM_HX + 1 and position.Z > HD and position.Z <= GYM_Z + GYM_HZ + 1
 		end,
 		packageSpots = { v(-10, 0, -32), v(-50, 0, 32), v(56, 0, 36), v(0, 0, -62), v(-55, 0, -39), v(40, 0, -14), v(-14, 0, 20), v(58, 0, -36) },
 		clawMachines = clawMachines, -- 🧸 인형뽑기 기계
 		wheel = { disc = wheelDisc, kiosk = wheelKiosk }, -- 🎡 다 같이 돌림판
-		dart = { board = dartBoard, counter = dartCounter }, -- 🎈 풍선 다트
+		dart = { board = dartBoard, counter = dartCounter }, -- 🎯 풍선 다트
 		arcade = arcade, -- 🕹️ 오락실 (게임기, 경품 교환대, 기록판)
 		dinnerSeats = dinnerSeats, -- 🍻 회식은 공원 식탁에서
 		dinnerBoss = v(dinnerX - 7.6, 0, dinnerZ), -- 부장님은 식탁 끝 상석

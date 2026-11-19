@@ -129,7 +129,7 @@ function RoofPigeons.start(folder: Instance, spot: Vector3, remotes, hooks)
 	bookPrompt.RequiresLineOfSight = false
 	bookPrompt.Parent = notebook
 	bookPrompt.Triggered:Connect(function(player)
-		remotes.PigeonBook:FireClient(player)
+		remotes.PigeonBook:FireClient(player, notebook.Position) -- 🚪 멀어지면 노트가 닫혀요
 	end)
 
 	local flock: { Pigeon } = {}

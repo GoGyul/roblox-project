@@ -26,6 +26,10 @@ local LOOK = {
 	pants = Color3.fromRGB(30, 35, 50),
 }
 
+-- 🎁 뇌물: 경비원 ID → 그 경비원의 받기 함수 (리모트 하나로 공원·옥상 경비원 둘 다 받아요)
+local bribeHandlers: { [string]: (Player, string) -> any } = {}
+local bribeBound = false
+
 local function pick<T>(list: { T }): T
 	return list[math.random(1, #list)]
 end
@@ -78,7 +82,8 @@ local function buildBooth(parent: Instance, post: Vector3)
 end
 
 -- opts: folder, post(경비실 앞 서는 자리), patrol(순찰 지점들), area(position) → 이 경비원 담당 구역인가,
---       dayCycle, events, remotes, name, lines(들켰을 때 대사), rest(💤 쉬는 시간 쓸까), range, fov
+--       dayCycle, events, remotes, name, lines(들켰을 때 대사), rest(💤 쉬는 시간 쓸까), range, fov,
+--       id("park"/"roof"), useGift(player, 선물 ID) → 🎒에서 하나 꺼냈나 (🎁 뇌물)
 function Guard.new(opts)
 	local post: Vector3 = opts.post
 	local dayCycle, events, remotes = opts.dayCycle, opts.events, opts.remotes
@@ -116,6 +121,11 @@ function Guard.new(opts)
 	end
 	model:PivotTo(CFrame.lookAt(post + Vector3.new(0, 3, 0), post + Vector3.new(0, 3, 10)))
 	root:SetNetworkOwner(nil)
+	-- 🏷️ 경비 모자 때문에 이름표가 캐릭터와 겹쳐 보여서, 머리 위로 더 올려요
+	local bubble = head and head:FindFirstChild("Bubble") :: BillboardGui?
+	if bubble then
+		bubble.StudsOffset = Vector3.new(0, 4.2, 0)
+	end
 	Npc.setStatus(model, "👮")
 
 	local guard = {
@@ -128,9 +138,15 @@ function Guard.new(opts)
 		fovCos = math.cos(math.rad(opts.fov or SalaryConfig.GUARD_FOV)),
 		stareAt = nil :: Model?,
 		stareUntil = 0,
+		stareStartedAt = 0, -- 👀 처음 발견한 시각 (말하는 동안은 의심도 안 올려요)
 		resting = false, -- 💤 경비실에서 쉬는 중
 		investigateAt = nil :: Vector3?, -- 🔊 소리 난 곳
 	}
+	local guardId: string = opts.id or "guard"
+	local bribedUntil: { [Player]: number } = {} -- 🎁 이 시각(os.clock)까지 못 본 척
+	local bribeCount: { [Player]: { day: number, count: number } } = {}
+	local talkingUntil: { [Player]: number } = {} -- 🎁 선물 창을 열고 경비원과 이야기하는 중 (이때는 의심도 안 올라요)
+	local talkStartedAt: { [Player]: number } = {}
 	local lines = opts.lines or { "거기! 근무 시간에 어디 가요?", "사원증 좀 봅시다~ 어느 부서예요?", "어허, 내가 다 보고 있어요!" }
 
 	-- 지금 근무하나? (근무 시간에만, 다 같이 밖에 나가는 이벤트는 빼고)
@@ -166,10 +182,22 @@ function Guard.new(opts)
 		if not characterRoot or not opts.area(characterRoot.Position) then
 			return false, math.huge, false, guard.range -- 내 담당 구역이 아니에요
 		end
+		local seenPlayer = Players:GetPlayerFromCharacter(character)
+		if seenPlayer and os.clock() < (bribedUntil[seenPlayer] or 0) then
+			return false, math.huge, false, guard.range -- 🎁 뇌물 받은 동안은 못 본 척
+		end
+		if seenPlayer and os.clock() < (talkingUntil[seenPlayer] or 0) then
+			local playerRoot = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if playerRoot and (playerRoot.Position - root.Position).Magnitude <= 14 then
+				return false, math.huge, false, guard.range -- 🗣️ 선물 드리려고 이야기하는 중엔 봐줘요
+			end
+			talkingUntil[seenPlayer] = nil -- 멀어지면 대화 끝
+		end
 		local seen, distance = Boss.canSee(guard, character)
 		if seen then
 			if not staring() then
 				guard.stareAt = character
+				guard.stareStartedAt = os.clock()
 				Npc.setStatus(model, "🚨")
 				Npc.say(model, pick(lines), 3)
 				local player = Players:GetPlayerFromCharacter(character)
@@ -179,6 +207,10 @@ function Guard.new(opts)
 			end
 			if guard.stareAt == character then
 				guard.stareUntil = os.clock() + SalaryConfig.GUARD_STARE_GRACE
+				-- 🗣️ "거기! 근무 시간에…" 말하는 동안은 경고만 (의심도는 아직 안 올라요 → 도망갈 틈)
+				if os.clock() - guard.stareStartedAt < SalaryConfig.GUARD_TALK_GRACE then
+					return false, distance, true, guard.range
+				end
 			end
 		end
 		return seen, distance, seen and guard.stareAt == character, guard.range
@@ -264,14 +296,14 @@ function Guard.new(opts)
 			local duty = onDuty()
 			guard.watching = duty
 			if not duty then
-				-- 근무 시간이 아니면 경비실 앞에서 쉬어요
+				-- 근무 시간이 아니어도 초소에만 있지 않고 느긋하게 돌아다녀요 (감시는 안 해요)
 				guard.stareAt = nil
 				guard.investigateAt = nil
 				Npc.setStatus(model, "☕")
-				if (root.Position - post).Magnitude > 3 then
-					Walker.walkTo(humanoid, root, post, onDuty)
-				end
-				task.wait(1)
+				humanoid.WalkSpeed = SalaryConfig.GUARD_WALK_SPEED * 0.6
+				Walker.walkTo(humanoid, root, pick(opts.patrol), onDuty)
+				humanoid.WalkSpeed = SalaryConfig.GUARD_WALK_SPEED
+				task.wait(math.random(15, 30) / 10)
 				continue
 			end
 			Npc.setStatus(model, "🔦")
@@ -290,17 +322,102 @@ function Guard.new(opts)
 					rest()
 					return
 				end
-				-- 가끔은 경비실 앞에서 한참 지켜봐요
-				local target = if math.random() < 0.2 then post else pick(opts.patrol)
+				-- 🚶 늘 순찰 지점들을 돌아다녀요 (초소에 붙어 있지 않게, 방금 간 곳은 다시 안 골라요)
+				local target = pick(opts.patrol)
+				for _ = 1, 3 do
+					if (target - root.Position).Magnitude > 8 then
+						break
+					end
+					target = pick(opts.patrol)
+				end
+				local before = root.Position
 				walk(target)
 				holdStare()
-				lookAround(if target == post then 4 else 2)
+				if (root.Position - before).Magnitude < 2 and not interrupted() then
+					return -- 길이 막혀 못 움직였으면 두리번거리지 말고 바로 다른 곳으로
+				end
+				lookAround(1)
 			end)
 			if not ok then
 				warn("[경비원] " .. tostring(err))
 				task.wait(1)
 			end
 		end
+	end)
+
+	-- 🎁 뇌물 받기: [E] 선물 드리기 → 화면에서 선물을 고르면 여기로 와요
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "🎁 선물 드리기"
+	prompt.ObjectText = opts.name or "경비원"
+	prompt.MaxActivationDistance = 8
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = root
+	prompt.Triggered:Connect(function(player)
+		-- 🗣️ 이야기하는 동안(최대 GUARD_TALK_SECONDS초, 가까이 있을 때만)은 의심도가 안 올라요
+		--   ([E]를 계속 눌러 영원히 봐주게 하는 꼼수 막기: 한 번 이야기하면 1분 뒤에 다시 봐줘요)
+		if os.clock() - (talkStartedAt[player] or -math.huge) >= 60 then
+			talkStartedAt[player] = os.clock()
+			talkingUntil[player] = os.clock() + SalaryConfig.GUARD_TALK_SECONDS
+			if player.Character and guard.stareAt == player.Character then
+				guard.stareAt = nil
+			end
+		end
+		Npc.say(model, "응? 무슨 일이에요?", 2)
+		remotes.GuardBribeOpen:FireClient(player, guardId, opts.name or "경비원")
+	end)
+	bribeHandlers[guardId] = function(player: Player, bribeId: string): any
+		local bribe = SalaryConfig.getGuardBribe(bribeId)
+		if not bribe then
+			return { ok = false, message = "없는 선물이에요." }
+		end
+		local character = player.Character
+		local playerRoot = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not playerRoot or (playerRoot.Position - root.Position).Magnitude > 12 then
+			return { ok = false, message = "👮 경비원 가까이에서 드려야 해요!" }
+		end
+		local record = bribeCount[player]
+		if not record or record.day ~= dayCycle.day then
+			record = { day = dayCycle.day, count = 0 }
+			bribeCount[player] = record
+		end
+		if record.count >= SalaryConfig.GUARD_BRIBE_DAILY then
+			Npc.say(model, "어허, 오늘은 너무 많이 받았어요. 내일 봐요~", 2.5)
+			return { ok = false, message = "🎁 오늘은 이 경비원에게 이미 드렸어요. 내일 다시!" }
+		end
+		-- 🎒 소지품에 있는 선물을 꺼내 드려요 (🏪 사내 매점에서 미리 사 둬야 해요)
+		if not opts.useGift(player, bribe.id) then
+			return { ok = false, message = `🎒 {bribe.emoji} {bribe.name}이(가) 없어요. 🏪 사내 매점에서 사 오세요!` }
+		end
+		record.count += 1
+		local now = os.clock()
+		bribedUntil[player] = math.max(bribedUntil[player] or 0, now) + bribe.seconds -- (또 주면 시간이 이어 붙어요)
+		if character and guard.stareAt == character then
+			guard.stareAt = nil -- 노려보던 중이었으면 바로 눈을 돌려요
+		end
+		Npc.setStatus(model, "😊")
+		Npc.say(model, bribe.line, 3)
+		player:SetAttribute(`GuardBribe_{guardId}`, workspace:GetServerTimeNow() + ((bribedUntil[player] :: number) - now))
+		return {
+			ok = true,
+			seconds = bribe.seconds,
+			message = `{bribe.emoji} {bribe.name} 드림! {opts.name or "경비원"}이(가) {SalaryConfig.gameDurationText(bribe.minutes)} 동안 못 본 척해요`,
+		}
+	end
+	if not bribeBound then
+		bribeBound = true
+		remotes.GuardBribe.OnServerInvoke = function(player: Player, id: any, bribeId: any)
+			local handler = typeof(id) == "string" and bribeHandlers[id]
+			if not handler or typeof(bribeId) ~= "string" then
+				return { ok = false, message = "잘못된 요청이에요." }
+			end
+			return handler(player, bribeId)
+		end
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		bribedUntil[player] = nil
+		bribeCount[player] = nil
+		talkingUntil[player] = nil
+		talkStartedAt[player] = nil
 	end)
 
 	-- 🚨 경광등: 누굴 노려볼 때 빨갛게 깜빡
@@ -323,7 +440,7 @@ function Guard.new(opts)
 end
 
 -- 🌳 공원·눈치 스트리트 경비원 (눈치물산만, 밖 공간이 있는 회사)
-function Guard.start(office, dayCycle, events, remotes)
+function Guard.start(office, dayCycle, events, remotes, useGift)
 	if not office.guardPatrol or not office.guardPost then
 		return nil -- 밖 공간이 없는 회사(대충상사)에는 공원 경비원이 없어요
 	end
@@ -339,6 +456,8 @@ function Guard.start(office, dayCycle, events, remotes)
 		events = events,
 		remotes = remotes,
 		name = "경비원 박씨",
+		id = "park",
+		useGift = useGift,
 	})
 end
 

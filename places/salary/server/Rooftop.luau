@@ -271,6 +271,8 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		events = events,
 		remotes = remotes,
 		name = "옥상 경비원 최씨",
+		id = "roof",
+		useGift = hooks.useGuardGift,
 		lines = { "거기! 근무 시간에 옥상에서 뭐 해요?", "어느 부서예요? 부장님께 말씀드릴까?", "내가 다 보고 있어요~ 옥상은 내 구역!" },
 		rest = true,
 		range = SalaryConfig.ROOF_GUARD_RANGE,
@@ -471,9 +473,9 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 			froot.Anchored = true
 			Npc.setStatus(model, "😐")
 			fake = model
-			-- 이벤트 순서: 👀 쳐다보기 / 🗣️ 말 걸기 (서로 2.8~3.8초 간격, 천천히)
+			-- 이벤트: 👀 쳐다보기 / 🗣️ 말 걸기 딱 한 번 (예고 ELEVATOR_WARN초 뒤에 판정 → 고를 시간 넉넉하게)
 			local count = math.random(SalaryConfig.ELEVATOR_EVENTS[1], SalaryConfig.ELEVATOR_EVENTS[2])
-			local t = 0.5
+			local t = SalaryConfig.ELEVATOR_WARN - 2.8 -- (아래에서 2.8~3.8초를 더해요: 첫 예고가 탑승 0.5~1.5초 뒤에 떠요)
 			for _ = 1, count do
 				t += math.random(28, 38) / 10
 				if t > duration - 0.6 then
@@ -509,7 +511,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 					Npc.setStatus(model, "👀")
 				else
 					Npc.setStatus(model, "🗣️")
-					Npc.say(model, pick(SalaryConfig.ElevatorTalkLines), 1.2)
+					Npc.say(model, pick(SalaryConfig.ElevatorTalkLines), 2.5)
 				end
 				local ok = if event.kind == "look" then phone else not phone
 				if ok then

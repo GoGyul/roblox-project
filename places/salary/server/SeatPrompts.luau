@@ -13,6 +13,7 @@ local OBJECT_TEXT = {
 	DinnerSeat = "🍻 회식 자리",
 	Lounger = "🏖️ 선베드",
 	HideSeat = "📦 상자 속 (밖에서 안 보여요)",
+	GymSeat = "🏋️ 운동기구", -- (기구마다 PromptText 속성이 있으면 그걸 써요: "🏃 러닝머신" 등)
 }
 
 local function sitOn(player: Player, seat: Seat)
@@ -48,8 +49,8 @@ function SeatPrompts.start(remotes)
 		end
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.Name = "SitPrompt"
-		prompt.ActionText = if seat.Name == "HideSeat" then "숨기" else "앉기"
-		prompt.ObjectText = OBJECT_TEXT[seat.Name] or "🪑 의자"
+		prompt.ActionText = if seat.Name == "HideSeat" then "숨기" elseif seat.Name == "GymSeat" then "운동하기" else "앉기"
+		prompt.ObjectText = seat:GetAttribute("PromptText") or OBJECT_TEXT[seat.Name] or "🪑 의자"
 		prompt.KeyboardKeyCode = Enum.KeyCode.E
 		prompt.MaxActivationDistance = 6
 		prompt.RequiresLineOfSight = false

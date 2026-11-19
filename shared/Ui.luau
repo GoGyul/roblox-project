@@ -107,12 +107,13 @@ function Ui.setToastPosition(position: UDim2)
 	toastLabel.Position = position
 end
 
-function Ui.toast(text: string)
+-- seconds: 보여 줄 시간 (안 주면 4.5초. 💬 수다 대사처럼 빨리 넘어가는 건 짧게)
+function Ui.toast(text: string, seconds: number?)
 	toastToken += 1
 	local myToken = toastToken
 	toastLabel.Text = text
 	toastLabel.Visible = true
-	task.delay(4.5, function()
+	task.delay(if typeof(seconds) == "number" then seconds else 4.5, function()
 		if myToken == toastToken then
 			toastLabel.Visible = false
 		end

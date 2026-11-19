@@ -27,6 +27,8 @@ local Remotes = {
 	Decor = func("Decor"),
 	VideoQuestion = event("VideoQuestion"), -- 서버 → 클라: 🎧 화상회의 질문 (ID, 질문, 보기 3개, 제한 초) / (0 = 질문 닫기)
 	VideoAnswer = event("VideoAnswer"),
+	ChatReact = event("ChatReact"), -- 서버 → 클라: 🗣️ 맞장구 고르기 (ID, 동료 이름, 보기 3개, 제한 초) / (0 = 닫기)
+	ChatReactAnswer = event("ChatReactAnswer"), -- 클라 → 서버: 🗣️ 고른 맞장구 (ID, 보기 번호)
 	ElevatorRide = event("ElevatorRide"), -- 서버 → 클라: 🚪 엘리베이터 탑승 정보 / 결과 ("dodged"/"stare")
 	ElevatorDodge = event("ElevatorDodge"), -- 클라 → 서버: 🚪 시선 피하기 (누른 시각)
 	RoofAlert = event("RoofAlert"), -- 서버 → 클라: 🚪 띵! 부장님이 옥상으로 올라와요 (몇 초 뒤) -- 클라 → 서버: 🎧 대답 (질문 ID, 고른 번호) -- 클라 → 서버 → 답장: 🪑 ("buy"/"equip", 아이템 ID) / 🏆 ("title", 칭호 ID) -- 클라 → 서버 → 답장: 📋 프로젝트 퍼즐 ("open" / "answer", 답)
@@ -63,8 +65,11 @@ local Remotes = {
 	ShapesPlay = func("ShapesPlay"), -- 클라 → 서버 → 답장: 🧩 ("start") / ("submit", 조각별 칸 목록) / ("quit")
 	MinesForfeit = event("MinesForfeit"), -- 서버 → 클라: 💣 폰 게임이 강제로 꺼졌어요 (지뢰 위치, 이유)
 	WheelBet = func("WheelBet"), -- 클라 → 서버 → 답장: 🎡 ("bet", 금액, 숫자) / ("spin")
-	DartOpen = event("DartOpen"), -- 서버 → 클라: 🎈 풍선 다트 창 열기
-	Dart = func("Dart"), -- 클라 → 서버 → 답장: 🎈 ("start") / ("throw", 고른 풍선 번호)
+	GuardBribeOpen = event("GuardBribeOpen"), -- 서버 → 클라: 🎁 경비원 뇌물 창 열기 (경비원 ID, 이름)
+	GuardBribe = func("GuardBribe"), -- 클라 → 서버 → 답장: 🎁 (경비원 ID, 선물 ID) → { ok, message, seconds } (🎒에 있는 선물을 드려요)
+	BuyGuardGift = func("BuyGuardGift"), -- 클라 → 서버 → 답장: 🏪 매점에서 경비원 선물 사기 (선물 ID) → (성공, 메시지)
+	DartOpen = event("DartOpen"), -- 서버 → 클라: 🎯 풍선 다트 창 열기
+	Dart = func("Dart"), -- 클라 → 서버 → 답장: 🎯 ("open" 풍선 벽 보기·이어 하기) / ("start" 돈 내기) / ("throw", 각도, 힘, 놓은 서버 시각)
 	ArcadeOpen = event("ArcadeOpen"), -- 서버 → 클라: 🕹️ 오락실 창 열기 ("mole" / "memory" / "prizes")
 	Arcade = func("Arcade"), -- 클라 → 서버 → 답장: 🕹️ ("start", 게임) / ("flip", 카드 번호) / ("finish", 기록) / ("exchange", 경품) -- 클라 → 서버: 🧸 책상에 인형 진열 켜기/끄기 -- 클라 → 서버 → 답장: 🏙️ 가게에서 사기 (가게 ID, 메뉴 ID) -- 클라 → 서버: 스카우트 제의 수락 (새 회사 사무실 서버로 이동)
 	UseEnergy = event("UseEnergy"), -- 클라 → 서버: 에너지 드링크 마시기

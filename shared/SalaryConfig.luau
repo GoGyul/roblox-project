@@ -19,7 +19,7 @@ SalaryConfig.CLOCKIN_WAIT = 20 -- 여럿이 할 때: 누군가 출근하기를 �
 -- 돈과 규칙
 ---------------------------------------------------------------------------
 SalaryConfig.BASE_PAY = 3000 -- 하루 기본급
-SalaryConfig.WORK_QUOTA = 60 -- 하루에 최소 이만큼(초)은 일해야 업무 평가 통과
+SalaryConfig.WORK_QUOTA = 75 -- 하루에 최소 이만큼(초)은 내 자리에 앉아 있어야 업무 평가 통과 (직급별 quota가 우선)
 SalaryConfig.MAX_WARNINGS = 3 -- 경고 3번이면 해고
 SalaryConfig.CAUGHT_PENALTY = 1000 -- 적발 1번당 감봉 (기본값. 실제로는 직급별 Ranks[].penalty를 써요)
 
@@ -106,7 +106,40 @@ SalaryConfig.RAMEN_SECONDS = 15 -- 라면 먹는 시간
 SalaryConfig.RAMEN_PER_DAY = 2 -- 하루에 끓일 수 있는 라면 수
 SalaryConfig.CHAT_RANGE = 7 -- 수다가 이어지는 거리
 SalaryConfig.CHAT_TOPIC_BONUS = 500 -- 수다 주제 하나를 끝까지 하면 받는 보너스
-SalaryConfig.CHAT_LINE_SECONDS = 2.6 -- 수다 대사 한 줄이 보이는 시간 (짧을수록 수다 성공이 쉬워요)
+SalaryConfig.CHAT_LINE_SECONDS = 2.2 -- 수다 대사 한 줄이 보이는 시간 (짧을수록 수다 성공이 쉬워요)
+SalaryConfig.CHAT_REACT_SECONDS = 4 -- 🗣️ 맞장구 고르기 제한 시간
+SalaryConfig.CHAT_REACT_BONUS = 200 -- 🗣️ 좋은 맞장구 하나마다 이번 주제 보너스 +
+SalaryConfig.CHATTERBOX_TOPICS = 30 -- 🗣️ 사내 수다왕 업적: 수다 주제 몇 개 수집 (주제가 100개 넘게 늘어서 15 → 30)
+
+-- 🤝 동료 친밀도 (동료 이름마다 점수, 저장돼요)
+SalaryConfig.FRIEND_LEVELS = { 6, 16, 30, 50 } -- ❤️ 1~4개가 되는 점수
+SalaryConfig.FRIEND_MAX = 60 -- 점수 최대
+SalaryConfig.FRIEND_TOPIC = 2 -- 수다 주제를 끝까지 하면 +
+SalaryConfig.FRIEND_GOOD = 1 -- 좋은 맞장구 +
+SalaryConfig.FRIEND_BAD = 3 -- 눈치 없는 맞장구 - (삐져요)
+SalaryConfig.FRIEND_BONUS_PER_LEVEL = 0.1 -- ❤️ 하나마다 수다 보너스 +10%
+SalaryConfig.FRIEND_WHISPER_LEVEL = 3 -- ❤️❤️❤️부터 "쉿! 부장님 와요" 귓속말
+SalaryConfig.FRIEND_WHISPER_BOSS = 30 -- 부장님이 내게서 이 거리 안으로 다가오면
+SalaryConfig.FRIEND_WHISPER_NEAR = 16 -- 친한 동료가 내 근처(이 거리 안)에 있을 때만
+SalaryConfig.FRIEND_WHISPER_COOLDOWN = 45 -- 귓속말 쿨타임 (초)
+SalaryConfig.FRIEND_STAMP_LEVEL = 4 -- ❤️❤️❤️❤️ 단짝: 결재 도장 2개 몫
+
+-- 친밀도 점수 → ❤️ 개수 (0~4)
+function SalaryConfig.friendLevel(points: number?): number
+	local level = 0
+	for i, need in SalaryConfig.FRIEND_LEVELS do
+		if (points or 0) >= need then
+			level = i
+		end
+	end
+	return level
+end
+
+-- ❤️❤️🖤🖤 모양
+function SalaryConfig.friendHearts(points: number?): string
+	local level = SalaryConfig.friendLevel(points)
+	return string.rep("❤️", level) .. string.rep("🖤", #SalaryConfig.FRIEND_LEVELS - level)
+end
 SalaryConfig.SUSPICION_DECAY = 8 -- 들키지 않을 때 의심도가 초당 줄어드는 양
 
 ---------------------------------------------------------------------------
@@ -208,7 +241,15 @@ SalaryConfig.States = {
 		income = 9,
 		detect = 25,
 		payLabel = "옥상 바람 수당",
-		hint = "🚪 엘리베이터로 옥상에! 부장님은 가끔만 올라와요 (띵! 소리 주의). 자리 부재 게이지는 차요.",
+		hint = "🚪 엘리베이터로 옥상에! 👮 옥상 경비원 눈만 피하면 돼요. 자리 부재 게이지는 차요.",
+	},
+	street = {
+		emoji = "🛍️",
+		name = "눈치 스트리트 구경",
+		income = 9,
+		detect = 25,
+		payLabel = "거리 구경 수당",
+		hint = "🏙️ 공원 정문 밖 눈치 스트리트에 있으면 돼요 (눈치물산). 👮 경비원 주의! 자리 부재 게이지는 차요.",
 	},
 	hiding = {
 		emoji = "📦",
@@ -318,6 +359,14 @@ SalaryConfig.States = {
 		payLabel = "라면 수당",
 		hint = "탕비실 조리대에서 끓여 먹어요. 냄새 때문에 부장이 올 수 있어요!",
 	},
+	gym = {
+		emoji = "🏋️",
+		name = "체력 단련실에서 운동",
+		income = 10,
+		detect = 25,
+		payLabel = "체력 단련 수당",
+		hint = "🏋️ 체력 단련실 운동기구에 [E]! 땀 흘리는 동안 돈도 벌고 체력 스탯도 올라요. 자리 부재 게이지는 차요.",
+	},
 	fired = {
 		emoji = "📦",
 		name = "해고됨",
@@ -325,6 +374,39 @@ SalaryConfig.States = {
 		detect = 0,
 	},
 } :: { [string]: StateInfo }
+
+---------------------------------------------------------------------------
+-- 🏋️ 체력 단련실 (두 회사 모두 사무실 뒤쪽 별관)
+--   운동기구 의자(GymSeat)에 [E] → "gym" 상태 (돈 + 자리 부재 게이지)
+--   GYM_STAT_SECONDS초 운동할 때마다 그 기구가 키우는 스탯이 +1 (profile.fitness)
+--   pose: 내 캐릭터 운동 자세 (client/Poses.luau)
+--   🔮 스탯 효과는 다음 업데이트에서! (지금은 숫자만 쌓여요 → Employees의 "2.6 체력 단련" 참고)
+---------------------------------------------------------------------------
+SalaryConfig.GYM_STAT_SECONDS = 10
+SalaryConfig.FitnessStats = {
+	{ id = "strength", emoji = "💪", name = "근력" },
+	{ id = "stamina", emoji = "🔋", name = "지구력" },
+	{ id = "agility", emoji = "⚡", name = "민첩성" },
+	{ id = "flexibility", emoji = "🤸", name = "유연성" },
+	{ id = "balance", emoji = "⚖️", name = "균형감" },
+}
+function SalaryConfig.getFitnessStat(statId: string)
+	for _, stat in SalaryConfig.FitnessStats do
+		if stat.id == statId then
+			return stat
+		end
+	end
+	return nil
+end
+SalaryConfig.GymMachines = {
+	treadmill = { emoji = "🏃", name = "러닝머신", pose = "treadmill", stats = { "stamina" } },
+	bench = { emoji = "🏋️", name = "벤치프레스", pose = "bench", stats = { "strength" } },
+	bike = { emoji = "🚴", name = "실내 자전거", pose = "bike", stats = { "stamina" } },
+	rowing = { emoji = "🚣", name = "로잉머신", pose = "row", stats = { "stamina", "strength" } }, -- 전신 운동이라 두 개!
+	sandbag = { emoji = "🥊", name = "샌드백", pose = "punch", stats = { "agility" } },
+	stretch = { emoji = "🤸", name = "스트레칭 매트", pose = "stretch", stats = { "flexibility" } },
+	balance = { emoji = "⚖️", name = "밸런스 볼", pose = "balance", stats = { "balance" } },
+} :: { [string]: { emoji: string, name: string, pose: string, stats: { string } } }
 
 -- 자리에서 고를 수 있는 행동 (숫자키 1~7, 직급이 오르면 하나씩 열려요)
 ---------------------------------------------------------------------------
@@ -560,18 +642,18 @@ end
 ---------------------------------------------------------------------------
 -- 📈 직급
 --   xp: 이 직급이 되는 데 필요한 누적 경력(지금까지 받은 월급 합계)
---   basePay: 하루 기본급 (출근만 해도 받는 돈 → 60% 너프: 진급은 농땡이 실력 위주로) / bonus: 농땡이 수입 배율 / quota: 하루 최소 업무(초)
+--   basePay: 하루 기본급 (출근만 해도 받는 돈 → 60% 너프: 진급은 농땡이 실력 위주로) / bonus: 농땡이 수입 배율 / quota: 하루 최소 업무(초) = 내 자리에 앉아 있던 시간 (일하기·앉아서 농땡이 모두, 근무 시간은 약 370초)
 ---------------------------------------------------------------------------
 SalaryConfig.Ranks = {
 	-- penalty: 적발(경고) 1번당 시말서 감봉 — 직급이 높을수록 책임도 커요 (대략 기본급의 1/3)
 	-- quotaPenalty: 업무 시간 미달 감봉 — 이것도 직급이 높을수록 커요 (대략 기본급의 1/2)
 	-- target: 💰 하루 실적 목표 (기본급 빼고 그날 번 돈 + 보너스). 못 채우면 경고 +1 + 목표의 30% 감봉. 인턴은 없음
-	{ name = "인턴", xp = 0, basePay = 1200, bonus = 1.0, quota = 60, penalty = 1000, quotaPenalty = 2000, target = 0 },
-	{ name = "사원", xp = 6000, basePay = 1600, bonus = 1.15, quota = 70, penalty = 1300, quotaPenalty = 2500, target = 1150 },
-	{ name = "주임", xp = 20000, basePay = 2200, bonus = 1.3, quota = 80, penalty = 1800, quotaPenalty = 3200, target = 1700 },
-	{ name = "대리", xp = 50000, basePay = 2800, bonus = 1.5, quota = 90, penalty = 2400, quotaPenalty = 4000, target = 2300 },
-	{ name = "과장", xp = 100000, basePay = 3600, bonus = 1.75, quota = 100, penalty = 3000, quotaPenalty = 5000, target = 2850 },
-	{ name = "차장", xp = 170000, basePay = 4600, bonus = 2.0, quota = 110, penalty = 3800, quotaPenalty = 6200, target = 3450 },
+	{ name = "인턴", xp = 0, basePay = 1200, bonus = 1.0, quota = 75, penalty = 1000, quotaPenalty = 2000, target = 0 },
+	{ name = "사원", xp = 6000, basePay = 1600, bonus = 1.15, quota = 85, penalty = 1300, quotaPenalty = 2500, target = 1150 },
+	{ name = "주임", xp = 20000, basePay = 2200, bonus = 1.3, quota = 90, penalty = 1800, quotaPenalty = 3200, target = 1700 },
+	{ name = "대리", xp = 50000, basePay = 2800, bonus = 1.5, quota = 100, penalty = 2400, quotaPenalty = 4000, target = 2300 },
+	{ name = "과장", xp = 100000, basePay = 3600, bonus = 1.75, quota = 105, penalty = 3000, quotaPenalty = 5000, target = 2850 },
+	{ name = "차장", xp = 170000, basePay = 4600, bonus = 2.0, quota = 115, penalty = 3800, quotaPenalty = 6200, target = 3450 },
 	{ name = "부장", xp = 260000, basePay = 5800, bonus = 2.3, quota = 120, penalty = 4800, quotaPenalty = 7500, target = 4300 },
 	{ name = "이사", xp = 380000, basePay = 7200, bonus = 2.7, quota = 130, penalty = 6000, quotaPenalty = 9000, target = 5150 },
 	-- 👑 사장: 3단계 엔딩에서 공개
@@ -661,7 +743,7 @@ SalaryConfig.Achievements = {
 	{ id = "mission_master", emoji = "🏅", name = "프로젝트 마스터", description = "긴급 프로젝트 4종(회의 발표 빼고)을 모두 성공하기" },
 	{ id = "gift_hongsam", emoji = "🎁", name = "아부의 달인", description = "홍삼 선물세트로 경고 지우기" },
 	{ id = "wheel_20", emoji = "🎡", name = "대박 돌림판", description = "돌림판 20에 걸어서 맞히기" },
-	{ id = "dart_legend", emoji = "🎈", name = "풍선 속 전설", description = "풍선 다트로 전설 인형 터뜨리기" },
+	{ id = "dart_legend", emoji = "🎈", name = "풍선 속 전설", description = "풍선 다트에서 🧸 인형 풍선을 터뜨려 전설 인형 받기" },
 	{ id = "dragon_plush", emoji = "🐲", name = "용용이 입양", description = "티켓으로 오락실 한정 인형 용용이 받기" },
 	{ id = "video_pro", emoji = "🎧", name = "회의의 달인", description = "화상회의 질문에 연속 5번 잘 대답하기" },
 	{ id = "cat_lover", emoji = "🐱", name = "집사 자격", description = "사무실 고양이 월급냥을 10번 쓰다듬기" },
@@ -677,7 +759,8 @@ SalaryConfig.Achievements = {
 	{ id = "company_nunchi", emoji = "🏢", name = "이직 성공", description = "대리가 돼서 (주)눈치물산으로 스카우트되기" },
 	{ id = "lee_bribe", emoji = "☕", name = "커피 외교", description = "이과장에게 커피를 상납해서 고자질 막기" },
 	{ id = "lee_dodge", emoji = "🙈", name = "눈치 싸움 승리", description = "이과장의 ❗를 보고 들키기 전에 일하는 척하기" },
-	{ id = "chatterbox", emoji = "🗣️", name = "사내 수다왕", description = "수다 주제 15개 수집하기" },
+	{ id = "chatterbox", emoji = "🗣️", name = "사내 수다왕", description = "수다 주제 30개 수집하기" },
+	{ id = "bestie", emoji = "🤝", name = "사내 단짝", description = "동료 한 명과 친밀도 ❤️ 4개 달성" },
 	{ id = "near_miss", emoji = "😅", name = "아슬아슬 입문", description = "처음으로 아슬아슬 보너스 받기" },
 	{ id = "combo_max", emoji = "🔥", name = "곡예사", description = "아슬아슬 콤보 x5 달성" },
 	{ id = "caught", emoji = "📝", name = "시말서 데뷔", description = "처음으로 적발되기" },
@@ -1086,30 +1169,139 @@ function SalaryConfig.wheelRotation(from: number, to: number, elapsed: number): 
 end
 
 ---------------------------------------------------------------------------
--- 🎈 풍선 다트 (인형뽑기 가게): DART_PRICE원에 다트 3개
---   벽의 풍선 12개 뒤에 경품이 숨어 있어요. 노릴 풍선을 직접 콕 고르면 던져요!
---   🤚 손이 살짝 떨려서 다트는 고른 풍선 근처 어딘가에 꽂혀요. 던질수록 팔이 아파서 더 많이 빗나가요
+-- 🎯 끌어서 던지기 풍선 다트 (뽑기 천국 가게): DART_PRICE원에 다트 DART_COUNT개
+--   벽에 풍선 10개가 둥실둥실. 풍선마다 경품이 써 있어요 (💰 금액 / 🎟️ 티켓 / 🧸 인형 / 💨 꽝)
+--   다트를 뒤로 끌었다 놓으면 반대쪽으로 날아가요 (새총처럼). 많이 당길수록 세게!
+--   중력 때문에 포물선으로 날아가요: 너무 약하면 못 미치고, 너무 세면 벽을 넘어가요.
+--   날아가다 처음 닿은 풍선이 펑! (앞 풍선이 뒤 풍선을 가로막을 수도 있어요)
+--
+-- 📐 좌표: 다트판 안의 화면 칸 (가로 DART_FIELD_W × 세로 DART_FIELD_H, 왼쪽 위가 0,0, 아래로 갈수록 y가 커져요)
+--   서버와 화면이 똑같은 공식(dartFlight, dartBalloonPos, dartSimulate)을 써요
+--   → 화면은 미리 날려 보여 주고, 서버는 같은 계산으로 맞았는지 확인해요 (서버 결과가 진짜)
+--
+-- ⚖️ 밸런스 (모의 계산: 남은 풍선 중 제일 비싼 걸 노리고, 손 떨림(각도·힘)만 다르게 판마다 100판씩)
+--   풍선 10개 = 가까운 자리 5 + 먼 자리 5. 가까운 풍선은 쉽고(세게 쏘면 거의 일직선), 먼 풍선은 높거나 옆이라
+--   거의 끝까지 당겨야 닿아요 → 힘 조절을 잘해야 해요 (먼 풍선 명중률: 처음 30%대 / 보통 50% / 잘하면 70%)
+--   - 가까운 자리: 100 · 50 · 🎟️10장 · 꽝 · 꽝 (DART_NEAR_PRIZES)
+--   - 먼 자리: 300 · 200 · 100 · 🧸(DART_PLUSH_CHANCE, 아니면 꽝) (DART_FAR_PRIZES)
+--     + 그중 한 곳은 🎰 대박 자리: DART_JACKPOT_CHANCE 확률로 3,000원 (아니면 300원). 작고 빨리 흔들려요
+--   - 한 판(1,000원) 평균 돈: 처음 하는 사람 약 650원 / 보통 약 860원 / 잘하는 사람 약 1,020원 (+ 티켓·가끔 인형)
+--     → 보통은 조금 손해, 잘하면 살짝 이득. 대박 풍선은 다섯 판에 한 번꼴로 나오고 맞히기 어려워요
+--   (🧸 인형 풍선은 DART_LEGEND_CHANCE 확률로 🦄 전설 인형!)
 ---------------------------------------------------------------------------
 SalaryConfig.DART_PRICE = 1000
 SalaryConfig.DART_COUNT = 3
-SalaryConfig.DART_COLS = 4
-SalaryConfig.DART_ROWS = 3
-SalaryConfig.DART_HIT_X = 0.09 -- 풍선 중심에서 이만큼(가로, 0~1) 안이면 터져요
-SalaryConfig.DART_HIT_Y = 0.12 -- 세로
--- 판마다 풍선 12개에 섞어 넣는 경품 (꽝 포함). legend는 아주 드물게 하나가 섞여요
-SalaryConfig.DartPrizes = {
-	{ id = "none", emoji = "💨", name = "꽝", count = 4 },
-	{ id = "cash400", emoji = "💰", name = "400원", count = 3, money = 400 },
-	{ id = "cash1300", emoji = "💵", name = "1,300원", count = 2, money = 1300 },
-	{ id = "tickets", emoji = "🎟️", name = "티켓 10장", count = 2, tickets = 10 },
-	{ id = "plush", emoji = "🧸", name = "랜덤 인형", count = 1, plush = true },
-}
-SalaryConfig.DART_LEGEND_CHANCE = 0.05 -- 판마다 꽝 하나가 🦄 전설 인형으로 바뀔 확률
+SalaryConfig.DART_FIELD_W = 380
+SalaryConfig.DART_FIELD_H = 290
+SalaryConfig.DART_ORIGIN = Vector2.new(190, 266) -- 다트가 날아가기 시작하는 곳 (아래 가운데)
+SalaryConfig.DART_SPEED = 640 -- 힘 100%일 때 처음 속도 (칸/초) → 똑바로 위로 쏘면 약 228칸까지 올라가요
+SalaryConfig.DART_GRAVITY = 900 -- 아래로 당기는 힘 (칸/초²)
+SalaryConfig.DART_MIN_POWER = 0.2 -- 이것보다 덜 당기면 안 던져요
+SalaryConfig.DART_MIN_ANGLE = math.rad(8) -- 거의 옆으로 눕힌 각도까지만 (0 = 오른쪽, 90도 = 위)
+SalaryConfig.DART_DRAG_MAX = 120 -- 화면에서 이만큼(칸) 당기면 힘 100%
+SalaryConfig.DART_MAX_TIME = 3 -- 이만큼 날아도 아무 데도 안 닿으면 끝
+SalaryConfig.DART_STEP = 1 / 120 -- 맞았는지 확인하는 간격 (초)
+SalaryConfig.DART_TIP = 3 -- 다트 끝 두께 (풍선 반지름에 더해요)
+SalaryConfig.DART_OVER_Y = -30 -- 다트판 위로 이만큼 넘어가면 "벽을 넘어갔어요"
+SalaryConfig.DART_JACKPOT_CHANCE = 0.2 -- 🎰 대박 자리에 3,000원 풍선이 나올 확률 (아니면 300원)
+SalaryConfig.DART_PLUSH_CHANCE = 0.4 -- 🧸 인형 풍선이 들어갈 확률 (아니면 꽝)
+SalaryConfig.DART_LEGEND_CHANCE = 0.08 -- 🧸 인형 풍선을 터뜨렸을 때 🦄 전설 인형이 나올 확률
 
--- 🤚 손 떨림: 몇 번째 다트인지에 따라 고른 풍선 중심에서 이 반지름(가로 0~1 기준) 안 어딘가에 꽂혀요
---   대략 첫 다트 90%, 두 번째 65%, 세 번째 50% 정도 고른 풍선에 맞아요 (서버가 정해요)
-SalaryConfig.DART_SCATTER = { 0.10, 0.12, 0.145 }
-SalaryConfig.DART_ASPECT = 420 / 300 -- 다트판 가로 ÷ 세로 (떨림을 동그랗게 맞추려고)
+-- 풍선 종류 (label = 풍선에 쓰는 글씨, color = 풍선 색 → 색만 봐도 값어치를 알 수 있어요)
+SalaryConfig.DartPrizes = {
+	{ id = "none", emoji = "💨", name = "꽝", label = "꽝", color = Color3.fromRGB(205, 205, 212) },
+	{ id = "won50", emoji = "💰", name = "50원", label = "50", color = Color3.fromRGB(160, 215, 255), money = 50 },
+	{ id = "won100", emoji = "💰", name = "100원", label = "100", color = Color3.fromRGB(100, 160, 255), money = 100 },
+	{ id = "won200", emoji = "💰", name = "200원", label = "200", color = Color3.fromRGB(100, 205, 115), money = 200 },
+	{ id = "won300", emoji = "💰", name = "300원", label = "300", color = Color3.fromRGB(255, 150, 60), money = 300 },
+	{ id = "jackpot", emoji = "💰", name = "3,000원 대박", label = "3000", color = Color3.fromRGB(255, 205, 40), money = 3000, jackpot = true },
+	{ id = "tickets", emoji = "🎟️", name = "티켓 10장", label = "🎟️10", color = Color3.fromRGB(255, 160, 200), tickets = 10 },
+	{ id = "plush", emoji = "🧸", name = "랜덤 인형", label = "🧸", color = Color3.fromRGB(190, 150, 255), plush = true },
+}
+-- 자리별 풍선 (판마다 섞어요. "plush"는 DART_PLUSH_CHANCE로 들어가고 아니면 꽝)
+SalaryConfig.DART_NEAR_PRIZES = { "won100", "won50", "tickets", "none", "none" } -- 가까운 자리 5곳
+SalaryConfig.DART_FAR_PRIZES = { "won300", "won200", "won100", "plush" } -- 먼 자리 4곳 (+ 🎰 대박 자리 1곳)
+
+-- 풍선 자리 10곳: 다트 출발점에서 본 각도(도)와 거리 → 서로 다른 방향이라 대부분 바로 노릴 수 있어요
+--   far = 먼 자리 (그중 하나가 🎰 대박 자리)
+SalaryConfig.DART_SLOTS = {}
+for i, info in { { 34, 150 }, { 47, 205 }, { 60, 140 }, { 73, 215 }, { 86, 150 }, { 99, 220 }, { 112, 140 }, { 125, 205 }, { 138, 150 }, { 151, 195 } } do
+	local angle, distance = math.rad(info[1]), info[2]
+	SalaryConfig.DART_SLOTS[i] = {
+		x = math.floor(SalaryConfig.DART_ORIGIN.X + math.cos(angle) * distance + 0.5),
+		y = math.floor(SalaryConfig.DART_ORIGIN.Y - math.sin(angle) * distance + 0.5),
+		far = distance > 180,
+	}
+end
+
+function SalaryConfig.getDartPrize(id: string): any
+	for _, info in SalaryConfig.DartPrizes do
+		if info.id == id then
+			return info
+		end
+	end
+	return nil
+end
+
+-- 🎯 다트가 던진 뒤 t초에 어디 있는지 (angle = 라디안, 0 = 오른쪽 · π/2 = 위 / power = 0~1)
+function SalaryConfig.dartFlight(angle: number, power: number, t: number): Vector2
+	local speed = SalaryConfig.DART_SPEED * power
+	local origin = SalaryConfig.DART_ORIGIN
+	return Vector2.new(
+		origin.X + math.cos(angle) * speed * t,
+		origin.Y - math.sin(angle) * speed * t + 0.5 * SalaryConfig.DART_GRAVITY * t * t
+	)
+end
+
+-- 🎈 풍선이 판 시작 뒤 t초에 어디 있는지 (위아래로 둥실 + 옆으로 살랑)
+--   balloon = { x, y, r, amp, period, phase }
+function SalaryConfig.dartBalloonPos(balloon: any, t: number): Vector2
+	local wave = 2 * math.pi * t / balloon.period + balloon.phase
+	local drift = 2 * math.pi * t / (balloon.period * 1.6) + balloon.phase * 2
+	return Vector2.new(balloon.x + balloon.amp * 0.5 * math.sin(drift), balloon.y + balloon.amp * math.sin(wave))
+end
+
+-- 💥 한 번 던지기 계산: releaseT = 판 시작 뒤 몇 초에 놓았는지
+--   → (맞은 풍선 번호 또는 nil, 날아간 시간, 멈춘 곳, 빗나간 이유 "short"/"over"/"side"/nil)
+--   빗나간 이유는 제일 가까이 스친 풍선 기준: 풍선 위로 지나감 = "over"(너무 셈) / 아래 = "short"(약함) / 옆 = "side"
+function SalaryConfig.dartSimulate(balloons: { any }, popped: { [number]: boolean }, angle: number, power: number, releaseT: number): (number?, number, Vector2, string?)
+	local step = SalaryConfig.DART_STEP
+	local width, height = SalaryConfig.DART_FIELD_W, SalaryConfig.DART_FIELD_H
+	local steps = math.floor(SalaryConfig.DART_MAX_TIME / step)
+	local position = SalaryConfig.DART_ORIGIN
+	local closestGap = math.huge
+	local closestOffset = Vector2.new(0, 1)
+	local function missReason(): string
+		if math.abs(closestOffset.X) > math.abs(closestOffset.Y) then
+			return "side" -- 옆으로 빗나갔어요
+		end
+		return if closestOffset.Y < 0 then "over" else "short" -- 위로 지나감 = 너무 셈 / 아래 = 힘이 모자람
+	end
+	for n = 1, steps do
+		local t = n * step
+		position = SalaryConfig.dartFlight(angle, power, t)
+		for index, balloon in balloons do
+			if not popped[index] then
+				local center = SalaryConfig.dartBalloonPos(balloon, releaseT + t)
+				local offset = position - center
+				local gap = offset.Magnitude - (balloon.r + SalaryConfig.DART_TIP)
+				if gap < 0 then
+					return index, t, position, nil
+				end
+				if gap < closestGap then
+					closestGap = gap
+					closestOffset = offset
+				end
+			end
+		end
+		if position.Y < SalaryConfig.DART_OVER_Y then
+			return nil, t, position, "over" -- 너무 세서 벽을 넘어갔어요
+		elseif position.Y > height + 20 or position.X < -20 or position.X > width + 20 then
+			return nil, t, position, missReason()
+		end
+	end
+	return nil, SalaryConfig.DART_MAX_TIME, position, missReason()
+end
 
 ---------------------------------------------------------------------------
 -- 📋 긴급 프로젝트 (하루 한 번, 사람마다 따로) — 실패해도 손해는 없지만 아주 어려워요!
@@ -1147,12 +1339,12 @@ SalaryConfig.TypingPhrases = {
 ---------------------------------------------------------------------------
 -- 🧠 퀴즈 (긴급 프로젝트마다 꼭 하나 풀어야 완수!)
 --   30문제 중 하나가 랜덤으로 나와요. 보기 4개 (순서는 매번 섞여요).
---   틀리면 QUIZ_WRONG_LOCK초 동안 못 풀고, 다른 문제로 바뀌어요 (찍기 방지)
+--   틀리면 바로 다른 문제로 바뀌어요 (찍기 방지)
 --   QUIZ_MAX_WRONG번 연속으로 틀리면 프로젝트 실패!
 --   answer = choices 안에서 정답의 번호 (1부터)
 ---------------------------------------------------------------------------
 export type QuizQuestion = { q: string, choices: { string }, answer: number }
-SalaryConfig.QUIZ_WRONG_LOCK = 10
+SalaryConfig.QUIZ_WRONG_LOCK = 0 -- (기다리는 시간 없이 바로 다음 문제)
 SalaryConfig.QUIZ_MAX_WRONG = 2 -- 이만큼 연속으로 틀리면 프로젝트 실패
 SalaryConfig.QuizQuestions = {
 	{ q = "규칙을 찾아요.\n4 → 17,  6 → 37,  9 → 82,  7 → ?", choices = { "49", "50", "51", "56" }, answer = 2 },
@@ -1185,6 +1377,27 @@ SalaryConfig.QuizQuestions = {
 	{ q = "두 자리 수의 각 자리 합은 9예요.\n십의 자리와 일의 자리를 바꾸면\n27이 커져요. 원래 수는?", choices = { "27", "36", "45", "63" }, answer = 2 },
 	{ q = "⚪⚪⚫ = 1\n⚪⚫⚪ = 2\n⚪⚫⚫ = 3\n⚫⚪⚪ = 4\n⚫⚫⚪ = ?", choices = { "5", "6", "7", "8" }, answer = 2 },
 	{ q = "다음 빈칸에 올 수는?\n5, 10, 8, 16, 14, 28, ?", choices = { "24", "26", "30", "56" }, answer = 2 },
+	-- 🧮 계산 문제 (엑셀 지옥 등 모든 퀴즈에 섞여 나와요)
+	{ q = "사과 3개 + 배 2개 = 2,300원\n사과 1개 + 배 2개 = 1,500원\n사과 1개는?", choices = { "300원", "400원", "500원", "600원" }, answer = 2 },
+	{ q = "원가 8,000원에 25% 이익을 붙여 정가를 정하고\n정가에서 10% 할인해 팔았어요. 이익은?", choices = { "500원", "800원", "1,000원", "1,200원" }, answer = 3 },
+	{ q = "엑셀에서\nA1 = 7\nA2 = A1 × 2 − 3\nA3 = A2 × 2 − 3\nA3 = ?", choices = { "17", "19", "21", "25" }, answer = 2 },
+	{ q = "1부터 50까지 홀수를 모두 더하면?", choices = { "600", "625", "650", "1275" }, answer = 2 },
+	{ q = "시급 9,860원, 하루 6시간씩 주 5일 일하면\n일주일 급여는?", choices = { "285,800원", "295,800원", "296,800원", "305,800원" }, answer = 2 },
+	{ q = "어떤 수에 6을 곱하고 18을 뺐더니 42예요.\n어떤 수는?", choices = { "8", "9", "10", "12" }, answer = 3 },
+	{ q = "의자를 한 줄에 7개씩 놓으면 4개가 남고\n8개씩 놓으면 마지막 줄만 3자리가 비어요.\n의자는 최소 몇 개?", choices = { "45개", "53개", "61개", "67개" }, answer = 2 },
+	{ q = "3명이 하루 4시간씩 6일 걸리는 일을\n4명이 하루 6시간씩 하면 며칠?", choices = { "2일", "3일", "4일", "4.5일" }, answer = 2 },
+	{ q = "10,000원짜리 주식이 첫날 20% 오르고\n다음 날 20% 내렸어요. 지금 가격은?", choices = { "9,600원", "10,000원", "9,800원", "10,400원" }, answer = 1 },
+	{ q = "1 + 2 + 3 + … + 40 = ?", choices = { "780", "800", "820", "840" }, answer = 3 },
+	{ q = "엑셀에서\nSUM(3, 5, 7) × AVERAGE(2, 4, 6) = ?", choices = { "45", "60", "75", "90" }, answer = 2 },
+	{ q = "12와 18의\n최소공배수 + 최대공약수 = ?", choices = { "36", "42", "48", "54" }, answer = 2 },
+	{ q = "물 240g에 소금 60g을 녹였어요.\n소금물의 농도는?", choices = { "20%", "25%", "15%", "18%" }, answer = 1 },
+	{ q = "시속 72km로 3시간 20분 달리면\n몇 km를 갈까요?", choices = { "220km", "230km", "240km", "250km" }, answer = 3 },
+	{ q = "다음 빈칸에 올 수는?\n3, 7, 15, 31, 63, ?", choices = { "95", "126", "127", "128" }, answer = 3 },
+	{ q = "x + y = 20\nx − y = 6\nx × y = ?", choices = { "84", "91", "96", "99" }, answer = 2 },
+	{ q = "정가 50,000원 가방을 30% 할인하고\n할인가에서 쿠폰으로 10%를 더 깎았어요.\n최종 가격은?", choices = { "30,000원", "31,500원", "32,000원", "35,000원" }, answer = 2 },
+	{ q = "직원 5명의 평균 나이는 32살.\n새 직원이 오니 평균이 31살이 됐어요.\n새 직원은 몇 살?", choices = { "25살", "26살", "27살", "28살" }, answer = 2 },
+	{ q = "2×2×2×2×2 + 3×3×3 − 4×4 = ?", choices = { "41", "43", "45", "47" }, answer = 2 },
+	{ q = "보고서 135쪽을 A는 1시간에 25쪽,\nB는 1시간에 20쪽 검토해요.\n둘이 같이 하면 몇 시간?", choices = { "2.5시간", "3시간", "3.5시간", "4시간" }, answer = 2 },
 } :: { QuizQuestion }
 
 SalaryConfig.Missions = {
@@ -1425,11 +1638,11 @@ SalaryConfig.TEST_CAT = false -- 🧪 true면 스튜디오에서 9시 10분쯤 �
 --     🗣️ 부장님이 말을 걸면 → 🙂 앞을 보고 있어야 해요 (어른이 말하는데 폰을 봐?)
 --     ⚠️ 예고는 ELEVATOR_WARN초뿐. 틀릴 때마다 의심도 +ELEVATOR_FAIL (100이 되면 적발)
 ---------------------------------------------------------------------------
-SalaryConfig.ELEVATOR_RIDE = 10 -- 부장님이랑 탈 때 (초)
+SalaryConfig.ELEVATOR_RIDE = 8 -- 부장님이랑 탈 때 (초)
 SalaryConfig.ELEVATOR_RIDE_ALONE = 4 -- 혼자 탈 때
 SalaryConfig.ELEVATOR_BOSS_CHANCE = 0.35
-SalaryConfig.ELEVATOR_EVENTS = { 2, 2 } -- 부장님이 쳐다보거나 말 거는 횟수 (최소, 최대)
-SalaryConfig.ELEVATOR_WARN = 1.1 -- ⚠️ 예고 후 실제로 쳐다보거나 말 걸기까지 (초)
+SalaryConfig.ELEVATOR_EVENTS = { 1, 1 } -- 부장님이 쳐다보거나 말 거는 횟수 (최소, 최대) → 딱 한 번만
+SalaryConfig.ELEVATOR_WARN = 3 -- ⚠️ 예고 후 실제로 쳐다보거나 말 걸기까지 (초): 고를 시간 3초
 SalaryConfig.ELEVATOR_GRACE = 0.2 -- 인터넷 지연 봐주기 (초)
 SalaryConfig.ELEVATOR_FAIL = 35 -- 틀릴 때마다 오르는 의심도
 SalaryConfig.ElevatorTalkLines = { "어이, 자네.", "흠흠.", "요즘 어때?" } -- 짧게!
@@ -1721,7 +1934,7 @@ SalaryConfig.OutfitSlots = {
 				{ size = Vector3.new(0.22, 0.5, 0.45), offset = CFrame.new(-0.66, 0.1, 0), color = BLACK },
 				{ size = Vector3.new(0.22, 0.5, 0.45), offset = CFrame.new(0.66, 0.1, 0), color = BLACK },
 			} },
-			{ id = "ears_white", emoji = "🤍", name = "노캔 헤드폰", price = 25000, description = "부장님 잔소리 차단 (안 됨)", part = "Head", pieces = {
+			{ id = "ears_white", emoji = "🖤", name = "노캔 헤드폰", price = 25000, description = "부장님 잔소리 차단 (안 됨)", part = "Head", pieces = {
 				{ size = Vector3.new(1.35, 0.12, 0.28), offset = CFrame.new(0, 0.7, 0), color = Color3.fromRGB(240, 240, 240) },
 				{ size = Vector3.new(0.24, 0.55, 0.5), offset = CFrame.new(-0.67, 0.1, 0), color = Color3.fromRGB(245, 245, 245) },
 				{ size = Vector3.new(0.24, 0.55, 0.5), offset = CFrame.new(0.67, 0.1, 0), color = Color3.fromRGB(245, 245, 245) },
@@ -1872,9 +2085,55 @@ SalaryConfig.ROOF_GUARD_RANGE = 36 -- 보이는 거리 (옥상)
 SalaryConfig.GUARD_FOV = 55 -- 시야 반각 (°)
 SalaryConfig.GUARD_WALK_SPEED = 9
 SalaryConfig.GUARD_STARE_GRACE = 4 -- 숨어서 이만큼(초) 안 보이면 다시 순찰
-SalaryConfig.GUARD_DETECT_MULTIPLIER = 1.0 -- 경비원한테 보일 때 의심도 속도 배율 (노려보는 중이면 OUTSIDE_STARE_MULTIPLIER)
-SalaryConfig.GUARD_REST_CHANCE = 0.25 -- 💤 옥상 경비원: 순찰 한 바퀴마다 경비실에서 쉴 확률
-SalaryConfig.GUARD_REST = { 12, 20 } -- 💤 쉬는 시간 (초): 이때가 옥상 콘텐츠를 즐길 찬스!
+SalaryConfig.GUARD_DETECT_MULTIPLIER = 0.7 -- 경비원한테 보일 때 의심도 속도 배율 (예전 1.0 → 30% 낮춤)
+SalaryConfig.GUARD_STARE_MULTIPLIER = 0.91
+SalaryConfig.GUARD_TALK_SECONDS = 25 -- 🎁 경비원에게 [E]로 말을 걸고(선물 창) 이야기하는 동안 최대 이만큼(초)은 의심도 안 올라요
+SalaryConfig.GUARD_TALK_GRACE = 3 -- 👮 경비원이 처음 발견하고 말하는 동안(초)은 의심도가 안 올라요 (도망갈 틈)
+SalaryConfig.GUARD_CATCH_CALM = 30 -- 🚨 경비원 보고로 적발된 뒤 이만큼(초)은 경비원 의심도가 안 올라요
+SalaryConfig.GUARD_CATCH_RAMP = 30 -- 그 뒤 이만큼(초) 동안 30% → 100%로 천천히 다시 올라가요 -- 경비원이 노려보는 중일 때 (예전 1.3 → 30% 낮춤)
+SalaryConfig.GUARD_REST_CHANCE = 0.1 -- 💤 옥상 경비원: 순찰 한 바퀴마다 경비실에서 쉴 확률
+SalaryConfig.GUARD_REST = { 8, 12 } -- 💤 쉬는 시간 (초): 이때가 옥상 콘텐츠를 즐길 찬스!
+-- 🎁 경비원 뇌물: 경비원에게 [E] 선물 드리기 → 그 경비원이 일정 시간 동안 나를 못 본 척 (의심도 안 올라요)
+--   🏪 사내 매점에서 미리 사서 🎒 소지품에 보관 → 경비원 앞에서 [E]로 골라 드려요
+--   좋은 선물일수록 오래 눈감아 줘요. 경비원마다 하루 GUARD_BRIBE_DAILY번만 받아요 (공원 경비원 · 옥상 경비원 따로)
+--   minutes = 게임 시계 기준 (게임 1시간 ≈ 실제 47초). seconds는 아래에서 자동 계산
+SalaryConfig.GUARD_BRIBE_DAILY = 1
+SalaryConfig.GuardBribes = {
+	{ id = "drink", emoji = "🥤", name = "시원한 음료수", price = 1000, minutes = 120, line = "어이쿠, 시원하네~ 잠깐 딴 데 볼게요." },
+	{ id = "donut", emoji = "🍩", name = "도넛 한 상자", price = 2500, minutes = 210, line = "이거 그 유명한 집 도넛? 흠흠, 난 아무것도 못 봤어요." },
+	{ id = "chicken", emoji = "🍗", name = "치킨 쿠폰", price = 5000, minutes = 330, line = "오늘 저녁은 치킨이다! 한동안 안 보일 거예요~" },
+	{ id = "ticket", emoji = "🎫", name = "주말 영화 예매권", price = 9000, minutes = 480, line = "영화를 좋아하는 걸 어떻게 알고! 오늘은 푹 쉬다 가요~" },
+}
+-- ⏰ 게임 시간(분) ↔ 실제 초
+function SalaryConfig.gameMinutesToSeconds(minutes: number): number
+	return minutes * SalaryConfig.DAY_SECONDS / (SalaryConfig.END_MINUTE - SalaryConfig.START_MINUTE)
+end
+function SalaryConfig.secondsToGameMinutes(seconds: number): number
+	return seconds * (SalaryConfig.END_MINUTE - SalaryConfig.START_MINUTE) / SalaryConfig.DAY_SECONDS
+end
+-- "1시간 30분" / "45분" 처럼
+function SalaryConfig.gameDurationText(minutes: number): string
+	local m = math.max(0, math.ceil(minutes))
+	local h = m // 60
+	m = m % 60
+	if h > 0 and m > 0 then
+		return `{h}시간 {m}분`
+	elseif h > 0 then
+		return `{h}시간`
+	end
+	return `{m}분`
+end
+for _, bribe in SalaryConfig.GuardBribes do
+	bribe.seconds = SalaryConfig.gameMinutesToSeconds(bribe.minutes)
+end
+function SalaryConfig.getGuardBribe(bribeId: string): any
+	for _, bribe in SalaryConfig.GuardBribes do
+		if bribe.id == bribeId then
+			return bribe
+		end
+	end
+	return nil
+end
 SalaryConfig.PIGEON_GUARD_RANGE = 16 -- 🐦 경비원이 이만큼 가까이 오면 비둘기들이 푸드덕 (근접 알람)
 SalaryConfig.TELESCOPE_SECONDS = 15 -- 🔭 망원경으로 부장님 위치 보기
 SalaryConfig.TEST_ELEVATOR = false -- 🧪 true면 스튜디오에서 엘리베이터에 부장님이 항상 타요

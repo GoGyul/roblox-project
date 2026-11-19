@@ -39,7 +39,8 @@ end
 local function fitScale(width: number, height: number, keepClear: boolean?): number
 	local camera = workspace.CurrentCamera
 	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
-	local availableHeight = (viewport.Y - 70 - (if keepClear then 110 else 0)) * 0.95 -- (+ 위 시계·아래 행동 버튼줄) -- 위쪽 로블록스 메뉴 막대 빼고
+	-- 위쪽 로블록스 메뉴 막대 빼고 / keepClear면 위 시계(~70) + 아래 행동 버튼줄과 안내 문구(~130)도 빼고
+	local availableHeight = if keepClear then (viewport.Y - 36 - 70 - 130) * 0.95 else (viewport.Y - 70) * 0.95
 	local availableWidth = (viewport.X - (if keepClear then 440 else 0)) * 0.95
 	return math.clamp(math.min(availableWidth / width, availableHeight / height), 0.4, 1)
 end
@@ -48,7 +49,7 @@ local function sheet(width: number, height: number, keepClear: boolean?): Frame
 	close()
 	local frame = Ui.make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = if keepClear then UDim2.new(0.5, 0, 0.5, 8) else UDim2.fromScale(0.5, 0.5),
+		Position = if keepClear then UDim2.new(0.5, 0, 0.5, -30) else UDim2.fromScale(0.5, 0.5), -- (위 70·아래 130 사이 가운데)
 		Size = UDim2.fromOffset(width, height),
 		BackgroundColor3 = Color3.fromRGB(250, 250, 245),
 		ZIndex = 30,
@@ -91,6 +92,28 @@ local function sheet(width: number, height: number, keepClear: boolean?): Frame
 
 	current = frame
 	return frame
+end
+
+-- 🚪 옥상·눈치 스트리트 게임 창: 캐릭터가 그 자리(station)에서 range보다 멀어지거나, 쓰러지면 창을 저절로 닫아요
+--   (닫히면 frame.Destroying이 불려서 각 창이 바꿔 둔 것(카메라·걸음 속도)을 되돌려요)
+local function closeWhenAway(frame: GuiObject, station: any, range: number)
+	if typeof(station) ~= "Vector3" then
+		return -- (서버가 자리를 안 알려 줬으면 그냥 둬요)
+	end
+	task.spawn(function()
+		while current == frame and frame.Parent do
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if not root or not humanoid or humanoid.Health <= 0 or (root.Position - station).Magnitude > range then
+				if current == frame then
+					close()
+				end
+				return
+			end
+			task.wait(0.25)
+		end
+	end)
 end
 
 local function line(parent: Instance, y: number, height: number, content: string, props: { [string]: any }?): TextLabel
@@ -320,7 +343,8 @@ function Panels.showShop(startTab: string?)
 	local gifts = SalaryConfig.StreetShops.store.items
 	local coupons = SalaryConfig.Coupons
 	local certs = SalaryConfig.Certificates
-	local rowsMax = math.max(#items, #gifts, #coupons, #certs)
+	local guardGifts = SalaryConfig.GuardBribes -- 👮 경비원 선물 (🎒에 보관)
+	local rowsMax = math.max(#items, #gifts, #coupons, #certs, #guardGifts)
 	local frame = sheet(560, 170 + rowsMax * 64)
 	line(frame, 0, 30, "🏪 사내 매점", { Font = Enum.Font.GothamBlack, TextSize = 24 })
 	local balance = line(frame, 0, 30, "", {
@@ -352,12 +376,12 @@ function Panels.showShop(startTab: string?)
 		message.Text = if id == "gifts" then "🎁 산 선물은 부장님께 다가가 [E] 말 걸기로 드려요" elseif id == "coupons" then "🎟️ 쿠폰은 사자마자 바로 써요!" elseif id == "certs" then `📚 퀴즈 {SalaryConfig.CERT_QUESTIONS}문제 중 {SalaryConfig.CERT_PASS}문제 맞히면 합격 · 시험은 하루 한 번` else ""
 		message.TextColor3 = MUTED
 	end
-	for i, info in { { "goods", "🧰 사무용품" }, { "gifts", "🎁 부장님 선물" }, { "coupons", "🎟️ 특수 쿠폰" }, { "certs", "📚 자격증" } } do
+	for i, info in { { "goods", "🧰 사무용품" }, { "gifts", "🎁 부장님 선물" }, { "guard", "👮 경비원 선물" }, { "coupons", "🎟️ 특수 쿠폰" }, { "certs", "📚 자격증" } } do
 		local b = Ui.button({
-			Position = UDim2.fromOffset((i - 1) * 130, 36),
-			Size = UDim2.fromOffset(124, 34),
+			Position = UDim2.fromOffset((i - 1) * 104, 36),
+			Size = UDim2.fromOffset(100, 34),
 			Text = info[2],
-			TextSize = 16,
+			TextSize = 13,
 			ZIndex = 31,
 			Parent = frame,
 		})
@@ -419,6 +443,18 @@ function Panels.showShop(startTab: string?)
 			message.Text = result.message
 			message.TextColor3 = if result.ok then Color3.fromRGB(40, 140, 70) else RED
 			Sounds.play(if result.ok then "ping" else "bass", 0.6, 1.2)
+		end)
+	end
+	-- 👮 경비원 선물 (사서 🎒에 보관 → 경비원 앞에서 [E]로 드려요)
+	local guardPage = page("guard")
+	for i, gift in guardGifts do
+		local buy = row(guardPage, i, `{gift.emoji} {gift.name} · {comma(gift.price)}원`, `🙈 경비원이 {SalaryConfig.gameDurationText(gift.minutes)} 동안 못 본 척 · 🎒에 보관`)
+		buy.Text = "사기"
+		buy.Activated:Connect(function()
+			local ok, result = Remotes.BuyGuardGift:InvokeServer(gift.id)
+			message.Text = result
+			message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
+			Sounds.play(if ok then "ping" else "bass", 0.6, 1.2)
 		end)
 	end
 	-- 📚 자격증 (응시 → 시험 창)
@@ -570,6 +606,24 @@ function Panels.showBag()
 	end
 
 	-- ⚡ 소모품과 들고 있는 것
+	-- 👮 경비원 선물 (🏪 사내 매점에서 사서 보관)
+	header("👮 경비원 선물")
+	local okGifts, myGifts = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("GuardGifts") or "{}")
+	end)
+	myGifts = if okGifts and typeof(myGifts) == "table" then myGifts else {}
+	local anyGift = false
+	for _, gift in SalaryConfig.GuardBribes do
+		local n = myGifts[gift.id] or 0
+		if n > 0 then
+			anyGift = true
+			entry(`{gift.emoji} {gift.name} x{n}`, `👮 경비원 앞에서 [E] → {SalaryConfig.gameDurationText(gift.minutes)} 동안 못 본 척`, true)
+		end
+	end
+	if not anyGift then
+		entry("🎁 경비원 선물 없음", "🏪 사내 매점 [👮 경비원 선물] 탭에서 사 둘 수 있어요", false)
+	end
+
 	header("🖐️ 쓰는 물건")
 	local energy = player:GetAttribute("Energy") or 0
 	local energyActive = player:GetAttribute("EnergyActive") == true
@@ -610,9 +664,21 @@ function Panels.showBag()
 		total += count
 	end
 	entry(`🧸 인형 {total}개 ({kinds}/{#SalaryConfig.Plushies}종)`, "🧸 버튼에서 보고, 책상에 3개까지 진열할 수 있어요", total > 0, "보기", function()
-		Panels.showPlushies()
+		Panels.showPlushies(Panels.showBag) -- (◀ 뒤로 누르면 소지품으로 돌아와요)
 	end)
 	entry(`🎟️ 오락실 티켓 {player:GetAttribute("Tickets") or 0}장`, "눈치 스트리트 오락실 경품 교환대에서 써요", (player:GetAttribute("Tickets") or 0) > 0)
+	-- 🏋️ 체력 스탯 (지금은 숫자만 쌓여요 — 효과는 다음 업데이트!)
+	local okFit, fitness = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("Fitness") or "{}")
+	end)
+	fitness = if okFit and typeof(fitness) == "table" then fitness else {}
+	local fitParts, fitTotal = {}, 0
+	for _, stat in SalaryConfig.FitnessStats do
+		local value = tonumber(fitness[stat.id]) or 0
+		fitTotal += value
+		table.insert(fitParts, `{stat.emoji} {stat.name} {value}`)
+	end
+	entry(`🏋️ 체력  {table.concat(fitParts, " · ")}`, "사무실 뒤 🏋️ 체력 단련실 운동기구에서 키워요 (효과는 곧 공개!)", fitTotal > 0)
 
 	button(frame, 0, "닫기", close)
 	Sounds.play("swoosh", 0.4)
@@ -936,7 +1002,7 @@ function Panels.showCollection()
 			table.insert(actions, actionId)
 		end
 	end
-	for _, stateId in { "toilet", "candy", "coffee", "meeting", "rooftop", "lounger", "hiding", "docs", "chat", "ramen" } do
+	for _, stateId in { "toilet", "candy", "coffee", "meeting", "rooftop", "street", "lounger", "hiding", "gym", "docs", "chat", "ramen" } do
 		table.insert(actions, stateId)
 	end
 
@@ -1027,7 +1093,21 @@ function Panels.showCollection()
 	found += heardTopics
 	total += #ChatTopics.Topics
 	line(left, 226, 22, `💬 수다 주제 {heardTopics}/{#ChatTopics.Topics}`, { Font = Enum.Font.GothamBold, TextSize = 16 })
-	line(left, 250, 40, "동료마다 전용 주제가 있어요. 수다를 끝까지 들으면 기록돼요!", { TextSize = 13, TextColor3 = MUTED })
+	-- 🤝 친한 동료 (❤️ 개수)
+	local friendship = {}
+	pcall(function()
+		friendship = HttpService:JSONDecode(player:GetAttribute("Friendship") or "{}")
+	end)
+	local friends = {}
+	for _, name in SalaryConfig.CoworkerNames do
+		local level = SalaryConfig.friendLevel(friendship[name])
+		if level > 0 then
+			table.insert(friends, `{name} {string.rep("❤️", level)}`)
+		end
+	end
+	line(left, 250, 40, if #friends > 0
+		then "🤝 " .. table.concat(friends, " · ")
+		else "🤝 수다를 끝까지 하고 맞장구를 잘 치면 동료와 친해져요 (❤️ 4개까지)", { TextSize = 13, TextColor3 = MUTED })
 
 	title.Text = `📖 농땡이 도감 ({found}/{total})`
 	button(frame, 0, "닫기", close)
@@ -1289,7 +1369,11 @@ local planeSettings = {
 	aim = SalaryConfig.PLANE_AIM.default,
 }
 
-function Panels.showPlane()
+-- 🗺️ 최근에 떨어진 곳 (창을 닫았다 열어도 기억) { forward, side, onBuilding }
+local planeLandings: { { forward: number, side: number, onBuilding: boolean } } = {}
+local PLANE_LANDINGS_KEPT = 5
+
+function Panels.showPlane(station: any)
 	local frame = sheet(360, 470)
 	frame.AnchorPoint = Vector2.new(1, 0.5)
 	frame.Position = UDim2.new(1, -20, 0.5, 0)
@@ -1355,9 +1439,75 @@ function Panels.showPlane()
 		BackgroundTransparency = 1,
 		Text = "✈️",
 		TextSize = 13,
+		Rotation = -45, -- ✈️ 이모지는 오른쪽 위를 보고 있어서, 똑바로 위(과녁 쪽)를 보게 돌려요
 		ZIndex = 34,
 		Parent = map,
 	})
+	-- 📍 떨어진 곳: 예전 것은 흐린 점, 방금 것은 빨간 X (길바닥이면 지도 가장자리에 붙여요)
+	local landingDots = {}
+	for i = 1, PLANE_LANDINGS_KEPT - 1 do
+		landingDots[i] = Ui.make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.fromOffset(6, 6),
+			BackgroundColor3 = Color3.fromRGB(255, 200, 190),
+			BorderSizePixel = 0,
+			Visible = false,
+			ZIndex = 34,
+			Parent = map,
+		}, { Ui.corner(3) })
+	end
+	local landingMark = Ui.make("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Size = UDim2.fromOffset(16, 16),
+		BackgroundTransparency = 1,
+		Text = "X",
+		TextColor3 = Color3.fromRGB(255, 70, 60),
+		TextStrokeTransparency = 0.2,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 15,
+		Visible = false,
+		ZIndex = 36,
+		Parent = map,
+	})
+	local mapNote = Ui.make("TextLabel", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -4, 0, 2),
+		Size = UDim2.fromOffset(150, 14),
+		BackgroundTransparency = 1,
+		Text = "",
+		TextColor3 = Color3.fromRGB(255, 220, 120),
+		TextStrokeTransparency = 0.4,
+		Font = Enum.Font.GothamBold,
+		TextSize = 10,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		ZIndex = 36,
+		Parent = map,
+	})
+	local function landingPoint(landing): UDim2
+		-- 지도 밖(길바닥·너무 멀리)이면 가장자리 안쪽으로 당겨서 보여 줘요
+		return mapPoint(math.clamp(landing.forward, 0, MAP_FORWARD - 2), math.clamp(landing.side, -MAP_SIDE + 3, MAP_SIDE - 3))
+	end
+	local function drawLandings()
+		local count = #planeLandings
+		for i, dot in landingDots do
+			local landing = planeLandings[count - i] -- (방금 것 바로 전부터 거꾸로)
+			dot.Visible = landing ~= nil
+			if landing then
+				dot.Position = landingPoint(landing)
+				dot.BackgroundTransparency = 0.25 + i * 0.12
+				dot.BackgroundColor3 = if landing.onBuilding then Color3.fromRGB(255, 200, 190) else Color3.fromRGB(170, 170, 180)
+			end
+		end
+		local latest = planeLandings[count]
+		landingMark.Visible = latest ~= nil
+		if latest then
+			landingMark.Position = landingPoint(latest)
+		end
+	end
+	drawLandings()
+	if #planeLandings > 0 then
+		mapNote.Text = "X = 지난번 떨어진 곳"
+	end
 	local DOTS = 8
 	local mapDots = {}
 	for i = 1, DOTS do
@@ -1483,6 +1633,43 @@ function Panels.showPlane()
 	onAim(updatePreview)
 	updatePreview()
 
+	-- 🎥 발사 시점: 발사대 뒤·위에서 건너편 빌딩 🎯 과녁 쪽을 봐요 (창이 닫히면 어떤 이유든 원래 카메라로)
+	local cameraMoved = false
+	local cameraTween: Tween? = nil
+	local function launchView(r)
+		local camera = workspace.CurrentCamera
+		if cameraMoved or not camera or typeof(r.launch) ~= "Vector3" or typeof(r.target) ~= "Vector3" then
+			return
+		end
+		local forward = if typeof(r.forward) == "Vector3" then r.forward else Vector3.new(0, 0, -1)
+		local right = forward:Cross(Vector3.yAxis)
+		local eye = r.launch - forward * 9 + right * 3 + Vector3.new(0, 7, 0)
+		-- 오른쪽에 창이 있으니 과녁이 화면 왼쪽·가운데쯤 오게 살짝 오른쪽을 봐요
+		local look = r.target + right * 14 + Vector3.new(0, 4, 0)
+		cameraMoved = true
+		camera.CameraType = Enum.CameraType.Scriptable
+		cameraTween = TweenService:Create(camera, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { CFrame = CFrame.lookAt(eye, look) })
+		cameraTween:Play()
+	end
+	local function restoreCamera()
+		if not cameraMoved then
+			return
+		end
+		cameraMoved = false
+		if cameraTween then
+			cameraTween:Cancel()
+			cameraTween = nil
+		end
+		local camera = workspace.CurrentCamera
+		if camera then
+			camera.CameraType = Enum.CameraType.Custom
+			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				camera.CameraSubject = humanoid
+			end
+		end
+	end
+
 	-- 🌬️ 바람 받아 오기 (던질 때까지 같은 바람이에요)
 	local function fetchWind()
 		local r = Remotes.PlaneThrow:InvokeServer("begin")
@@ -1498,6 +1685,7 @@ function Panels.showPlane()
 		windLabel.TextColor3 = INK
 		spot = { start = r.start, launch = r.launch, roofY = r.roofY }
 		updatePreview()
+		launchView(r)
 	end
 
 	local busy = false
@@ -1523,9 +1711,24 @@ function Panels.showPlane()
 		result.Text = "✈️ 날아가는 중…"
 		result.TextColor3 = MUTED
 		task.delay(r.duration, function()
+			-- 📍 떨어진 곳 기억 (창을 닫았어도 다음에 열면 지도에 보여요 · 되돌아온 건 빼요)
+			if not r.boomerang and typeof(r.forward) == "number" and typeof(r.side) == "number" then
+				table.insert(planeLandings, { forward = r.forward, side = r.side, onBuilding = r.onBuilding == true })
+				while #planeLandings > PLANE_LANDINGS_KEPT do
+					table.remove(planeLandings, 1)
+				end
+			end
 			if current ~= frame then
 				return
 			end
+			if r.boomerang then
+				mapNote.Text = "🔄 되돌아와서 착지 없음"
+			elseif r.onBuilding then
+				mapNote.Text = if r.hitTarget then "🎯 X = 과녁 명중!" else "X = 방금 떨어진 곳"
+			else
+				mapNote.Text = "X = 길바닥 (옥상 밖)"
+			end
+			drawLandings()
 			local lines = { r.label }
 			if r.distance > 0 then
 				table.insert(lines, `{math.floor(r.distance)}m` .. (if r.record then " · 🏆 내 최고 기록!" else ` · 내 최고 {r.best or 0}m`))
@@ -1567,12 +1770,14 @@ function Panels.showPlane()
 	frame.Destroying:Connect(function()
 		keyConnection:Disconnect()
 		worldDots:Destroy()
+		restoreCamera() -- 🎥 닫기 버튼 · 다른 창 · 멀어짐 · 쓰러짐 모두 여기로 와요
 	end)
+	closeWhenAway(frame, station, 11) -- 🚪 발사대에서 11칸 넘게 멀어지면 닫혀요 (서버는 12칸까지 받아요)
 	Sounds.play("swoosh", 0.4)
 	task.spawn(fetchWind)
 end
-Remotes:WaitForChild("PlaneOpen").OnClientEvent:Connect(function()
-	Panels.showPlane()
+Remotes:WaitForChild("PlaneOpen").OnClientEvent:Connect(function(station)
+	Panels.showPlane(station)
 end)
 
 ---------------------------------------------------------------------------
@@ -1695,8 +1900,9 @@ player:GetAttributeChangedSignal("GardenToday"):Connect(renderGarden)
 ReplicatedStorage:GetAttributeChangedSignal("GardenSlots"):Connect(renderGarden)
 task.defer(renderGarden)
 
-function Panels.showGarden()
+function Panels.showGarden(station: any)
 	local frame = sheet(380, 560)
+	closeWhenAway(frame, station, 11) -- 🚪 화분에서 11칸 넘게 멀어지면 닫혀요 (서버는 12칸까지 받아요)
 	frame.AnchorPoint = Vector2.new(1, 0.5)
 	frame.Position = UDim2.new(1, -20, 0.5, 0)
 	line(frame, 0, 30, "🌱 직장인 텃밭", { Font = Enum.Font.GothamBlack, TextSize = 24 })
@@ -1843,8 +2049,8 @@ function Panels.showGarden()
 	end)
 	Sounds.play("swoosh", 0.4)
 end
-Remotes:WaitForChild("GardenOpen").OnClientEvent:Connect(function()
-	Panels.showGarden()
+Remotes:WaitForChild("GardenOpen").OnClientEvent:Connect(function(station)
+	Panels.showGarden(station)
 end)
 
 ---------------------------------------------------------------------------
@@ -1861,9 +2067,11 @@ end
 
 local RARITY_TEXT = { common = "흔함", rare = "희귀", legend = "전설" }
 
+local scopeStation: Vector3? = nil -- 🔭 망원경 자리 (서버가 열 때 알려 줘요 · 멀어지면 창을 닫는 기준)
 function Panels.showScopeLog(fromScope: boolean?)
 	local frame = sheet(600, 520)
 	if fromScope then
+		closeWhenAway(frame, scopeStation, 11) -- 🚪 망원경에서 열었을 때만: 멀어지면 닫혀요
 		-- 🔭 망원경에서 열었으면 바로 다시 볼 수 있게
 		button(frame, 0, "🔭 다시 엿보기", function()
 			Panels.showScope()
@@ -1893,7 +2101,10 @@ function Panels.showScopeLog(fromScope: boolean?)
 end
 
 local scopeSavedSpeed: number? = nil -- 🔭 엿보기 전 걸음 속도 (여러 번 열어도 처음 값만 기억)
-function Panels.showScope()
+function Panels.showScope(station: any)
+	if typeof(station) == "Vector3" then
+		scopeStation = station
+	end
 	if current and current:GetAttribute("Scope") then
 		return -- 이미 엿보는 중 ([E]를 또 눌러도 무시)
 	end
@@ -2122,12 +2333,16 @@ function Panels.showScope()
 		if humanoid and humanoid.Parent and not (current and current:GetAttribute("Scope")) then
 			humanoid.WalkSpeed = scopeSavedSpeed or 16
 			scopeSavedSpeed = nil
+		elseif not (humanoid and humanoid.Parent) then
+			scopeSavedSpeed = nil -- (쓰러져서 캐릭터가 바뀌었으면 새 캐릭터 속도를 다음에 다시 기억해요)
 		end
 	end)
+	-- 🚪 망원경에서 멀어지거나(엘리베이터 등) 쓰러지면 닫혀요 → 위 반복이 끝나면서 걸음 속도도 되돌려요
+	closeWhenAway(overlay, scopeStation, 11)
 	Sounds.play("swoosh", 0.5, 0.8)
 end
-Remotes:WaitForChild("ScopeOpen").OnClientEvent:Connect(function()
-	Panels.showScope()
+Remotes:WaitForChild("ScopeOpen").OnClientEvent:Connect(function(station)
+	Panels.showScope(station)
 end)
 
 ---------------------------------------------------------------------------
@@ -2383,8 +2598,9 @@ end)
 
 local HOOP_TEXT = { swish = "🎯 클린슛!", make = "🏀 골인!", rim = "😫 림 맞고 튕김…", miss = "💨 에어볼…" }
 
-function Panels.showHoop()
+function Panels.showHoop(station: any)
 	local frame = sheet(340, 380)
+	closeWhenAway(frame, station, 12.5) -- 🚪 자유투 라인에서 12.5칸 넘게 멀어지면 닫혀요 (서버는 13칸까지 받아요 · 공 거치대 [E] 거리 포함)
 	frame.AnchorPoint = Vector2.new(1, 0.5)
 	frame.Position = UDim2.new(1, -20, 0.5, 0)
 	line(frame, 0, 30, "🏀 옥상 농구", { Font = Enum.Font.GothamBlack, TextSize = 24 })
@@ -2530,8 +2746,8 @@ function Panels.showHoop()
 	refresh()
 	start()
 end
-Remotes:WaitForChild("HoopOpen").OnClientEvent:Connect(function()
-	Panels.showHoop()
+Remotes:WaitForChild("HoopOpen").OnClientEvent:Connect(function(station)
+	Panels.showHoop(station)
 end)
 
 ---------------------------------------------------------------------------
@@ -2775,7 +2991,7 @@ function Panels.showExam(certId: string)
 end
 
 -- 🐦 옥상 비둘기 관찰 노트
-Remotes:WaitForChild("PigeonBook").OnClientEvent:Connect(function()
+Remotes:WaitForChild("PigeonBook").OnClientEvent:Connect(function(station)
 	local ok, seen = pcall(function()
 		return HttpService:JSONDecode(player:GetAttribute("Pigeons") or "{}")
 	end)
@@ -2801,6 +3017,9 @@ Remotes:WaitForChild("PigeonBook").OnClientEvent:Connect(function()
 			.. (if nextLevel then ` · 다음 단계까지 {nextLevel.feeds - feeds}번` else " · 최고 단계!"),
 		lines = lines,
 	})
+	if current then
+		closeWhenAway(current, station, 10) -- 🚪 모이 상자에서 멀어지면 노트가 닫혀요
+	end
 end)
 
 -- 🐦 비둘기가 놀라서 날아갔어요 = 부장님이 곧 와요!
@@ -3194,7 +3413,8 @@ local function showClaw()
 		status.TextColor3 = INK
 	end)
 
-	actionButton.Activated:Connect(function()
+	-- 버튼을 "뗄 때"가 아니라 "누르는 순간" 멈춰요 (Activated는 손을 뗄 때라 늦게 느껴져요)
+	actionButton.MouseButton1Down:Connect(function()
 		if stage == "x" then
 			local now = workspace:GetServerTimeNow()
 			if now < session.start then
@@ -3217,6 +3437,12 @@ local function showClaw()
 				return
 			end
 			stage = "busy"
+			-- ⚡ 누른 순간 그 자리에 바로 멈춰요 (판정은 서버가 같은 시각으로 다시 계산)
+			claw.Position = toBox(
+				SalaryConfig.clawPosition(stopX - session.start, session.periodX),
+				SalaryConfig.clawPosition(math.max(0, now - stopX - SalaryConfig.CLAW_GAP), session.periodZ)
+			)
+			Sounds.play("click", 0.5, 1.4)
 			local result = Remotes.Claw:InvokeServer("drop", now)
 			if not result.ok then
 				stage = "idle"
@@ -3301,9 +3527,13 @@ Remotes:WaitForChild("ClawOpen").OnClientEvent:Connect(showClaw)
 ---------------------------------------------------------------------------
 -- 🧸 내 인형 (눌러서 책상에 진열)
 ---------------------------------------------------------------------------
-function Panels.showPlushies()
+-- backTo: 다른 창(🎒 소지품 등)에서 열었으면 아래에 [◀ 뒤로] 버튼을 달아 그 창으로 돌아가요
+function Panels.showPlushies(backTo: (() -> ())?)
 	local plushRows = math.ceil(#SalaryConfig.Plushies / 3)
-	local frame = sheet(540, 90 + plushRows * 92)
+	local frame = sheet(540, 90 + plushRows * 92 + (if backTo then 52 else 0))
+	if backTo then
+		button(frame, 0, "◀ 소지품으로", backTo)
+	end
 	line(frame, 0, 32, "🧸 내 인형", { Font = Enum.Font.GothamBlack, TextSize = 26 })
 	line(frame, 34, 22, `눌러서 책상에 진열하기 (최대 {SalaryConfig.DESK_PLUSH_MAX}개) · 눈치 스트리트 인형뽑기에서 뽑아요`, { TextSize = 14, TextColor3 = MUTED })
 	local cards = {}
@@ -3939,216 +4169,552 @@ end
 Remotes:WaitForChild("WheelOpen").OnClientEvent:Connect(showWheel)
 
 ---------------------------------------------------------------------------
--- 🎈 풍선 다트 (서버가 경품과 손 떨림을 정하고, 화면은 노린 풍선 번호만 보내요)
+-- 🎯 끌어서 던지기 풍선 다트 (풍선 벽·경품은 서버가 정하고, 화면은 각도·힘·놓은 시각만 보내요)
+--   판 아무 데나 누른 채 뒤로(아래로) 끌었다가 놓으면 반대쪽으로 슝! (새총처럼, 많이 당길수록 세게)
+--   날아가는 길은 서버와 같은 공식(SalaryConfig.dartFlight)이라 화면에서 본 그대로 맞아요
 ---------------------------------------------------------------------------
 local function showDart()
-	local W, H = 420, 300 -- SalaryConfig.DART_ASPECT와 같은 비율
-	local frame = sheet(520, 560)
-	line(frame, 0, 32, "🎈 풍선 다트", { Font = Enum.Font.GothamBlack, TextSize = 26 })
-	line(frame, 34, 40, `{comma(SalaryConfig.DART_PRICE)}원에 다트 {SalaryConfig.DART_COUNT}개! 노릴 풍선을 콕 누르면 던져요. 손이 떨려서 동그라미 안 어딘가에 꽂혀요\n풍선 속엔 꽝, 돈, 티켓, 인형… 아주 가끔 전설 인형도!`, {
-		TextSize = 14,
+	local RunService = game:GetService("RunService")
+	local FIELD_W, FIELD_H = SalaryConfig.DART_FIELD_W, SalaryConfig.DART_FIELD_H
+	local ORIGIN = SalaryConfig.DART_ORIGIN
+	local MIN_ANGLE = SalaryConfig.DART_MIN_ANGLE
+	local frame = sheet(420, 480)
+	line(frame, 0, 28, "🎯 풍선 다트", { Font = Enum.Font.GothamBlack, TextSize = 24 })
+	line(frame, 28, 32, "판을 누른 채 아래로 끌었다 놓으면 다트가 슝! 많이 당길수록 세게\n맞힌 풍선에 써 있는 경품을 받아요 · 🧸 풍선은 가끔 전설 인형!", {
+		TextSize = 12,
 		TextColor3 = MUTED,
 	})
-	local board = Ui.make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 82),
-		Size = UDim2.fromOffset(W, H),
-		BackgroundColor3 = Color3.fromRGB(240, 230, 210),
+	-- 풍선 벽 (하늘색 판, 넘어가는 다트는 잘려 보여요)
+	local field = Ui.make("Frame", {
+		Position = UDim2.fromOffset(0, 62),
+		Size = UDim2.fromOffset(FIELD_W, FIELD_H),
+		BackgroundColor3 = Color3.fromRGB(165, 220, 255),
+		ClipsDescendants = true,
 		ZIndex = 31,
 		Parent = frame,
-	}, { Ui.corner(10), Ui.stroke(Color3.fromRGB(150, 110, 70), 3) })
-	local colors = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 200, 60), Color3.fromRGB(90, 180, 255), Color3.fromRGB(120, 220, 120) }
-	local status = line(frame, 0, 40, "▶ 시작을 눌러 주세요!", {
-		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 0, 1, -62),
-		TextSize = 17,
+	}, { Ui.stroke(Color3.fromRGB(150, 110, 70), 3) })
+	Ui.make("Frame", { -- 아래 나무 받침대
+		Position = UDim2.fromOffset(0, FIELD_H - 26),
+		Size = UDim2.fromOffset(FIELD_W, 26),
+		BackgroundColor3 = Color3.fromRGB(190, 140, 90),
+		BorderSizePixel = 0,
+		ZIndex = 32,
+		Parent = field,
+	})
+	-- 고무줄·당긴 다트는 판 밖(아래)으로도 보여야 해서 안 잘리는 층에 그려요
+	local overlay = Ui.make("Frame", {
+		Position = field.Position,
+		Size = field.Size,
+		BackgroundTransparency = 1,
+		ZIndex = 31,
+		Parent = frame,
+	})
+	-- 누르고 끄는 곳 (판 전체)
+	local grab = Ui.make("Frame", {
+		Position = field.Position,
+		Size = field.Size,
+		BackgroundTransparency = 1,
+		Active = true,
+		ZIndex = 50,
+		Parent = frame,
+	})
+	local status = line(frame, 356, 40, "풍선 벽 가져오는 중…", {
+		TextSize = 14,
 		Font = Enum.Font.GothamBold,
 		TextXAlignment = Enum.TextXAlignment.Center,
 	})
-	local startButton = Ui.button({
+	local mainButton = Ui.button({
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, 0),
-		Size = UDim2.fromOffset(260, 52),
-		Text = `▶ 시작 ({comma(SalaryConfig.DART_PRICE)}원)`,
-		TextSize = 20,
+		Size = UDim2.fromOffset(260, 42),
+		Text = "…",
+		TextSize = 18,
 		ZIndex = 31,
 		Parent = frame,
 	})
-	-- 🤚 손 떨림 동그라미: 마우스를 올린 풍선 둘레에 "이 안 어딘가에 꽂혀요"를 보여 줘요
-	local ring = Ui.make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		BackgroundColor3 = Color3.fromRGB(220, 30, 30),
-		BackgroundTransparency = 0.85,
-		Visible = false,
-		ZIndex = 36,
-		Parent = board,
-	}, { Ui.corner(999), Ui.stroke(Color3.fromRGB(220, 30, 30), 2) })
-	local run: any = nil
-	local throwing = false
-	local PRIZE_EMOJI = { legend = "🌟" }
-	for _, prize in SalaryConfig.DartPrizes do
-		PRIZE_EMOJI[prize.id] = prize.emoji
-	end
-	local SHAKE = { "🤚 손 떨림 작음", "🤚 손 떨림 보통", "🤚 손 떨림 큼 (마지막!)" }
 
-	local function dartNumber(): number
-		return if run then SalaryConfig.DART_COUNT - run.left + 1 else 1
+	-- 🪵 새총 기둥 두 개 + 고무줄 두 가닥
+	local POST_L, POST_R = ORIGIN + Vector2.new(-22, -4), ORIGIN + Vector2.new(22, -4)
+	for _, post in { POST_L, POST_R } do
+		Ui.make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.fromOffset(post.X, post.Y),
+			Size = UDim2.fromOffset(6, FIELD_H - post.Y),
+			BackgroundColor3 = Color3.fromRGB(120, 80, 45),
+			BorderSizePixel = 0,
+			ZIndex = 41,
+			Parent = overlay,
+		}, { Ui.corner(3) })
 	end
-	local function showRing(index: number)
-		if not run then
-			ring.Visible = false
-			return
-		end
-		local cols, rows = SalaryConfig.DART_COLS, SalaryConfig.DART_ROWS
-		local col, row = (index - 1) % cols, math.floor((index - 1) / cols)
-		local radius = SalaryConfig.DART_SCATTER[dartNumber()] or SalaryConfig.DART_SCATTER[#SalaryConfig.DART_SCATTER]
-		ring.Position = UDim2.fromScale((col + 0.5) / cols, (row + 0.5) / rows)
-		ring.Size = UDim2.fromOffset(radius * 2 * W, radius * 2 * W)
-		ring.Visible = true
-	end
-	local function aimText()
-		local n = dartNumber()
-		status.Text = `🎯 다트 {n}/{SalaryConfig.DART_COUNT} · {SHAKE[n] or SHAKE[#SHAKE]} · 풍선을 콕!`
-		status.TextColor3 = INK
-	end
-
-	local balloons: { TextButton } = {}
-	local throwAt: (number) -> () -- 아래에서 채워요 (풍선을 누르면 던지기)
-	local function resetBalloons()
-		for _, b in balloons do
-			b:Destroy()
-		end
-		table.clear(balloons)
-		for _, mark in board:GetChildren() do
-			if mark.Name == "DartMark" then
-				mark:Destroy()
-			end
-		end
-		for row = 0, SalaryConfig.DART_ROWS - 1 do
-			for col = 0, SalaryConfig.DART_COLS - 1 do
-				local index = row * SalaryConfig.DART_COLS + col + 1
-				local balloon = Ui.make("TextButton", {
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					Position = UDim2.fromScale((col + 0.5) / SalaryConfig.DART_COLS, (row + 0.5) / SalaryConfig.DART_ROWS),
-					Size = UDim2.fromOffset(SalaryConfig.DART_HIT_X * 2 * W, SalaryConfig.DART_HIT_Y * 2 * H),
-					BackgroundColor3 = colors[(row + col) % #colors + 1],
-					TextColor3 = Color3.fromRGB(40, 30, 30),
-					Font = Enum.Font.GothamBold,
-					TextScaled = true,
-					Text = "",
-					AutoButtonColor = false,
-					ZIndex = 32,
-					Parent = board,
-				}, { Ui.corner(40) })
-				balloon.MouseEnter:Connect(function()
-					if balloon.Text == "" then
-						showRing(index)
-					end
-				end)
-				balloon.MouseLeave:Connect(function()
-					ring.Visible = false
-				end)
-				balloon.MouseButton1Down:Connect(function()
-					throwAt(index)
-				end)
-				balloons[index] = balloon
-			end
-		end
-	end
-	resetBalloons()
-
-	startButton.Activated:Connect(function()
-		if run or throwing then
-			return
-		end
-		local result = Remotes.Dart:InvokeServer("start")
-		if current ~= frame then
-			return
-		end
-		if not result.ok then
-			status.Text = result.message
-			status.TextColor3 = RED
-			return
-		end
-		resetBalloons()
-		run = result
-		startButton.Text = "🎯 풍선을 골라요!"
-		aimText()
-	end)
-
-	throwAt = function(index: number)
-		if not run or throwing then
-			return
-		end
-		local balloon = balloons[index]
-		if not balloon or balloon.Text ~= "" then
-			return -- 이미 터진 풍선
-		end
-		throwing = true
-		showRing(index) -- 폰에서도 어디쯤 꽂힐지 잠깐 보여 줘요
-		Sounds.play("swoosh", 0.4, 1.3)
-		local result = Remotes.Dart:InvokeServer("throw", index)
-		throwing = false
-		ring.Visible = false
-		if current ~= frame then
-			return
-		end
-		if not result.ok then
-			status.Text = result.message
-			status.TextColor3 = RED
-			return
-		end
-		run.left = result.left
-		-- 다트 자국
-		Ui.make("TextLabel", {
-			Name = "DartMark",
+	local function makeBand(): Frame
+		return Ui.make("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(result.x, result.y),
-			Size = UDim2.fromOffset(22, 22),
-			BackgroundTransparency = 1,
-			Text = "📍",
-			TextScaled = true,
-			ZIndex = 37,
-			Parent = board,
+			BackgroundColor3 = Color3.fromRGB(200, 60, 50),
+			BorderSizePixel = 0,
+			Visible = false,
+			ZIndex = 42,
+			Parent = overlay,
 		})
-		local hit = result.balloon and balloons[result.balloon]
-		if hit then
-			Sounds.play(if result.prizeId == "none" then "bass" else "ping", 0.6, 1.3)
-			hit.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			hit.BackgroundTransparency = 0.3
-			hit.Text = PRIZE_EMOJI[result.prizeId] or "?"
-			status.Text = (if result.balloon ~= index then "😮 옆 풍선이 펑! " else "💥 펑! ") .. result.prizeName
-			status.TextColor3 = if result.prizeId == "none" then MUTED else Color3.fromRGB(40, 140, 70)
-			if result.prizeId == "legend" then
-				Hud.popup(`🎈 {result.prizeName}`, Color3.fromRGB(255, 210, 80), 3)
-			end
-		else
-			status.Text = "손이 떨려서 빗나갔어요! 벽에 콕 😅"
-			status.TextColor3 = RED
-			Sounds.play("bass", 0.3, 1.6)
+	end
+	local bandL, bandR = makeBand(), makeBand()
+	-- 두 점 사이에 선 긋기
+	local function setLine(bar: Frame, a: Vector2, b: Vector2, thickness: number)
+		local middle = (a + b) / 2
+		local delta = b - a
+		bar.Position = UDim2.fromOffset(middle.X, middle.Y)
+		bar.Size = UDim2.fromOffset(delta.Magnitude, thickness)
+		bar.Rotation = math.deg(math.atan2(delta.Y, delta.X))
+	end
+
+	-- 🎯 다트 (오른쪽 끝이 뾰족한 끝 → 날아가는 방향으로 돌려요)
+	local DART_LEN = 34
+	local dart = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Size = UDim2.fromOffset(DART_LEN, 10),
+		BackgroundTransparency = 1,
+		ZIndex = 44,
+		Parent = overlay,
+	}, {
+		Ui.make("Frame", { -- 깃털
+			Position = UDim2.fromOffset(0, 0),
+			Size = UDim2.fromOffset(8, 10),
+			BackgroundColor3 = Color3.fromRGB(255, 200, 60),
+			BorderSizePixel = 0,
+			ZIndex = 44,
+		}),
+		Ui.make("Frame", { -- 몸통
+			Position = UDim2.fromOffset(6, 3),
+			Size = UDim2.fromOffset(22, 4),
+			BackgroundColor3 = Color3.fromRGB(70, 70, 80),
+			BorderSizePixel = 0,
+			ZIndex = 45,
+		}),
+		Ui.make("Frame", { -- 뾰족한 끝
+			Position = UDim2.fromOffset(DART_LEN - 7, 2),
+			Size = UDim2.fromOffset(7, 6),
+			BackgroundColor3 = Color3.fromRGB(220, 50, 50),
+			BorderSizePixel = 0,
+			ZIndex = 45,
+		}, { Ui.corner(3) }),
+	})
+	-- tip = 뾰족한 끝 자리, direction = 향하는 방향
+	local function placeDart(tip: Vector2, direction: Vector2)
+		local unit = if direction.Magnitude > 0.001 then direction.Unit else Vector2.new(0, -1)
+		local center = tip - unit * (DART_LEN / 2)
+		dart.Position = UDim2.fromOffset(center.X, center.Y)
+		dart.Rotation = math.deg(math.atan2(unit.Y, unit.X))
+	end
+
+	-- 겨냥 점선 (처음 조금만 보여 줘요 → 나머지 포물선은 감으로!)
+	local GUIDE_DOTS, GUIDE_GAP = 6, 0.02
+	local dots: { Frame } = {}
+	for i = 1, GUIDE_DOTS do
+		dots[i] = Ui.make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.fromOffset(6, 6),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundTransparency = 0.1 + i * 0.1,
+			BorderSizePixel = 0,
+			Visible = false,
+			ZIndex = 43,
+			Parent = field,
+		}, { Ui.corner(3) })
+	end
+	local powerLabel = Ui.make("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromOffset(ORIGIN.X + 70, ORIGIN.Y - 4),
+		Size = UDim2.fromOffset(90, 20),
+		BackgroundTransparency = 1,
+		Text = "",
+		TextColor3 = INK,
+		TextStrokeColor3 = Color3.fromRGB(255, 255, 255),
+		TextStrokeTransparency = 0.3,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 15,
+		Visible = false,
+		ZIndex = 46,
+		Parent = overlay,
+	})
+
+	-- 판 상태 (서버가 보내 준 그대로)
+	local wall: { any } = {}
+	local wallStart = 0
+	local popped: { [number]: boolean } = {}
+	local views: { Frame } = {}
+	local mode = "loading" -- "loading" / "preview"(아직 돈 안 냄) / "playing" / "finished"
+	local left = 0
+	local total, totalTickets = 0, 0
+	local busy = false
+	local flight: any = nil -- 날아가는 중인 다트 { angle, power, release, predicted, result, done }
+	local dragging = false
+	local dragStart, dragNow = Vector2.zero, Vector2.zero
+	local connections: { RBXScriptConnection } = {}
+
+	local function ticketText(tickets: number): string
+		return if tickets > 0 then ` · 🎟️ {tickets}장` else ""
+	end
+	local function setStatus(text: string, color: Color3?)
+		status.Text = text
+		status.TextColor3 = color or INK
+	end
+	local function idleText()
+		if mode == "playing" then
+			setStatus(`🎯 다트 {left}개 남음 · 이번 판 💰 {comma(total)}원{ticketText(totalTickets)}\n판을 누른 채 아래로 끌었다 놓아요!`)
+		elseif mode == "preview" then
+			setStatus("이번 풍선 벽이에요! 어느 풍선을 노릴까요?\n마음에 들면 시작 (닫았다 열어도 같은 벽이에요)")
 		end
-		if result.left <= 0 then
-			run = nil
-			-- 남은 풍선 속 공개
-			for i, prizeId in result.reveal or {} do
-				local b = balloons[i]
-				if b and b.Text == "" then
-					b.Text = PRIZE_EMOJI[prizeId] or ""
-					b.BackgroundTransparency = 0.6
-				end
-			end
-			startButton.Text = `▶ 한 판 더 ({comma(SalaryConfig.DART_PRICE)}원)`
-		else
-			-- 결과를 잠깐 보여 주고 다음 다트 안내
-			local thisRun = run
-			task.delay(1.4, function()
-				if current == frame and run == thisRun and not throwing then
-					aimText()
-				end
+	end
+
+	-- 🎈 풍선 그리기 (경품 글씨가 써 있어요)
+	local function buildBalloons()
+		for _, view in views do
+			view:Destroy()
+		end
+		table.clear(views)
+		for index, data in wall do
+			local info = SalaryConfig.getDartPrize(data.id) or SalaryConfig.getDartPrize("none")
+			local size = data.r * 2
+			local view = Ui.make("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Size = UDim2.fromOffset(size, size * 1.1),
+				BackgroundColor3 = info.color,
+				Visible = not popped[index],
+				ZIndex = 34,
+				Parent = field,
+			}, {
+				Ui.corner(data.r),
+				Ui.stroke(if info.jackpot then Color3.fromRGB(230, 60, 40) else Color3.fromRGB(255, 255, 255), if info.jackpot then 3 else 2),
+				Ui.make("Frame", { -- 풍선 끈
+					AnchorPoint = Vector2.new(0.5, 0),
+					Position = UDim2.fromScale(0.5, 1),
+					Size = UDim2.fromOffset(2, 14),
+					BackgroundColor3 = Color3.fromRGB(110, 110, 120),
+					BorderSizePixel = 0,
+					ZIndex = 33,
+				}),
+				Ui.make("TextLabel", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromScale(0.9, 0.6),
+					BackgroundTransparency = 1,
+					Text = info.label,
+					TextColor3 = Color3.fromRGB(40, 30, 30),
+					Font = Enum.Font.GothamBlack,
+					TextScaled = true,
+					ZIndex = 35,
+				}, { Ui.make("UITextSizeConstraint", { MaxTextSize = 16 }) }),
+			})
+			views[index] = view
+		end
+	end
+
+	-- 🖱️ 끈 만큼 → (각도, 힘, 당긴 방향) — 당긴 반대쪽으로 날아가요
+	local function aimFromDrag(): (number, number, Vector2)
+		local scale = field.AbsoluteSize.X / FIELD_W
+		if scale <= 0 then
+			scale = 1
+		end
+		local pull = (dragNow - dragStart) / scale
+		local power = math.clamp(pull.Magnitude / SalaryConfig.DART_DRAG_MAX, 0, 1)
+		local angle = math.atan2(pull.Y, -pull.X) -- 아래로 당기면 위로 (π/2)
+		if angle < 0 then
+			angle = if angle < -math.pi / 2 then math.pi - MIN_ANGLE else MIN_ANGLE -- 위로 당기면 옆으로 눕혀요
+		end
+		return math.clamp(angle, MIN_ANGLE, math.pi - MIN_ANGLE), power, pull
+	end
+
+	-- 💥 펑! (조각이 튀고, 경품 글씨가 떠올라요)
+	local function popEffect(position: Vector2, color: Color3, text: string, textColor: Color3)
+		local flash = Ui.make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(position.X, position.Y),
+			Size = UDim2.fromOffset(30, 30),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundTransparency = 0.2,
+			ZIndex = 46,
+			Parent = field,
+		}, { Ui.corner(40) })
+		TweenService:Create(flash, TweenInfo.new(0.3), { Size = UDim2.fromOffset(80, 80), BackgroundTransparency = 1 }):Play()
+		for i = 1, 8 do
+			local angle = i / 8 * 2 * math.pi
+			local shard = Ui.make("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromOffset(position.X, position.Y),
+				Size = UDim2.fromOffset(8, 6),
+				Rotation = math.deg(angle),
+				BackgroundColor3 = color,
+				BorderSizePixel = 0,
+				ZIndex = 45,
+				Parent = field,
+			})
+			local away = position + Vector2.new(math.cos(angle), math.sin(angle)) * 34
+			TweenService:Create(shard, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = UDim2.fromOffset(away.X, away.Y + 10),
+				BackgroundTransparency = 1,
+			}):Play()
+			task.delay(0.5, function()
+				shard:Destroy()
 			end)
 		end
+		local float = Ui.make("TextLabel", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(position.X, position.Y),
+			Size = UDim2.fromOffset(200, 26),
+			BackgroundTransparency = 1,
+			Text = text,
+			TextColor3 = textColor,
+			TextStrokeTransparency = 0.3,
+			TextStrokeColor3 = Color3.fromRGB(255, 255, 255),
+			Font = Enum.Font.GothamBlack,
+			TextSize = 20,
+			ZIndex = 47,
+			Parent = field,
+		})
+		TweenService:Create(float, TweenInfo.new(1.1), {
+			Position = UDim2.fromOffset(position.X, position.Y - 40),
+			TextTransparency = 1,
+			TextStrokeTransparency = 1,
+		}):Play()
+		task.delay(1.15, function()
+			flash:Destroy()
+			float:Destroy()
+		end)
 	end
+
+	-- 🏁 다트가 도착했을 때 (서버 결과 그대로)
+	local function finishThrow(result: any)
+		left = result.left
+		total = result.total
+		totalTickets = result.totalTickets
+		if result.hit then
+			local index = result.hit
+			local data = wall[index]
+			popped[index] = true
+			local position = if data then SalaryConfig.dartBalloonPos(data, result.release + result.flightTime - wallStart) else ORIGIN
+			if views[index] then
+				views[index].Visible = false
+			end
+			local info = SalaryConfig.getDartPrize(if data then data.id else "none")
+			local text, color = "💨 꽝!", MUTED
+			if result.money > 0 then
+				text, color = `+{comma(result.money)}원`, Color3.fromRGB(40, 140, 70)
+			elseif result.tickets > 0 then
+				text, color = `🎟️ +{result.tickets}장`, Color3.fromRGB(220, 80, 150)
+			elseif result.name ~= "" then
+				text, color = result.name, Color3.fromRGB(140, 80, 220)
+			end
+			popEffect(position, if info then info.color else Color3.fromRGB(200, 200, 200), text, color)
+			Sounds.play("crunch", 0.8, 1.5) -- 펑!
+			if result.money > 0 or result.tickets > 0 or result.name ~= "" then
+				Sounds.play("ping", 0.5, if result.money >= 3000 then 1.4 else 1.1)
+			else
+				Sounds.play("bass", 0.3)
+			end
+			if result.id == "legend" then
+				Hud.popup(`🎯 {result.name}`, Color3.fromRGB(255, 210, 80), 3)
+			elseif result.id == "plush" and result.name ~= "" then
+				Hud.popup(`🎯 {result.name}`, Color3.fromRGB(200, 160, 255), 2)
+			elseif result.id == "jackpot" then
+				Hud.popup(`🎯 대박 풍선! +{comma(result.money)}원`, Color3.fromRGB(255, 210, 80), 3)
+			end
+			setStatus(`💥 펑! {if text == "💨 꽝!" then "꽝이에요" else text} · 다트 {left}개 남음\n이번 판 💰 {comma(total)}원{ticketText(totalTickets)}`, Color3.fromRGB(40, 140, 70))
+		else
+			Sounds.play("bass", 0.3, 1.2)
+			local why = if result.reason == "over" then "너무 세요! 풍선 위로 지나갔어요"
+				elseif result.reason == "side" then "옆으로 빗나갔어요"
+				else "힘이 모자라요! 풍선 아래로 떨어졌어요"
+			setStatus(`😅 {why} · 다트 {left}개 남음\n이번 판 💰 {comma(total)}원{ticketText(totalTickets)}`, Color3.fromRGB(200, 110, 30))
+		end
+		task.wait(0.7)
+		if current ~= frame then
+			return
+		end
+		flight = nil
+		busy = false
+		dart.Visible = true
+		if result.finished then
+			mode = "finished"
+			dart.Visible = false
+			mainButton.Text = "🎯 새 풍선 벽 보기"
+			setStatus(`🏁 끝! 이번 판 💰 {comma(total)}원{ticketText(totalTickets)}\n아래 버튼으로 새 풍선 벽을 볼 수 있어요`, Color3.fromRGB(40, 140, 70))
+		end
+	end
+
+	-- 서버가 보내 준 판 상태로 화면 맞추기
+	local function load(state: any)
+		wall = state.balloons or {}
+		wallStart = state.start or workspace:GetServerTimeNow()
+		table.clear(popped)
+		for _, index in state.popped or {} do
+			popped[index] = true
+		end
+		left = state.left or 0
+		total = state.money or 0
+		totalTickets = state.tickets or 0
+		flight = nil
+		mode = if state.paid then "playing" else "preview"
+		buildBalloons()
+		dart.Visible = true
+		mainButton.Text = if mode == "playing" then "🎯 판을 끌어서 던져요!" else `▶ 시작 ({comma(SalaryConfig.DART_PRICE)}원)`
+		idleText()
+	end
+	local function fetch()
+		busy = true
+		local result = Remotes.Dart:InvokeServer("open")
+		busy = false
+		if current ~= frame then
+			return
+		end
+		if not result.ok then
+			setStatus(result.message, RED)
+			return
+		end
+		load(result)
+	end
+
+	mainButton.MouseButton1Down:Connect(function()
+		if busy then
+			return
+		end
+		if mode == "preview" then
+			busy = true
+			local result = Remotes.Dart:InvokeServer("start")
+			busy = false
+			if current ~= frame then
+				return
+			end
+			if not result.ok then
+				setStatus(result.message, RED)
+				return
+			end
+			load(result)
+			Sounds.play("ping", 0.4, 1.2)
+		elseif mode == "finished" or mode == "loading" then
+			fetch()
+		end
+	end)
+
+	-- 🚀 놓으면 던지기: 화면은 바로 날리고(같은 공식으로 미리 계산), 서버 결과가 오면 그대로 마무리
+	local function throw(angle: number, power: number)
+		busy = true
+		local release = workspace:GetServerTimeNow()
+		local _, predicted = SalaryConfig.dartSimulate(wall, popped, angle, power, release - wallStart)
+		local thisFlight = { angle = angle, power = power, release = release, predicted = predicted, result = nil, done = false }
+		flight = thisFlight
+		left = math.max(0, left - 1)
+		Sounds.play("swoosh", 0.5, 1.3)
+		task.spawn(function()
+			local result = Remotes.Dart:InvokeServer("throw", angle, power, release)
+			if current ~= frame or flight ~= thisFlight then
+				return
+			end
+			if not result.ok then
+				flight = nil
+				busy = false
+				left += 1
+				setStatus(result.message, RED)
+				return
+			end
+			-- 서버가 쓴 값으로 맞춰요 (보통은 똑같아요)
+			thisFlight.angle, thisFlight.power, thisFlight.release = result.angle, result.power, result.release
+			thisFlight.result = result
+		end)
+	end
+
+	table.insert(connections, grab.InputBegan:Connect(function(input)
+		if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+			return
+		end
+		if mode == "preview" then
+			setStatus("▶ 시작을 먼저 눌러 주세요!", RED)
+			return
+		end
+		if mode ~= "playing" or busy or left <= 0 then
+			return
+		end
+		dragging = true
+		dragStart = Vector2.new(input.Position.X, input.Position.Y)
+		dragNow = dragStart
+	end))
+	table.insert(connections, UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			dragNow = Vector2.new(input.Position.X, input.Position.Y)
+		end
+	end))
+	table.insert(connections, UserInputService.InputEnded:Connect(function(input)
+		if not dragging or (input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch) then
+			return
+		end
+		dragging = false
+		local angle, power = aimFromDrag()
+		if power < SalaryConfig.DART_MIN_POWER then
+			setStatus("조금 더 길게 끌어 주세요! (많이 당길수록 세게 날아가요)", Color3.fromRGB(200, 110, 30))
+			return
+		end
+		if mode == "playing" and not busy and left > 0 then
+			throw(angle, power)
+		end
+	end))
+
+	-- 🎞️ 매 프레임: 풍선 둥실둥실 + 다트 (가만히 / 당기는 중 / 날아가는 중)
+	table.insert(connections, RunService.RenderStepped:Connect(function()
+		local now = workspace:GetServerTimeNow()
+		for index, data in wall do
+			local view = views[index]
+			if view and not popped[index] then
+				local position = SalaryConfig.dartBalloonPos(data, now - wallStart)
+				view.Position = UDim2.fromOffset(position.X, position.Y)
+			end
+		end
+		local aiming = dragging and not flight
+		local angle, power, pull = 0, 0, Vector2.zero
+		if aiming then
+			angle, power, pull = aimFromDrag()
+		end
+		local showGuide = aiming and power >= SalaryConfig.DART_MIN_POWER
+		for i, dot in dots do
+			dot.Visible = showGuide
+			if showGuide then
+				local position = SalaryConfig.dartFlight(angle, power, i * GUIDE_GAP)
+				dot.Position = UDim2.fromOffset(position.X, position.Y)
+			end
+		end
+		powerLabel.Visible = aiming
+		bandL.Visible = aiming
+		bandR.Visible = aiming
+		if flight then
+			local endTime = if flight.result then flight.result.flightTime else flight.predicted
+			local elapsed = now - flight.release
+			local t = math.clamp(elapsed, 0, endTime)
+			local position = SalaryConfig.dartFlight(flight.angle, flight.power, t)
+			placeDart(position, SalaryConfig.dartFlight(flight.angle, flight.power, t + 0.01) - position)
+			-- 판 밖으로 나가면 안 보여요 (위로 넘어가거나 아래로 떨어진 다트)
+			dart.Visible = position.X > -10 and position.X < FIELD_W + 10 and position.Y > -10 and position.Y < FIELD_H + 10
+			if elapsed >= endTime and flight.result and not flight.done then
+				flight.done = true
+				task.spawn(finishThrow, flight.result)
+			end
+		elseif aiming then
+			local direction = Vector2.new(math.cos(angle), -math.sin(angle))
+			local tip = ORIGIN - direction * math.min(pull.Magnitude, SalaryConfig.DART_DRAG_MAX) * 0.3
+			placeDart(tip, direction)
+			local tail = tip - direction * DART_LEN
+			setLine(bandL, POST_L, tail, 3)
+			setLine(bandR, POST_R, tail, 3)
+			powerLabel.Text = if power < SalaryConfig.DART_MIN_POWER then "더 당겨요" else `힘 {math.floor(power * 100 + 0.5)}%`
+		elseif mode ~= "finished" then
+			placeDart(ORIGIN, Vector2.new(0, -1)) -- 가만히 위를 보고 있어요
+		end
+	end))
+	frame.Destroying:Connect(function()
+		for _, connection in connections do
+			connection:Disconnect()
+		end
+	end)
+
+	placeDart(ORIGIN, Vector2.new(0, -1))
 	Sounds.play("swoosh", 0.4)
+	fetch()
 end
 
 Remotes:WaitForChild("DartOpen").OnClientEvent:Connect(showDart)
@@ -5362,15 +5928,114 @@ function Panels.showBaseball()
 	end)
 end
 
+-- 🎁 경비원 뇌물 창: 선물을 고르면 그 경비원이 일정 시간 못 본 척해요 (좋은 선물일수록 오래)
+Remotes:WaitForChild("GuardBribeOpen").OnClientEvent:Connect(function(guardId: string, guardName: string)
+	local count = #SalaryConfig.GuardBribes
+	local frame = sheet(400, 200 + count * 58) -- (아래 안내 문구가 버튼과 안 겹치게 여유)
+	line(frame, 0, 30, "🎁 경비원에게 선물", { Font = Enum.Font.GothamBlack, TextSize = 22 })
+	line(frame, 32, 20, `👮 {guardName} · 🎒 소지품의 선물을 드려요 (하루 한 번, 좋을수록 오래)`, { TextSize = 13, TextColor3 = MUTED })
+	local message = line(frame, 0, 22, "", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, -50),
+		TextSize = 14,
+		TextColor3 = MUTED,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
+	local busy = false
+	local okGifts, myGifts = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("GuardGifts") or "{}")
+	end)
+	myGifts = if okGifts and typeof(myGifts) == "table" then myGifts else {}
+	for i, bribe in SalaryConfig.GuardBribes do
+		local y = 60 + (i - 1) * 58
+		local have = myGifts[bribe.id] or 0
+		line(frame, y, 22, `{bribe.emoji} {bribe.name} (🎒 {have}개)`, { Font = Enum.Font.GothamBold, TextSize = 16, Size = UDim2.new(1, -130, 0, 22), TextColor3 = if have > 0 then INK else MUTED })
+		line(frame, y + 22, 20, `🙈 {SalaryConfig.gameDurationText(bribe.minutes)} 동안 의심도 안 올라요`, { TextSize = 13, TextColor3 = MUTED, Size = UDim2.new(1, -130, 0, 20) })
+		local buy = Ui.button({
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, 0, 0, y + 4),
+			Size = UDim2.fromOffset(120, 38),
+			Text = if have > 0 then "🎁 드리기" else "🏪 매점에서",
+			TextSize = 15,
+			ZIndex = 32,
+			Parent = frame,
+		})
+		buy.Activated:Connect(function()
+			if busy then
+				return
+			end
+			busy = true
+			local result = Remotes.GuardBribe:InvokeServer(guardId, bribe.id)
+			busy = false
+			if current ~= frame then
+				return
+			end
+			message.Text = result.message
+			message.TextColor3 = if result.ok then Color3.fromRGB(40, 140, 70) else RED
+			Sounds.play(if result.ok then "ping" else "bass", 0.6, 1.2)
+			if result.ok then
+				task.delay(1.2, function()
+					if current == frame then
+						close()
+					end
+				end)
+			end
+		end)
+	end
+	button(frame, 0, "닫기", close)
+	Sounds.play("swoosh", 0.4)
+end)
+
+-- 🏙️ 눈치 스트리트 게임·가게, 🏪 사내 매점: 창을 연 자리에서 멀어지면 창을 닫아요
+--   (기계·계산대 앞에서 [E]로 열기 때문에, 열 때 서 있던 곳을 기준으로 해요)
+do
+	local function guardHere(range: number)
+		task.delay(0.3, function() -- (창이 다 만들어진 뒤에)
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if root and current then
+				closeWhenAway(current, root.Position, range)
+			end
+		end)
+	end
+	for _, info in { { "GuardBribeOpen", 12 }, { "StreetMenu", 14 }, { "ClawOpen", 12 }, { "ArcadeOpen", 12 }, { "WheelOpen", 12 }, { "DartOpen", 12 } } do
+		local remoteName, range = info[1], info[2]
+		Remotes:WaitForChild(remoteName).OnClientEvent:Connect(function()
+			guardHere(range)
+		end)
+	end
+end
+
 -- 🛒 [온라인 쇼핑] 농땡이를 켜면 쇼핑몰(꾸미기 상점)이 자동으로 열리고, 그만두면 닫혀요
+--   (쇼핑 중에 [5] 쇼핑을 다시 누르면 다시 열려요: Hud.onShoppingAgain)
+--   🛒 쇼핑몰 창을 닫으면 폰 게임처럼 자연스럽게 [일하기]로 돌아가요 (다른 창으로 바꾼 거면 그대로)
 do
 	local mallFrame: Frame? = nil
+	local function openMall()
+		Panels.showDecor()
+		local frame = current
+		mallFrame = frame
+		if frame then
+			frame.Destroying:Connect(function()
+				task.defer(function()
+					local replaced = current ~= nil
+					if not replaced and player:GetAttribute("SalaryAction") == "shopping" then
+						Remotes.SetAction:FireServer("work")
+					end
+				end)
+			end)
+		end
+	end
+	Hud.onShoppingAgain = function()
+		if isShopping() and current ~= mallFrame then
+			openMall()
+		end
+	end
 	local wasShopping = false
 	player:GetAttributeChangedSignal("SalaryState"):Connect(function()
 		local shopping = isShopping()
 		if shopping and not wasShopping and not current then
-			Panels.showDecor()
-			mallFrame = current
+			openMall()
 		elseif not shopping and wasShopping and mallFrame and current == mallFrame then
 			close() -- 일하기로 복귀하면 쇼핑 창도 쓱 닫아요
 		end

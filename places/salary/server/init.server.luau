@@ -100,7 +100,7 @@ PhoneGames.start(Remotes, { -- 📱 폰 게임 (💣 지뢰 피하기)
 	baseballPrize = Employees.payBaseball,
 })
 Employees.hooks.onRoof = rooftop.onRoof
-local parkGuard = require(script.Guard).start(office, dayCycle, events, Remotes) -- 👮 공원·거리 경비원 (눈치물산만)
+local parkGuard = require(script.Guard).start(office, dayCycle, events, Remotes, Employees.useGuardGift) -- 👮 공원·거리 경비원 (눈치물산만)
 -- 👮 사무실 밖 경비원들 (옥상 + 공원): 보이나, 거리, 노려보는 중인가
 Employees.hooks.guardSees = function(character: Model): (boolean, number, boolean, number)
 	local seen, distance, staring, range = rooftop.sees(character)
@@ -114,7 +114,7 @@ Employees.hooks.guardSees = function(character: Model): (boolean, number, boolea
 end
 Missions.start(office, boss, dayCycle, Remotes, Employees.missionApi, Employees.hooks, coworkers) -- 📋 긴급 프로젝트 + 🎁 선물
 Wheel.start(office, Remotes, { charge = Employees.chargeClaw, payout = Employees.payWheel }) -- 🎡 돌림판
-Dart.start(office, Remotes, { charge = Employees.chargeClaw, prize = Employees.dartPrize }) -- 🎈 풍선 다트
+Dart.start(office, Remotes, { charge = Employees.chargeClaw, prize = Employees.dartPrize }) -- 🎯 끌어서 던지기 풍선 다트
 Arcade.start(office, Remotes, { -- 🕹️ 오락실
 	charge = Employees.chargeClaw,
 	reward = Employees.rewardArcade,

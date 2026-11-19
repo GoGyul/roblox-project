@@ -240,7 +240,7 @@ local totalText = text({ Position = UDim2.fromOffset(0, 88), Size = UDim2.new(1,
 ---------------------------------------------------------------------------
 -- 왼쪽: 내 상태, 의심도, 업무, 경고
 ---------------------------------------------------------------------------
-local STATUS_HEIGHT = 276
+local STATUS_HEIGHT = 284 -- (아래에 🎒 들고 있는 것·버프 줄)
 local statusPanel = panel({
 	AnchorPoint = Vector2.new(0, 0),
 	Position = UDim2.new(0, 12, 0, 8),
@@ -258,9 +258,21 @@ local comboText = text({
 	Position = UDim2.fromOffset(0, 222),
 	Size = UDim2.new(1, 0, 0, 20),
 	TextSize = 15,
+	TextScaled = true, -- 길어지면 글씨를 줄여서 패널 밖으로 안 나가게
 	TextColor3 = COLORS.good,
 	Parent = statusPanel,
 })
+Ui.make("UITextSizeConstraint", { MaxTextSize = 15, MinTextSize = 9, Parent = comboText })
+-- 🎒 들고 있는 것·버프 (선물·카페 음료·간식): 콤보 줄 아래 따로 한 줄
+local extrasText = text({
+	Position = UDim2.fromOffset(0, 244),
+	Size = UDim2.new(1, 0, 0, 18),
+	TextSize = 14,
+	TextScaled = true,
+	TextColor3 = Color3.fromRGB(255, 220, 140),
+	Parent = statusPanel,
+})
+Ui.make("UITextSizeConstraint", { MaxTextSize = 14, MinTextSize = 9, Parent = extrasText })
 
 -- 🔥 콤보 줄을 누르면 설명창 (다시 누르거나 ✕, 15초 뒤 닫혀요)
 local comboButton = Ui.make("TextButton", {
@@ -558,7 +570,12 @@ for i, phoneGame in SalaryConfig.PhoneGames do
 	end)
 end
 
+Hud.onShoppingAgain = nil :: (() -> ())? -- 🛒 쇼핑 중에 [쇼핑]을 또 누르면 쇼핑몰 다시 열기 (Panels가 채워요)
 local function chooseAction(actionId: string)
+	if actionId == "shopping" and player:GetAttribute("SalaryState") == "shopping" and Hud.onShoppingAgain then
+		Hud.onShoppingAgain()
+		return
+	end
 	if actionId == "phone" then
 		phonePicker.Visible = not phonePicker.Visible
 		return
@@ -625,7 +642,7 @@ for i, actionId in SalaryConfig.DeskActions do
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed or not actionPanel.Visible or player:GetAttribute("ScreenHidden") or videoPopupOpen() or Hud.inElevator or Hud.numberGame then
+	if gameProcessed or not actionPanel.Visible or player:GetAttribute("ScreenHidden") or videoPopupOpen() or Hud.inElevator or Hud.numberGame or Hud.chatReactOpen then
 		return
 	end
 	local index = table.find(KEYS, input.KeyCode)
@@ -1058,20 +1075,33 @@ RunService.RenderStepped:Connect(function()
 	if comboInfo.Visible then
 		refreshComboInfo()
 	end
-	local heldSnack = SalaryConfig.getSnack(player:GetAttribute("HeldSnack") or "")
-	if heldSnack then
-		local percent = math.floor((player:GetAttribute("SnackProgress") or 0) * 100)
-		comboLine = `{heldSnack.emoji} {heldSnack.name} {percent}%  ` .. comboLine
+	-- 들고 있는 것·버프는 아래 줄로 (한 줄에 다 넣으면 패널 밖으로 삐져나와요)
+	local extras = {}
+	local gift = player:GetAttribute("HeldGift") or ""
+	if gift ~= "" then
+		table.insert(extras, `선물 {gift}`) -- 🎁 부장님께 드릴 선물
 	end
 	local buffs = player:GetAttribute("Buffs") or ""
 	if buffs ~= "" then
-		comboLine = `오늘 버프 {buffs}  ` .. comboLine -- 🏙️ 카페 음료
+		table.insert(extras, `버프 {buffs}`) -- 🏙️ 카페 음료
 	end
-	local gift = player:GetAttribute("HeldGift") or ""
-	if gift ~= "" then
-		comboLine = `선물 {gift}  ` .. comboLine -- 🎁 부장님께 드릴 선물
+	-- 🎁 경비원 매수: 남은 시간
+	for _, info in { { "park", "👮" }, { "roof", "👮옥상" } } do
+		local untilTime = player:GetAttribute(`GuardBribe_{info[1]}`)
+		if typeof(untilTime) == "number" then
+			local left = math.ceil(untilTime - workspace:GetServerTimeNow())
+			if left > 0 then
+				table.insert(extras, `{info[2]} 못 본 척 {SalaryConfig.gameDurationText(SalaryConfig.secondsToGameMinutes(left))}`)
+			end
+		end
+	end
+	local heldSnack = SalaryConfig.getSnack(player:GetAttribute("HeldSnack") or "")
+	if heldSnack then
+		local percent = math.floor((player:GetAttribute("SnackProgress") or 0) * 100)
+		table.insert(extras, `{heldSnack.emoji} {heldSnack.name} {percent}%`)
 	end
 	comboText.Text = comboLine
+	extrasText.Text = table.concat(extras, " · ")
 
 	-- 행동 버튼
 	local seated = player:GetAttribute("Seated") == true
@@ -1365,6 +1395,99 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
+-- 🗣️ 맞장구 고르기 (수다 중에 보기 3개, [1]·[2]·[3] 또는 누르기)
+--   떠 있는 동안 숫자 키 1~3은 맞장구에 써요 (Hud.chatReactOpen)
+Hud.chatReactOpen = false
+local chatReactBar = Ui.make("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 150),
+	Size = UDim2.fromOffset(500, 100),
+	BackgroundColor3 = Color3.fromRGB(36, 30, 26),
+	BackgroundTransparency = 0.05,
+	Visible = false,
+	ZIndex = 40,
+	Parent = gui,
+}, { Ui.corner(12), Ui.stroke(Color3.fromRGB(255, 190, 90), 2), Ui.padding(8) })
+local chatReactTitle = text({ Size = UDim2.new(1, 0, 0, 20), TextSize = 15, TextColor3 = Color3.fromRGB(255, 210, 130), ZIndex = 41, Parent = chatReactBar })
+local chatReactTimer = Ui.make("Frame", {
+	Position = UDim2.fromOffset(0, 24),
+	Size = UDim2.new(1, 0, 0, 5),
+	BackgroundColor3 = Color3.fromRGB(255, 190, 90),
+	BorderSizePixel = 0,
+	ZIndex = 41,
+	Parent = chatReactBar,
+})
+local chatReactButtons = {}
+local chatReactId = 0
+local chatReactDeadline = 0
+local chatReactSeconds = 4
+local function closeChatReact()
+	chatReactId = 0
+	chatReactBar.Visible = false
+	Hud.chatReactOpen = false
+end
+local function answerChatReact(index: number)
+	if chatReactId == 0 then
+		return
+	end
+	Remotes.ChatReactAnswer:FireServer(chatReactId, index)
+	Sounds.play("click", 0.5)
+	chatReactId = 0
+	-- (같은 키를 다른 단축키가 다시 쓰지 않게, 이번 입력이 다 처리된 뒤에 닫아요)
+	task.defer(closeChatReact)
+end
+for i = 1, 3 do
+	local b = Ui.button({
+		Position = UDim2.new((i - 1) / 3, if i == 1 then 0 else 3, 0, 36),
+		Size = UDim2.new(1 / 3, -4, 0, 48),
+		TextSize = 14,
+		TextWrapped = true,
+		ZIndex = 41,
+		Parent = chatReactBar,
+	})
+	b.Activated:Connect(function()
+		answerChatReact(i)
+	end)
+	chatReactButtons[i] = b
+end
+Remotes:WaitForChild("ChatReact").OnClientEvent:Connect(function(id: number, name: string?, options: { string }?, seconds: number?)
+	if id == 0 or not options then
+		closeChatReact()
+		return
+	end
+	chatReactId = id
+	chatReactSeconds = seconds or 4
+	chatReactDeadline = os.clock() + chatReactSeconds
+	chatReactTitle.Text = `🗣️ {name or "동료"}에게 맞장구! [1]·[2]·[3]`
+	for i, b in chatReactButtons do
+		b.Text = `[{i}] {options[i] or ""}`
+	end
+	chatReactBar.Visible = true
+	Hud.chatReactOpen = true
+	Sounds.play("ping", 0.5, 1.8)
+end)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed or chatReactId == 0 then
+		return
+	end
+	local index = table.find({ Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three }, input.KeyCode)
+	if index then
+		answerChatReact(index)
+	end
+end)
+RunService.Heartbeat:Connect(function()
+	if chatReactBar.Visible then
+		local left = math.max(0, chatReactDeadline - os.clock())
+		chatReactTimer.Size = UDim2.new(left / chatReactSeconds, 0, 0, 5)
+		chatReactTimer.BackgroundColor3 = if left < 1.5 then COLORS.bad else Color3.fromRGB(255, 190, 90)
+		if left <= 0 and chatReactId ~= 0 then
+			closeChatReact() -- 시간 초과 (서버도 알아서 처리해요)
+		end
+	end
+end)
+-- 죽거나 다시 태어나면 닫아요
+player.CharacterAdded:Connect(closeChatReact)
+
 -- 🚪 어색한 엘리베이터 (부장님과 단둘이 타면 미니게임)
 --   📱 폰 보기 [1] / 🙂 앞 보기 [2] 버튼
 --   👀 쳐다보면 → 📱 폰 / 🗣️ 말 걸면 → 🙂 앞 보기 (틀리면 무조건 경고)
@@ -1534,7 +1657,7 @@ Remotes:WaitForChild("ElevatorRide").OnClientEvent:Connect(function(info)
 							bossHint.Text = texts.need
 							bossHint.TextColor3 = COLORS.warn
 							shown = true
-						elseif elapsed >= event.t and elapsed < event.t + 0.7 then
+						elseif elapsed >= event.t and elapsed < event.t + 1.5 then -- (결과는 조금 더 오래 보여 줘요)
 							bossState.Text = texts.now
 							bossState.TextColor3 = COLORS.bad
 							shown = true
@@ -1599,7 +1722,7 @@ Remotes:WaitForChild("Notify").OnClientEvent:Connect(Ui.toast)
 -- 🔊 상황별 소리
 ---------------------------------------------------------------------------
 Sounds.startMusic()
-local typingLoop = Sounds.loop("typing", 0.12)
+local typingLoop: Sound? = nil -- ⌨️ 일하기 중 반복 타자 소리는 거슬려서 껐어요 (다시 켜려면 Sounds.loop("typing", 0.12))
 local lastCrunch = 0
 local lastPhase = ReplicatedStorage:GetAttribute("SalaryPhase")
 RunService.Heartbeat:Connect(function()

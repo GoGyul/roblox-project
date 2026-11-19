@@ -44,12 +44,15 @@ export type Profile = {
 	certs: { [string]: boolean }, -- 📚 딴 자격증
 	daily: { [string]: any }, -- 📅 하루 한 번 제한 기록 (내 근무일 기준, 서버를 옮겨도 유지)
 	outfitOwned: { [string]: boolean }, -- 👔 산 출근룩
+	guardGifts: { [string]: number }, -- 🎁 🎒에 보관 중인 경비원 선물 (선물 ID → 개수)
 	deskHidden: { [string]: boolean },
 	itemUntil: { [string]: number }, -- ⏳ 사무용품 사용 기한 (이 근무일 수가 되면 끝나요) -- 🪑 책상에서 치워 둔 사무용품 (아이템 ID → true)
 	outfitEquipped: { [string]: string }, -- 👔 칸별로 입은 출근룩 ID
 	pigeonFeeds: number, -- 🐦 옥상 비둘기 친밀도 (모이 준 횟수, 안 주면 조금씩 줄어요)
 	pigeons: { [string]: number }, -- 🐦 만난 비둘기 (종류 → 만난 횟수)
 	arcadeBest: { [string]: number }, -- 🕹️ 게임별 내 최고 점수
+	friendship: { [string]: number }, -- 🤝 동료 친밀도 (동료 이름 → 점수)
+	fitness: { strength: number, stamina: number, agility: number, flexibility: number, balance: number }, -- 🏋️ 체력 단련실에서 키운 스탯 (효과는 다음 업데이트)
 	stats: { days: number, nearMiss: number, caught: number, fired: number, stockProfit: number },
 }
 
@@ -87,12 +90,15 @@ function Profiles.default(): Profile
 		certs = {},
 		daily = {},
 		outfitOwned = {},
+		guardGifts = {},
 		deskHidden = {},
 		itemUntil = {},
 		outfitEquipped = {},
 		pigeonFeeds = 0,
 		pigeons = {},
 		arcadeBest = {},
+		friendship = {},
+		fitness = { strength = 0, stamina = 0, agility = 0, flexibility = 0, balance = 0 },
 		stats = { days = 0, nearMiss = 0, caught = 0, fired = 0, stockProfit = 0 },
 	}
 end
@@ -124,6 +130,11 @@ local function fillDefaults(profile: any): Profile
 	for field, value in base.stats do
 		if profile.stats[field] == nil then
 			profile.stats[field] = value
+		end
+	end
+	for field, value in base.fitness do -- 🏋️ 나중에 스탯이 늘어나도 0부터
+		if profile.fitness[field] == nil then
+			profile.fitness[field] = value
 		end
 	end
 	return profile

@@ -5,6 +5,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
+local Deck = require(ReplicatedStorage.Shared.Deck)
+local shapeDeck = Deck.new(function()
+	return #SalaryConfig.ShapePuzzles
+end)
 
 local PhoneGames = {}
 
@@ -184,13 +188,8 @@ function PhoneGames.start(remotes, hooks)
 		end
 
 		if action == "start" then
-			-- 방금 한 퍼즐은 빼고 랜덤
-			local index = math.random(1, #SalaryConfig.ShapePuzzles)
-			if #SalaryConfig.ShapePuzzles > 1 then
-				while index == lastPuzzle[player] do
-					index = math.random(1, #SalaryConfig.ShapePuzzles)
-				end
-			end
+			-- 🃏 섞어 둔 더미에서 한 장씩 (30개를 다 할 때까지 같은 퍼즐이 다시 안 나와요)
+			local index = shapeDeck()
 			lastPuzzle[player] = index
 			local board, pieces, name = SalaryConfig.getShapePuzzle(index)
 			-- 조각은 정답 모양 그대로(돌리지 않고), 순서만 섞어서 줘요

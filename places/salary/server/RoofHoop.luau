@@ -61,7 +61,7 @@ function RoofHoop.start(folder: Instance, base: Vector3, remotes, hooks)
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = rack
 	prompt.Triggered:Connect(function(player)
-		remotes.HoopOpen:FireClient(player)
+		remotes.HoopOpen:FireClient(player, spot) -- 🚪 자유투 라인에서 멀어지면 창이 닫혀요
 	end)
 
 	---------------------------------------------------------------- 한 판
@@ -72,7 +72,7 @@ function RoofHoop.start(folder: Instance, base: Vector3, remotes, hooks)
 	local function near(player: Player): Vector3?
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if root and (root.Position - spot).Magnitude < 10 then
+		if root and (root.Position - spot).Magnitude < 13 then -- (공 거치대 [E] 거리까지 닿게 · 화면은 12에서 창을 닫아요)
 			return root.Position
 		end
 		return nil

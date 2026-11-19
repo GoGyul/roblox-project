@@ -48,7 +48,7 @@ function RoofScope.start(folder: Instance, stand: Vector3, dayCycle, remotes, ho
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = scope
 	prompt.Triggered:Connect(function(player)
-		remotes.ScopeOpen:FireClient(player)
+		remotes.ScopeOpen:FireClient(player, stand) -- 🚪 망원경에서 멀어지면 창이 닫혀요
 	end)
 
 	---------------------------------------------------------------- 건너편 (주)야근물산 (오른쪽 멀리)

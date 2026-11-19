@@ -12,7 +12,10 @@
 --   허리/목: + 뒤로 젖힘, - 앞으로 숙임
 --   어깨/팔꿈치: + 팔을 앞으로 듦
 --   y: 좌우로 돌리기, z: 옆으로 기울이기
--- wave = {관절, 축, 크기, 빠르기}: 반복 움직임 (타자 치기, 고개 끄덕임 등)
+-- wave = {관절, 축, 크기, 빠르기, (시작 위치)}: 반복 움직임 (타자 치기, 고개 끄덕임 등)
+--   크기를 음수로 하면 반대로 움직여요 (왼발·오른발 번갈아). 시작 위치(라디안)로 박자를 어긋나게 해요 (자전거 페달)
+-- 🦵 다리(rHip·rKnee·lHip·lKnee)는 앉은 자세 위에 더해져요: 엉덩이 -90 + 무릎 +90 = 의자에서 다리를 쭉 펴고 선 자세
+--   (🏋️ 체력 단련실 러닝머신·샌드백은 허리 높이의 안 보이는 의자에 "서" 있어요)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -30,6 +33,10 @@ type Pose = {
 	rElbow: number?,
 	lShoulder: number?,
 	lElbow: number?,
+	rHip: number?,
+	rKnee: number?,
+	lHip: number?,
+	lKnee: number?,
 	waves: { { any } }?,
 	prop: string?,
 }
@@ -54,6 +61,35 @@ local POSES: { [string]: Pose } = {
 	lounger = { waist = 30, neck = 25, rShoulder = 150, rElbow = 110, lShoulder = 150, lElbow = 110, waves = { { "waist", "x", 2, 0.3 } } }, -- 머리 뒤로 손 깍지
 	meeting = { waist = -6, neck = -24, rShoulder = 30, rElbow = 60, lShoulder = 30, lElbow = 60, waves = { { "neck", "x", 10, 0.7 } } }, -- 꾸벅꾸벅
 	ramen = { neck = -15, rShoulder = 50, rElbow = 95, lShoulder = 30, lElbow = 60, prop = "bowl", waves = { { "rElbow", "x", 15, 4 } } },
+	-- 🏋️ 체력 단련실 (SalaryConfig.GymMachines의 pose)
+	treadmill = { -- 🏃 다리를 펴고 서서 팔다리를 번갈아 흔들며 달리기
+		waist = -4, neck = -4, rElbow = 75, lElbow = 75, rHip = -90, lHip = -90, rKnee = 90, lKnee = 90,
+		waves = { { "rHip", "x", 25, 1.6 }, { "lHip", "x", -25, 1.6 }, { "rShoulder", "x", -30, 1.6 }, { "lShoulder", "x", 30, 1.6 }, { "rKnee", "x", -15, 1.6, 1.6 }, { "lKnee", "x", 15, 1.6, 1.6 } },
+	},
+	bench = { -- 🏋️ 비스듬히 기대서 두 팔로 바벨 밀어 올리기
+		waist = 10, neck = 8, rShoulder = 115, lShoulder = 115, rElbow = 45, lElbow = 45,
+		waves = { { "rElbow", "x", 45, 0.6 }, { "lElbow", "x", 45, 0.6 }, { "rShoulder", "x", -12, 0.6 }, { "lShoulder", "x", -12, 0.6 } },
+	},
+	bike = { -- 🚴 핸들 잡고 페달 굴리기
+		waist = -20, neck = 12, rShoulder = 70, lShoulder = 70, rElbow = 20, lElbow = 20,
+		waves = { { "rHip", "x", 20, 1.2 }, { "lHip", "x", -20, 1.2 }, { "rKnee", "x", -25, 1.2, 1.57 }, { "lKnee", "x", 25, 1.2, 1.57 }, { "waist", "y", 4, 1.2 } },
+	},
+	row = { -- 🚣 다리 펴며 몸 젖히고 손잡이 당기기
+		waist = 0, neck = 5, rShoulder = 75, lShoulder = 75, rElbow = 45, lElbow = 45, rKnee = 60, lKnee = 60,
+		waves = { { "waist", "x", 20, 0.5 }, { "rElbow", "x", 45, 0.5 }, { "lElbow", "x", 45, 0.5 }, { "rKnee", "x", 30, 0.5 }, { "lKnee", "x", 30, 0.5 } },
+	},
+	stretch = { -- 🤸 매트에 앉아 다리 쭉 펴고 앞으로 숙이기 (천천히 꾸욱~)
+		waist = -40, neck = -10, rShoulder = 70, lShoulder = 70, rElbow = 5, lElbow = 5, rKnee = 85, lKnee = 85,
+		waves = { { "waist", "x", -12, 0.35 }, { "rShoulder", "x", 12, 0.35 }, { "lShoulder", "x", 12, 0.35 } },
+	},
+	balance = { -- ⚖️ 짐볼 위에 앉아 팔 벌리고 흔들흔들 균형 잡기
+		waist = 0, neck = 0, rShoulder = 80, lShoulder = 80, rElbow = 5, lElbow = 5, rKnee = 30, lKnee = 30,
+		waves = { { "waist", "z", 9, 0.8 }, { "rShoulder", "x", 10, 0.8 }, { "lShoulder", "x", -10, 0.8 }, { "neck", "z", -5, 0.8 } },
+	},
+	punch = { -- 🥊 서서 원투 원투! (팔을 번갈아 쭉)
+		waist = -5, neck = -5, rShoulder = 85, lShoulder = 85, rElbow = 60, lElbow = 60, rHip = -85, lHip = -95, rKnee = 90, lKnee = 85,
+		waves = { { "rElbow", "x", -50, 2 }, { "lElbow", "x", 50, 2 }, { "rShoulder", "x", 10, 2 }, { "lShoulder", "x", -10, 2 }, { "waist", "y", 12, 2 } },
+	},
 }
 
 -- 관절 이름 → 움직이는 몸 부위 (R15 이름, R6 이름)
@@ -299,11 +335,11 @@ local function applyPlayer(model: Model, poseName: string?, dt: number, t: numbe
 	end
 	local pose = (poseName and POSES[poseName]) or {}
 	local targets: { [string]: Vector3 } = {}
-	for _, name in { "waist", "neck", "rShoulder", "rElbow", "lShoulder", "lElbow" } do
+	for _, name in { "waist", "neck", "rShoulder", "rElbow", "lShoulder", "lElbow", "rHip", "rKnee", "lHip", "lKnee" } do
 		targets[name] = Vector3.new((pose :: any)[name] or 0, 0, 0)
 	end
 	for _, wave in pose.waves or {} do
-		local amount = math.sin(t * wave[4] * math.pi * 2) * wave[3]
+		local amount = math.sin(t * wave[4] * math.pi * 2 + (wave[5] or 0)) * wave[3]
 		local axis = if wave[2] == "x" then Vector3.new(amount, 0, 0) elseif wave[2] == "y" then Vector3.new(0, amount, 0) else Vector3.new(0, 0, amount)
 		targets[wave[1]] = (targets[wave[1]] or Vector3.zero) + axis
 	end
@@ -334,6 +370,11 @@ function Poses.start()
 		if character then
 			-- 변기에 앉아 있으면 폰으로 주식 보는 자세
 			local pose = if me:GetAttribute("OnToilet") then "phone" else me:GetAttribute("SalaryState")
+			if pose == "gym" then
+				-- 🏋️ 운동기구마다 자세가 달라요 (러닝머신·벤치프레스·자전거·로잉·샌드백)
+				local machine = SalaryConfig.GymMachines[me:GetAttribute("GymMachine") or ""]
+				pose = if machine then machine.pose else "rooftop"
+			end
 			applyPlayer(character, pose, dt, t)
 		end
 	end)

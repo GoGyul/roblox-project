@@ -17,6 +17,22 @@ if arrivingGui then
 	end)
 end
 
+-- 📱 폰에서는 캐릭터가 물건에 닿으면 저절로 점프해서 책상·의자 위로 올라가 버려요 → 자동 점프를 꺼요
+--   (점프 버튼으로 직접 뛰는 건 그대로 돼요)
+local function noAutoJump(character: Model)
+	local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
+	if humanoid then
+		humanoid.AutoJumpEnabled = false
+	end
+end
+if Players.LocalPlayer.Character then
+	task.spawn(noAutoJump, Players.LocalPlayer.Character)
+end
+Players.LocalPlayer.CharacterAdded:Connect(noAutoJump)
+pcall(function()
+	game:GetService("StarterPlayer").AutoJumpEnabled = false
+end)
+
 require(script.Hud)
 require(script.Prompts).start() -- 💬 [E] 안내창을 작게
 require(script.Poses).start()
