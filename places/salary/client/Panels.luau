@@ -1,4 +1,4 @@
--- 가운데 뜨는 창: 입사 안내, 월급명세서(+승진), 해고 통지, 🛒 매점, 📖 도감
+-- 가운데 뜨는 창: 입사 안내, 월급명세서(+승진), 해고 통지, 🏪 사내 매점, 📖 도감
 
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
@@ -150,7 +150,7 @@ local WELCOME_PAGES = {
 			"🚶 서류 들기 · 동료와 수다 · 탕비실 라면",
 			"🍪 탕비실 간식을 챙겨서 자리에서 [8]로 몰래 먹기",
 			"🚽 화장실 변기에 앉으면 📈 주식 거래 (가짜 주식)",
-			"📈 승진하면 새 농땡이! 🛒 매점 · 📖 도감도 있어요",
+			"📈 승진하면 새 농땡이! 🏪 사내 매점(창가 계산대) · 📖 도감도 있어요",
 			"🙈 진짜 회사라면? [B] 화면 숨기기",
 		},
 	},
@@ -230,6 +230,9 @@ Remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
 	if not slip.quotaOk then
 		status ..= `\n📄 업무 미달! ({slip.workSeconds}/{slip.quota}초) 경고 +1`
 	end
+	if slip.targetOk == false then
+		status ..= `\n💰 실적 미달! ({comma(slip.earned)}/{comma(slip.target)}원) 경고 +1`
+	end
 	if slip.fired then
 		status ..= `\n📦 경고 누적으로 해고… 통장 0원, {slip.rankName}(으)로 강등돼 재입사해요.`
 	end
@@ -284,7 +287,7 @@ Remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
 	end
 
 	button(frame, -95, "🏛️ 광장으로", goLobby)
-	button(frame, 95, "다음 날 기다리기", close)
+	button(frame, 95, "닫기 (출근 준비)", close)
 end)
 
 ---------------------------------------------------------------------------
@@ -306,32 +309,80 @@ Remotes:WaitForChild("Fired").OnClientEvent:Connect(function(bossLine: string, r
 end)
 
 ---------------------------------------------------------------------------
--- 🛒 매점
+-- 🏪 매점
 ---------------------------------------------------------------------------
-function Panels.showShop()
+-- 🏪 사내 매점 (사무실의 매점 계산대에서 [E] 주문하기로 열려요)
+--   탭 두 개: 🧰 사무용품(화분·텀블러·이어폰…) / 🎁 부장님 선물(홍삼·꽃다발·초콜릿)
+function Panels.showShop(startTab: string?)
 	local items = SalaryConfig.Items
-	local frame = sheet(560, 130 + #items * 64)
-	line(frame, 0, 30, "🛒 사내 매점", { Font = Enum.Font.GothamBlack, TextSize = 24 })
+	local gifts = SalaryConfig.StreetShops.store.items
+	local rowsMax = math.max(#items, #gifts)
+	local frame = sheet(560, 170 + rowsMax * 64)
+	line(frame, 0, 30, "🏪 사내 매점", { Font = Enum.Font.GothamBlack, TextSize = 24 })
 	local balance = line(frame, 0, 30, "", {
 		TextXAlignment = Enum.TextXAlignment.Right,
 		Font = Enum.Font.GothamBold,
 		Size = UDim2.new(1, -44, 0, 30), -- 오른쪽 위 닫기 버튼 자리는 비워 둬요
 	})
-	local message = line(frame, 30 + #items * 64 + 14, 22, "", { TextSize = 15, TextColor3 = MUTED })
+	local message = line(frame, 76 + rowsMax * 64 + 6, 22, "", { TextSize = 15, TextColor3 = MUTED })
 
-	local rows = {}
-	for i, item in items do
-		local y = 40 + (i - 1) * 64
-		line(frame, y, 22, `{item.emoji} {item.name} · {comma(item.price)}원`, { Font = Enum.Font.GothamBold })
-		line(frame, y + 22, 36, item.description, { TextSize = 14, TextColor3 = MUTED, Size = UDim2.new(1, -120, 0, 36) })
-		local buy = Ui.button({
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, 0, 0, y + 8),
-			Size = UDim2.fromOffset(110, 40),
+	-- 탭
+	local pages: { [string]: Frame } = {}
+	local tabButtons: { [string]: TextButton } = {}
+	local function page(id: string): Frame
+		local f = Ui.make("Frame", {
+			Position = UDim2.fromOffset(0, 80),
+			Size = UDim2.new(1, 0, 0, rowsMax * 64),
+			BackgroundTransparency = 1,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		pages[id] = f
+		return f
+	end
+	local function selectTab(id: string)
+		for tabId, f in pages do
+			f.Visible = tabId == id
+			tabButtons[tabId].BackgroundColor3 = if tabId == id then Color3.fromRGB(255, 200, 80) else Color3.fromRGB(200, 200, 205)
+		end
+		message.Text = if id == "gifts" then "🎁 산 선물은 부장님께 다가가 [E] 말 걸기로 드려요" else ""
+		message.TextColor3 = MUTED
+	end
+	for i, info in { { "goods", "🧰 사무용품" }, { "gifts", "🎁 부장님 선물" } } do
+		local b = Ui.button({
+			Position = UDim2.fromOffset((i - 1) * 150, 36),
+			Size = UDim2.fromOffset(140, 34),
+			Text = info[2],
 			TextSize = 16,
 			ZIndex = 31,
 			Parent = frame,
 		})
+		b.Activated:Connect(function()
+			Sounds.play("click", 0.4)
+			selectTab(info[1])
+		end)
+		tabButtons[info[1]] = b
+	end
+
+	local function row(parent: Frame, i: number, title: string, description: string): TextButton
+		local y = (i - 1) * 64
+		line(parent, y, 22, title, { Font = Enum.Font.GothamBold })
+		line(parent, y + 22, 36, description, { TextSize = 14, TextColor3 = MUTED, Size = UDim2.new(1, -120, 0, 36) })
+		return Ui.button({
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, 0, 0, y + 8),
+			Size = UDim2.fromOffset(110, 40),
+			TextSize = 16,
+			ZIndex = 32,
+			Parent = parent,
+		})
+	end
+
+	-- 🧰 사무용품
+	local goods = page("goods")
+	local rows = {}
+	for i, item in items do
+		local buy = row(goods, i, `{item.emoji} {item.name} · {comma(item.price)}원`, item.description)
 		buy.Activated:Connect(function()
 			local ok, result = Remotes.BuyItem:InvokeServer(item.id)
 			message.Text = result
@@ -339,6 +390,22 @@ function Panels.showShop()
 		end)
 		rows[item.id] = buy
 	end
+
+	-- 🎁 부장님 선물
+	local giftPage = page("gifts")
+	for i, item in gifts do
+		local buy = row(giftPage, i, `{item.emoji} {item.name} · {comma(item.price)}원`, item.description)
+		buy.Text = "사기"
+		buy.Activated:Connect(function()
+			local ok, result = Remotes.BuyStreet:InvokeServer("store", item.id)
+			message.Text = result
+			message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
+			if ok then
+				Sounds.play("ping", 0.6, 1.2)
+			end
+		end)
+	end
+	selectTab(startTab or "goods")
 
 	-- 잔고와 버튼 상태를 계속 갱신
 	task.spawn(function()
@@ -357,6 +424,127 @@ function Panels.showShop()
 	end)
 
 	button(frame, 0, "닫기", close)
+	Sounds.play("swoosh", 0.4)
+end
+
+---------------------------------------------------------------------------
+-- 🎒 소지품: 가진 물건과 쓰는 법 한눈에
+---------------------------------------------------------------------------
+-- 사무용품마다 "어떻게 쓰는지" 설명 (모두 사면 자동으로 효과가 켜져요)
+local ITEM_HOW = {
+	plant = "책상 위에 놓여 있어요. 부장님 의심도가 25% 더 빨리 줄어요.",
+	tumbler = "책상 위에 있어요. 탕비실에서 커피 타는 척을 90초까지 버텨요.",
+	cover = "모니터를 감싸요. 웹툰·폰·쇼핑 같은 화면 농땡이가 30% 덜 들켜요.",
+	earphones = "책상 위에 있어요. 부장님 발소리를 멀리서 듣고, 화면 위에 부장님 상태가 보여요.",
+	dummy = "내가 자리를 비우면 의자에 앉아 있어요. 자리 부재 게이지가 천천히 차요 (150초).",
+}
+
+function Panels.showBag()
+	local frame = sheet(600, 560)
+	line(frame, 0, 32, "🎒 내 소지품", { Font = Enum.Font.GothamBlack, TextSize = 26 })
+	line(frame, 34, 22, "사무용품은 사면 자동으로 효과가 켜져요 (내 책상 위에 보여요). 소모품은 여기서 써요!", { TextSize = 14, TextColor3 = MUTED })
+	local list = Ui.make("ScrollingFrame", {
+		Position = UDim2.fromOffset(0, 62),
+		Size = UDim2.new(1, 0, 1, -122),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 6,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ZIndex = 31,
+		Parent = frame,
+	}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local order = 0
+	local function header(textValue: string)
+		order += 1
+		line(list, 0, 26, textValue, { Size = UDim2.new(1, -10, 0, 26), Font = Enum.Font.GothamBlack, TextSize = 18, LayoutOrder = order, ZIndex = 32 })
+	end
+	local function entry(title: string, description: string, owned: boolean, buttonText: string?, onClick: (() -> ())?): TextButton?
+		order += 1
+		local row = Ui.make("Frame", {
+			Size = UDim2.new(1, -10, 0, 54),
+			BackgroundColor3 = if owned then Color3.fromRGB(235, 245, 235) else Color3.fromRGB(235, 235, 235),
+			LayoutOrder = order,
+			ZIndex = 32,
+			Parent = list,
+		}, { Ui.corner(8), Ui.padding(6) })
+		line(row, 0, 20, title, { Font = Enum.Font.GothamBold, TextSize = 16, ZIndex = 33, TextColor3 = if owned then INK else MUTED })
+		line(row, 20, 22, description, { TextSize = 13, ZIndex = 33, TextColor3 = MUTED, Size = UDim2.new(1, if buttonText then -110 else 0, 0, 22) })
+		if buttonText then
+			local b = Ui.button({
+				AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, 0, 0.5, 0),
+				Size = UDim2.fromOffset(100, 34),
+				Text = buttonText,
+				TextSize = 15,
+				ZIndex = 34,
+				Parent = row,
+			})
+			if onClick then
+				b.Activated:Connect(onClick)
+			end
+			return b
+		end
+		return nil
+	end
+
+	-- 🧰 사무용품 (자동 효과)
+	header("🧰 사무용품 (자동 효과)")
+	for _, item in SalaryConfig.Items do
+		if item.consumable then
+			continue
+		end
+		local owned = player:GetAttribute(`Item_{item.id}`) == true
+		entry(`{item.emoji} {item.name} {if owned then "✅ 보유 중" else "· 🏪 사내 매점에서 구매"}`, ITEM_HOW[item.id] or item.description, owned)
+	end
+
+	-- ⚡ 소모품과 들고 있는 것
+	header("🖐️ 쓰는 물건")
+	local energy = player:GetAttribute("Energy") or 0
+	local energyActive = player:GetAttribute("EnergyActive") == true
+	entry(
+		`⚡ 에너지 드링크 x{energy}`,
+		if energyActive then "오늘 마셨어요! 복귀 시간 절반 효과 중" else "마시면 오늘 하루 일하는 척 복귀 시간이 절반!",
+		energy > 0 or energyActive,
+		if energy > 0 and not energyActive then "마시기" else nil,
+		function()
+			Remotes.UseEnergy:FireServer()
+			Sounds.play("ping", 0.5, 1.2)
+			close()
+		end
+	)
+	local snack = SalaryConfig.getSnack(player:GetAttribute("HeldSnack") or "")
+	if snack then
+		local percent = math.floor((player:GetAttribute("SnackProgress") or 0) * 100)
+		entry(`{snack.emoji} {snack.name} ({percent}% 먹음)`, "내 자리에 앉아서 [8] 간식 먹기로 몰래 먹어요. 다 먹으면 보너스!", true)
+	else
+		entry("🍪 들고 있는 간식 없음", "탕비실 간식 테이블이나 눈치 스트리트 디저트집에서 가져와요", false)
+	end
+	local giftId = player:GetAttribute("HeldGiftId") or ""
+	local gift = giftId ~= "" and SalaryConfig.getStreetItem("store", giftId)
+	if gift then
+		entry(`{gift.emoji} {gift.name}`, "부장님께 다가가서 [E] 말 걸기 → 선물 드리기! " .. gift.description, true)
+	else
+		entry("🎁 들고 있는 선물 없음", "🏪 사내 매점 '부장님 선물' 탭에서 사요 (홍삼 = 경고 -1)", false)
+	end
+	local buffs = player:GetAttribute("Buffs") or ""
+	entry(if buffs ~= "" then `☕ 오늘 마신 음료 {buffs}` else "☕ 오늘 마신 음료 없음", "눈치 스트리트 카페 음료는 오늘 하루 효과가 있어요", buffs ~= "")
+
+	-- 🎟️ 모은 것
+	header("📦 모은 것")
+	local owned = HttpService:JSONDecode(player:GetAttribute("Plushies") or "{}")
+	local kinds, total = 0, 0
+	for _, count in owned do
+		kinds += 1
+		total += count
+	end
+	entry(`🧸 인형 {total}개 ({kinds}/{#SalaryConfig.Plushies}종)`, "🧸 버튼에서 보고, 책상에 3개까지 진열할 수 있어요", total > 0, "보기", function()
+		Panels.showPlushies()
+	end)
+	entry(`🎟️ 오락실 티켓 {player:GetAttribute("Tickets") or 0}장`, "눈치 스트리트 오락실 경품 교환대에서 써요", (player:GetAttribute("Tickets") or 0) > 0)
+
+	button(frame, 0, "닫기", close)
+	Sounds.play("swoosh", 0.4)
 end
 
 ---------------------------------------------------------------------------
@@ -488,18 +676,19 @@ local function toolButton(label: string, width: number, onClick: () -> ()): Text
 	return b
 end
 
-toolButton("🛒 매점", 76, function()
-	if current then
-		close()
-	else
-		Panels.showShop()
-	end
-end)
+-- (🛒 매점 버튼은 없앴어요: 사무실의 🏪 사내 매점 계산대에서 [E]로 사요)
 toolButton("📖 도감", 76, function()
 	if current then
 		close()
 	else
 		Panels.showCollection()
+	end
+end)
+toolButton("🎒", 46, function()
+	if current then
+		close()
+	else
+		Panels.showBag()
 	end
 end)
 toolButton("🧸", 46, function()
@@ -758,7 +947,7 @@ local function showStreetShop(shopId: string)
 		Font = Enum.Font.GothamBold,
 		Size = UDim2.new(1, -44, 0, 30),
 	})
-	local message = line(frame, 30 + #items * 64 + 14, 22, "근무 중이라면 빨리 사서 돌아가요! 🖥️ 자리 부재 게이지가 차고 있어요", { TextSize = 15, TextColor3 = MUTED })
+	local message = line(frame, 30 + #items * 64 + 14, 22, if shopId == "store" then "🎁 산 선물은 부장님께 다가가 [E] 말 걸기로 드려요" else "근무 중이라면 빨리 사서 돌아가요! 🖥️ 자리 부재 게이지가 차고 있어요", { TextSize = 15, TextColor3 = MUTED })
 	for i, item in items do
 		local y = 40 + (i - 1) * 64
 		line(frame, y, 22, `{item.emoji} {item.name} · {comma(item.price)}원`, { Font = Enum.Font.GothamBold })
@@ -767,7 +956,7 @@ local function showStreetShop(shopId: string)
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, 0, 0, y + 8),
 			Size = UDim2.fromOffset(110, 40),
-			Text = if item.snack then "포장하기" else "마시기",
+			Text = if item.gift then "사기" elseif item.snack then "포장하기" else "마시기",
 			TextSize = 16,
 			ZIndex = 31,
 			Parent = frame,
@@ -790,7 +979,13 @@ local function showStreetShop(shopId: string)
 	Sounds.play("swoosh", 0.4)
 end
 
-Remotes:WaitForChild("StreetMenu").OnClientEvent:Connect(showStreetShop)
+Remotes:WaitForChild("StreetMenu").OnClientEvent:Connect(function(shopId: string)
+	if shopId == "store" then
+		Panels.showShop() -- 🏪 사내 매점은 사무용품 + 선물 탭
+	else
+		showStreetShop(shopId)
+	end
+end)
 
 ---------------------------------------------------------------------------
 -- 🧸 인형뽑기 기계 (판정은 서버가 해요. 화면은 같은 식으로 집게를 움직여 보여 줘요)
@@ -1826,6 +2021,214 @@ local function showDart()
 end
 
 Remotes:WaitForChild("DartOpen").OnClientEvent:Connect(showDart)
+
+---------------------------------------------------------------------------
+-- 🧩 긴급 프로젝트 퍼즐 (타자·계산·기억·순서) — 문제와 정답은 서버에 있어요
+---------------------------------------------------------------------------
+local PUZZLE_KINDS = { typing = true, math = true, memory = true, order = true }
+
+local function currentMissionStep()
+	local mission = SalaryConfig.Missions[player:GetAttribute("MissionId") or ""]
+	if not mission or player:GetAttribute("MissionStatus") ~= "active" then
+		return nil
+	end
+	return mission.steps[player:GetAttribute("MissionStep") or 0]
+end
+
+function Panels.showPuzzle()
+	local opened = Remotes.MissionPuzzle:InvokeServer("open")
+	if not opened.ok then
+		Ui.toast(opened.message)
+		return
+	end
+	local kind = opened.kind
+	local frame = sheet(520, 400)
+	local titles = { typing = "⌨️ 보고서 타자", math = "🧮 엑셀 계산", memory = "🧠 주문번호 기억", order = "📊 슬라이드 순서" }
+	line(frame, 0, 32, titles[kind] or "🧩 퍼즐", { Font = Enum.Font.GothamBlack, TextSize = 26 })
+	local info = line(frame, 36, 24, "", { TextSize = 15, TextColor3 = MUTED })
+	local big = line(frame, 70, 70, "", { TextSize = 36, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Center })
+	local status = line(frame, 0, 26, "", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, -60),
+		TextSize = 16,
+		Font = Enum.Font.GothamBold,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
+	local function showResult(result)
+		if not result.ok then
+			status.Text = result.message
+			status.TextColor3 = RED
+			return false
+		end
+		if result.done then
+			if result.correct then
+				Sounds.play("ping", 0.7, 1.3)
+				Ui.toast("🧩 통과! 다음 단계로")
+			else
+				Ui.toast(result.message)
+			end
+			close()
+			return true
+		end
+		if result.correct == false then
+			Sounds.play("bass", 0.4, 1.3)
+			status.Text = result.message
+			status.TextColor3 = RED
+		elseif result.correct then
+			Sounds.play("ping", 0.5, 1.2)
+			status.Text = "✅ 정답!"
+			status.TextColor3 = Color3.fromRGB(40, 140, 70)
+		end
+		return false
+	end
+
+	if kind == "typing" or kind == "math" or kind == "memory" then
+		local box = Ui.make("TextBox", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 160),
+			Size = UDim2.fromOffset(360, 50),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			TextColor3 = INK,
+			Font = Enum.Font.GothamBold,
+			TextSize = 24,
+			PlaceholderText = if kind == "typing" then "위 문장을 똑같이 입력" else "숫자 입력",
+			Text = "",
+			ClearTextOnFocus = false,
+			ZIndex = 32,
+			Parent = frame,
+		}, { Ui.corner(8), Ui.stroke(Color3.fromRGB(150, 150, 160), 2) })
+		local submit = Ui.button({
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 1, 0),
+			Size = UDim2.fromOffset(220, 50),
+			Text = "제출 (Enter)",
+			TextSize = 20,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		local function show(data)
+			if data.text then
+				big.Text = data.text
+				info.Text = `{data.index}/{data.total}`
+			end
+		end
+		if kind == "typing" then
+			info.Text = "오타 없이 똑같이 쳐요! (띄어쓰기도 똑같이)"
+		elseif kind == "math" then
+			info.Text = "하나라도 틀리면 새 문제로 처음부터!"
+		end
+		show(opened)
+		local busy = false
+		local function send()
+			if busy then
+				return
+			end
+			busy = true
+			local result = Remotes.MissionPuzzle:InvokeServer("answer", box.Text)
+			busy = false
+			if showResult(result) then
+				return
+			end
+			if result.ok then
+				show(result)
+				box.Text = ""
+				box:CaptureFocus()
+			end
+		end
+		submit.Activated:Connect(send)
+		box.FocusLost:Connect(function(enter)
+			if enter then
+				send()
+			end
+		end)
+		if kind == "memory" then
+			-- 처음 몇 초만 번호를 보여 주고, 그 뒤엔 통화(일하기) 버티기 → 입력
+			task.spawn(function()
+				while current == frame do
+					local left = (opened.showUntil or 0) - workspace:GetServerTimeNow()
+					if opened.code and left > 0 then
+						big.Text = opened.code
+						info.Text = `📞 주문번호를 외워요! {math.ceil(left)}초`
+						box.Visible = false
+					else
+						big.Text = "☎️ * * * * *"
+						info.Text = `통화 중: [1] 일하기 상태로 버텨요! ({player:GetAttribute("MissionProgress") or ""})`
+						box.Visible = true
+					end
+					task.wait(0.1)
+				end
+			end)
+		else
+			box:CaptureFocus()
+		end
+	elseif kind == "order" then
+		info.Text = "슬라이드 1번부터 6번까지 순서대로 눌러요!"
+		local clicked = {}
+		local buttons = {}
+		local function render(numbers)
+			for _, b in buttons do
+				b:Destroy()
+			end
+			table.clear(buttons)
+			table.clear(clicked)
+			for i, n in numbers do
+				local col, row = (i - 1) % 3, math.floor((i - 1) / 3)
+				local b = Ui.button({
+					Position = UDim2.new(0, col * 160 + 10, 0, 90 + row * 90),
+					Size = UDim2.fromOffset(140, 80),
+					Text = `📊 {n}`,
+					TextSize = 28,
+					ZIndex = 32,
+					Parent = frame,
+				})
+				b.Activated:Connect(function()
+					if table.find(clicked, n) then
+						return
+					end
+					table.insert(clicked, n)
+					b.BackgroundColor3 = Color3.fromRGB(150, 220, 150)
+					Sounds.play("click", 0.4)
+					if #clicked == #numbers then
+						local result = Remotes.MissionPuzzle:InvokeServer("answer", clicked)
+						if showResult(result) then
+							return
+						end
+						if result.numbers then
+							render(result.numbers)
+						end
+					end
+				end)
+				table.insert(buttons, b)
+			end
+		end
+		render(opened.numbers)
+	end
+	Sounds.play("swoosh", 0.4)
+end
+
+-- 📋 프로젝트 카드의 "🧩 풀기" 버튼 (퍼즐 단계일 때만)
+local puzzleButton = Ui.button({
+	AnchorPoint = Vector2.new(0.5, 1),
+	Position = UDim2.new(0.5, 0, 1, 4),
+	Size = UDim2.fromOffset(150, 36),
+	Text = "🧩 풀기",
+	TextSize = 18,
+	Visible = false,
+	Parent = Hud.missionPanel,
+})
+puzzleButton.Activated:Connect(function()
+	if current then
+		close()
+	end
+	Panels.showPuzzle()
+end)
+task.spawn(function()
+	while true do
+		local step = currentMissionStep()
+		puzzleButton.Visible = step ~= nil and PUZZLE_KINDS[step.kind] == true
+		task.wait(0.3)
+	end
+end)
 
 -- 새 날이 시작되면 열려 있던 창은 자동으로 닫아요
 ReplicatedStorage:GetAttributeChangedSignal("SalaryPhase"):Connect(function()

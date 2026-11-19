@@ -79,6 +79,9 @@ type EmployeeData = {
 	leeCooldownUntil: number, -- 이 시각 전에는 다시 고자질 안 해요
 	incomeRate: number, -- 지금 1초에 버는 돈
 	buffs: { [string]: boolean }, -- 🏙️ 오늘 마신 카페 음료 (americano, latte, smoothie)
+	heldGift: string?, -- 🎁 들고 있는 부장님 선물 (hongsam, flowers, choco)
+	flowerDay: number, -- 💐 꽃다발 효과가 있는 날
+	ready: boolean, -- 🏢 오늘 출근하기를 눌렀나
 	bossMood: number, -- 🍻 회식 결과: 다음 날 의심도 배율 (1보다 작으면 너그러움)
 	bossMoodDay: number, -- 그 배율이 적용되는 날
 	coffeeTime: number,
@@ -105,6 +108,7 @@ local function pick<T>(list: { T }): T
 end
 
 function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee)
+	Employees.hooks = {} :: { printer: ((Player) -> boolean)?, caught: ((Player) -> ())? } -- Missions가 채워요
 	local data: { [Player]: EmployeeData } = {}
 	local deskOwner: { [number]: Player } = {}
 
@@ -128,7 +132,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		for _, amount in d.today.earned do
 			total += amount
 		end
-		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus + d.today.eventBonus - d.today.caught * SalaryConfig.CAUGHT_PENALTY
+		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus + d.today.eventBonus - d.today.caught * SalaryConfig.caughtPenalty(d.profile.rank)
 	end
 
 	local function getHumanoid(player: Player): Humanoid?
@@ -213,6 +217,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		player:SetAttribute("TotalMoney", math.floor(profile.money))
 		player:SetAttribute("WorkSeconds", math.floor(d.workSeconds))
 		player:SetAttribute("WorkQuota", rankOf(d).quota)
+		player:SetAttribute("DailyTarget", SalaryConfig.dailyTarget(profile.rank))
 		player:SetAttribute("Combo", d.combo)
 		player:SetAttribute("Seated", isSeated(player, d))
 		player:SetAttribute("Fired", d.fired)
@@ -231,6 +236,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 		end
 		player:SetAttribute("Buffs", buffText)
+		local gift = d.heldGift and SalaryConfig.getStreetItem("store", d.heldGift)
+		player:SetAttribute("HeldGift", if gift then gift.emoji else "")
+		player:SetAttribute("HeldGiftId", d.heldGift or "")
 		player:SetAttribute("LeeWatch", math.clamp(d.leeWatch / SalaryConfig.LEE_NOTICE, 0, 1))
 		player:SetAttribute("LeeBribed", d.leeBribed)
 		local held = d.heldSnack
@@ -306,6 +314,80 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			label.TextScaled = true
 			label.Text = plush.emoji
 			label.Parent = tag
+		end
+	end
+
+	-- 🧰 산 사무용품을 책상 위에 보여 줘요 (효과가 켜져 있다는 표시)
+	--   🌱 화분 · 🥤 텀블러 · 🖥️ 모니터 가리개 · 🎧 이어폰 · 🧸 대리 출석 인형(자리 비우면 의자에 앉아 있어요)
+	local function buildDeskItems(d: EmployeeData)
+		local deskModel = d.desk.model
+		local old = deskModel:FindFirstChild("Items")
+		if old then
+			old:Destroy()
+		end
+		local folder = Instance.new("Folder")
+		folder.Name = "Items"
+		folder.Parent = deskModel
+		local seat = d.desk.seat
+		local top = seat.Position + Vector3.new(0, 1.5, -2.6) -- 책상 윗면 가운데
+		local function part(size: Vector3, position: Vector3, color: Color3, props: { [string]: any }?): BasePart
+			local p = Instance.new("Part")
+			p.Size = size
+			p.Position = position
+			p.Color = color
+			p.Anchored = true
+			p.CanCollide = false
+			p.CanQuery = false
+			p.CanTouch = false
+			p.Material = Enum.Material.SmoothPlastic
+			for key, value in props or {} do
+				(p :: any)[key] = value
+			end
+			p.Parent = folder
+			return p
+		end
+		if hasItem(d, "plant") then
+			part(Vector3.new(0.7, 0.7, 0.7), top + Vector3.new(2.5, 0.35, 0.9), Color3.fromRGB(200, 120, 70))
+			part(Vector3.new(1, 1, 1), top + Vector3.new(2.5, 1.1, 0.9), Color3.fromRGB(70, 160, 70), { Shape = Enum.PartType.Ball, Material = Enum.Material.Grass })
+		end
+		if hasItem(d, "tumbler") then
+			part(Vector3.new(0.45, 0.8, 0.45), top + Vector3.new(1.6, 0.4, 0.9), Color3.fromRGB(80, 170, 220), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90) })
+		end
+		if hasItem(d, "cover") then
+			-- 모니터 양옆을 감싸는 가리개
+			for _, dx in { -1.5, 1.5 } do
+				part(Vector3.new(0.15, 2, 0.9), top + Vector3.new(dx, 1.1, -0.45), Color3.fromRGB(40, 40, 50))
+			end
+			part(Vector3.new(3.15, 0.15, 0.9), top + Vector3.new(0, 2.15, -0.45), Color3.fromRGB(40, 40, 50))
+		end
+		if hasItem(d, "earphones") then
+			part(Vector3.new(0.9, 0.12, 0.25), top + Vector3.new(-1, 0.06, 1), Color3.fromRGB(30, 30, 35))
+			for _, dx in { -1.4, -0.6 } do
+				part(Vector3.new(0.3, 0.3, 0.3), top + Vector3.new(dx, 0.15, 1), Color3.fromRGB(230, 60, 60), { Shape = Enum.PartType.Ball })
+			end
+		end
+		if hasItem(d, "dummy") then
+			-- 🧸 대리 출석 인형: 내가 자리를 비우면 의자에 앉아 있어요
+			local base = seat.Position + Vector3.new(0, 0.5, 0)
+			local doll = {
+				part(Vector3.new(1.6, 1.8, 1), base + Vector3.new(0, 1, 0), Color3.fromRGB(80, 110, 160), { Material = Enum.Material.Fabric }),
+				part(Vector3.new(1.2, 1.2, 1.2), base + Vector3.new(0, 2.5, 0), Color3.fromRGB(240, 210, 180), { Shape = Enum.PartType.Ball, Material = Enum.Material.Fabric }),
+			}
+			local function refresh()
+				local away = seat.Occupant == nil
+				for _, piece in doll do
+					piece.Transparency = if away then 0 else 1
+				end
+			end
+			refresh()
+			local connection
+			connection = seat:GetPropertyChangedSignal("Occupant"):Connect(function()
+				if not folder.Parent then
+					connection:Disconnect()
+					return
+				end
+				refresh()
+			end)
 		end
 	end
 
@@ -399,8 +481,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			leeBribed = false,
 			leeCooldownUntil = 0,
 			bossMood = 1,
+			ready = false,
 			incomeRate = 0,
 			buffs = {},
+			heldGift = nil,
+			flowerDay = -1,
 			bossMoodDay = 0,
 			coffeeTime = 0,
 			energyActive = false,
@@ -445,6 +530,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		publishStocks(player, d)
 		publishPlushies(player, d)
 		buildDeskPlushies(d)
+		buildDeskItems(d)
 
 		-- 🏢 회사 확인: 이 서버 사무실과 내 직급의 회사가 다르면 알려 줘요
 		local here = SalaryConfig.getCompany(office.companyId)
@@ -500,9 +586,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if d then
 			endActivity(d)
 			save(player, d)
-			local plushFolder = d.desk.model:FindFirstChild("Plushies")
-			if plushFolder then
-				plushFolder:Destroy() -- 내 인형도 같이 퇴근
+			for _, folderName in { "Plushies", "Items" } do
+				local folder = d.desk.model:FindFirstChild(folderName)
+				if folder then
+					folder:Destroy() -- 내 인형·물건도 같이 퇴근
+				end
 			end
 			deskOwner[d.desk.index] = nil
 			data[player] = nil
@@ -586,6 +674,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if not d or not item then
 			return false, "알 수 없는 상품이에요."
 		end
+		-- 🛡️ 이제 사무실의 🏪 사내 매점 계산대 앞에서만 살 수 있어요
+		local store = office.shops.store
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if store and (not root or (root.Position - store.counter.Position).Magnitude > 12) then
+			return false, "🏪 사내 매점 계산대 앞에서 사 주세요!"
+		end
 		if not item.consumable and hasItem(d, item.id) then
 			return false, "이미 가지고 있어요."
 		end
@@ -599,8 +693,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			d.profile.items[item.id] = true
 		end
 		publish(player, d)
+		buildDeskItems(d)
 		task.spawn(save, player, d)
-		return true, `{item.emoji} {item.name} 구매 완료!`
+		return true, if item.consumable
+			then `{item.emoji} {item.name} 구매 완료! 🎒 소지품이나 ⚡ 버튼으로 마셔요.`
+			else `{item.emoji} {item.name} 구매 완료! 내 책상 위에 놓였어요 (효과 자동 적용)`
 	end
 
 	remotes.UseEnergy.OnServerEvent:Connect(function(player)
@@ -749,6 +846,10 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	docsPrompt.MaxActivationDistance = 7
 	docsPrompt.Parent = office.printer
 	docsPrompt.Triggered:Connect(function(player)
+		if Employees.hooks.printer and Employees.hooks.printer(player) then
+			remotes.Notify:FireClient(player, "🖨️ 지이잉… 출력 완료!")
+			return -- 📋 긴급 프로젝트 출력 (서류 들기 대신)
+		end
 		local d = data[player]
 		if not canStartActivity(player, d) then
 			return
@@ -876,6 +977,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if wasEating and d.heldSnack then
 			d.heldSnack = nil
 			remotes.Notify:FireClient(player, "🍪 간식을 압수당했다…")
+		end
+		if Employees.hooks.caught then
+			Employees.hooks.caught(player) -- 📋 긴급 프로젝트 중이면 실패
 		end
 		d.deskAction = "work"
 		d.returnUntil = nil
@@ -1063,9 +1167,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 
 		-- 2.5 🖥️ 자리 부재 게이지 (컴퓨터 자동 감지 시스템)
 		--   근무 중 자리를 비우면 차오르고, 앉아 있으면 줄어요.
-		--   소방 훈련·워크숍(나가야 하니까)·정전(컴퓨터가 꺼짐)·점심시간엔 멈춰요.
+		--   소방 훈련·워크숍(나가야 하니까)·점심시간엔 멈춰요.
+		--   💡 정전 때는 내 컴퓨터가 꺼져서 기록이 날아가요 → 0%로 초기화
 		local gaugeOn = dayCycle.phase == "work" and not events:is("drill") and not events:is("workshop") and not blackout
-		if gaugeOn and not isSeated(player, d) then
+		if blackout then
+			d.away, d.awayWarned = 0, false -- 컴퓨터 꺼짐: 기록 초기화
+		elseif gaugeOn and not isSeated(player, d) then
 			local smoothie = if d.buffs.smoothie then SalaryConfig.SMOOTHIE_AWAY else 1 -- 🍹 에너지 스무디
 			d.away = math.min(100, d.away + 100 / awayLimit(d) * smoothie * dt)
 			if d.away >= SalaryConfig.AWAY_WARN and not d.awayWarned then
@@ -1104,6 +1211,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 			if d.bossMoodDay == dayCycle.day then
 				rate *= d.bossMood -- 🍻 어제 회식 결과
+			end
+			if d.flowerDay == dayCycle.day then
+				rate *= SalaryConfig.FLOWER_DETECT -- 💐 오늘 꽃다발 드림
 			end
 			local raised = false
 			if rate > 0 then
@@ -1241,6 +1351,49 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 	end)
 
+	---------------------------------------------------------------- 🏢 출근하기
+	-- 하루가 시작되기 전, 모두 [출근하기]를 누를 때까지 기다려요.
+	-- 여럿이면: 누군가 누른 뒤 CLOCKIN_WAIT초가 지나면 나머지를 기다리지 않아요 (자리 비운 사람 때문에 멈추지 않게)
+	dayCycle.readyGate = function()
+		for player, d in data do
+			d.ready = false
+			player:SetAttribute("ClockedIn", false)
+		end
+		local firstReadyAt: number? = nil
+		while true do
+			task.wait(0.25)
+			local total, ready = 0, 0
+			for _, d in data do
+				total += 1
+				if d.ready then
+					ready += 1
+				end
+			end
+			ReplicatedStorage:SetAttribute("ClockInCount", `{ready}/{total}`)
+			if total > 0 and ready == total then
+				break
+			end
+			if ready > 0 then
+				firstReadyAt = firstReadyAt or os.clock()
+				ReplicatedStorage:SetAttribute("ClockInLeft", math.max(0, math.ceil(SalaryConfig.CLOCKIN_WAIT - (os.clock() - (firstReadyAt :: number)))))
+				if os.clock() - (firstReadyAt :: number) >= SalaryConfig.CLOCKIN_WAIT then
+					break
+				end
+			else
+				firstReadyAt = nil
+				ReplicatedStorage:SetAttribute("ClockInLeft", -1)
+			end
+		end
+		ReplicatedStorage:SetAttribute("ClockInLeft", -1)
+	end
+	remotes.ClockIn.OnServerEvent:Connect(function(player)
+		local d = data[player]
+		if d and dayCycle.waiting then
+			d.ready = true
+			player:SetAttribute("ClockedIn", true)
+		end
+	end)
+
 	---------------------------------------------------------------- 🌸 워크숍
 	events.canJoinWorkshop = function(player: Player): boolean
 		local d = data[player]
@@ -1270,7 +1423,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if d.profile.money < item.price then
 			return false, `통장 잔고가 부족해요. 😢 ({item.price}원 필요)`
 		end
-		if item.snack then
+		if item.gift then
+			if d.heldGift then
+				return false, "🎁 들고 있는 선물부터 부장님께 드려요! (한 번에 하나만)"
+			end
+			d.heldGift = item.id
+		elseif item.snack then
 			if d.heldSnack then
 				return false, "🍪 들고 있는 간식부터 먹어요! (한 번에 하나만)"
 			end
@@ -1286,6 +1444,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		d.profile.money -= item.price
 		publish(player, d)
 		task.spawn(save, player, d)
+		if item.gift then
+			return true, `{item.emoji} {item.name} 포장 완료! 부장님께 다가가 [E]로 드려요.`
+		end
 		if item.snack then
 			return true, `{item.emoji} {item.name} 포장 완료! 자리에서 [8]로 몰래 먹어요.`
 		end
@@ -1484,6 +1645,88 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		task.spawn(save, player, d)
 	end)
 
+	---------------------------------------------------------------- 📋 긴급 프로젝트 / 🎁 선물 (Missions 모듈이 불러요)
+	Employees.missionApi = {
+		get = function(player: Player): EmployeeData?
+			return data[player]
+		end,
+		isSeated = function(player: Player): boolean
+			local d = data[player]
+			return d ~= nil and isSeated(player, d)
+		end,
+		-- 성공 보상: 경고가 있으면 -1, 없으면 보너스
+		reward = function(player: Player, missionId: string): string
+			local d = data[player]
+			if not d then
+				return ""
+			end
+			local profile = d.profile
+			local text
+			if profile.warnings > 0 then
+				profile.warnings -= 1
+				text = `경고 -1! (남은 경고 {profile.warnings}/{SalaryConfig.MAX_WARNINGS})`
+			else
+				d.today.eventBonus += SalaryConfig.MISSION_BONUS
+				text = `보너스 +{SalaryConfig.MISSION_BONUS}원 (퇴근 때 지급)`
+			end
+			profile.missionsDone[missionId] = true
+			unlockAchievement(player, d, "mission_clear")
+			local all = true
+			for id, mission in SalaryConfig.Missions do
+				if not mission.company and not profile.missionsDone[id] then
+					all = false -- (회사 전용 미션은 빼고 세요)
+				end
+			end
+			if all then
+				unlockAchievement(player, d, "mission_master")
+			end
+			publishCollection(player, d)
+			publish(player, d)
+			task.spawn(save, player, d)
+			return text
+		end,
+		-- 🎁 들고 있는 선물을 부장님께 드리기 → (드렸는지, 부장님 대사, 안내 문구)
+		giveGift = function(player: Player): (boolean, string, string)
+			local d = data[player]
+			if not d or not d.heldGift then
+				return false, "", ""
+			end
+			local giftId = d.heldGift :: string
+			local profile = d.profile
+			if giftId == "hongsam" then
+				if dayCycle.day - profile.lastHongsamDay < SalaryConfig.GIFT_HONGSAM_DAYS then
+					return false, "허허, 저번에도 받았잖아~ 다음에 줘.", `🎁 홍삼은 {SalaryConfig.GIFT_HONGSAM_DAYS}일에 한 번만 통해요.`
+				end
+				profile.lastHongsamDay = dayCycle.day
+				d.heldGift = nil
+				local text
+				if profile.warnings > 0 then
+					profile.warnings -= 1
+					unlockAchievement(player, d, "gift_hongsam")
+					publishCollection(player, d)
+					text = `🎁 경고 -1! (남은 경고 {profile.warnings}/{SalaryConfig.MAX_WARNINGS})`
+				else
+					d.bossMood, d.bossMoodDay = 0.85, dayCycle.day + 1
+					text = "🎁 경고가 없어서 대신 내일 부장님이 너그러워요 (의심도 -15%)"
+				end
+				publish(player, d)
+				task.spawn(save, player, d)
+				return true, "어허, 뭘 이런 걸 다~ 😊 (홍삼 최고지)", text
+			elseif giftId == "flowers" then
+				d.heldGift = nil
+				d.flowerDay = dayCycle.day
+				publish(player, d)
+				return true, "오~ 꽃이네? 사무실이 환해졌어 💐", "💐 오늘 하루 의심도가 15% 덜 올라요"
+			elseif giftId == "choco" then
+				d.heldGift = nil
+				d.suspicion = math.max(0, d.suspicion - SalaryConfig.CHOCO_SUSPICION)
+				publish(player, d)
+				return true, "초콜릿? 당 떨어졌는데 잘됐네 🍫", `🍫 의심도 -{SalaryConfig.CHOCO_SUSPICION}`
+			end
+			return false, "", ""
+		end,
+	}
+
 	---------------------------------------------------------------- 🍻 회식 (Dinner 모듈이 불러요)
 	function Employees.dinnerParticipants(): { Player }
 		local list = {}
@@ -1626,11 +1869,19 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				table.insert(lines, { label = "돌발 이벤트 보너스", amount = d.today.eventBonus })
 			end
 			if d.today.caught > 0 then
-				table.insert(lines, { label = `시말서 감봉 ({d.today.caught}회)`, amount = -d.today.caught * SalaryConfig.CAUGHT_PENALTY })
+				table.insert(lines, { label = `시말서 감봉 ({d.today.caught}회)`, amount = -d.today.caught * SalaryConfig.caughtPenalty(profile.rank) })
 			end
 			local quotaOk = d.workSeconds >= rank.quota
 			if not quotaOk then
-				table.insert(lines, { label = "업무 미달 감봉", amount = -SalaryConfig.QUOTA_PENALTY })
+				table.insert(lines, { label = "업무 미달 감봉", amount = -SalaryConfig.quotaPenalty(profile.rank) })
+				profile.warnings += 1
+			end
+			-- 💰 하루 실적 목표 (사원부터): 기본급 빼고 오늘 번 돈 + 보너스 − 시말서 감봉
+			local target = SalaryConfig.dailyTarget(profile.rank)
+			local earned = math.floor(runningTotal(d))
+			local targetOk = target <= 0 or earned >= target
+			if not targetOk then
+				table.insert(lines, { label = `실적 미달 감봉 ({earned}/{target}원)`, amount = -math.floor(target * SalaryConfig.TARGET_PENALTY_RATE) })
 				profile.warnings += 1
 			end
 
@@ -1684,6 +1935,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				total = math.floor(profile.money),
 				warnings = profile.warnings,
 				quotaOk = quotaOk,
+				targetOk = targetOk,
+				target = target,
+				earned = earned,
 				workSeconds = math.floor(d.workSeconds),
 				quota = rank.quota,
 				fired = fired,

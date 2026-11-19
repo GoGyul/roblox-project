@@ -28,6 +28,8 @@ export type Profile = {
 	deskPlushies: { string }, -- 🧸 책상에 진열한 인형 (최대 3개)
 	tickets: number, -- 🎟️ 오락실 티켓
 	lastCompany: string, -- 🏢 지난번에 다닌 회사 (바뀌면 이직/좌천 안내)
+	missionsDone: { [string]: boolean }, -- 📋 성공한 긴급 프로젝트 종류
+	lastHongsamDay: number, -- 🎁 홍삼 선물을 마지막으로 드린 날
 	arcadeBest: { [string]: number }, -- 🕹️ 게임별 내 최고 점수
 	stats: { days: number, nearMiss: number, caught: number, fired: number, stockProfit: number },
 }
@@ -50,6 +52,8 @@ function Profiles.default(): Profile
 		deskPlushies = {},
 		tickets = 0,
 		lastCompany = "",
+		missionsDone = {},
+		lastHongsamDay = -100,
 		arcadeBest = {},
 		stats = { days = 0, nearMiss = 0, caught = 0, fired = 0, stockProfit = 0 },
 	}

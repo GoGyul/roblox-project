@@ -26,6 +26,7 @@ local Claw = require(script.Claw)
 local Arcade = require(script.Arcade)
 local Wheel = require(script.Wheel)
 local Dart = require(script.Dart)
+local Missions = require(script.Missions)
 local Profiles = require(script.Profiles)
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local Places = require(ReplicatedStorage.Shared.Places)
@@ -62,6 +63,10 @@ local dayCycle = DayCycle.new()
 
 -- 동료가 "수다 떨기"를 받으면 Employees가 처리해요
 local coworkers = Coworkers.start(office, boss, dayCycle, Remotes, function(player, coworker)
+	-- 📋 긴급 프로젝트 결재 도장이 필요하면 수다 대신 도장
+	if Employees.hooks and Employees.hooks.coworker and Employees.hooks.coworker(player, coworker) then
+		return
+	end
 	Employees.startChat(player, coworker)
 end)
 local events = Events.new(office, boss, dayCycle, Remotes, coworkers) -- 🎲 돌발 이벤트
@@ -69,6 +74,7 @@ local lee = Lee.new(office, dayCycle) -- 👀 눈치 빠른 이과장 (수·목 
 Employees.start(office, boss, dayCycle, Remotes, coworkers, events, lee)
 Street.start(office, Remotes, Employees.buyStreet) -- 🏙️ 눈치 스트리트 가게 (눈치물산만)
 Claw.start(office, Remotes, { charge = Employees.chargeClaw, give = Employees.givePlush }) -- 🧸 인형뽑기
+Missions.start(office, boss, dayCycle, Remotes, Employees.missionApi, Employees.hooks, coworkers) -- 📋 긴급 프로젝트 + 🎁 선물
 Wheel.start(office, Remotes, { charge = Employees.chargeClaw, payout = Employees.payWheel }) -- 🎡 다 같이 돌림판
 Dart.start(office, Remotes, { charge = Employees.chargeClaw, prize = Employees.dartPrize }) -- 🎈 풍선 다트
 Arcade.start(office, Remotes, { -- 🕹️ 오락실

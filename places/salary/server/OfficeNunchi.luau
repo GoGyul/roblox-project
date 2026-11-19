@@ -211,18 +211,24 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	Build.surfaceText(pantrySign, Enum.NormalId.Right, "☕ 카페 라운지")
 	local pantryZone = zone(B, "PantryZone", Vector3.new(22, 10, 24.5), v(-41, 5, 17.75))
 
-	---------------------------------------------------------------- 🛋️ 휴게 라운지 (뒤쪽 오른쪽, 장식)
-	B:part(Vector3.new(16, 0.1, 14), v(43, 0.05, 22), { Color = Color3.fromRGB(150, 140, 125), Material = Enum.Material.Carpet, CanCollide = false })
-	B:part(Vector3.new(9, 1.6, 3), v(43, 0.8, 27.5), { Color = C.sofa, Material = Enum.Material.Fabric }) -- 소파
-	B:part(Vector3.new(9, 2.2, 0.8), v(43, 2.2, 29), { Color = C.sofa, Material = Enum.Material.Fabric })
-	B:part(Vector3.new(3, 1.6, 6), v(49.5, 0.8, 22), { Color = C.sofa, Material = Enum.Material.Fabric })
-	B:part(Vector3.new(4, 1.2, 2.5), v(43, 0.6, 23), { Color = C.darkWood, Material = Enum.Material.Wood }) -- 커피 테이블
-	B:part(Vector3.new(1, 8, 6), v(51.4, 4, 14), { Color = C.wood, Material = Enum.Material.Wood }) -- 책장
+	---------------------------------------------------------------- 🏪 사내 매점 (뒤쪽 오른쪽, x 33.5~52 / z 11.5~30): 문이 있는 큰 별도 공간
+	B:wall("Z", 33.5, 11.5, HD, FLOOR_Y, WALL_HEIGHT, { { center = 20, width = 4.5, height = 8 } }, wall)
+	B:wall("X", 11.5, 33.5, HW, FLOOR_Y, WALL_HEIGHT, nil, wall)
+	local storeSpot = helpers.buildStore(B, 43, 18.5, C.accent)
+	helpers.decorateStore(B, {
+		center = Vector2.new(42.75, 20.75),
+		size = Vector2.new(18, 18),
+		wallX = 51.3,
+		z1 = 20,
+		z2 = 29.5,
+		fridge = Vector2.new(51, 14),
+		signPosition = v(32.85, 9, 20),
+		signFace = Enum.NormalId.Left,
+	})
 	plant(v(36, 0, 28))
-	plant(v(50, 0, 17), 0.8)
 
 	-- 장식: 화분, 프린터
-	for _, position in { v(-30, 0, -27), v(30, 0, -27), v(-26, 0, 3), v(30, 0, 7), v(-24, 0, 27), v(24, 0, 27) } do
+	for _, position in { v(-30, 0, -27), v(19, 0, -28), v(-26, 0, 3), v(30, 0, 7), v(-24, 0, 27), v(24, 0, 27) } do
 		plant(position)
 	end
 	local printer = B:part(Vector3.new(3, 2.5, 2.5), v(-30, 1.25, -4), { Name = "Printer", Color = Color3.fromRGB(230, 230, 235) })
@@ -513,6 +519,10 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	---------------------------------------------------------------- 🚒 집결지(=🏁 워크숍 결승선)와 시작 지점
 	-- 소방 훈련 때는 건물 밖 공원으로 대피해요
 	local assemblyZone, assemblyPoint, setAssemblyVisible = helpers.makeAssembly(B, 0, -HD - 9)
+
+	shops.store = storeSpot -- 🏪 사내 매점 (뒤쪽 오른쪽 방)
+	-- 📦 택배 상자 (출입문 옆)
+	local packageBox = helpers.buildPackage(B, -8, -27)
 	B:part(Vector3.new(4, 1, 4), v(0, -0.4, -HD + 5), {
 		ClassName = "SpawnLocation",
 		Transparency = 1,
@@ -531,7 +541,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		v(-7, 0, -7.5), -- 책상 줄 사이
 		v(7, 0, -7.5),
 		v(0, 0, -24), -- 창가
-		v(24, 0, -24),
+		v(18, 0, -22),
 		v(24, 0, -7),
 		v(24, 0, 6),
 		v(-7, 0, 6), -- 뒷줄 의자 뒤
@@ -539,7 +549,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		v(-27, 0, 12), -- 카페 라운지 문 앞
 		v(-32, 0, -10), -- 회의실·프린터 쪽
 		v(32, 0, -10), -- 화장실 쪽
-		v(38, 0, 18), -- 휴게 라운지
+		v(30, 0, 20), -- 매점 문 앞
 		v(0, 0, -44), -- 🌳 공원 (가끔 나가 봐요)
 		v(28, 0, -64), -- 흡연구역 근처
 		v(-20, 0, -100), -- 🏙️ 눈치 스트리트 (근무 중 외출 감시!)
@@ -558,7 +568,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		printer = printer,
 		pantryCounter = pantryCounter,
 		snackSpots = snackSpots,
-		spots = { v(-44, 0, 14), v(-27, 0, -4), v(-14, 0, -26), v(14, 0, -26), v(42, 0, 19), v(-6, 0, -48) },
+		spots = { v(-44, 0, 14), v(-27, 0, -4), v(-14, 0, -26), v(14, 0, -26), v(42, 0, 25), v(-6, 0, -48) },
 		toiletSeats = toiletSeats,
 		meetingSeats = meetingSeats,
 		meetingZone = meetingZone,
@@ -572,7 +582,9 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		workshopBoss = v(0, 0, -HD - 4), -- 부장님은 건물 출입문 바로 앞에서 술래
 		workshopLook = Vector3.new(0, 0, -1), -- 술래가 직원들을 볼 때 방향 (공원 쪽)
 		candyZone = candyZone,
-		shops = shops, -- 🏙️ 눈치 스트리트 가게들 (계산대, 사장님 자리)
+		shops = shops, -- 🏙️ 눈치 스트리트 가게들 + 🏪 사내 매점 (계산대, 사장님 자리)
+		packageBox = packageBox,
+		packageSpots = { v(-8, 0, -24), v(-40, 0, 24), v(42, 0, 26), v(0, 0, -50), v(-44, 0, -22), v(30, 0, -8), v(0, 0, 16), v(44, 0, -24) },
 		clawMachines = clawMachines, -- 🧸 인형뽑기 기계
 		wheel = { disc = wheelDisc, kiosk = wheelKiosk }, -- 🎡 다 같이 돌림판
 		dart = { board = dartBoard, counter = dartCounter }, -- 🎈 풍선 다트

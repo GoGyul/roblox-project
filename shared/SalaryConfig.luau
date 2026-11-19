@@ -11,7 +11,8 @@ SalaryConfig.START_MINUTE = 9 * 60
 SalaryConfig.END_MINUTE = 18 * 60
 SalaryConfig.LUNCH_START = 12 * 60
 SalaryConfig.LUNCH_END = 13 * 60
-SalaryConfig.PAYSLIP_SECONDS = 15 -- 퇴근 후 다음 날 출근까지
+SalaryConfig.PAYSLIP_SECONDS = 15 -- 퇴근 후 명세서 보는 시간 (그다음 🏢 출근하기 대기)
+SalaryConfig.CLOCKIN_WAIT = 20 -- 여럿이 할 때: 누군가 출근하기를 누르고 이만큼 지나면 나머지를 기다리지 않고 출근
 
 ---------------------------------------------------------------------------
 -- 돈과 규칙
@@ -19,7 +20,27 @@ SalaryConfig.PAYSLIP_SECONDS = 15 -- 퇴근 후 다음 날 출근까지
 SalaryConfig.BASE_PAY = 3000 -- 하루 기본급
 SalaryConfig.WORK_QUOTA = 60 -- 하루에 최소 이만큼(초)은 일해야 업무 평가 통과
 SalaryConfig.MAX_WARNINGS = 3 -- 경고 3번이면 해고
-SalaryConfig.CAUGHT_PENALTY = 1000 -- 적발 1번당 감봉
+SalaryConfig.CAUGHT_PENALTY = 1000 -- 적발 1번당 감봉 (기본값. 실제로는 직급별 Ranks[].penalty를 써요)
+
+SalaryConfig.TARGET_PENALTY_RATE = 0.3 -- 실적 미달 감봉 = 목표 × 이 비율
+
+-- 이 직급의 하루 실적 목표 (0이면 없음)
+function SalaryConfig.dailyTarget(rank: number): number
+	local info = SalaryConfig.Ranks[rank]
+	return if info and info.target then info.target else 0
+end
+
+-- 이 직급에서 업무 미달 감봉액
+function SalaryConfig.quotaPenalty(rank: number): number
+	local info = SalaryConfig.Ranks[rank]
+	return if info and info.quotaPenalty then info.quotaPenalty else SalaryConfig.QUOTA_PENALTY
+end
+
+-- 이 직급에서 적발 1번당 감봉액
+function SalaryConfig.caughtPenalty(rank: number): number
+	local info = SalaryConfig.Ranks[rank]
+	return if info and info.penalty then info.penalty else SalaryConfig.CAUGHT_PENALTY
+end
 SalaryConfig.QUOTA_PENALTY = 2000 -- 업무 미달 감봉
 SalaryConfig.NEAR_MISS_BONUS = 300 -- 아슬아슬 보너스 (콤보만큼 곱해짐)
 SalaryConfig.NEAR_MISS_WINDOW = 2.5 -- 복귀한 뒤 몇 초 안에 부장이 보면 아슬아슬
@@ -168,7 +189,7 @@ SalaryConfig.States = {
 		emoji = "🚶",
 		name = "어슬렁",
 		income = 0,
-		detect = 15,
+		detect = 7.5, -- 그냥 걸어 다니는 건 덜 수상해요 (예전 15)
 	},
 	-- 돌아다니며 하는 농땡이 (자리에서 일어나서)
 	docs = {
@@ -311,14 +332,17 @@ end
 --   basePay: 하루 기본급 / bonus: 농땡이 수입 배율 / quota: 하루 최소 업무(초)
 ---------------------------------------------------------------------------
 SalaryConfig.Ranks = {
-	{ name = "인턴", xp = 0, basePay = 3000, bonus = 1.0, quota = 60 },
-	{ name = "사원", xp = 6000, basePay = 4000, bonus = 1.15, quota = 70 },
-	{ name = "주임", xp = 20000, basePay = 5500, bonus = 1.3, quota = 80 },
-	{ name = "대리", xp = 50000, basePay = 7000, bonus = 1.5, quota = 90 },
-	{ name = "과장", xp = 100000, basePay = 9000, bonus = 1.75, quota = 100 },
-	{ name = "차장", xp = 170000, basePay = 11500, bonus = 2.0, quota = 110 },
-	{ name = "부장", xp = 260000, basePay = 14500, bonus = 2.3, quota = 120 },
-	{ name = "이사", xp = 380000, basePay = 18000, bonus = 2.7, quota = 130 },
+	-- penalty: 적발(경고) 1번당 시말서 감봉 — 직급이 높을수록 책임도 커요 (대략 기본급의 1/3)
+	-- quotaPenalty: 업무 시간 미달 감봉 — 이것도 직급이 높을수록 커요 (대략 기본급의 1/2)
+	-- target: 💰 하루 실적 목표 (기본급 빼고 그날 번 돈 + 보너스). 못 채우면 경고 +1 + 목표의 30% 감봉. 인턴은 없음
+	{ name = "인턴", xp = 0, basePay = 3000, bonus = 1.0, quota = 60, penalty = 1000, quotaPenalty = 2000, target = 0 },
+	{ name = "사원", xp = 6000, basePay = 4000, bonus = 1.15, quota = 70, penalty = 1300, quotaPenalty = 2500, target = 2000 },
+	{ name = "주임", xp = 20000, basePay = 5500, bonus = 1.3, quota = 80, penalty = 1800, quotaPenalty = 3200, target = 3000 },
+	{ name = "대리", xp = 50000, basePay = 7000, bonus = 1.5, quota = 90, penalty = 2400, quotaPenalty = 4000, target = 4000 },
+	{ name = "과장", xp = 100000, basePay = 9000, bonus = 1.75, quota = 100, penalty = 3000, quotaPenalty = 5000, target = 5000 },
+	{ name = "차장", xp = 170000, basePay = 11500, bonus = 2.0, quota = 110, penalty = 3800, quotaPenalty = 6200, target = 6000 },
+	{ name = "부장", xp = 260000, basePay = 14500, bonus = 2.3, quota = 120, penalty = 4800, quotaPenalty = 7500, target = 7500 },
+	{ name = "이사", xp = 380000, basePay = 18000, bonus = 2.7, quota = 130, penalty = 6000, quotaPenalty = 9000, target = 9000 },
 	-- 👑 사장: 3단계 엔딩에서 공개
 }
 
@@ -370,6 +394,9 @@ SalaryConfig.Achievements = {
 	{ id = "plush_all", emoji = "📚", name = "인형 수집가", description = "인형 10종을 모두 모으기 (오락실 한정 포함)" },
 	{ id = "arcade_first", emoji = "🕹️", name = "오락실 데뷔", description = "오락실 게임 처음 해 보기" },
 	{ id = "arcade_champ", emoji = "🏆", name = "오락실 챔피언", description = "두더지 30점 또는 타이밍 13점 이상" },
+	{ id = "mission_clear", emoji = "📋", name = "프로젝트 해결사", description = "긴급 프로젝트 성공하기" },
+	{ id = "mission_master", emoji = "🏅", name = "프로젝트 마스터", description = "긴급 프로젝트 4종(회의 발표 빼고)을 모두 성공하기" },
+	{ id = "gift_hongsam", emoji = "🎁", name = "아부의 달인", description = "홍삼 선물세트로 경고 지우기" },
 	{ id = "wheel_20", emoji = "🎡", name = "대박 돌림판", description = "돌림판 20에 걸어서 맞히기" },
 	{ id = "dart_legend", emoji = "🎈", name = "풍선 속 전설", description = "풍선 다트로 전설 인형 터뜨리기" },
 	{ id = "dragon_plush", emoji = "🐲", name = "용용이 입양", description = "티켓으로 오락실 한정 인형 용용이 받기" },
@@ -563,10 +590,21 @@ end
 --   buff: 사면 바로 마시고 오늘 하루 효과 (같은 음료는 하루 한 번)
 --   snack: 들고 가서 자리에서 [8] 몰래 먹기 (간식 시스템과 같아요)
 ---------------------------------------------------------------------------
-export type StreetItem = { id: string, emoji: string, name: string, price: number, description: string, snack: string? }
+export type StreetItem = { id: string, emoji: string, name: string, price: number, description: string, snack: string?, gift: boolean? }
 export type StreetShop = { id: string, name: string, clerk: string, items: { StreetItem } }
 
 SalaryConfig.StreetShops = {
+	-- 🏪 사내 매점 (두 회사 모두 사무실 안에 있어요): 부장님께 드릴 선물
+	store = {
+		id = "store",
+		name = "🏪 사내 매점",
+		clerk = "매점 아주머니",
+		items = {
+			{ id = "hongsam", emoji = "🎁", name = "홍삼 선물세트", price = 8000, gift = true, description = "부장님께 [E] 드리면 경고 -1! (5일에 한 번만)" },
+			{ id = "flowers", emoji = "💐", name = "꽃다발", price = 3000, gift = true, description = "부장님께 드리면 오늘 하루 의심도가 15% 덜 올라요" },
+			{ id = "choco", emoji = "🍫", name = "초콜릿", price = 800, gift = true, description = "부장님께 드리면 지금 의심도 -25" },
+		},
+	},
 	cafe = {
 		id = "cafe",
 		name = "☕ 눈치 커피",
@@ -768,5 +806,104 @@ function SalaryConfig.dartAim(elapsed: number, aim: { a: number, b: number, p: n
 	local y = 0.5 + 0.44 * math.sin(aim.b * elapsed + aim.q)
 	return x, y
 end
+
+---------------------------------------------------------------------------
+-- 📋 긴급 프로젝트 (하루 한 번, 사람마다 따로) — 실패해도 손해는 없지만 아주 어려워요!
+--   성공하면 경고 -1 (경고가 없으면 보너스). 적발되면 그 자리에서 실패.
+--   단계 종류(kind):
+--     typing  ⌨️ 내 자리에서 보고서 문장 타자 (오타 나면 그 문장 다시)
+--     math    🧮 내 자리에서 계산 문제 연속 (하나라도 틀리면 처음부터 새 문제)
+--     memory  🧠 거래처 주문번호 기억 → 통화(일하기) 버티기 → 번호 입력 (틀리면 실패)
+--     order   📊 회의실 의자에서 슬라이드 번호 순서대로 누르기 (틀리면 다시 섞임)
+--     printer 🖨️ 프린터 [E] / boss 👔 부장님 [E] / stamps 🖊️ 동료 결재 도장 [E] / boxes 📦 흩어진 택배 줍기
+---------------------------------------------------------------------------
+export type MissionStep = { kind: string, text: string, count: number? }
+export type MissionInfo = { id: string, emoji: string, name: string, seconds: number, steps: { MissionStep }, company: string? }
+
+SalaryConfig.MISSION_WINDOWS = { { 10 * 60, 10 * 60 + 25 }, { 13 * 60 + 5, 15 * 60 } } -- 시작 시각 (점심과 겹치지 않게)
+SalaryConfig.MISSION_BONUS = 3000 -- 경고가 없을 때 성공 보너스
+SalaryConfig.MEMORY_SHOW = 3 -- 주문번호를 보여 주는 시간 (초)
+SalaryConfig.MEMORY_HOLD = 12 -- 번호를 기억한 채 일하기로 버텨야 하는 시간 (초)
+SalaryConfig.BOX_SPEEDS = { 12, 9, 7 } -- 택배를 하나씩 들 때마다 느려져요 (평소 16)
+
+SalaryConfig.TypingPhrases = {
+	"3분기 매출 보고",
+	"전년 대비 성장률",
+	"고객 만족도 개선",
+	"비용 절감 방안",
+	"신규 거래처 확보",
+	"업무 효율 극대화",
+	"차기 분기 목표",
+	"시장 점유율 분석",
+	"품질 관리 강화",
+	"협업 체계 구축",
+}
+
+SalaryConfig.Missions = {
+	report = {
+		id = "report",
+		emoji = "📄",
+		name = "3분기 보고서",
+		seconds = 110,
+		steps = {
+			{ kind = "typing", text = "⌨️ 자리에서 보고서 3문장 타자 (🧩 풀기)", count = 3 },
+			{ kind = "printer", text = "🖨️ 프린터에서 출력 [E]" },
+			{ kind = "stamps", text = "🖊️ 동료 2명에게 결재 도장 [E]", count = 2 },
+			{ kind = "boss", text = "👔 부장님께 제출 [E]" },
+		},
+	},
+	boxes = {
+		id = "boxes",
+		emoji = "📦",
+		name = "택배 대란",
+		seconds = 80,
+		steps = {
+			{ kind = "boxes", text = "📦 사무실 곳곳 택배 3개 줍기 (들수록 느려져요)", count = 3 },
+			{ kind = "boss", text = "👔 부장님께 전달 [E]" },
+		},
+	},
+	excel = {
+		id = "excel",
+		emoji = "🧮",
+		name = "엑셀 지옥",
+		seconds = 100,
+		steps = {
+			{ kind = "math", text = "🧮 자리에서 계산 8문제 연속 정답 (틀리면 처음부터)", count = 8 },
+			{ kind = "printer", text = "🖨️ 프린터에서 출력 [E]" },
+			{ kind = "boss", text = "👔 부장님께 제출 [E]" },
+		},
+	},
+	claim = {
+		id = "claim",
+		emoji = "📞",
+		name = "거래처 클레임",
+		seconds = 75,
+		steps = {
+			{ kind = "answer", text = "📳 6초 안에 내 자리에 앉아서 전화 받기" },
+			{ kind = "memory", text = "🧠 주문번호 기억 → 12초 일하며 통화 → 번호 입력 (🧩 풀기)" },
+			{ kind = "printer", text = "🖨️ 주문서 출력 [E]" },
+			{ kind = "boss", text = "👔 부장님께 보고 [E]" },
+		},
+	},
+	meeting = {
+		id = "meeting",
+		emoji = "📊",
+		name = "임원 회의 발표",
+		seconds = 100,
+		steps = {
+			{ kind = "printer", text = "🖨️ 발표 자료 출력 [E]" },
+			{ kind = "order", text = "📊 회의실 의자에서 슬라이드 6장 순서대로 (🧩 풀기)", count = 6 },
+			{ kind = "stamps", text = "🖊️ 동료 1명에게 확인 도장 [E]", count = 1 },
+			{ kind = "boss", text = "👔 부장님께 보고 [E]" },
+		},
+		company = "nunchi",
+	},
+} :: { [string]: MissionInfo }
+
+SalaryConfig.TEST_MISSION = "" -- 🧪 스튜디오에서 이 프로젝트가 9시 15분쯤 바로 시작 ("report"/"boxes"/"excel"/"claim"/"meeting", ""면 끔)
+
+SalaryConfig.GIFT_HONGSAM_DAYS = 5 -- 홍삼 선물세트는 이 일수마다 한 번만 통해요
+SalaryConfig.FLOWER_DETECT = 0.85 -- 꽃다발: 오늘 의심도 배율
+SalaryConfig.CHOCO_SUSPICION = 25 -- 초콜릿: 의심도 감소량
 
 return SalaryConfig

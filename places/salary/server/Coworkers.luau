@@ -288,6 +288,17 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 		end
 	end
 
+	-- 지금 사무실에 있는 동료 이름들 (📋 결재 도장 미션용)
+	function api.names(): { string }
+		local names = {}
+		for _, c in list do
+			if not c.removed then
+				table.insert(names, c.name)
+			end
+		end
+		return names
+	end
+
 	function api.setChatting(c: Coworker, on: boolean)
 		if c.removed then
 			return

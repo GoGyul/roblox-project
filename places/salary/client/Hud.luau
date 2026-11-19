@@ -133,6 +133,96 @@ local leeText = text({
 	Parent = gui,
 })
 
+-- 🏢 출근하기 (하루가 시작되기 전, 이 버튼을 눌러야 9시가 돼요)
+local clockIn = Ui.make("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.58),
+	Size = UDim2.fromOffset(380, 170),
+	BackgroundColor3 = Color3.fromRGB(28, 22, 16),
+	BackgroundTransparency = 0.1,
+	Visible = false,
+	ZIndex = 20,
+	Parent = gui,
+}, { Ui.corner(14), Ui.stroke(C.brass, 2) })
+local clockInTitle = text({
+	Position = UDim2.fromOffset(0, 12),
+	Size = UDim2.new(1, 0, 0, 30),
+	TextSize = 24,
+	TextXAlignment = Enum.TextXAlignment.Center,
+	ZIndex = 21,
+	Parent = clockIn,
+})
+local clockInInfo = text({
+	Position = UDim2.fromOffset(0, 44),
+	Size = UDim2.new(1, 0, 0, 22),
+	TextSize = 15,
+	TextColor3 = Color3.fromRGB(200, 200, 210),
+	TextXAlignment = Enum.TextXAlignment.Center,
+	ZIndex = 21,
+	Parent = clockIn,
+})
+local clockInButton = Ui.button({
+	AnchorPoint = Vector2.new(0.5, 1),
+	Position = UDim2.new(0.5, 0, 1, -14),
+	Size = UDim2.fromOffset(260, 64),
+	Text = "🏢 출근하기!",
+	TextSize = 26,
+	ZIndex = 21,
+	Parent = clockIn,
+})
+clockInButton.Activated:Connect(function()
+	if player:GetAttribute("ClockedIn") then
+		return
+	end
+	Sounds.play("click", 0.6)
+	Remotes.ClockIn:FireServer()
+end)
+
+local function updateClockIn()
+	local waiting = ReplicatedStorage:GetAttribute("SalaryWaiting") == true
+	clockIn.Visible = waiting
+	if not waiting then
+		return
+	end
+	local day = ReplicatedStorage:GetAttribute("SalaryDay") or 0
+	local nextWeekday = SalaryConfig.Weekdays[day % #SalaryConfig.Weekdays + 1]
+	clockInTitle.Text = `🌅 {day + 1}일차 · {nextWeekday.name} 아침`
+	local count = ReplicatedStorage:GetAttribute("ClockInCount") or ""
+	local left = ReplicatedStorage:GetAttribute("ClockInLeft") or -1
+	local done = player:GetAttribute("ClockedIn") == true
+	if done then
+		clockInButton.Text = "✅ 출근 완료!"
+		clockInButton.BackgroundColor3 = Color3.fromRGB(110, 110, 120)
+		clockInInfo.Text = if left >= 0 then `동료 기다리는 중 ({count}) · {left}초 뒤 자동 출근` else `동료 기다리는 중 ({count})`
+	else
+		clockInButton.Text = "🏢 출근하기!"
+		clockInButton.BackgroundColor3 = C.brass
+		clockInInfo.Text = if left >= 0 then `준비 {count} · {left}초 뒤 출근해요!` else `부장님 기분: {nextWeekday.mood}`
+	end
+end
+
+-- 📋 긴급 프로젝트 카드 (오른쪽, 돈 창 아래)
+local missionPanel = panel({
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -12, 0, 150),
+	Size = UDim2.fromOffset(290, 196),
+	Visible = false,
+})
+Hud.missionPanel = missionPanel -- Panels가 "🧩 풀기" 버튼을 붙여요
+local missionTitle = text({ Size = UDim2.new(1, 0, 0, 24), TextSize = 19, TextColor3 = C.brass, Parent = missionPanel })
+local missionTime = text({ Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Parent = missionPanel })
+local missionSteps = text({
+	Position = UDim2.fromOffset(0, 48),
+	Size = UDim2.new(1, 0, 1, -48),
+	TextSize = 14,
+	TextWrapped = true,
+	RichText = true,
+	TextYAlignment = Enum.TextYAlignment.Top,
+	Parent = missionPanel,
+})
+local lastMissionStatus = ""
+local nextRingAt = 0
+
 ---------------------------------------------------------------------------
 -- 오른쪽 위: 직급, 경력, 돈
 ---------------------------------------------------------------------------
@@ -149,7 +239,7 @@ local totalText = text({ Position = UDim2.fromOffset(0, 88), Size = UDim2.new(1,
 ---------------------------------------------------------------------------
 -- 왼쪽: 내 상태, 의심도, 업무, 경고
 ---------------------------------------------------------------------------
-local STATUS_HEIGHT = 236
+local STATUS_HEIGHT = 276
 local statusPanel = panel({
 	AnchorPoint = Vector2.new(0, 0.5),
 	Position = UDim2.new(0, 12, 0.42, 0),
@@ -160,9 +250,10 @@ Ui.make("UITextSizeConstraint", { MaxTextSize = 22, MinTextSize = 12, Parent = s
 local suspicionLabel, suspicionFill = bar(statusPanel, 34, "")
 local workLabel, workFill = bar(statusPanel, 74, "")
 local awayLabel, awayFill = bar(statusPanel, 114, "") -- 🖥️ 자리 부재 게이지
-local warningText = text({ Position = UDim2.fromOffset(0, 156), Size = UDim2.new(1, 0, 0, 22), Parent = statusPanel })
+local targetLabel, targetFill = bar(statusPanel, 154, "") -- 💰 하루 실적 목표 (사원부터)
+local warningText = text({ Position = UDim2.fromOffset(0, 196), Size = UDim2.new(1, 0, 0, 22), Parent = statusPanel })
 local comboText = text({
-	Position = UDim2.fromOffset(0, 182),
+	Position = UDim2.fromOffset(0, 222),
 	Size = UDim2.new(1, 0, 0, 20),
 	TextSize = 15,
 	TextColor3 = COLORS.good,
@@ -333,7 +424,7 @@ end)
 --   작은 화면(폰·작은 창): 패널을 줄이고, 행동 버튼은 2줄로 위쪽에, 서로 겹치지 않게
 ---------------------------------------------------------------------------
 local scales = {}
-for _, frame in { clockPanel, moneyPanel, statusPanel, Hud.toolbar, actionPanel } do
+for _, frame in { clockPanel, moneyPanel, statusPanel, Hud.toolbar, actionPanel, missionPanel } do
 	scales[frame] = Ui.make("UIScale", { Parent = frame })
 end
 
@@ -367,6 +458,9 @@ local function applyLayout()
 
 	scales[moneyPanel].Scale = small
 	moneyPanel.Position = UDim2.new(1, if compact then -6 else -12, 0, if compact then 4 else 8)
+	-- 📋 프로젝트 카드는 돈 창 바로 아래
+	scales[missionPanel].Scale = small
+	missionPanel.Position = UDim2.new(1, if compact then -6 else -12, 0, (if compact then 4 else 8) + math.floor(moneyPanel.AbsoluteSize.Y) + 8)
 
 	scales[statusPanel].Scale = small
 	if compact then
@@ -459,6 +553,9 @@ local BOSS_STATUS_TEXT = {
 }
 
 local function phaseName(phase: string?): string
+	if ReplicatedStorage:GetAttribute("SalaryWaiting") then
+		return " 🌅 출근 전"
+	end
 	if phase == "lunch" then
 		return " 🍚 점심시간"
 	elseif phase == "offwork" then
@@ -556,8 +653,66 @@ local function updateEvent()
 	end
 end
 
+-- 📋 긴급 프로젝트 카드 갱신
+local function updateMission()
+	local missionId = player:GetAttribute("MissionId") or ""
+	local status = player:GetAttribute("MissionStatus") or ""
+	local mission = SalaryConfig.Missions[missionId]
+	missionPanel.Visible = mission ~= nil and (status == "active" or status == "success" or status == "fail")
+	if status ~= lastMissionStatus then
+		if status == "active" then
+			Sounds.play("bass", 0.6, 1.3)
+			Hud.popup(`📋 긴급 프로젝트! {mission and mission.name or ""}`, COLORS.warn, 3)
+		elseif status == "success" then
+			Sounds.play("ping", 0.8, 1.3)
+			Hud.popup("📋 프로젝트 성공! 🎉", COLORS.good, 3)
+		elseif status == "fail" then
+			Sounds.play("bass", 0.5, 0.8)
+			Hud.popup("📋 프로젝트 실패…", COLORS.bad, 2.5)
+		end
+		lastMissionStatus = status
+	end
+	if not mission or not missionPanel.Visible then
+		return
+	end
+	local step = player:GetAttribute("MissionStep") or 1
+	local left = math.max(0, math.ceil((player:GetAttribute("MissionEndsAt") or 0) - workspace:GetServerTimeNow()))
+	missionTitle.Text = `📋 {mission.emoji} {mission.name}`
+	if status == "success" then
+		missionTime.Text = "✅ 성공!"
+		missionTime.TextColor3 = COLORS.good
+	elseif status == "fail" then
+		missionTime.Text = "❌ 실패…"
+		missionTime.TextColor3 = COLORS.bad
+	else
+		missionTime.Text = `⏰ 남은 시간 {left}초 · 성공하면 경고 -1`
+		missionTime.TextColor3 = if left <= 15 then COLORS.bad else C.text
+	end
+	local lines = {}
+	local progress = player:GetAttribute("MissionProgress") or ""
+	for i, stepInfo in mission.steps do
+		local stepText = stepInfo.text
+		if i < step or status == "success" then
+			table.insert(lines, `<font color="#7CE08A">✅ {stepText}</font>`)
+		elseif i == step and status == "active" then
+			table.insert(lines, `<b>▶ {stepText}</b>` .. (if progress ~= "" then `  <font color="#FFD266">{progress}</font>` else ""))
+		else
+			table.insert(lines, `<font color="#9A9AA5">· {stepText}</font>`)
+		end
+	end
+	missionSteps.Text = table.concat(lines, "\n")
+	-- 📞 전화 벨소리
+	local current = mission.steps[step]
+	if status == "active" and current and current.kind == "answer" and os.clock() >= nextRingAt then
+		nextRingAt = os.clock() + 0.5
+		Sounds.play("ping", 0.6, 1.8)
+	end
+end
+
 RunService.RenderStepped:Connect(function()
 	updateEvent()
+	updateMission()
+	updateClockIn()
 	-- 👀 이과장 경고
 	local leeWatch = player:GetAttribute("LeeWatch") or 0
 	leeText.Visible = leeWatch > 0
@@ -606,9 +761,24 @@ RunService.RenderStepped:Connect(function()
 	suspicionFill.Size = UDim2.fromScale(math.clamp(suspicion / 100, 0, 1), 1)
 	suspicionFill.BackgroundColor3 = if suspicion >= 70 then COLORS.bad elseif suspicion >= 35 then COLORS.warn else COLORS.good
 
+	-- 💰 하루 실적 목표
+	local target = player:GetAttribute("DailyTarget") or 0
+	local earnedToday = player:GetAttribute("TodayMoney") or 0
+	if target > 0 then
+		targetLabel.Text = if earnedToday >= target then `💰 오늘 실적 {comma(earnedToday)}/{comma(target)}원 ✅` else `💰 오늘 실적 {comma(earnedToday)}/{comma(target)}원 (못 채우면 경고)`
+		targetFill.Size = UDim2.fromScale(math.clamp(earnedToday / target, 0, 1), 1)
+		targetFill.BackgroundColor3 = if earnedToday >= target then COLORS.good else COLORS.warn
+	else
+		targetLabel.Text = "💰 실적 목표는 사원부터 (지금은 자유!)"
+		targetFill.Size = UDim2.fromScale(0, 1)
+	end
+
 	-- 🖥️ 자리 부재 게이지
 	local away = player:GetAttribute("AwayGauge") or 0
-	awayLabel.Text = if away >= SalaryConfig.AWAY_WARN then `🖥️ 자리 부재 {away}% ⚠️ 얼른 자리로!` else `🖥️ 자리 부재 {away}% (꽉 차면 경고)`
+	local powerOut = ReplicatedStorage:GetAttribute("SalaryEvent") == "blackout" and ReplicatedStorage:GetAttribute("SalaryEventStage") == "active"
+	awayLabel.Text = if powerOut then `🖥️ 자리 부재 {away}% (💡 정전: 컴퓨터 꺼짐, 기록 초기화)`
+		elseif away >= SalaryConfig.AWAY_WARN then `🖥️ 자리 부재 {away}% ⚠️ 얼른 자리로!`
+		else `🖥️ 자리 부재 {away}% (꽉 차면 경고)`
 	awayFill.Size = UDim2.fromScale(math.clamp(away / 100, 0, 1), 1)
 	awayFill.BackgroundColor3 = if away >= SalaryConfig.AWAY_WARN then COLORS.bad elseif away >= 40 then COLORS.warn else COLORS.good
 
@@ -631,10 +801,16 @@ RunService.RenderStepped:Connect(function()
 	local day = ReplicatedStorage:GetAttribute("SalaryDay")
 	if phase == "work" and minute >= SalaryConfig.END_MINUTE - 60 and quotaWarnedDay ~= day and player:GetAttribute("Fired") ~= true then
 		quotaWarnedDay = day
+		local outcome = if onEdge then "못 채우면 해고예요!!" else "못 채우면 경고 1개!"
 		if work < quota then
 			Sounds.play("caught", 0.4)
-			local outcome = if onEdge then "못 채우면 해고예요!!" else "못 채우면 경고 1개!"
 			Ui.toast(`⏰ 퇴근 1시간 전! 업무가 {quota - work}초 남았어요. {outcome}`)
+		end
+		local target = player:GetAttribute("DailyTarget") or 0
+		local earned = player:GetAttribute("TodayMoney") or 0
+		if target > 0 and earned < target then
+			Sounds.play("caught", 0.4)
+			Ui.toast(`💰 퇴근 1시간 전! 오늘 실적이 {comma(target - earned)}원 모자라요. {outcome}`)
 		end
 	end
 	local combo = player:GetAttribute("Combo") or 1
@@ -647,6 +823,10 @@ RunService.RenderStepped:Connect(function()
 	local buffs = player:GetAttribute("Buffs") or ""
 	if buffs ~= "" then
 		comboLine = `오늘 버프 {buffs}  ` .. comboLine -- 🏙️ 카페 음료
+	end
+	local gift = player:GetAttribute("HeldGift") or ""
+	if gift ~= "" then
+		comboLine = `선물 {gift}  ` .. comboLine -- 🎁 부장님께 드릴 선물
 	end
 	comboText.Text = comboLine
 
@@ -746,7 +926,7 @@ Remotes:WaitForChild("Caught").OnClientEvent:Connect(function(line: string, warn
 	flash.BackgroundTransparency = 0.4
 	TweenService:Create(flash, TweenInfo.new(0.8), { BackgroundTransparency = 1 }):Play()
 	Hud.popup(`🚨 적발! "{line}"`, COLORS.bad, 3)
-	Ui.toast(`경고 {warnings}/{SalaryConfig.MAX_WARNINGS} · 시말서 감봉 -{comma(SalaryConfig.CAUGHT_PENALTY)}원`)
+	Ui.toast(`경고 {warnings}/{SalaryConfig.MAX_WARNINGS} · 시말서 감봉 -{comma(SalaryConfig.caughtPenalty(player:GetAttribute("Rank") or 1))}원`)
 	if warnings == SalaryConfig.MAX_WARNINGS - 1 then
 		task.delay(2, function()
 			Hud.popup("⚠️ 한 번만 더 걸리면 해고!", COLORS.bad, 3.5)
