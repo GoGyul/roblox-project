@@ -36,7 +36,7 @@ type Pose = {
 
 -- 내 캐릭터의 농땡이 모션
 local POSES: { [string]: Pose } = {
-	work = { waist = -5, neck = -8, rShoulder = 45, rElbow = 35, lShoulder = 45, lElbow = 35, waves = { { "rElbow", "x", 6, 12 }, { "lElbow", "x", 6, 10 } } },
+	work = { waist = -5, neck = -8, rShoulder = 45, rElbow = 35, lShoulder = 45, lElbow = 35, waves = { { "rElbow", "x", 3, 2.6 }, { "lElbow", "x", 3, 2.2 } } }, -- 천천히 타자 (빠르면 손이 떨리는 것처럼 보여요)
 	blank = { waist = 6, neck = 18, waves = { { "neck", "y", 10, 0.6 } } },
 	webtoon = { waist = -12, neck = -18, rShoulder = 40, rElbow = 40, lShoulder = 20, lElbow = 20, waves = { { "rElbow", "x", 3, 2 } } },
 	phone = { waist = -10, neck = -30, rShoulder = 55, rElbow = 80, lShoulder = 55, lElbow = 80, prop = "phone", waves = { { "neck", "y", 4, 1.5 } } },
@@ -48,6 +48,8 @@ local POSES: { [string]: Pose } = {
 	coffee = { rShoulder = 40, rElbow = 85, prop = "cup", waves = { { "rElbow", "x", 12, 1 } } },
 	docs = { rShoulder = 20, rElbow = 70, lShoulder = 20, lElbow = 70, prop = "folder" },
 	chat = { neck = 5, rShoulder = 35, rElbow = 50, waves = { { "rShoulder", "z", 15, 2 }, { "neck", "y", 8, 1 } } },
+	candy = { neck = 12, rShoulder = 75, rElbow = 125, waves = { { "neck", "y", 8, 0.4 } }, prop = "lollipop" }, -- 사탕 물고 먼 산 보기
+	meeting = { waist = -6, neck = -24, rShoulder = 30, rElbow = 60, lShoulder = 30, lElbow = 60, waves = { { "neck", "x", 10, 0.7 } } }, -- 꾸벅꾸벅
 	ramen = { neck = -15, rShoulder = 50, rElbow = 95, lShoulder = 30, lElbow = 60, prop = "bowl", waves = { { "rElbow", "x", 15, 4 } } },
 }
 
@@ -72,6 +74,7 @@ local PROPS = {
 	folder = { hands = { "RightHand", "Right Arm" }, size = Vector3.new(1, 1.3, 0.12), color = Color3.fromRGB(240, 200, 80), offset = CFrame.new(-0.5, -0.3, -0.35) },
 	snack = { hands = { "RightHand", "Right Arm" }, size = Vector3.new(0.5, 0.25, 0.5), color = Color3.fromRGB(200, 150, 90), offset = CFrame.new(0, -0.3, -0.25) },
 	bowl = { hands = { "LeftHand", "Left Arm" }, size = Vector3.new(1, 0.5, 1), color = Color3.fromRGB(200, 60, 40), offset = CFrame.new(0, -0.2, -0.4) },
+	lollipop = { hands = { "RightHand", "Right Arm" }, size = Vector3.new(0.6, 0.6, 0.6), color = Color3.fromRGB(255, 110, 170), offset = CFrame.new(0, -0.5, -0.3), shape = Enum.PartType.Ball },
 }
 
 type Joint = { set: (CFrame) -> (), base: CFrame, angle: Vector3, kind: string }
@@ -182,6 +185,9 @@ local function setProp(model: Model, rig: Rig, wanted: string?)
 		if hand then
 			local part = Instance.new("Part")
 			part.Name = `Prop_{wanted}`
+			if spec.shape then
+				part.Shape = spec.shape
+			end
 			part.Size = spec.size
 			part.Color = spec.color
 			part.CanCollide = false

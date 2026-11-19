@@ -310,6 +310,32 @@ function Boss:callTo(position: Vector3)
 	self.summon = position
 end
 
+-- 🌸 워크숍 술래: 감시를 멈추고 이 자리에 서요
+function Boss:host(position: Vector3, look: Vector3)
+	self.token += 1
+	self.active = false
+	self.scolding = false
+	self.watching = false
+	self.footsteps.Playing = false
+	self.model:PivotTo(CFrame.lookAt(position + Vector3.new(0, 3, 0), position + Vector3.new(0, 3, 0) - look))
+	self:status("🌸")
+end
+
+-- 🍻 회식 자리에 나타나기 / 회식 끝나면 퇴근
+function Boss:joinDinner(position: Vector3, look: Vector3)
+	self.token += 1
+	self.active = false
+	self.watching = false
+	self.model.Parent = self.office.folder
+	self.model:PivotTo(CFrame.lookAt(position + Vector3.new(0, 3, 0), position + Vector3.new(0, 3, 0) + look))
+	self.root:SetNetworkOwner(nil)
+	self:status("🍻")
+end
+
+function Boss:leaveDinner()
+	self.model.Parent = nil
+end
+
 -- 🚒 소방 훈련: 감시를 멈추고 집결지로 가요
 function Boss:evacuate(position: Vector3)
 	self.token += 1

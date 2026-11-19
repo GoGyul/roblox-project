@@ -12,6 +12,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Build = require(ReplicatedStorage.Shared.Build)
+local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
+local OfficeNunchi = require(script.Parent.OfficeNunchi)
 
 local OfficeBuilder = {}
 
@@ -30,6 +32,23 @@ local COLORS = {
 	tile = Color3.fromRGB(210, 225, 230),
 	accent = Color3.fromRGB(230, 120, 60),
 }
+
+-- 🏢 회사마다 다른 인테리어 (여기 없는 색은 위 기본색을 써요)
+--   partitionHeight: 책상 칸막이 높이. 낮을수록 부장님 눈에 잘 띄어요!
+local THEMES = {
+	daechung = { partitionHeight = 4.5, colors = {} },
+	nunchi = {
+		partitionHeight = 2.6, -- 요즘 회사는 칸막이가 낮아요 (= 숨기 어려움)
+		colors = {
+			floor = Color3.fromRGB(75, 85, 100),
+			wall = Color3.fromRGB(245, 246, 248),
+			desk = Color3.fromRGB(235, 235, 232),
+			partition = Color3.fromRGB(80, 165, 165),
+			accent = Color3.fromRGB(40, 160, 170),
+		},
+	},
+}
+local partitionHeight = 4.5
 
 export type Desk = {
 	index: number,
@@ -52,11 +71,21 @@ export type Office = {
 	spots: { Vector3 }, -- 동료들이 들르는 곳 (탕비실, 프린터, 창가)
 	snackSpots: { Vector3 }, -- 간식이 놓이는 자리 (테이블 윗면)
 	toiletSeats: { Seat }, -- 변기 (앉으면 주식 거래)
+	meetingSeats: { Seat }, -- 📊 유리 회의실 의자 (눈치물산만, 없으면 빈 목록)
+	meetingZone: BasePart?,
+	companyId: string,
 	lamps: { BasePart }, -- 형광등 (정전 때 꺼져요)
 	assemblyZone: BasePart, -- 🚒 소방 훈련 집결지
 	assemblyPoint: Vector3,
 	setAssemblyVisible: (boolean) -> (),
 	cakeSpots: { Vector3 }, -- 🎂 생일 케이크 조각이 놓이는 곳 (탕비실 조리대)
+	workshopStart: Vector3, -- 🌸 무궁화꽃 출발선 가운데 (결승선은 집결지)
+	workshopBoss: Vector3, -- 술래(부장님) 자리
+	workshopLook: Vector3, -- 술래가 직원들을 볼 때 방향
+	candyZone: BasePart?, -- 🍭 흡연구역(사탕) — 눈치물산 공원에만
+	dinnerSeats: { Seat }, -- 🍻 회식 자리 (없으면 화면 미니게임만)
+	dinnerBoss: Vector3?,
+	dinnerLook: Vector3?,
 	setClock: (number, number) -> (),
 }
 
@@ -95,9 +124,10 @@ local function buildDesk(B, index: number, x: number, z: number): Desk
 	screen.Name = "Screen"
 	p(Vector3.new(1.6, 0.1, 0.6), v(x, 2.55, z + 0.3), { Color = Color3.fromRGB(60, 60, 60) }) -- 키보드
 	-- 파티션 (앞, 양옆)
-	p(Vector3.new(6.4, 4.5, 0.3), v(x, 2.25, z - 1.7), { Color = COLORS.partition, Material = Enum.Material.Fabric })
-	p(Vector3.new(0.3, 4.5, 3.6), v(x - 3.2, 2.25, z), { Color = COLORS.partition, Material = Enum.Material.Fabric })
-	p(Vector3.new(0.3, 4.5, 3.6), v(x + 3.2, 2.25, z), { Color = COLORS.partition, Material = Enum.Material.Fabric })
+	local h = partitionHeight
+	p(Vector3.new(6.4, h, 0.3), v(x, h / 2, z - 1.7), { Color = COLORS.partition, Material = Enum.Material.Fabric })
+	p(Vector3.new(0.3, h, 3.6), v(x - 3.2, h / 2, z), { Color = COLORS.partition, Material = Enum.Material.Fabric })
+	p(Vector3.new(0.3, h, 3.6), v(x + 3.2, h / 2, z), { Color = COLORS.partition, Material = Enum.Material.Fabric })
 
 	-- 의자 (Seat: 닿으면 앉아요. 앞쪽(-Z)을 보고 앉음)
 	local seat = p(Vector3.new(2, 1, 2), v(x, 1, z + 2.6), {
@@ -110,7 +140,48 @@ local function buildDesk(B, index: number, x: number, z: number): Desk
 	return { index = index, model = model, seat = seat, behind = v(x, 0, z + 6.5) }
 end
 
-function OfficeBuilder.build(): Office
+-- 🚒 소방 훈련 집결지 (훈련 때만 초록색으로 보여요). 회사마다 위치만 달라요.
+local function makeAssembly(B, x: number, z: number): (BasePart, Vector3, (boolean) -> ())
+	local assemblyPoint = v(x, 0, z)
+	local assemblyZone = zone(B, "AssemblyZone", Vector3.new(12, 10, 8), v(x, 5, z - 0.5))
+	local assemblyMarker = B:part(Vector3.new(12, 0.1, 6), v(x, 0.06, z), {
+		Name = "AssemblyMarker",
+		Color = Color3.fromRGB(60, 200, 90),
+		Material = Enum.Material.Neon,
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+	})
+	local assemblyBoard = Instance.new("BillboardGui")
+	-- 크기를 칸(stud) 단위로: 멀리서 보면 작아져서 부장님(술래)을 가리지 않아요
+	assemblyBoard.Size = UDim2.fromScale(8, 1.8)
+	assemblyBoard.StudsOffset = Vector3.new(0, 12, 0) -- 부장님 머리보다 한참 위
+	assemblyBoard.AlwaysOnTop = true
+	assemblyBoard.Enabled = false
+	assemblyBoard.Parent = assemblyMarker
+	local assemblyLabel = Instance.new("TextLabel")
+	assemblyLabel.Size = UDim2.fromScale(1, 1)
+	assemblyLabel.BackgroundColor3 = Color3.fromRGB(40, 150, 70)
+	assemblyLabel.TextColor3 = Color3.new(1, 1, 1)
+	assemblyLabel.Font = Enum.Font.GothamBlack
+	assemblyLabel.TextScaled = true
+	assemblyLabel.Text = "🚨 비상 집결지"
+	assemblyLabel.Parent = assemblyBoard
+	local function setAssemblyVisible(visible: boolean, text: string?)
+		assemblyMarker.Transparency = if visible then 0.4 else 1
+		assemblyBoard.Enabled = visible
+		assemblyLabel.Text = text or "🚨 비상 집결지"
+	end
+	return assemblyZone, assemblyPoint, setAssemblyVisible :: any
+end
+
+function OfficeBuilder.build(companyId: string?): Office
+	local company = SalaryConfig.getCompany(companyId or "daechung")
+	local theme = THEMES[company.id] or THEMES.daechung
+	for key, color in theme.colors do
+		COLORS[key] = color
+	end
+	partitionHeight = theme.partitionHeight
 	local old = workspace:FindFirstChild("Office")
 	if old then
 		old:Destroy()
@@ -125,6 +196,18 @@ function OfficeBuilder.build(): Office
 	folder.Name = "Office"
 	folder.Parent = workspace
 	local B = Build.new(folder, Vector3.zero)
+
+	-- 🏙️ 눈치물산은 완전히 다른(더 크고 고급스러운) 사무실이에요 → OfficeNunchi.luau
+	if company.id == "nunchi" then
+		return OfficeNunchi.build(B, folder, company, {
+			v = v,
+			zone = zone,
+			buildDesk = buildDesk,
+			makeAssembly = makeAssembly,
+			FLOOR_Y = FLOOR_Y,
+		})
+	end
+
 	local wall = { Color = COLORS.wall, Material = Enum.Material.Plaster }
 
 	-- 바닥, 천장, 바깥 벽 (가로 76칸: 가운데 사무실 + 양쪽 끝 화장실·탕비실)
@@ -150,7 +233,7 @@ function OfficeBuilder.build(): Office
 
 	-- 사훈 현수막과 벽시계 (직원들이 앉으면 정면에 보여요)
 	local banner = B:part(Vector3.new(16, 2.5, 0.2), v(0, 10, -21.85), { Color = Color3.fromRGB(170, 30, 40) })
-	Build.surfaceText(banner, Enum.NormalId.Back, "사훈: 열정! 도전! 혁신! 우리는 가족입니다", {
+	Build.surfaceText(banner, Enum.NormalId.Back, company.motto, {
 		Font = Enum.Font.GothamBlack,
 		TextColor3 = Color3.fromRGB(255, 230, 120),
 	})
@@ -272,34 +355,7 @@ function OfficeBuilder.build(): Office
 	end
 
 	-- 🚒 소방 훈련 집결지 (출입문 안쪽, 훈련 때만 초록색으로 보여요)
-	local assemblyPoint = v(0, 0, -19)
-	local assemblyZone = zone(B, "AssemblyZone", Vector3.new(12, 10, 8), v(0, 5, -19.5))
-	local assemblyMarker = B:part(Vector3.new(12, 0.1, 6), v(0, 0.06, -19), {
-		Name = "AssemblyMarker",
-		Color = Color3.fromRGB(60, 200, 90),
-		Material = Enum.Material.Neon,
-		Transparency = 1,
-		CanCollide = false,
-		CanQuery = false,
-	})
-	local assemblyBoard = Instance.new("BillboardGui")
-	assemblyBoard.Size = UDim2.fromOffset(220, 50)
-	assemblyBoard.StudsOffset = Vector3.new(0, 6, 0)
-	assemblyBoard.AlwaysOnTop = true
-	assemblyBoard.Enabled = false
-	assemblyBoard.Parent = assemblyMarker
-	local assemblyLabel = Instance.new("TextLabel")
-	assemblyLabel.Size = UDim2.fromScale(1, 1)
-	assemblyLabel.BackgroundColor3 = Color3.fromRGB(40, 150, 70)
-	assemblyLabel.TextColor3 = Color3.new(1, 1, 1)
-	assemblyLabel.Font = Enum.Font.GothamBlack
-	assemblyLabel.TextScaled = true
-	assemblyLabel.Text = "🚨 비상 집결지"
-	assemblyLabel.Parent = assemblyBoard
-	local function setAssemblyVisible(visible: boolean)
-		assemblyMarker.Transparency = if visible then 0.4 else 1
-		assemblyBoard.Enabled = visible
-	end
+	local assemblyZone, assemblyPoint, setAssemblyVisible = makeAssembly(B, 0, -19)
 
 	-- 시작 지점 (출입문 안쪽)
 	B:part(Vector3.new(4, 1, 4), v(0, -0.4, -19), {
@@ -344,11 +400,21 @@ function OfficeBuilder.build(): Office
 		snackSpots = snackSpots,
 		spots = { v(34, 0, 8), v(-24, 0, -8), v(-12, 0, -18), v(12, 0, -18), v(34, 0, 17) },
 		toiletSeats = toiletSeats,
+		meetingSeats = {}, -- 대충상사엔 회의실이 없어요
+		meetingZone = nil,
+		companyId = company.id,
 		lamps = lamps,
 		assemblyZone = assemblyZone,
 		assemblyPoint = assemblyPoint,
 		setAssemblyVisible = setAssemblyVisible,
 		cakeSpots = { v(36.6, 3, 11.2), v(36.6, 3, 12.6), v(36.6, 3, 16.4) },
+		workshopStart = v(0, 0, 10), -- 뒷줄 의자와 부장 책상 사이
+		workshopBoss = v(0, 0, -21), -- 출입문 앞
+		workshopLook = Vector3.new(0, 0, 1),
+		candyZone = nil,
+		dinnerSeats = {}, -- 대충상사는 회식 장소가 없어서 화면 미니게임만
+		dinnerBoss = nil,
+		dinnerLook = nil,
 		setClock = setClock,
 	}
 end

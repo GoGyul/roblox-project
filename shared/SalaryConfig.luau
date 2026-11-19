@@ -24,7 +24,11 @@ SalaryConfig.QUOTA_PENALTY = 2000 -- 업무 미달 감봉
 SalaryConfig.NEAR_MISS_BONUS = 300 -- 아슬아슬 보너스 (콤보만큼 곱해짐)
 SalaryConfig.NEAR_MISS_WINDOW = 2.5 -- 복귀한 뒤 몇 초 안에 부장이 보면 아슬아슬
 SalaryConfig.MAX_COMBO = 5
-SalaryConfig.TOILET_LIMIT = 90 -- 화장실에 이보다 오래 있으면 자리 비움이 티 남
+-- 🖥️ 자리 부재 게이지: 근무 중에 내 자리를 비우면(화장실, 흡연구역, 회의실, 탕비실…) 천천히 차올라요.
+--   70%면 "컴퓨터 자동 감지 시스템" 경보, 100%면 경고 1회. 자리에 앉아 있으면 다시 줄어요.
+SalaryConfig.AWAY_SECONDS = 90 -- 0% → 100%까지 걸리는 시간 (대리 출석 인형이 있으면 150초)
+SalaryConfig.AWAY_RECOVER = 8 -- 자리에 앉아 있으면 1초에 줄어드는 양 (%)
+SalaryConfig.AWAY_WARN = 70 -- 이 %가 되면 경보
 SalaryConfig.COFFEE_GRACE = 40 -- 탕비실에서 이 시간까지는 커피 타는 척 가능
 SalaryConfig.DOCS_SECONDS = 40 -- 서류 들고 바쁜 척 지속 시간
 SalaryConfig.RAMEN_SECONDS = 15 -- 라면 먹는 시간
@@ -150,7 +154,7 @@ SalaryConfig.States = {
 		income = 8,
 		detect = 0,
 		payLabel = "화장실 체류 수당",
-		hint = "부장도 못 들어오는 안전지대. 대신 오래 있으면 자리 비움이 티 나요.",
+		hint = "부장도 못 들어오는 안전지대. 대신 🖥️ 자리 부재 게이지가 차올라요.",
 	},
 	coffee = {
 		emoji = "☕",
@@ -183,6 +187,22 @@ SalaryConfig.States = {
 		noise = 0.2,
 		payLabel = "수다 수당",
 		hint = "자리에 앉아 있는 동료에게 말을 걸어요. 떨어지면 끝나요.",
+	},
+	candy = {
+		emoji = "🍭",
+		name = "흡연구역에서 사탕 물기",
+		income = 9,
+		detect = 25,
+		payLabel = "흡연구역 사탕 수당",
+		hint = "🌳 눈치물산 공원 흡연구역(※ 금연, 사탕만!)에 서 있으면 돼요. 자리를 오래 비우면 티 나요.",
+	},
+	meeting = {
+		emoji = "📊",
+		name = "회의하는 척 졸기",
+		income = 12,
+		detect = 20,
+		payLabel = "회의 참석 수당",
+		hint = "🏢 눈치물산 유리 회의실 의자에 앉으면 돼요. 유리벽이라 너무 대놓고 자면 티 나요.",
 	},
 	ramen = {
 		emoji = "🍜",
@@ -315,7 +335,7 @@ SalaryConfig.Items = {
 	{ id = "tumbler", emoji = "🥤", name = "고급 텀블러", price = 3000, description = "탕비실에서 커피 타는 척 시간이 40초 → 90초." },
 	{ id = "cover", emoji = "🖥️", name = "모니터 가리개", price = 6000, description = "화면 농땡이(웹툰, 폰, 쇼핑)가 30% 덜 들켜요." },
 	{ id = "earphones", emoji = "🎧", name = "부장 레이더 이어폰", price = 9000, description = "발소리 감지 거리 증가 + 부장이 지금 감시 중인지 화면에 표시." },
-	{ id = "dummy", emoji = "🧸", name = "대리 출석 인형", price = 12000, description = "자리에 인형을 앉혀 둬요. 화장실 체류 한도 90초 → 150초." },
+	{ id = "dummy", emoji = "🧸", name = "대리 출석 인형", price = 12000, description = "자리에 인형을 앉혀 둬요. 자리 부재 게이지가 천천히 차요 (90초 → 150초)." },
 	{ id = "energy", emoji = "⚡", name = "에너지 드링크", price = 1500, consumable = true, description = "마시면 그날 하루 일하는 척 복귀 시간 절반!" },
 } :: { ItemInfo }
 
@@ -338,6 +358,9 @@ SalaryConfig.Achievements = {
 	{ id = "birthday_cake", emoji = "🎂", name = "생일 축하해요(?)", description = "남의 생일 케이크를 끝까지 먹기" },
 	{ id = "drill_hero", emoji = "🚒", name = "모범 대피자", description = "소방 훈련 때 제시간에 집결지로 대피하기" },
 	{ id = "audit_survivor", emoji = "🔍", name = "감사 생존자", description = "감사 기간에 한 번도 안 걸리고 퇴근하기" },
+	{ id = "workshop_winner", emoji = "🌸", name = "무궁화 챔피언", description = "워크숍 무궁화꽃이 피었습니다 1등 하기" },
+	{ id = "dinner_ace", emoji = "🍻", name = "회식 에이스", description = "회식에서 6점 이상 받기" },
+	{ id = "company_nunchi", emoji = "🏢", name = "이직 성공", description = "과장이 돼서 (주)눈치물산으로 스카우트되기" },
 	{ id = "lee_bribe", emoji = "☕", name = "커피 외교", description = "이과장에게 커피를 상납해서 고자질 막기" },
 	{ id = "lee_dodge", emoji = "🫣", name = "눈치 싸움 승리", description = "이과장의 ❗를 보고 들키기 전에 일하는 척하기" },
 	{ id = "chatterbox", emoji = "🗣️", name = "사내 수다왕", description = "수다 주제 15개 수집하기" },
@@ -415,6 +438,7 @@ SalaryConfig.Events = {
 	{ id = "blackout", emoji = "💡", name = "정전", allDay = false, description = "30초 동안 컴퓨터가 꺼져요. 어두워서 자도 안 들켜요!" },
 	{ id = "cake", emoji = "🎂", name = "생일 케이크", allDay = false, description = "탕비실에 생일 케이크 3조각! 먼저 먹는 사람이 임자" },
 	{ id = "drill", emoji = "🚒", name = "소방 훈련", allDay = false, description = "45초 안에 초록색 집결지로 대피! 안 하면 경고" },
+	{ id = "workshop", emoji = "🌸", name = "워크숍 레크리에이션", allDay = false, description = "부장님이 술래인 무궁화꽃이 피었습니다! 골인하면 보너스" },
 } :: { EventInfo }
 
 SalaryConfig.AUDIT_INCOME = 2 -- 감사 기간 농땡이 수입 배율
@@ -425,11 +449,11 @@ SalaryConfig.AUDIT_INCOME = 2 -- 감사 기간 농땡이 수입 배율
 --   농땡이를 LEE_NOTICE초 이상 보면 부장님께 고자질 → 의심도 +LEE_TATTLE, 부장님이 바로 달려와요.
 --   ☕ 커피를 상납하면 그날 고자질을 한 번 눈감아 줘요.
 ---------------------------------------------------------------------------
-SalaryConfig.LEE_DAYS = { "수요일", "목요일" }
 SalaryConfig.LEE_NOTICE = 1.2
 SalaryConfig.LEE_TATTLE = 35
 SalaryConfig.LEE_COOLDOWN = 25 -- 같은 사람을 다시 고자질하기까지 (초)
 SalaryConfig.LEE_BRIBE_COST = 1000
+SalaryConfig.LEE_IGNORE_RANK = 5 -- 과장부터는 이과장과 동급이라 고자질 안 당해요
 SalaryConfig.TEST_LEE = false -- 🧪 true면 스튜디오에서 요일 상관없이 매일 출근 (실제 게임엔 영향 없음)
 
 -- 오늘 이과장이 출근하나? (감사 기간과 겹치지 않게 Events도 이걸 봐요)
@@ -437,12 +461,77 @@ function SalaryConfig.leeWorksOn(weekdayName: string): boolean
 	if SalaryConfig.TEST_LEE and game:GetService("RunService"):IsStudio() then
 		return true
 	end
-	return table.find(SalaryConfig.LEE_DAYS, weekdayName) ~= nil
+	local company = SalaryConfig.currentCompany()
+	return table.find(company.leeDays, weekdayName) ~= nil
+end
+
+---------------------------------------------------------------------------
+-- 🏢 회사: 직급이 오르면 더 큰 회사로 스카우트돼요
+--   서버는 처음 들어온 사람의 직급으로 회사를 정하고 사무실을 지어요.
+--   지금 서버의 회사 ID는 ReplicatedStorage의 "SalaryCompany" 속성에 있어요.
+---------------------------------------------------------------------------
+export type CompanyInfo = {
+	id: string,
+	name: string,
+	minRank: number, -- 이 직급부터 이 회사로 출근
+	leeDays: { string }, -- 이과장이 출근하는 요일
+	motto: string,
+}
+
+SalaryConfig.Companies = {
+	{ id = "daechung", name = "(주)대충상사", minRank = 1, leeDays = { "수요일", "목요일" }, motto = "사훈: 열정! 도전! 혁신! 우리는 가족입니다" },
+	{
+		id = "nunchi",
+		name = "(주)눈치물산",
+		minRank = 5, -- 과장
+		leeDays = {}, -- 이과장은 대충상사에 남았어요 (나도 이제 과장이라 동급!)
+		motto = "사훈: 눈치가 곧 경쟁력! 칼퇴는 없다",
+	},
+} :: { CompanyInfo }
+
+SalaryConfig.TEST_COMPANY = "" -- 🧪 스튜디오에서 "nunchi"를 넣으면 눈치물산 사무실로 시작 (실제 게임엔 영향 없음)
+
+function SalaryConfig.getCompany(companyId: string): CompanyInfo
+	for _, company in SalaryConfig.Companies do
+		if company.id == companyId then
+			return company
+		end
+	end
+	return SalaryConfig.Companies[1]
+end
+
+-- 이 직급이면 어느 회사에 다니나 (조건을 만족하는 가장 높은 회사)
+function SalaryConfig.companyForRank(rank: number): CompanyInfo
+	local best = SalaryConfig.Companies[1]
+	for _, company in SalaryConfig.Companies do
+		if rank >= company.minRank then
+			best = company
+		end
+	end
+	return best
+end
+
+function SalaryConfig.currentCompany(): CompanyInfo
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	return SalaryConfig.getCompany(ReplicatedStorage:GetAttribute("SalaryCompany") or "daechung")
 end
 SalaryConfig.BLACKOUT_SECONDS = 30
 SalaryConfig.DRILL_SECONDS = 45 -- 대피 제한 시간
 SalaryConfig.DRILL_ROLLCALL_SECONDS = 20 -- 대피 후 인원 점검 (자유시간)
 SalaryConfig.DRILL_BONUS = 800
+
+-- 🌸 워크숍: 무궁화꽃이 피었습니다 (부장님이 술래, 결승선은 출입문 앞)
+SalaryConfig.WORKSHOP_SECONDS = 60 -- 최대 게임 시간
+SalaryConfig.WORKSHOP_SPEED = 6 -- 게임 중 걷는 속도 (평소 16)
+SalaryConfig.WORKSHOP_BONUS = 2000 -- 골인 보너스
+SalaryConfig.WORKSHOP_FIRST_BONUS = 1500 -- 1등 추가 보너스
+
+-- 🍻 목요일 회식 (퇴근 후 미니게임)
+SalaryConfig.DINNER_DAY = "목요일"
+SalaryConfig.DINNER_DELAY = 7 -- 명세서 읽을 시간
+SalaryConfig.DINNER_SECONDS = 40
+SalaryConfig.DINNER_POINT = 300 -- 회식 점수 1점당 보너스
+SalaryConfig.TEST_DINNER = false -- 🧪 true면 스튜디오에서 매일 회식 (실제 게임엔 영향 없음)
 
 function SalaryConfig.getEvent(eventId: string): EventInfo?
 	for _, event in SalaryConfig.Events do

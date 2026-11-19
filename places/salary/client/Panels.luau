@@ -196,7 +196,7 @@ Remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
 		Sounds.play("ping", 0.7, 1.3)
 	end
 	local rows = #slip.lines
-	local extra = if slip.promotedTo then 70 else 0
+	local extra = (if slip.promotedTo then 70 else 0) + (if slip.moveTo then 76 else 0)
 	local frame = sheet(470, 280 + rows * 26 + extra)
 	line(frame, 0, 30, `🧾 급여명세서 · {slip.day}일차 ({slip.weekday})`, { Font = Enum.Font.GothamBlack, TextSize = 22 })
 
@@ -249,6 +249,37 @@ Remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
 			ZIndex = 32,
 		})
 		Hud.popup(`🎉 {slip.promotedTo} 승진!`, Color3.fromRGB(255, 210, 80), 3)
+	end
+
+	-- 🏢 스카우트 제의 (더 큰 회사로 이직)
+	if slip.moveTo then
+		local top = y + 110 + (if slip.promotedTo then 70 else 0)
+		local offer = Ui.make("Frame", {
+			Position = UDim2.fromOffset(0, top),
+			Size = UDim2.new(1, 0, 0, 66),
+			BackgroundColor3 = Color3.fromRGB(200, 235, 240),
+			ZIndex = 31,
+			Parent = frame,
+		}, { Ui.corner(10) })
+		line(offer, 4, 26, `📦 {slip.moveTo}에서 스카우트 제의가 왔어요!`, {
+			Font = Enum.Font.GothamBold,
+			TextSize = 16,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			ZIndex = 32,
+		})
+		local accept = Ui.button({
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 30),
+			Size = UDim2.fromOffset(220, 32),
+			Text = "🏢 새 회사로 출근하기",
+			TextSize = 16,
+			ZIndex = 32,
+			Parent = offer,
+		})
+		accept.Activated:Connect(function()
+			accept.Text = "📦 짐 싸는 중…"
+			Remotes.MoveCompany:FireServer()
+		end)
 	end
 
 	button(frame, -95, "🏛️ 광장으로", goLobby)
@@ -345,7 +376,7 @@ function Panels.showCollection()
 			table.insert(actions, actionId)
 		end
 	end
-	for _, stateId in { "toilet", "coffee", "docs", "chat", "ramen" } do
+	for _, stateId in { "toilet", "candy", "coffee", "meeting", "docs", "chat", "ramen" } do
 		table.insert(actions, stateId)
 	end
 
@@ -489,9 +520,20 @@ end)
 type Person = { title: string, subtitle: string, lines: { string } }
 
 local PEOPLE: { [string]: Person } = {
+	nunchi = {
+		title = "🏢 (주)눈치물산 첫 출근!",
+		subtitle = "과장님, 스카우트를 환영합니다",
+		lines = {
+			"🪑 칸막이가 낮아요. 부장님 눈에 더 잘 띄어요!",
+			"📊 유리 회의실 의자에 앉으면 '회의하는 척 졸기' (안전한 편)",
+			"🌳 출입문 밖 공원 · 🍭 흡연구역(※ 금연, 사탕만!)에서 농땡이",
+			"😎 이제 나도 과장! 이과장 감시에서 해방 (대충상사에 남았어요)",
+			"💰 직급이 높아서 농땡이 수입도 커요",
+		},
+	},
 	lee = {
 		title = "👀 눈치 빠른 이과장",
-		subtitle = "수요일·목요일 출근 · 보라색 조끼",
+		subtitle = "(주)대충상사 수요일·목요일 출근 · 보라색 조끼 · 과장부터는 고자질 안 해요",
 		lines = {
 			"📱 휴대폰 볼 때는 아무것도 안 봐요",
 			"❗ 머리 위에 뜨면 곧 휙 뒤돌아봐요!",
@@ -554,6 +596,111 @@ local function onLeePresent()
 end
 ReplicatedStorage:GetAttributeChangedSignal("LeePresent"):Connect(onLeePresent)
 onLeePresent()
+
+-- 🏢 눈치물산 사무실이면 들어올 때 회사 소개 카드를 한 번 (이과장 카드보다 먼저)
+task.spawn(function()
+	task.wait(2)
+	if ReplicatedStorage:GetAttribute("SalaryCompany") == "nunchi" then
+		while current ~= nil do
+			task.wait(0.5)
+		end
+		Panels.showPerson("nunchi")
+	end
+end)
+
+---------------------------------------------------------------------------
+-- 🍻 목요일 회식 (판정은 서버가 해요. 여기서는 보여 주고 버튼만 보내요)
+---------------------------------------------------------------------------
+local dinnerLine: TextLabel? = nil
+
+local function showDinner(seconds: number)
+	local frame = sheet(500, 380)
+	local endsAt = os.clock() + seconds
+	line(frame, 0, 34, "🍻 목요일 회식", { Font = Enum.Font.GothamBlack, TextSize = 26 })
+	line(frame, 36, 44, "🍶 부장님 잔이 거의 비었을 때 채워요 (너무 일찍 채우면 감점)\n🥂 \"건배사!\"가 뜨면 바로 [위하여!]", {
+		TextSize = 15,
+		TextColor3 = MUTED,
+	})
+	-- 부장님 잔 (위로 갈수록 가득)
+	local glassBox = Ui.make("Frame", {
+		Position = UDim2.fromOffset(0, 92),
+		Size = UDim2.fromOffset(90, 150),
+		BackgroundColor3 = Color3.fromRGB(225, 235, 240),
+		ZIndex = 31,
+		Parent = frame,
+	}, { Ui.corner(10), Ui.stroke(Color3.fromRGB(120, 140, 150), 2) })
+	local fill = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.fromScale(0, 1),
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(250, 220, 120),
+		ZIndex = 32,
+		Parent = glassBox,
+	}, { Ui.corner(10) })
+	line(frame, 246, 22, "부장님 잔", { Size = UDim2.fromOffset(90, 22), TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center })
+	local scoreText = line(frame, 92, 30, "", { Position = UDim2.fromOffset(110, 92), Size = UDim2.new(1, -110, 0, 30), Font = Enum.Font.GothamBlack, TextSize = 22 })
+	local timeText = line(frame, 124, 24, "", { Position = UDim2.fromOffset(110, 124), Size = UDim2.new(1, -110, 0, 24), TextSize = 16, TextColor3 = MUTED })
+	local talk = line(frame, 156, 70, "🎤 부장님: \"자~ 한 주 고생했어!\"", {
+		Position = UDim2.fromOffset(110, 156),
+		Size = UDim2.new(1, -110, 0, 70),
+		TextSize = 18,
+		Font = Enum.Font.GothamBold,
+	})
+	dinnerLine = talk
+
+	local function bigButton(x: number, text: string, action: string): TextButton
+		local b = Ui.button({
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, x, 1, 0),
+			Size = UDim2.fromOffset(200, 54),
+			Text = text,
+			TextSize = 22,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		b.Activated:Connect(function()
+			Sounds.play("click", 0.5)
+			Remotes.Dinner:FireServer(action)
+		end)
+		return b
+	end
+	bigButton(-108, "🍶 따르기", "pour")
+	local cheersButton = bigButton(108, "🥂 위하여!", "cheers")
+
+	task.spawn(function()
+		while current == frame do
+			local glass = player:GetAttribute("DinnerGlass") or 1
+			fill.Size = UDim2.fromScale(1, math.clamp(glass, 0, 1))
+			fill.BackgroundColor3 = if glass < 0.35 then Color3.fromRGB(240, 110, 90) else Color3.fromRGB(250, 220, 120)
+			scoreText.Text = `점수 {player:GetAttribute("DinnerScore") or 0}점`
+			timeText.Text = `남은 시간 {math.max(0, math.ceil(endsAt - os.clock()))}초`
+			local cheers = player:GetAttribute("DinnerCheers") == true
+			cheersButton.BackgroundColor3 = if cheers and math.floor(os.clock() * 6) % 2 == 0 then Color3.fromRGB(255, 120, 120) else Ui.COLORS.brass
+			task.wait(0.05)
+		end
+	end)
+end
+
+Remotes:WaitForChild("Dinner").OnClientEvent:Connect(function(kind: string, a: any, b: any)
+	if kind == "start" then
+		Sounds.play("swoosh", 0.5)
+		Hud.popup("🍻 목요일 회식!", Color3.fromRGB(255, 200, 120), 2.5)
+		showDinner(a)
+	elseif kind == "line" then
+		if dinnerLine and dinnerLine.Parent then
+			dinnerLine.Text = `🎤 {a}`
+		end
+	elseif kind == "end" then
+		local score, mood = a, b
+		local result = if mood < 1 then "😊 부장님 기분 최고! 내일은 의심도가 덜 올라요."
+			elseif mood > 1 then "😠 부장님이 서운해해요… 내일은 의심도가 더 올라요."
+			else "😐 무난한 회식이었어요."
+		if dinnerLine and dinnerLine.Parent then
+			dinnerLine.Text = `🍻 회식 끝! {score}점\n{result}`
+		end
+		Ui.toast(`🍻 회식 끝! {score}점 · {result}`)
+	end
+end)
 
 -- 새 날이 시작되면 열려 있던 창은 자동으로 닫아요
 ReplicatedStorage:GetAttributeChangedSignal("SalaryPhase"):Connect(function()

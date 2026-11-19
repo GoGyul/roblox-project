@@ -149,17 +149,20 @@ local totalText = text({ Position = UDim2.fromOffset(0, 88), Size = UDim2.new(1,
 ---------------------------------------------------------------------------
 -- 왼쪽: 내 상태, 의심도, 업무, 경고
 ---------------------------------------------------------------------------
+local STATUS_HEIGHT = 236
 local statusPanel = panel({
 	AnchorPoint = Vector2.new(0, 0.5),
 	Position = UDim2.new(0, 12, 0.42, 0),
-	Size = UDim2.fromOffset(250, 196),
+	Size = UDim2.fromOffset(250, STATUS_HEIGHT),
 })
-local stateText = text({ Size = UDim2.new(1, 0, 0, 26), TextSize = 22, Parent = statusPanel })
+local stateText = text({ Size = UDim2.new(1, 0, 0, 26), TextSize = 22, TextScaled = true, Parent = statusPanel })
+Ui.make("UITextSizeConstraint", { MaxTextSize = 22, MinTextSize = 12, Parent = stateText }) -- 길면 글씨를 줄여서 한 줄에
 local suspicionLabel, suspicionFill = bar(statusPanel, 34, "")
 local workLabel, workFill = bar(statusPanel, 74, "")
-local warningText = text({ Position = UDim2.fromOffset(0, 116), Size = UDim2.new(1, 0, 0, 22), Parent = statusPanel })
+local awayLabel, awayFill = bar(statusPanel, 114, "") -- 🖥️ 자리 부재 게이지
+local warningText = text({ Position = UDim2.fromOffset(0, 156), Size = UDim2.new(1, 0, 0, 22), Parent = statusPanel })
 local comboText = text({
-	Position = UDim2.fromOffset(0, 142),
+	Position = UDim2.fromOffset(0, 182),
 	Size = UDim2.new(1, 0, 0, 20),
 	TextSize = 15,
 	TextColor3 = COLORS.good,
@@ -169,7 +172,7 @@ local comboText = text({
 -- 매점 / 도감 / 드링크 버튼은 Panels가 이 줄에 넣어요
 Hud.toolbar = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(0, 0),
-	Position = UDim2.new(0, 12, 0.42, 108),
+	Position = UDim2.new(0, 12, 0.42, STATUS_HEIGHT / 2 + 10),
 	Size = UDim2.fromOffset(250, 40),
 	BackgroundTransparency = 1,
 	Parent = gui,
@@ -369,11 +372,11 @@ local function applyLayout()
 	if compact then
 		statusPanel.AnchorPoint = Vector2.new(0, 0)
 		statusPanel.Position = UDim2.new(0, 6, 0, 60)
-		Hud.toolbar.Position = UDim2.new(0, 6, 0, 60 + math.floor(196 * small) + 4)
+		Hud.toolbar.Position = UDim2.new(0, 6, 0, 60 + math.floor(STATUS_HEIGHT * small) + 4)
 	else
 		statusPanel.AnchorPoint = Vector2.new(0, 0.5)
 		statusPanel.Position = UDim2.new(0, 12, 0.42, 0)
-		Hud.toolbar.Position = UDim2.new(0, 12, 0.42, 108)
+		Hud.toolbar.Position = UDim2.new(0, 12, 0.42, STATUS_HEIGHT / 2 + 10)
 	end
 	scales[Hud.toolbar].Scale = if compact then 0.85 else 1
 
@@ -522,6 +525,29 @@ local function updateEvent()
 	elseif eventId == "drill" and stage == "rollcall" then
 		message = `🚒 인원 점검 중… 부장님 감시 쉬는 중 ({left}초)`
 		color = COLORS.good
+	elseif eventId == "workshop" and (stage == "ready" or stage == "chant" or stage == "look") then
+		local status = player:GetAttribute("WorkshopStatus")
+		if status == "out" then
+			message = "🌸 탈락… 움직였어요! 구경하면서 응원해요"
+			color = Color3.fromRGB(200, 200, 210)
+		elseif status == "finished" then
+			message = "🏁 골인! 보너스 획득!"
+			color = COLORS.good
+		elseif stage == "ready" then
+			message = `🌸 무궁화꽃이 피었습니다! 초록 결승선(출입문 앞)까지! {left}초 뒤 시작`
+			color = Color3.fromRGB(255, 180, 210)
+		elseif stage == "chant" then
+			message = `🌸 무궁화~ 꽃이~ 피었습니다~ 지금 움직여요! ({left}초)`
+			color = COLORS.good
+		else
+			message = "👀 멈춰!! 움직이면 탈락!"
+			color = COLORS.bad
+		end
+		if changed and stage == "look" then
+			Sounds.play("bass", 0.6, 1.4)
+		elseif changed and stage == "ready" then
+			Hud.popup("🌸 워크숍 레크리에이션!", Color3.fromRGB(255, 180, 210), 3)
+		end
 	end
 	eventText.Visible = message ~= nil
 	if message then
@@ -543,7 +569,7 @@ RunService.RenderStepped:Connect(function()
 	local minute = ReplicatedStorage:GetAttribute("SalaryMinute") or SalaryConfig.START_MINUTE
 	local phase = ReplicatedStorage:GetAttribute("SalaryPhase")
 	clockText.Text = string.format("🕘 %02d:%02d · %s%s", minute // 60, minute % 60, ReplicatedStorage:GetAttribute("SalaryWeekday") or "", phaseName(phase))
-	moodText.Text = `부장님 상태: {ReplicatedStorage:GetAttribute("SalaryMood") or "?"}`
+	moodText.Text = `{SalaryConfig.currentCompany().name} · 부장님: {ReplicatedStorage:GetAttribute("SalaryMood") or "?"}`
 
 	-- 직급과 경력
 	local rankIndex = player:GetAttribute("Rank") or 1
@@ -569,12 +595,22 @@ RunService.RenderStepped:Connect(function()
 	-- 상태
 	local stateId = player:GetAttribute("SalaryState") or "work"
 	local info = States[stateId] or States.work
-	stateText.Text = `{info.emoji} {info.name}` .. (if player:GetAttribute("EnergyActive") then "  ⚡" else "")
+	-- 지금 1초에 얼마 버는지 (농땡이 종류 + 직급 배율 + 이벤트까지 계산된 값)
+	local rate = player:GetAttribute("IncomeRate") or 0
+	local rateText = if rate > 0 then `  <font color="#7CE08A">+{rate}원/초</font>` else `  <font color="#9A9AA5">+0원/초</font>`
+	stateText.RichText = true
+	stateText.Text = `{info.emoji} {info.name}` .. rateText .. (if player:GetAttribute("EnergyActive") then "  ⚡" else "")
 
 	local suspicion = player:GetAttribute("Suspicion") or 0
 	suspicionLabel.Text = `🔍 부장님 의심도 {suspicion}%`
 	suspicionFill.Size = UDim2.fromScale(math.clamp(suspicion / 100, 0, 1), 1)
 	suspicionFill.BackgroundColor3 = if suspicion >= 70 then COLORS.bad elseif suspicion >= 35 then COLORS.warn else COLORS.good
+
+	-- 🖥️ 자리 부재 게이지
+	local away = player:GetAttribute("AwayGauge") or 0
+	awayLabel.Text = if away >= SalaryConfig.AWAY_WARN then `🖥️ 자리 부재 {away}% ⚠️ 얼른 자리로!` else `🖥️ 자리 부재 {away}% (꽉 차면 경고)`
+	awayFill.Size = UDim2.fromScale(math.clamp(away / 100, 0, 1), 1)
+	awayFill.BackgroundColor3 = if away >= SalaryConfig.AWAY_WARN then COLORS.bad elseif away >= 40 then COLORS.warn else COLORS.good
 
 	local work = player:GetAttribute("WorkSeconds") or 0
 	local quota = player:GetAttribute("WorkQuota") or SalaryConfig.WORK_QUOTA
@@ -712,6 +748,19 @@ Remotes:WaitForChild("Caught").OnClientEvent:Connect(function(line: string, warn
 			Hud.popup("⚠️ 한 번만 더 걸리면 해고!", COLORS.bad, 3.5)
 		end)
 	end
+end)
+
+-- 🖥️ 컴퓨터 자동 감지 시스템 경보 (자리 부재 70%)
+Remotes:WaitForChild("AwayAlert").OnClientEvent:Connect(function()
+	for i = 0, 2 do
+		task.delay(i * 0.35, function()
+			Sounds.play("ping", 0.7, 0.7)
+		end)
+	end
+	flash.BackgroundTransparency = 0.6
+	TweenService:Create(flash, TweenInfo.new(1), { BackgroundTransparency = 1 }):Play()
+	Hud.popup("🖥️ 장시간 입력 없음 감지!", COLORS.bad, 3)
+	Ui.toast("🖥️ 컴퓨터 자동 감지 시스템: 장시간 일을 안 하고 있는 걸 발견했습니다! 빠르게 자리로 복귀하세요!")
 end)
 
 Remotes:WaitForChild("Bonus").OnClientEvent:Connect(function(message: string, amount: number)

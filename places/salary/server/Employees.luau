@@ -18,6 +18,7 @@ local RunService = game:GetService("RunService")
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local ChatTopics = require(ReplicatedStorage.Shared.ChatTopics)
 local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
+local Teleport = require(ReplicatedStorage.Shared.Teleport)
 local Npc = require(script.Parent.Npc)
 local Profiles = require(script.Parent.Profiles)
 local Snacks = require(script.Parent.Snacks)
@@ -32,7 +33,7 @@ local DESK_PRIORITY = { 5, 4, 6, 2, 1, 3 }
 local TICK = 0.1
 local AUTOSAVE_SECONDS = 60
 local GAME_MINUTES_PER_SECOND = (SalaryConfig.END_MINUTE - SalaryConfig.START_MINUTE) / SalaryConfig.DAY_SECONDS
-local PAYSLIP_ORDER = { "work", "blank", "webtoon", "phone", "shopping", "sleep", "recline", "toilet", "coffee", "docs", "chat", "ramen" }
+local PAYSLIP_ORDER = { "work", "blank", "webtoon", "phone", "shopping", "sleep", "recline", "toilet", "candy", "coffee", "meeting", "docs", "chat", "ramen" }
 local MOBILE_STATES = { "docs", "chat", "ramen" }
 local MAX_TRADE = 1000 -- 한 번에 사고팔 수 있는 최대 주식 수
 
@@ -41,6 +42,7 @@ local allowAction = RateLimit.new(0.15)
 local allowBuy = RateLimit.new(0.3)
 local allowEnergy = RateLimit.new(1)
 local allowTrade = RateLimit.new(0.15)
+local allowMove = RateLimit.new(5)
 
 type DayRecord = {
 	earned: { [string]: number }, -- 상태별 번 돈
@@ -69,10 +71,14 @@ type EmployeeData = {
 	lastReturnEnd: number?,
 	nearMissUsed: boolean,
 	toiletTime: number,
-	toiletWarned: boolean, -- "화장실 너무 오래" 경고를 보냈나
+	away: number, -- 🖥️ 자리 부재 게이지 (0~100)
+	awayWarned: boolean, -- 자동 감지 경보를 보냈나
 	leeWatch: number, -- 👀 이과장이 내 농땡이를 본 시간 (초)
 	leeBribed: boolean, -- ☕ 오늘 커피를 상납했나 (고자질 1번 막아 줘요)
 	leeCooldownUntil: number, -- 이 시각 전에는 다시 고자질 안 해요
+	incomeRate: number, -- 지금 1초에 버는 돈
+	bossMood: number, -- 🍻 회식 결과: 다음 날 의심도 배율 (1보다 작으면 너그러움)
+	bossMoodDay: number, -- 그 배율이 적용되는 날
 	coffeeTime: number,
 	energyActive: boolean, -- 오늘 에너지 드링크를 마셨나
 	activity: { kind: string, untilTime: number?, coworker: any? }?, -- 돌아다니며 하는 농땡이
@@ -109,9 +115,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		return d.profile.items[itemId] == true
 	end
 
-	-- 화장실에 이 시간(초)보다 오래 있으면 자리 비움이 티 나요
-	local function toiletLimit(d: EmployeeData): number
-		return if hasItem(d, "dummy") then 150 else SalaryConfig.TOILET_LIMIT
+	-- 🖥️ 자리 부재 게이지가 0 → 100%까지 차는 시간
+	local function awayLimit(d: EmployeeData): number
+		return if hasItem(d, "dummy") then 150 else SalaryConfig.AWAY_SECONDS
 	end
 
 	-- 오늘 지금까지 번 돈 (기본급 빼고, 아직 통장에 안 들어간 돈)
@@ -197,6 +203,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local nextRank = Ranks[profile.rank + 1]
 
 		player:SetAttribute("SalaryState", d.state)
+		player:SetAttribute("IncomeRate", math.floor(d.incomeRate * 10 + 0.5) / 10)
 		player:SetAttribute("SalaryAction", d.deskAction)
 		player:SetAttribute("Suspicion", math.floor(d.suspicion))
 		player:SetAttribute("Warnings", profile.warnings)
@@ -214,7 +221,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		player:SetAttribute("EnergyActive", d.energyActive)
 		player:SetAttribute("CanSave", d.canSave)
 		player:SetAttribute("OnToilet", isOnToilet(player))
-		player:SetAttribute("ToiletLeft", math.max(0, math.ceil(toiletLimit(d) - d.toiletTime)))
+		player:SetAttribute("AwayGauge", math.floor(d.away))
 		player:SetAttribute("LeeWatch", math.clamp(d.leeWatch / SalaryConfig.LEE_NOTICE, 0, 1))
 		player:SetAttribute("LeeBribed", d.leeBribed)
 		local held = d.heldSnack
@@ -300,10 +307,14 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			lastReturnEnd = nil,
 			nearMissUsed = true,
 			toiletTime = 0,
-			toiletWarned = false,
+			away = 0,
+			awayWarned = false,
 			leeWatch = 0,
 			leeBribed = false,
 			leeCooldownUntil = 0,
+			bossMood = 1,
+			incomeRate = 0,
+			bossMoodDay = 0,
 			coffeeTime = 0,
 			energyActive = false,
 			activity = nil,
@@ -338,6 +349,21 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		publish(player, d)
 		publishCollection(player, d)
 		publishStocks(player, d)
+
+		-- 🏢 회사 확인: 이 서버 사무실과 내 직급의 회사가 다르면 알려 줘요
+		local here = SalaryConfig.getCompany(office.companyId)
+		local mine = SalaryConfig.companyForRank(profile.rank)
+		if here.id == "nunchi" then
+			unlockAchievement(player, d, "company_nunchi")
+			publishCollection(player, d)
+		end
+		if mine.id ~= here.id then
+			task.delay(4, function()
+				if player.Parent then
+					remotes.Notify:FireClient(player, `🏢 오늘은 같이 온 동료를 따라 {here.name} 사무실로 출근했어요. (내 회사: {mine.name})`)
+				end
+			end)
+		end
 		if not canSave then
 			remotes.Notify:FireClient(player, "💾 지금은 저장 기능이 꺼져 있어요. (스튜디오라면 API 접근 설정 확인)")
 		end
@@ -737,7 +763,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		d.deskAction = "work"
 		d.returnUntil = nil
 		-- 자리 비움 시간도 처음부터 (안 그러면 화장실에서 연달아 적발돼 바로 해고돼요)
-		d.toiletTime, d.coffeeTime, d.toiletWarned = 0, 0, false
+		d.toiletTime, d.coffeeTime = 0, 0
+		d.away, d.awayWarned = 0, false
 		local humanoid = getHumanoid(player)
 		if humanoid and humanoid.SeatPart and isOnToilet(player) then
 			-- 부장님이 화장실 문을 두드려요: 변기에서 일으켜 세워요
@@ -804,7 +831,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		-- 1. 지금 상태
 		local previous = d.state
 		if isSeated(player, d) then
-			d.toiletTime, d.coffeeTime, d.toiletWarned = 0, 0, false
+			d.toiletTime, d.coffeeTime = 0, 0
 			if d.returnUntil and now >= d.returnUntil then
 				d.returnUntil = nil
 				d.deskAction = "work"
@@ -835,8 +862,14 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				end
 			end
 
-			if inZone(office.toiletZone, root.Position) then
+			local onMeetingSeat = seatPart ~= nil and seatPart.Name == "MeetingSeat" and humanoid ~= nil and humanoid.SeatPart == seatPart
+			if onMeetingSeat then
+				d.state = "meeting" -- 📊 유리 회의실에서 회의하는 척 졸기
+			elseif inZone(office.toiletZone, root.Position) then
 				d.state = "toilet"
+				d.toiletTime += dt
+			elseif office.candyZone and inZone(office.candyZone, root.Position) then
+				d.state = "candy" -- 🍭 공원 흡연구역에서 사탕 물기 (화장실처럼 자리 비움 시간이 쌓여요)
 				d.toiletTime += dt
 			elseif activity and activity.kind == "ramen" then
 				d.state = "ramen"
@@ -891,6 +924,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if blackout and (d.state == "work" or info.screen) then
 			multiplier = 0 -- 💡 정전: 컴퓨터가 꺼져서 일도, 화면 농땡이도 돈이 안 나와요
 		end
+		d.incomeRate = info.income * multiplier -- 화면에 "+N원/초"로 보여 줘요
 		local income = info.income * multiplier * dt
 		d.today.earned[d.state] = (d.today.earned[d.state] or 0) + income
 		d.today.seconds[d.state] = (d.today.seconds[d.state] or 0) + dt
@@ -910,6 +944,31 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 		end
 
+		-- 2.5 🖥️ 자리 부재 게이지 (컴퓨터 자동 감지 시스템)
+		--   근무 중 자리를 비우면 차오르고, 앉아 있으면 줄어요.
+		--   소방 훈련·워크숍(나가야 하니까)·정전(컴퓨터가 꺼짐)·점심시간엔 멈춰요.
+		local gaugeOn = dayCycle.phase == "work" and not events:is("drill") and not events:is("workshop") and not blackout
+		if gaugeOn and not isSeated(player, d) then
+			d.away = math.min(100, d.away + 100 / awayLimit(d) * dt)
+			if d.away >= SalaryConfig.AWAY_WARN and not d.awayWarned then
+				d.awayWarned = true
+				remotes.AwayAlert:FireClient(player)
+			end
+			if d.away >= 100 then
+				caught(player, d, "자동 감지 시스템에 걸렸어! 자리 비우고 어디 갔었어?!")
+			end
+		elseif not isSeated(player, d) then
+			-- 게이지가 멈춘 시간 (점심 등): 그대로 둬요
+		else
+			d.away = math.max(0, d.away - SalaryConfig.AWAY_RECOVER * dt)
+			if d.away < SalaryConfig.AWAY_WARN - 20 then
+				d.awayWarned = false
+			end
+		end
+		if d.fired then
+			return
+		end
+
 		-- 3. 의심도 (점심시간에는 부장이 없어서 안전)
 		local decay = SalaryConfig.SUSPICION_DECAY * (if hasItem(d, "plant") then 1.25 else 1)
 		if dayCycle.phase == "work" and boss.active then
@@ -923,6 +982,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 			if blackout and (d.state == "sleep" or d.state == "recline") then
 				rate = 0 -- 💡 어두워서 자는 게 안 보여요
+			end
+			if d.bossMoodDay == dayCycle.day then
+				rate *= d.bossMood -- 🍻 어제 회식 결과
 			end
 			local raised = false
 			if rate > 0 then
@@ -941,7 +1003,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 
 			-- 👀 이과장: 농땡이를 LEE_NOTICE초 보면 고자질
-			local leeSees = lee:sees(character)
+			-- (과장부터는 동급이라 이과장이 고자질하지 않아요)
+			local leeSees = d.profile.rank < SalaryConfig.LEE_IGNORE_RANK and lee:sees(character)
 			if leeSees and rate > 0 then
 				d.leeWatch += dt
 				if d.leeWatch >= SalaryConfig.LEE_NOTICE and now >= d.leeCooldownUntil then
@@ -968,15 +1031,6 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				publishCollection(player, d)
 			elseif not leeSees then
 				d.leeWatch = 0
-			end
-			local limit = toiletLimit(d)
-			if d.state == "toilet" and not d.toiletWarned and d.toiletTime > limit - 15 then
-				d.toiletWarned = true
-				remotes.Notify:FireClient(player, "⏰ 화장실에 너무 오래 있었어요! 15초 안에 자리로 돌아가세요!")
-			end
-			if d.state == "toilet" and d.toiletTime > limit then
-				d.suspicion += 6 * dt -- 자리가 너무 오래 비어 있어요
-				raised = true
 			end
 			if not raised then
 				d.suspicion = math.max(0, d.suspicion - decay * dt)
@@ -1045,6 +1099,81 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		return true
 	end
 
+	---------------------------------------------------------------- 🏢 스카우트 제의 수락 → 새 회사 사무실로
+	remotes.MoveCompany.OnServerEvent:Connect(function(player)
+		if not allowMove(player) then
+			return
+		end
+		local d = data[player]
+		if not d then
+			return
+		end
+		local target = SalaryConfig.companyForRank(d.profile.rank)
+		if target.id == office.companyId then
+			remotes.Notify:FireClient(player, "🏢 이미 지금 회사에 다니고 있어요.")
+			return
+		end
+		remotes.Notify:FireClient(player, `📦 {target.name}(으)로 짐 싸서 이동 중…`)
+		save(player, d) -- 이동하기 전에 꼭 저장 (새 서버가 이 저장을 읽어서 사무실을 정해요)
+		-- 같은 게임(월급루팡)의 새 전용 서버로 → 들어가면 내 직급에 맞는 사무실이 지어져요
+		local ok, message = Teleport.send(game.PlaceId, { player }, true)
+		if not ok and message then
+			remotes.Notify:FireClient(player, message)
+		end
+	end)
+
+	---------------------------------------------------------------- 🌸 워크숍
+	events.canJoinWorkshop = function(player: Player): boolean
+		local d = data[player]
+		return d ~= nil and not d.fired
+	end
+	events.onWorkshopFinish = function(player: Player, place: number)
+		local d = data[player]
+		if not d then
+			return
+		end
+		local bonus = SalaryConfig.WORKSHOP_BONUS + (if place == 1 then SalaryConfig.WORKSHOP_FIRST_BONUS else 0)
+		d.today.eventBonus += bonus
+		remotes.Bonus:FireClient(player, if place == 1 then "🌸 무궁화 1등!" else `🌸 골인! ({place}등)`, bonus)
+		if place == 1 then
+			unlockAchievement(player, d, "workshop_winner")
+			publishCollection(player, d)
+		end
+	end
+
+	---------------------------------------------------------------- 🍻 회식 (Dinner 모듈이 불러요)
+	function Employees.dinnerParticipants(): { Player }
+		local list = {}
+		for player, d in data do
+			if not d.fired then
+				table.insert(list, player)
+			end
+		end
+		return list
+	end
+	function Employees.dinnerReward(player: Player, score: number)
+		local d = data[player]
+		if not d then
+			return
+		end
+		local mood = if score >= 6 then 0.75 elseif score >= 3 then 0.9 elseif score <= -2 then 1.15 else 1
+		d.bossMood = mood
+		d.bossMoodDay = dayCycle.day + 1
+		local bonus = math.max(0, score) * SalaryConfig.DINNER_POINT
+		if bonus > 0 then
+			d.profile.money += bonus
+			d.profile.xp += bonus
+			remotes.Bonus:FireClient(player, `🍻 회식 점수 {score}점!`, bonus)
+		end
+		if score >= 6 then
+			unlockAchievement(player, d, "dinner_ace")
+			publishCollection(player, d)
+		end
+		remotes.Dinner:FireClient(player, "end", score, mood)
+		publish(player, d)
+		task.spawn(save, player, d)
+	end
+
 	---------------------------------------------------------------- 🎲 돌발 이벤트 연결
 	events.snacks = snacks
 	events.notifyAll = function(message: string)
@@ -1092,6 +1221,15 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			d.ramenToday = 0
 			d.heldSnack = nil
 			d.leeWatch, d.leeBribed = 0, false
+			d.away, d.awayWarned = 0, false
+			if d.bossMoodDay == dayCycle.day and d.bossMood ~= 1 then
+				remotes.Notify:FireClient(
+					player,
+					if d.bossMood < 1
+						then `🍻 어제 회식 덕분에 부장님이 너그러워요! (의심도 {math.floor((1 - d.bossMood) * 100 + 0.5)}% 덜 올라요)`
+						else "🍻 어제 회식 때 서운하셨는지 부장님이 예민해요… (의심도 더 올라요)"
+				)
+			end
 			updateBubble(player, "work")
 			task.spawn(seatPlayer, player, d)
 			remotes.Notify:FireClient(player, `🏢 {weekday.name} 출근! 오늘 부장님은 "{weekday.mood}"`)
@@ -1207,6 +1345,10 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				fired = fired,
 				stockProfit = math.floor(d.today.stockProfit),
 				promotedTo = promotedTo,
+				-- 🏢 새 직급이면 더 큰 회사에서 스카우트 제의가 와요
+				moveTo = if not fired and SalaryConfig.companyForRank(profile.rank).id ~= office.companyId
+					then SalaryConfig.companyForRank(profile.rank).name
+					else nil,
 				rankName = Ranks[profile.rank].name,
 			})
 			publish(player, d)

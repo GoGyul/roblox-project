@@ -14,6 +14,7 @@ function DayCycle.new()
 	return setmetatable({
 		day = 0,
 		started = false, -- 첫 플레이어가 들어와 날짜를 불러오면 true
+		extraOffwork = 0, -- 퇴근 후 추가 시간 (회식)
 		minute = SalaryConfig.START_MINUTE,
 		phase = "offwork" :: Phase,
 		listeners = {} :: { [string]: { (...any) -> () } },
@@ -73,10 +74,12 @@ function DayCycle:run()
 
 			self.phase = "offwork"
 			self.minute = SalaryConfig.END_MINUTE
-			ReplicatedStorage:SetAttribute("SalaryNextDayAt", workspace:GetServerTimeNow() + SalaryConfig.PAYSLIP_SECONDS)
+			self.extraOffwork = 0 -- 🍻 회식 같은 퇴근 후 일정이 있으면 dayEnd에서 늘려요
 			self:publish()
 			self:emit("dayEnd")
-			task.wait(SalaryConfig.PAYSLIP_SECONDS)
+			local rest = SalaryConfig.PAYSLIP_SECONDS + self.extraOffwork
+			ReplicatedStorage:SetAttribute("SalaryNextDayAt", workspace:GetServerTimeNow() + rest)
+			task.wait(rest)
 		end
 	end)
 end

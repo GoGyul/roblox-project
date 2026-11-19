@@ -30,6 +30,7 @@ export type Coworker = {
 	slacking: boolean,
 	chatting: boolean,
 	removed: boolean,
+	borrowed: boolean, -- 🌸 워크숍·🍻 회식에 불려 가 있는 중 (평소 AI 멈춤)
 }
 
 local function pick<T>(list: { T }): T
@@ -72,7 +73,7 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 	-- seconds 동안 기다려요. keepGoing()이 false가 되면 일찍 끝나요
 	local function waitWhile(c: Coworker, seconds: number, keepGoing: (() -> boolean)?)
 		local finish = os.clock() + seconds
-		while os.clock() < finish and not c.removed do
+		while os.clock() < finish and not c.removed and not c.borrowed do
 			if keepGoing and not keepGoing() then
 				return
 			end
@@ -88,7 +89,7 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 		Npc.standUpright(c.model)
 		c.desk.seat.Disabled = true -- 자리를 비운 동안 아무도 못 앉게 잠가요
 		local function cancelled()
-			return c.removed
+			return c.removed or c.borrowed
 		end
 
 		setState(c, "walk", "🚶")
@@ -99,7 +100,7 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 
 		setState(c, "walk", "🚶")
 		Walker.walkTo(c.humanoid, c.root, c.desk.behind, cancelled)
-		if c.removed then
+		if c.removed or c.borrowed then
 			return
 		end
 		c.desk.seat.Disabled = false
@@ -111,7 +112,7 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 	local function runAi(c: Coworker)
 		task.wait(math.random() * 10) -- 다 같이 움직이지 않게 시작을 흩어요
 		while not c.removed do
-			if dayCycle.phase == "offwork" or c.chatting then
+			if dayCycle.phase == "offwork" or c.chatting or c.borrowed then
 				task.wait(1)
 				continue
 			end
@@ -122,7 +123,7 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 			waitWhile(c, math.random(15, 40), function()
 				return not c.chatting
 			end)
-			if c.removed or c.chatting then
+			if c.removed or c.chatting or c.borrowed then
 				continue
 			end
 
@@ -168,6 +169,7 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 			slacking = false,
 			chatting = false,
 			removed = false,
+			borrowed = false,
 		}
 		prompt.Triggered:Connect(function(player)
 			if c.atDesk and not c.chatting then
@@ -186,7 +188,7 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 		while true do
 			task.wait(1)
 			for _, c in list do
-				if not c.removed and not c.atDesk then
+				if not c.removed and not c.atDesk and not c.borrowed then
 					Npc.standUpright(c.model)
 				end
 			end
@@ -201,7 +203,7 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 				continue
 			end
 			for _, c in list do
-				if c.slacking and not c.removed and boss:canSee(c.model) then
+				if c.slacking and not c.removed and not c.borrowed and boss:canSee(c.model) then
 					c.slacking = false
 					setState(c, "work", "😰")
 					local line = string.gsub(pick(SalaryConfig.BossLines.scoldCoworker), "{name}", c.name)
@@ -233,6 +235,57 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 		end
 		c.model:Destroy()
 		list[index] = nil
+	end
+
+	-- 🌸🍻 이벤트에 동료들을 불러가요: 자리에서 일으켜 세우고 평소 AI를 멈춰요
+	function api.borrowAll(): { Coworker }
+		local borrowed = {}
+		for _, c in list do
+			if c.removed or c.chatting or c.borrowed then
+				continue
+			end
+			c.borrowed = true
+			c.slacking = false
+			c.atDesk = false
+			c.prompt.Enabled = false
+			Npc.stand(c.model, c.desk.seat)
+			c.desk.seat.Disabled = true -- 비운 자리는 잠가요
+			Npc.standUpright(c.model)
+			setState(c, "walk", "🙂")
+			table.insert(borrowed, c)
+		end
+		return borrowed
+	end
+
+	-- 이벤트가 끝나면 자리로 돌려보내요 (instant면 바로 순간이동해서 앉아요)
+	function api.returnAll(instant: boolean?)
+		for _, c in list do
+			if not c.borrowed or c.removed then
+				continue
+			end
+			task.spawn(function()
+				local seated = c.humanoid.SeatPart -- 회식 벤치 등에 앉아 있었으면 일어나기
+				if seated and seated:IsA("Seat") then
+					Npc.stand(c.model, seated)
+				end
+				c.humanoid.WalkSpeed = 16
+				if not instant then
+					setState(c, "walk", "🚶")
+					Walker.walkTo(c.humanoid, c.root, c.desk.behind, function()
+						return c.removed
+					end)
+				end
+				if c.removed then
+					return
+				end
+				c.desk.seat.Disabled = false
+				Npc.sit(c.model, c.desk.seat)
+				c.atDesk = true
+				c.prompt.Enabled = true
+				c.borrowed = false
+				setState(c, "work", "⌨️")
+			end)
+		end
 	end
 
 	function api.setChatting(c: Coworker, on: boolean)

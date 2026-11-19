@@ -10,6 +10,7 @@
 -- 🧪 스튜디오에서는 테스트하기 쉽게 매일 이벤트가 순서대로 나오고, 9시 40분쯤 바로 시작해요.
 
 local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -37,17 +38,18 @@ local function triggerMinute(): number
 		return SalaryConfig.START_MINUTE + 40
 	end
 	if math.random() < 0.35 then
-		return math.random(10 * 60, 10 * 60 + 50) -- 10:00 ~ 10:50
+		return math.random(10 * 60, 10 * 60 + 30) -- 10:00 ~ 10:30 (점심 전에 끝나게)
 	end
 	return math.random(13 * 60 + 20, 16 * 60 + 20) -- 13:20 ~ 16:20
 end
 
-function Events.new(office, boss, dayCycle, remotes)
+function Events.new(office, boss, dayCycle, remotes, coworkers)
 	local self = setmetatable({
 		office = office,
 		boss = boss,
 		dayCycle = dayCycle,
 		remotes = remotes,
+		coworkers = coworkers, -- 🌸 워크숍에 동료 NPC도 참가
 		current = nil :: SalaryConfig.EventInfo?,
 		active = false,
 		token = 0,
@@ -58,6 +60,8 @@ function Events.new(office, boss, dayCycle, remotes)
 		-- Employees가 채워 줘요
 		snacks = nil :: any,
 		onDrillCheck = nil :: ((isInZone: (Vector3) -> boolean) -> ())?,
+		canJoinWorkshop = nil :: ((Player) -> boolean)?,
+		onWorkshopFinish = nil :: ((Player, number) -> ())?, -- (플레이어, 등수)
 		notifyAll = nil :: ((string) -> ())?,
 	}, Events)
 
@@ -184,6 +188,15 @@ function Events:beginDay()
 		self:runCake()
 	elseif event.id == "drill" then
 		self:runDrill(token)
+	elseif event.id == "workshop" then
+		self:runWorkshop(token)
+	end
+end
+
+-- 이벤트가 끝나면 부장님 감시 재개 (점심시간이면 점심 끝날 때 알아서 돌아와요)
+function Events:resumeBoss()
+	if self.dayCycle.phase == "work" then
+		self.boss:resume()
 	end
 end
 
@@ -196,6 +209,19 @@ function Events:cleanup()
 	table.clear(self.auditors)
 	self:restoreLights()
 	self.office.setAssemblyVisible(false)
+	if self.coworkers then
+		self.coworkers.returnAll(true) -- 이벤트 중에 하루가 끝났으면 동료들은 바로 자리로
+	end
+	-- 🌸 워크숍 중에 하루가 끝나면 걷는 속도를 원래대로
+	for _, player in Players:GetPlayers() do
+		if player:GetAttribute("WorkshopStatus") then
+			player:SetAttribute("WorkshopStatus", nil)
+			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid.WalkSpeed = 16
+			end
+		end
+	end
 end
 
 ---------------------------------------------------------------------------
@@ -381,8 +407,246 @@ function Events:runDrill(token: number)
 	office.setAssemblyVisible(false)
 	self.active = false
 	self:publish("done", 0)
-	self.boss:resume()
+	self:resumeBoss()
 	self:notify("🚒 훈련 끝! 다시 자리로 돌아가세요. 부장님 감시 재개!")
+end
+
+---------------------------------------------------------------------------
+-- 🌸 워크숍: 무궁화꽃이 피었습니다
+--   부장님(술래)은 출입문 앞에 서요. 직원들은 뒷줄 출발선에서 시작해 초록 결승선까지!
+--   "무궁화 꽃이 피었습니다~" 하는 동안만 움직이고, 부장님이 뒤돌아보면 멈춰야 해요.
+---------------------------------------------------------------------------
+local function flat(position: Vector3): Vector3
+	return Vector3.new(position.X, 0, position.Z)
+end
+
+local function unseat(humanoid: Humanoid)
+	local seat = humanoid.SeatPart
+	if seat then
+		for _, child in seat:GetChildren() do
+			if child:IsA("Weld") and child.Name == "SeatWeld" then
+				child:Destroy()
+			end
+		end
+	end
+	humanoid.Sit = false
+end
+
+function Events:runWorkshop(token: number)
+	local office = self.office
+	local zone = office.assemblyZone
+	local goal = office.assemblyPoint
+	local function inFinish(position: Vector3): boolean
+		local offset = zone.CFrame:PointToObjectSpace(position)
+		return math.abs(offset.X) <= zone.Size.X / 2 and math.abs(offset.Z) <= zone.Size.Z / 2
+	end
+
+	-- 참가자 모으기: 플레이어 + 동료 NPC 전원
+	local racers = {}
+	for _, player in Players:GetPlayers() do
+		if self.canJoinWorkshop and not self.canJoinWorkshop(player) then
+			continue
+		end
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if humanoid and root and humanoid.Health > 0 then
+			table.insert(racers, { player = player, name = player.DisplayName, model = character, humanoid = humanoid, root = root, status = "playing", mark = root.Position })
+		end
+	end
+	if #racers == 0 then
+		return
+	end
+	local npcs = if self.coworkers then self.coworkers.borrowAll() else {}
+	for _, c in npcs do
+		table.insert(racers, { npc = c, name = c.name, model = c.model, humanoid = c.humanoid, root = c.root, status = "playing", mark = c.root.Position })
+	end
+
+	self.active = true
+	local stage = "ready"
+	local endsAt = os.clock() + 4 + SalaryConfig.WORKSHOP_SECONDS
+	local function left(): number
+		return math.max(0, endsAt - os.clock())
+	end
+	local look = office.workshopLook -- 술래가 직원들을 볼 때 방향
+	self.boss:host(office.workshopBoss, look)
+	office.setAssemblyVisible(true, "🏁 결승선")
+	self:notify(if office.candyZone
+		then "🌸 공원에서 워크숍 레크리에이션! 동료들도 다 같이! 부장님이 뒤돌아볼 때 움직이면 탈락!"
+		else "🌸 워크숍 레크리에이션! 동료들도 다 같이! 부장님이 뒤돌아볼 때 움직이면 탈락!")
+
+	-- 출발선에 한 줄로 세우기
+	for i, racer in racers do
+		local x = (i - (#racers + 1) / 2) * 3.5
+		local spot = CFrame.new(office.workshopStart + Vector3.new(x, 3, 0))
+		if racer.player then
+			unseat(racer.humanoid)
+			racer.humanoid.WalkSpeed = SalaryConfig.WORKSHOP_SPEED
+			racer.player:SetAttribute("WorkshopStatus", "playing")
+			task.delay(0.15, function()
+				if racer.model.Parent then
+					racer.model:PivotTo(spot)
+				end
+			end)
+		else
+			-- 동료는 플레이어보다 살짝 느려요 (이길 수 있게)
+			racer.humanoid.WalkSpeed = SalaryConfig.WORKSHOP_SPEED * math.random(75, 95) / 100
+			Npc.setStatus(racer.model, "🌸")
+			task.delay(0.3, function()
+				if racer.model.Parent then
+					racer.model:PivotTo(spot)
+				end
+			end)
+		end
+	end
+	self:publish("ready", 4)
+	if not self:wait(4, token) then
+		return
+	end
+
+	local finished = 0
+	local function finish(racer, status: string)
+		racer.status = status
+		if racer.player then
+			racer.player:SetAttribute("WorkshopStatus", status)
+			if racer.humanoid.Parent then
+				racer.humanoid.WalkSpeed = 16
+			end
+		else
+			racer.humanoid:MoveTo(racer.root.Position) -- 그 자리에 멈춰요
+			Npc.setStatus(racer.model, if status == "finished" then "🏁" elseif status == "out" then "😵" else "🙂")
+		end
+	end
+	local function gone(racer): boolean
+		if racer.player then
+			return not racer.player.Parent or not racer.humanoid.Parent or racer.humanoid.Health <= 0
+		end
+		return racer.npc.removed or not racer.model.Parent
+	end
+	local function playersLeft(): number
+		local count = 0
+		for _, racer in racers do
+			if racer.status == "playing" then
+				if gone(racer) then
+					racer.status = "gone"
+				elseif racer.player then
+					count += 1
+				end
+			end
+		end
+		return count
+	end
+	-- 결승선에 들어온 사람 체크 (동료가 먼저 들어오면 등수가 밀려요!)
+	local function checkGoal()
+		for _, racer in racers do
+			if racer.status == "playing" and racer.root.Parent and inFinish(racer.root.Position) then
+				finished += 1
+				finish(racer, "finished")
+				self.boss:say(`{racer.name} 씨 {finished}등! 👏`, 2)
+				if racer.player and self.onWorkshopFinish then
+					self.onWorkshopFinish(racer.player, finished)
+				end
+			end
+		end
+	end
+	local function waitChecking(seconds: number): boolean
+		local finishAt = os.clock() + seconds
+		while os.clock() < finishAt do
+			if self.token ~= token then
+				return false
+			end
+			checkGoal()
+			task.wait(0.1)
+		end
+		return true
+	end
+
+	-- 🤖 동료 NPC: 노래하는 동안 결승선으로 걷고, 뒤돌아보면 멈춰요 (가끔 못 멈춰서 탈락)
+	for _, racer in racers do
+		if not racer.npc then
+			continue
+		end
+		task.spawn(function()
+			while self.token == token and racer.status == "playing" and stage ~= "over" do
+				if stage == "chant" then
+					Walker.walkTo(racer.humanoid, racer.root, goal, function()
+						return stage ~= "chant" or racer.status ~= "playing" or self.token ~= token
+					end)
+					if racer.status == "playing" and stage == "look" and math.random() < 0.12 then
+						task.wait(0.8) -- 앗, 못 멈췄다!
+					end
+					racer.humanoid:MoveTo(racer.root.Position)
+				else
+					task.wait(0.05)
+				end
+			end
+			racer.humanoid:MoveTo(racer.root.Position)
+		end)
+	end
+
+	while left() > 0 and playersLeft() > 0 do
+		-- 1. 무궁화 꽃이 피었습니다~ (부장님이 등 돌림 → 움직여도 돼요)
+		local chant = math.random(25, 50) / 10
+		stage = "chant"
+		self.boss:face(-look)
+		self.boss:status("🌸")
+		self.boss:say("무궁화~ 꽃이~ 피었습니다~!", chant)
+		self:publish("chant", left())
+		if not waitChecking(chant) then
+			return
+		end
+		-- 2. 휙! 뒤돌아봐요 → 움직이면 탈락
+		stage = "look"
+		self.boss:face(look)
+		self.boss:status("👀")
+		self:publish("look", left())
+		if not waitChecking(0.4) then -- 멈출 시간
+			return
+		end
+		for _, racer in racers do
+			if racer.status == "playing" and racer.root.Parent then
+				racer.mark = racer.root.Position
+			end
+		end
+		local lookUntil = os.clock() + math.random(15, 25) / 10
+		while os.clock() < lookUntil do
+			if self.token ~= token then
+				return
+			end
+			for _, racer in racers do
+				if racer.status == "playing" and racer.root.Parent then
+					if (flat(racer.root.Position) - flat(racer.mark)).Magnitude > 0.8 then
+						finish(racer, "out")
+						self.boss:say(`{racer.name} 씨 움직였어! 탈락!`, 2)
+					end
+				end
+			end
+			task.wait(0.1)
+		end
+	end
+
+	-- 끝!
+	stage = "over"
+	for _, racer in racers do
+		if racer.status == "playing" then
+			finish(racer, "timeout")
+		end
+	end
+	self:publish("done", 0)
+	office.setAssemblyVisible(false)
+	self.active = false
+	self:notify(if finished > 0 then `🌸 워크숍 끝! 골인 {finished}명. 다들 자리로!` else "🌸 워크숍 끝! 아무도 골인 못 했어요… 다들 자리로!")
+	task.delay(4, function()
+		for _, racer in racers do
+			if racer.player then
+				racer.player:SetAttribute("WorkshopStatus", nil)
+			end
+		end
+	end)
+	if self.coworkers then
+		self.coworkers.returnAll(false) -- 동료들은 걸어서 자리로
+	end
+	self:resumeBoss()
 end
 
 return Events
