@@ -360,7 +360,7 @@ SalaryConfig.Achievements = {
 	{ id = "audit_survivor", emoji = "🔍", name = "감사 생존자", description = "감사 기간에 한 번도 안 걸리고 퇴근하기" },
 	{ id = "workshop_winner", emoji = "🌸", name = "무궁화 챔피언", description = "워크숍 무궁화꽃이 피었습니다 1등 하기" },
 	{ id = "dinner_ace", emoji = "🍻", name = "회식 에이스", description = "회식에서 6점 이상 받기" },
-	{ id = "company_nunchi", emoji = "🏢", name = "이직 성공", description = "과장이 돼서 (주)눈치물산으로 스카우트되기" },
+	{ id = "company_nunchi", emoji = "🏢", name = "이직 성공", description = "대리가 돼서 (주)눈치물산으로 스카우트되기" },
 	{ id = "lee_bribe", emoji = "☕", name = "커피 외교", description = "이과장에게 커피를 상납해서 고자질 막기" },
 	{ id = "lee_dodge", emoji = "🫣", name = "눈치 싸움 승리", description = "이과장의 ❗를 보고 들키기 전에 일하는 척하기" },
 	{ id = "chatterbox", emoji = "🗣️", name = "사내 수다왕", description = "수다 주제 15개 수집하기" },
@@ -483,7 +483,7 @@ SalaryConfig.Companies = {
 	{
 		id = "nunchi",
 		name = "(주)눈치물산",
-		minRank = 5, -- 과장
+		minRank = 4, -- 대리부터 (승진하면 자동으로 이직)
 		leeDays = {}, -- 이과장은 대충상사에 남았어요 (나도 이제 과장이라 동급!)
 		motto = "사훈: 눈치가 곧 경쟁력! 칼퇴는 없다",
 	},
