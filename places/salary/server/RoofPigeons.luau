@@ -1,6 +1,6 @@
 -- 🐦 옥상 비둘기 친구
 --   🍞 모이 통 [E] → 하늘에서 비둘기들이 내려와 콕콕 쪼아 먹어요 (PIGEON_STAY초)
---   ⚠️ 부장님이 옥상에 올라오기 PIGEON_EARLY초 전에 먼저 놀라서 푸드덕! (살아 있는 알람)
+--   ⚠️ 👮 옥상 경비원이 가까이 다가오면 먼저 놀라서 푸드덕! (살아 있는 근접 알람)
 --   💕 친밀도가 오를수록 더 많이, 더 희귀한 비둘기가 와요 → 📒 관찰 노트에 기록
 
 local Players = game:GetService("Players")
@@ -97,7 +97,7 @@ end
 --   charge(player, 금액) → (ok, 메시지)
 --   fed(player) → 친밀도(모이 준 횟수)
 --   seen(player, 비둘기 ID) → 처음 만났나
---   bossOnRoof() → 부장님이 지금 옥상에 있나
+--   guardNear() → 경비원이 모이 통 가까이 있나
 --   onRoof(position) → 옥상 위인가
 function RoofPigeons.start(folder: Instance, spot: Vector3, remotes, hooks)
 	local pigeonFolder = Instance.new("Folder")
@@ -253,7 +253,11 @@ function RoofPigeons.start(folder: Instance, spot: Vector3, remotes, hooks)
 	end
 
 	-- 하늘에서 내려앉기
-	local function land(kind: any)
+	local generation = 0 -- 모두 날아갈 때마다 +1 (늦게 내려오던 비둘기는 취소)
+	local function land(kind: any, myGeneration: number?)
+		if myGeneration and myGeneration ~= generation then
+			return -- 그사이 다들 날아갔어요
+		end
 		local scale = kind.scale or 1
 		local angle = math.random() * math.pi * 2
 		local radius = 1 + math.random() * 3.5
@@ -311,6 +315,7 @@ function RoofPigeons.start(folder: Instance, spot: Vector3, remotes, hooks)
 
 	-- 모두 날아가요
 	local function scatter(calm: boolean)
+		generation += 1
 		for _, pigeon in flock do
 			flyAway(pigeon, calm)
 		end
@@ -320,8 +325,8 @@ function RoofPigeons.start(folder: Instance, spot: Vector3, remotes, hooks)
 	end
 
 	feedPrompt.Triggered:Connect(function(player)
-		if hooks.bossOnRoof() then
-			remotes.Notify:FireClient(player, "🐦 부장님 때문에 비둘기들이 겁먹었어요… 나중에 다시!")
+		if hooks.guardNear() then
+			remotes.Notify:FireClient(player, "🐦 경비원 아저씨 때문에 비둘기들이 겁먹었어요… 조금 있다가 다시!")
 			return
 		end
 		local paid, message = hooks.charge(player, SalaryConfig.PIGEON_FEED_PRICE)
@@ -337,7 +342,7 @@ function RoofPigeons.start(folder: Instance, spot: Vector3, remotes, hooks)
 		local found = {}
 		for i = 1, math.max(0, want) do
 			local kind = rollKind(levelIndex)
-			task.delay((i - 1) * 0.35 + math.random() * 0.3, land, kind)
+			task.delay((i - 1) * 0.35 + math.random() * 0.3, land, kind, generation)
 			table.insert(found, kind)
 			if hooks.seen(player, kind.id) then
 				remotes.Notify:FireClient(player, `📒 새 비둘기 발견! {kind.emoji} {kind.name} — {kind.description}`)
@@ -367,14 +372,14 @@ function RoofPigeons.start(folder: Instance, spot: Vector3, remotes, hooks)
 	end)
 
 	local api = {}
-	-- ⚠️ 부장님이 곧 올라와요 → 놀라서 푸드덕! (비둘기가 있을 때만 경고가 돼요)
+	-- ⚠️ 경비원이 다가와요 → 놀라서 푸드덕! (비둘기가 있을 때만 경고가 돼요)
 	function api.scare(): boolean
 		if aliveCount() == 0 then
 			return false
 		end
 		scatter(false)
 		for _, player in roofPlayers() do
-			remotes.Notify:FireClient(player, "🐦 푸드덕!! 비둘기들이 놀라서 날아갔어요… 누가 올라오나 봐요!")
+			remotes.Notify:FireClient(player, "🐦 푸드덕!! 비둘기들이 놀라서 날아갔어요… 👮 경비원이 이쪽으로 와요!")
 			remotes.PigeonScare:FireClient(player)
 		end
 		return true

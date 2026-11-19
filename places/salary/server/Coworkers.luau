@@ -435,8 +435,10 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 				task.wait(0.4)
 			end
 			Npc.standUpright(c.model)
+			local originalColors: { [BasePart]: Color3 } = {}
 			for _, part in c.model:GetDescendants() do
 				if part:IsA("BasePart") and (string.find(part.Name, "Torso") or string.find(part.Name, "Arm") or string.find(part.Name, "Hand")) then
+					originalColors[part] = part.Color
 					part.Color = Color3.fromRGB(30, 30, 38) -- 🕶️ 검은 정장
 				end
 			end
@@ -449,7 +451,26 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 				return c.model.Parent == nil
 			end)
 			c.desk.seat.Disabled = false
-			c.model:Destroy()
+			-- 잠시 뒤 원래 동료로 돌아와 자리에 앉아요 (진짜 동료는 휴가였대요 😅)
+			task.wait(20)
+			if c.desk.seat:GetAttribute("OwnerId") or c.desk.seat.Occupant or not c.model.Parent then
+				c.model:Destroy() -- 그사이 플레이어가 그 자리에 앉았어요
+				return
+			end
+			for part, color in originalColors do
+				part.Color = color
+			end
+			c.humanoid.WalkSpeed = 16
+			c.model:PivotTo(CFrame.new(c.desk.behind + Vector3.new(0, 3, 0)))
+			c.removed = false
+			c.chatting, c.slacking, c.borrowed = false, false, false -- (들킬 때 수다 중이었으면 굳지 않게)
+			list[c.index] = c
+			Npc.sit(c.model, c.desk.seat)
+			c.atDesk = true
+			c.prompt.Enabled = true
+			setState(c, "work", "⌨️")
+			Npc.say(c.model, "휴가 끝! …응? 내 자리에 누가 앉아 있었어?", 3)
+			task.spawn(runAi, c)
 		end)
 	end
 

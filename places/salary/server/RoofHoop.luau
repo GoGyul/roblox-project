@@ -1,13 +1,14 @@
 -- 🏀 옥상 농구
 --   공 거치대 [E] → 화면에서 슛 게이지 멈추기 × 공 HOOP_SHOTS개 → 점수만큼 상금 (하루 HOOP_DAILY_PRIZES번)
 --   게이지 값은 "누른 시각"으로 서버가 다시 계산해요. 공이 날아가는 모습은 모두의 화면에 (HoopShot)
---   🔊 공 소리에 옥상 순찰 부장님이 더 빨리 와요 (hooks.noise)
+--   🔊 공 소리(새 판·놓친 공)에 👮 옥상 경비원이 농구대 쪽으로 확인하러 와요 (hooks.noise)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local Build = require(ReplicatedStorage.Shared.Build)
+local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 
 local RoofHoop = {}
 
@@ -15,7 +16,7 @@ local RIM_HEIGHT = 10
 local RIM_RADIUS = 1.15
 
 -- base: 골대 기둥 자리 (골대는 -Z 쪽을 봐요) / spot: 슛하는 자리
--- hooks.prize(player, 금액) → (준 돈, 남은 횟수) / hooks.noise(초) / hooks.unlock(player, 업적)
+-- hooks.prize(player, 금액) → (준 돈, 남은 횟수) / hooks.noise() / hooks.unlock(player, 업적)
 function RoofHoop.start(folder: Instance, base: Vector3, remotes, hooks)
 	local B = Build.new(folder, Vector3.zero)
 	local spot = base + Vector3.new(0, 0, -10)
@@ -66,6 +67,7 @@ function RoofHoop.start(folder: Instance, base: Vector3, remotes, hooks)
 	---------------------------------------------------------------- 한 판
 	type Round = { shot: number, score: number, streak: number, makes: number, swishes: number, gaugeStart: number }
 	local rounds: { [Player]: Round } = {}
+	local allow = RateLimit.new(0.3)
 
 	local function near(player: Player): Vector3?
 		local character = player.Character
@@ -77,22 +79,30 @@ function RoofHoop.start(folder: Instance, base: Vector3, remotes, hooks)
 	end
 	local function pressTime(value: any): number
 		local now = workspace:GetServerTimeNow()
-		if typeof(value) == "number" and value <= now + 0.05 and value >= now - 0.6 then
+		if typeof(value) == "number" and value <= now + 0.05 and value >= now - 0.35 then -- (너무 옛날 시각은 못 골라요)
 			return value
 		end
 		return now
 	end
 
 	remotes.HoopPlay.OnServerInvoke = function(player: Player, action: any, value: any)
+		if not allow(player) then
+			return { ok = false, message = "천천히!" }
+		end
 		local position = near(player)
 		if not position then
 			return { ok = false, message = "🏀 자유투 라인 근처에서 해요!" }
 		end
 		local now = workspace:GetServerTimeNow()
 		if action == "start" then
+			local old = rounds[player]
+			-- (창을 닫고 다시 시작해도 소리가 나요: 하던 판이 없거나 오래 멈춰 있었으면)
+			local wasPlaying = old ~= nil and now - old.gaugeStart < 8
 			local round: Round = { shot = 0, score = 0, streak = 0, makes = 0, swishes = 0, gaugeStart = now + 0.5 }
 			rounds[player] = round
-			hooks.noise(SalaryConfig.HOOP_NOISE) -- 🔊 공 튀기는 소리
+			if not wasPlaying then
+				hooks.noise() -- 🔊 공 튀기는 소리 (새 판을 시작할 때만) → 경비원이 확인하러 와요
+			end
 			return { ok = true, gaugeStart = round.gaugeStart, shots = SalaryConfig.HOOP_SHOTS }
 		elseif action == "shoot" then
 			local round = rounds[player]
@@ -118,7 +128,9 @@ function RoofHoop.start(folder: Instance, base: Vector3, remotes, hooks)
 				round.streak = 0
 			end
 			round.score += points
-			hooks.noise(if points > 0 then SalaryConfig.HOOP_NOISE else SalaryConfig.HOOP_NOISE * 2) -- 🔊 놓치면 공이 더 시끄럽게 굴러가요
+			if points == 0 then
+				hooks.noise() -- 🔊 놓친 공이 데굴데굴 시끄럽게 굴러가요 → 경비원이 확인하러 와요
+			end
 			remotes.HoopShot:FireAllClients({ from = position + Vector3.new(0, 3, 0), rim = rim, result = result })
 			round.gaugeStart = now + 1.7 -- 다음 공 받는 시간
 			local reply = {

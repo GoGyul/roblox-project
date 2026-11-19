@@ -75,6 +75,7 @@ function RoofScope.start(folder: Instance, stand: Vector3, dayCycle, remotes, ho
 	---------------------------------------------------------------- 장면 정하기 (서버만)
 	type Showing = { w: number, s: string, u: number } -- 창문 번호, 장면 ID, 언제까지(서버 시각)
 	local showing: { Showing } = {}
+	local recent: { Showing } = {} -- 막 사라진 장면 (화면과 서버 시간 차이를 봐줘요)
 	local function publish()
 		ReplicatedStorage:SetAttribute("ScopeScenes", HttpService:JSONEncode(showing))
 	end
@@ -111,8 +112,15 @@ function RoofScope.start(folder: Instance, stand: Vector3, dayCycle, remotes, ho
 			-- 시간이 다 된 장면은 사라져요
 			for i = #showing, 1, -1 do
 				if showing[i].u <= now then
+					table.insert(recent, showing[i])
 					table.remove(showing, i)
 					changed = true
+				end
+			end
+			-- 방금 사라진 장면은 잠깐만 기억해요 (아무도 안 봐도 계속 쌓이지 않게)
+			for i = #recent, 1, -1 do
+				if recent[i].u < now - 5 then
+					table.remove(recent, i)
 				end
 			end
 			local period = timeOfDay(dayCycle)
@@ -171,7 +179,16 @@ function RoofScope.start(folder: Instance, stand: Vector3, dayCycle, remotes, ho
 		end
 		local now = workspace:GetServerTimeNow()
 		local visible = false
-		for _, item in showing do
+		for i = #recent, 1, -1 do
+			if recent[i].u < now - 2 then
+				table.remove(recent, i)
+			end
+		end
+		local candidates = table.clone(showing)
+		for _, item in recent do
+			table.insert(candidates, item)
+		end
+		for _, item in candidates do
 			-- (화면과 서버 사이 시간 차이를 조금 봐줘요)
 			if item.w == window and item.s == sceneId and item.u > now - 1.5 then
 				visible = true

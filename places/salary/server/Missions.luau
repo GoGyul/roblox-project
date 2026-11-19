@@ -270,7 +270,7 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 		end
 		state.status = "active"
 		state.startedAt = workspace:GetServerTimeNow()
-		state.endsAt = state.startedAt + state.mission.seconds
+		state.endsAt = state.startedAt + state.mission.seconds + (if api.timeBonus then api.timeBonus(player) else 0) -- 📊 엑셀 마스터
 		state.step = 0
 		if boss.model.Parent then
 			boss:say(`{player.DisplayName} 씨! 긴급 프로젝트야! {state.mission.emoji} {state.mission.name}!`, 4)
@@ -472,7 +472,7 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 				if answer ~= puzzle.correct then
 					-- 두 번 연속 틀리면 프로젝트 실패!
 					local wrongs = (puzzle.wrongs or 0) + 1
-					if wrongs >= SalaryConfig.QUIZ_MAX_WRONG then
+					if wrongs >= SalaryConfig.QUIZ_MAX_WRONG + (if api.quizBonus then api.quizBonus(player) else 0) then -- 🏯 한국사
 						finish(player, state, false, `퀴즈를 {wrongs}번 연속 틀렸어요!`)
 						return { ok = true, correct = false, done = true, message = `❌ {wrongs}번 연속 오답… 프로젝트 실패!` }
 					end

@@ -25,6 +25,64 @@ end)
 PhysicsService:CollisionGroupSetCollidable(NPC_GROUP, CHARACTER_GROUP, false)
 PhysicsService:CollisionGroupSetCollidable(NPC_GROUP, NPC_GROUP, false)
 
+-- 🪑 NPC만 부딪히는 투명 천장 (책상·탁자 위로 못 올라오게): 플레이어·고양이·다른 물건과는 안 부딪혀요
+local NPC_BLOCK_GROUP = "SalaryNpcBlock"
+pcall(function()
+	PhysicsService:RegisterCollisionGroup(NPC_BLOCK_GROUP)
+end)
+PhysicsService:CollisionGroupSetCollidable(NPC_BLOCK_GROUP, "Default", false)
+PhysicsService:CollisionGroupSetCollidable(NPC_BLOCK_GROUP, CHARACTER_GROUP, false)
+PhysicsService:CollisionGroupSetCollidable(NPC_BLOCK_GROUP, NPC_BLOCK_GROUP, false)
+PhysicsService:CollisionGroupSetCollidable(NPC_BLOCK_GROUP, NPC_GROUP, true)
+
+-- folder 안의 낮은 가구(바닥 높이 floorLevels 기준 윗면이 1.5~5.5칸) 위에 NPC 전용 투명 천장을 씌워요
+--   로블록스 캐릭터는 낮은 턱을 저절로 올라서는데, 부장님·동료가 끼었을 때 책상 위로 올라가 버려서 막아요
+function Npc.guardFurniture(folder: Instance, floorLevels: { number })
+	local guards = Instance.new("Folder")
+	guards.Name = "NpcFurnitureGuards"
+	guards.Parent = folder
+	local count = 0
+	for _, part in folder:GetDescendants() do
+		if not part:IsA("BasePart") or part:IsA("Seat") or part:IsA("VehicleSeat") or part:IsDescendantOf(guards) then
+			continue
+		end
+		if not part.CanCollide or part.Transparency >= 1 or part.Parent == nil then
+			continue
+		end
+		if part.CFrame.UpVector.Y < 0.99 then
+			continue -- (눕혀 놓은 원기둥 같은 건 건너뛰어요)
+		end
+		local size = part.Size
+		if size.Y < 0.5 or size.Y > 6 or size.X > 40 or size.Z > 40 then
+			continue -- 바닥·벽·카펫은 빼고
+		end
+		local top = part.Position.Y + size.Y / 2
+		local onFloor = false
+		for _, floorY in floorLevels do
+			local height = top - floorY
+			if height >= 1.5 and height <= 5.5 then
+				onFloor = true
+			end
+		end
+		if not onFloor then
+			continue
+		end
+		local guard = Instance.new("Part")
+		guard.Name = "NpcGuard"
+		guard.Size = Vector3.new(size.X + 0.4, 6, size.Z + 0.4)
+		guard.CFrame = part.CFrame * CFrame.new(0, size.Y / 2 + 3, 0)
+		guard.Anchored = true
+		guard.Transparency = 1
+		guard.CanQuery = false
+		guard.CanTouch = false
+		guard.CastShadow = false
+		guard.CollisionGroup = NPC_BLOCK_GROUP
+		guard.Parent = guards
+		count += 1
+	end
+	return count
+end
+
 local function setGroup(instance: Instance, group: string)
 	if instance:IsA("BasePart") then
 		instance.CollisionGroup = group

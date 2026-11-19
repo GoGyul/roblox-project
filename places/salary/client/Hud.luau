@@ -1043,6 +1043,9 @@ RunService.RenderStepped:Connect(function()
 	end
 	local combo = player:GetAttribute("Combo") or 1
 	local comboLine = `🔥 콤보 x{combo} ❓` -- (누르면 설명창)
+	if player:GetAttribute("HalfDay") == true then
+		comboLine = "🏖️ 반차 중  " .. comboLine -- 🎟️ 반차권
+	end
 	local photos = player:GetAttribute("AuditPhotos") or -1
 	if photos >= 0 then
 		-- 🕶️ 감사관에게 찍힌 사진: 농땡이 📸 n/2 · 빈자리 🪑 n/3 (하나라도 차면 감사 보고서)
@@ -1348,7 +1351,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		Remotes.VideoAnswer:FireServer(videoId, index)
 		Sounds.play("click", 0.5)
 		videoId = 0
-		videoPopup.Visible = false
+		-- (같은 키를 책상 행동 단축키가 다시 쓰지 않게, 이번 입력이 다 처리된 뒤에 닫아요)
+		task.defer(function()
+			videoPopup.Visible = false
+		end)
 	end
 end)
 RunService.Heartbeat:Connect(function()
@@ -1369,24 +1375,22 @@ local elevatorGui = Ui.make("Frame", {
 	ZIndex = 45,
 	Parent = gui,
 })
-for _, anchorY in { 0, 1 } do -- 영화처럼 위아래 검은 띠
-	Ui.make("Frame", {
-		AnchorPoint = Vector2.new(0, anchorY),
-		Position = UDim2.fromScale(0, anchorY),
-		Size = UDim2.new(1, 0, 0.1, 0),
-		BackgroundColor3 = Color3.new(0, 0, 0),
-		ZIndex = 45,
-		Parent = elevatorGui,
-	})
-end
-local elevatorTitle = text({
+-- 이동 안내는 시계 바로 아래 작은 알약 모양으로 (다른 UI를 가리지 않게)
+local elevatorPill = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0),
-	Position = UDim2.new(0.5, 0, 0.02, 0),
-	Size = UDim2.fromOffset(600, 34),
-	TextSize = 26,
+	Position = UDim2.new(0.5, 0, 0, 76),
+	Size = UDim2.fromOffset(280, 30),
+	BackgroundColor3 = Color3.fromRGB(20, 22, 30),
+	BackgroundTransparency = 0.15,
+	ZIndex = 45,
+	Parent = elevatorGui,
+}, { Ui.corner(15), Ui.stroke(Color3.fromRGB(255, 200, 80), 1.5) })
+local elevatorTitle = text({
+	Size = UDim2.fromScale(1, 1),
+	TextSize = 16,
 	TextXAlignment = Enum.TextXAlignment.Center,
 	ZIndex = 46,
-	Parent = elevatorGui,
+	Parent = elevatorPill,
 })
 -- 가운데 게임 판
 local elevatorBoard = Ui.make("Frame", {

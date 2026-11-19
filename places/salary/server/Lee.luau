@@ -19,7 +19,7 @@ local Walker = require(script.Parent.Walker)
 local Lee = {}
 Lee.__index = Lee
 
-local RANGE = 24
+local RANGE = 35 -- (사무실이 넓어져서 24 → 35)
 local FOV = math.cos(math.rad(55))
 local WARN_SECONDS = 0.7 -- ❗가 뜨고 뒤돌아보기까지
 local STARE_SECONDS = 2.5

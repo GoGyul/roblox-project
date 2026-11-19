@@ -1,6 +1,8 @@
 -- ✈️ 옥상 종이비행기
---   발사대 [E] → 화면에서 🌬️ 바람 확인 → ① 각도 게이지 멈추기 → ② 힘 게이지 멈추기 → 슈웅~
---   게이지 값은 "누른 시각"으로 서버가 다시 계산해요 (화면을 조작해도 소용없어요)
+--   발사대 [E] → 화면에서 🌬️ 바람 확인 → 각도·힘·방향을 [-] [+]로 맞추고 → [던지기] 슈웅~
+--   미리보기 점선은 "바람 없을 때"의 처음 조금만 보여 줘요. 바람을 보고 직접 보정하는 게 실력!
+--   🌬️ 바람은 던질 때까지 그대로예요 (창을 닫았다 열어도 같은 바람 → 좋은 바람 고르기 금지)
+--   🛡️ 화면은 각도·힘·방향 숫자만 보내요. 서버가 범위·칸에 맞춰 다시 자르고, 비행 결과도 서버가 계산해요
 --   비행기는 모든 사람 화면에 똑같이 날아가요 (PlaneFlight)
 
 local Players = game:GetService("Players")
@@ -18,9 +20,9 @@ local NEAR_START, NEAR_END, HALF_WIDTH = 55, 205, 42 -- 건너편 빌딩 옥상 
 
 -- hooks:
 --   onRoof(position) → 옥상 위인가
---   bossModel() → 옥상에 올라온 부장님 모델 (없으면 nil)
+--   bossModel() → 발사대 근처에 있는 👮 옥상 경비원 모델 (없으면 nil)
 --   prize(player, 금액) → (준 돈, 오늘 남은 횟수)
---   bossHit(player) → 부장님 머리에 꽂힘 (의심도 + 업적)
+--   bossHit(player) → 👮 옥상 경비원 머리에 꽂힘 (의심도 + 업적)
 --   unlock(player, 업적 ID)
 --   best(player, 거리) → (새 기록인가, 내 최고 기록)
 function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
@@ -131,7 +133,7 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 	refreshBoard()
 
 	---------------------------------------------------------------- 던지기
-	type Throw = { wind: { forward: number, side: number }, angleStart: number, angle: number?, powerStart: number? }
+	type Throw = { wind: { forward: number, side: number } }
 	local throws: { [Player]: Throw } = {}
 	local cooldown: { [Player]: number } = {}
 	local flying: { [Player]: boolean } = {}
@@ -140,48 +142,51 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		return root ~= nil and (root.Position - launch).Magnitude < 12
 	end
-	local function pressTime(value: any): number
-		local now = workspace:GetServerTimeNow()
-		if typeof(value) == "number" and value <= now + 0.05 and value >= now - 0.6 then
-			return value
-		end
-		return now
-	end
 	local function roundWind(): number
 		return math.floor((math.random() * 2 - 1) * 10 + 0.5) / 10
 	end
 
-	remotes.PlaneThrow.OnServerInvoke = function(player: Player, action: any, value: any)
+	local start = launch + Vector3.new(0, 3.2, -1.5) -- 비행기가 출발하는 곳 (화면 미리보기도 여기서 시작)
+
+	remotes.PlaneThrow.OnServerInvoke = function(player: Player, action: any, angleValue: any, powerValue: any, aimValue: any)
 		if not near(player) then
 			return { ok = false, message = "✈️ 발사대 앞에서 날려요!" }
 		end
-		local now = workspace:GetServerTimeNow()
 		if action == "begin" then
-			if flying[player] then
-				return { ok = false, message = "아직 날아가는 중이에요!" }
+			-- 🌬️ 이번 바람 (던지기 전까지는 같은 바람)
+			local throw = throws[player]
+			if not throw then
+				throw = { wind = { forward = roundWind(), side = roundWind() } }
+				throws[player] = throw
 			end
-			if os.clock() < (cooldown[player] or 0) then
-				return { ok = false, message = `종이를 접는 중… {math.ceil((cooldown[player] :: number) - os.clock())}초` }
-			end
-			local throw: Throw = { wind = { forward = roundWind(), side = roundWind() }, angleStart = now + 0.4 }
-			throws[player] = throw
-			return { ok = true, wind = throw.wind, angleStart = throw.angleStart }
+			return { ok = true, wind = throw.wind, start = start, launch = launch, roofY = roofY }
+		elseif action ~= "throw" then
+			return { ok = false, message = "잘못된 요청이에요." }
+		end
+		if flying[player] then
+			return { ok = false, message = "아직 날아가는 중이에요!" }
+		end
+		if os.clock() < (cooldown[player] or 0) then
+			return { ok = false, message = `종이를 접는 중… {math.ceil((cooldown[player] :: number) - os.clock())}초` }
 		end
 		local throw = throws[player]
 		if not throw then
-			return { ok = false, message = "먼저 [준비]를 눌러 주세요." }
+			return { ok = false, message = "바람을 먼저 확인해 주세요." }
 		end
-		if action == "angle" and not throw.angle then
-			throw.angle = SalaryConfig.planeAngle(math.max(0, pressTime(value) - throw.angleStart))
-			throw.powerStart = now + 0.3
-			return { ok = true, angle = throw.angle, powerStart = throw.powerStart }
-		elseif action == "power" and throw.angle and throw.powerStart then
+		do
 			throws[player] = nil
 			cooldown[player] = os.clock() + SalaryConfig.PLANE_COOLDOWN
-			local angle = throw.angle :: number
-			local power = SalaryConfig.planePower(math.max(0, pressTime(value) - (throw.powerStart :: number)))
-			local distance, drift = SalaryConfig.planeFlight(angle, power, throw.wind.forward, throw.wind.side)
-			local start = launch + Vector3.new(0, 3.2, -1.5)
+			-- 🛡️ 화면이 보낸 값은 범위·칸에 맞춰 다시 잘라요
+			local angle = SalaryConfig.planeSnap(angleValue, SalaryConfig.PLANE_ANGLE)
+			local power = SalaryConfig.planeSnap(powerValue, SalaryConfig.PLANE_POWER) / 100
+			local aim = SalaryConfig.planeSnap(aimValue, SalaryConfig.PLANE_AIM)
+			local forward, side, distance = SalaryConfig.planeLanding(angle, power, aim, throw.wind.forward, throw.wind.side)
+			-- 💨 돌풍 (살짝 운)
+			local gust = 1 + (math.random() * 2 - 1) * SalaryConfig.PLANE_GUST
+			forward *= gust
+			distance *= gust
+			side = side * gust + (math.random() * 2 - 1) * SalaryConfig.PLANE_GUST_SIDE
+			local drift = side
 
 			-- 😱 맞바람이 세면 가끔 되돌아와요
 			local boomerang = throw.wind.forward <= -0.5 and math.random() < SalaryConfig.PLANE_BOOMERANG_CHANCE
@@ -189,6 +194,7 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 			local finish: Vector3
 			local control: Vector3
 			local hitBoss = false
+			local onBuilding = false -- 건너편 빌딩 옥상에 내려앉았나 (아니면 길바닥으로 떨어져요)
 			if boomerang then
 				local bossHead = bossModel and bossModel:FindFirstChild("Head") :: BasePart?
 				if bossHead then
@@ -199,12 +205,13 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 				end
 				control = launch + FORWARD * 40 + Vector3.new(drift * 0.3, 22, 0)
 				distance = 0
+				forward = 0
 			else
-				finish = launch + FORWARD * distance + RIGHT * drift
-				local onBuilding = distance >= NEAR_START and distance <= NEAR_END and math.abs(drift) <= HALF_WIDTH
+				finish = launch + FORWARD * forward + RIGHT * side
+				onBuilding = forward >= NEAR_START and forward <= NEAR_END and math.abs(side) <= HALF_WIDTH
 				finish = Vector3.new(finish.X, if onBuilding then roofY + 0.15 else launch.Y - 70, finish.Z)
-				local lift = distance * math.tan(math.rad(angle)) * 0.3
-				control = start:Lerp(finish, 0.45) + Vector3.new(drift * 0.2, lift + 4, 0)
+				-- 바람이 옆으로 미는 만큼 곡선도 살짝 휘어요 (미리보기에는 바람이 없어요)
+				control = SalaryConfig.planeControl(start, finish, distance, angle) + RIGHT * (drift - distance * math.sin(math.rad(aim))) * 0.2
 			end
 			local duration = if boomerang then 3.2 else 1.3 + distance / 75
 			flying[player] = true
@@ -216,7 +223,7 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 			local prize, label = 0, "🍂 툭… 금방 떨어졌어요"
 			if hitTarget then
 				prize, label = SalaryConfig.PLANE_TARGET_PRIZE, "🎯 과녁 명중!!"
-			elseif not boomerang then
+			elseif not boomerang and onBuilding then -- (빌딩을 넘어가거나 옆으로 빠져 길에 떨어지면 거리 상금 없음)
 				for _, tier in SalaryConfig.PlanePrizes do
 					if distance >= tier.distance then
 						prize, label = tier.prize, tier.label
@@ -224,13 +231,17 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 					end
 				end
 			else
-				label = if hitBoss then "😱 되돌아와서 부장님 머리에 꽂혔어요!!" else "🔄 바람에 되돌아왔어요…"
+				label = if hitBoss then "😱 되돌아와서 경비원 아저씨 머리에 꽂혔어요!!" else "🔄 바람에 되돌아왔어요…"
 			end
 			local result = {
 				ok = true,
 				angle = angle,
 				power = power,
+				aim = aim,
 				distance = distance,
+				-- 🎯 과녁과 얼마나 차이 났는지 (다음 던지기 보정용): 앞뒤(+넘어감 / -짧음), 좌우(+오른쪽)
+				missLong = forward - SalaryConfig.PLANE_TARGET_DISTANCE,
+				missSide = side,
 				drift = drift,
 				duration = duration,
 				hitTarget = hitTarget,
@@ -284,7 +295,6 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 			end
 			return result
 		end
-		return { ok = false, message = "잘못된 요청이에요." }
 	end
 
 	Players.PlayerRemoving:Connect(function(player)

@@ -28,6 +28,7 @@ local Wheel = require(script.Wheel)
 local Dart = require(script.Dart)
 local Missions = require(script.Missions)
 local Decor = require(script.Decor)
+local Outfit = require(script.Outfit)
 local Cat = require(script.Cat)
 local Rooftop = require(script.Rooftop)
 local SeatPrompts = require(script.SeatPrompts)
@@ -80,9 +81,14 @@ Employees.start(office, boss, dayCycle, Remotes, coworkers, events, lee)
 Street.start(office, Remotes, Employees.buyStreet) -- 🏙️ 눈치 스트리트 가게 (눈치물산만)
 Claw.start(office, Remotes, { charge = Employees.chargeClaw, give = Employees.givePlush }) -- 🧸 인형뽑기
 Decor.start(Remotes, Employees.decorApi) -- 🪑 내 자리 꾸미기 + 🏆 칭호
+if SalaryConfig.OUTFIT_ENABLED then
+	Outfit.start(Remotes, Employees.decorApi) -- 👔 출근룩 (Decor 다음에: 들어올 때 훅을 이어 붙여요)
+end
 local cat = Cat.start(office, boss, dayCycle, Remotes, Employees.catHooks) -- 🐱 사무실 고양이 월급냥
 Employees.hooks.catOn = cat.sittingOn
 local rooftop = Rooftop.start(office, boss, dayCycle, Remotes, Employees.roofHooks, events) -- 🏢 옥상 + 🚪 엘리베이터
+-- 🪑 부장님·동료가 책상·탁자 위로 올라가지 않게 (사무실 바닥 높이 1, 옥상 300)
+require(script.Npc).guardFurniture(office.folder, { 1, 300 })
 SeatPrompts.start(Remotes) -- 🪑 의자마다 [E] 앉기
 PhoneGames.start(Remotes, { -- 📱 폰 게임 (💣 지뢰 피하기)
 	charge = Employees.chargeClaw,
@@ -94,7 +100,18 @@ PhoneGames.start(Remotes, { -- 📱 폰 게임 (💣 지뢰 피하기)
 	baseballPrize = Employees.payBaseball,
 })
 Employees.hooks.onRoof = rooftop.onRoof
-Employees.hooks.roofSees = rooftop.sees
+local parkGuard = require(script.Guard).start(office, dayCycle, events, Remotes) -- 👮 공원·거리 경비원 (눈치물산만)
+-- 👮 사무실 밖 경비원들 (옥상 + 공원): 보이나, 거리, 노려보는 중인가
+Employees.hooks.guardSees = function(character: Model): (boolean, number, boolean, number)
+	local seen, distance, staring, range = rooftop.sees(character)
+	if seen then
+		return seen, distance, staring, range
+	end
+	if parkGuard then
+		return parkGuard.sees(character)
+	end
+	return false, math.huge, false, SalaryConfig.GUARD_RANGE
+end
 Missions.start(office, boss, dayCycle, Remotes, Employees.missionApi, Employees.hooks, coworkers) -- 📋 긴급 프로젝트 + 🎁 선물
 Wheel.start(office, Remotes, { charge = Employees.chargeClaw, payout = Employees.payWheel }) -- 🎡 돌림판
 Dart.start(office, Remotes, { charge = Employees.chargeClaw, prize = Employees.dartPrize }) -- 🎈 풍선 다트

@@ -2,7 +2,8 @@
 --   사무실 엘리베이터 [E] → 엘리베이터 안 → 옥상 도착 (옥상 엘리베이터 [E] → 사무실)
 --   😱 근무 중엔 가끔 부장님과 같이 타요: 부장님이 이쪽을 볼 때(👀 예고) 시선을 피해야 해요 → 못 피하면 의심도 +
 --   🌬️ 옥상: 바람 쐬기 / 🏖️ 선베드 일광욕 / 🔭 망원경(부장님 위치 보기) / 물탱크·실외기 뒤에 숨기
---   🚪 띵! 가끔 부장님이 옥상까지 순찰 와요 (5초 예고)
+--   👮 옥상 경비원이 근무 시간 내내 순찰해요 (부장님은 사무실에만). 💤 가끔 경비실에서 쉬는 틈을 노려요
+--   📐 옥상은 예전보다 가로·세로 1.4배 넓어요 (ROOF_SCALE)
 --
 -- 옥상과 엘리베이터 칸은 사무실 훨씬 위 하늘에 지어요 (사무실 천장에 가려서 안 보여요).
 
@@ -14,7 +15,7 @@ local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 local Build = require(ReplicatedStorage.Shared.Build)
 local Npc = require(script.Parent.Npc)
-local Boss = require(script.Parent.Boss)
+local Guard = require(script.Parent.Guard)
 local Walker = require(script.Parent.Walker)
 local RoofPigeons = require(script.Parent.RoofPigeons)
 local RoofPlane = require(script.Parent.RoofPlane)
@@ -25,7 +26,12 @@ local RoofHoop = require(script.Parent.RoofHoop)
 local Rooftop = {}
 
 local ROOF = Vector3.new(0, 300, 0) -- 옥상 바닥 윗면 가운데
-local ROOF_W, ROOF_D = 70, 50
+local ROOF_SCALE = 1.4 -- 📐 옥상을 넓혔어요 (가로·세로 1.4배 = 넓이 약 2배). 물건 묶음들도 이만큼 바깥쪽으로 퍼져요
+local ROOF_W, ROOF_D = 70 * ROOF_SCALE, 50 * ROOF_SCALE
+-- 예전 좌표(x, z)를 넓어진 옥상 좌표로
+local function spread(x: number, y: number, z: number): Vector3
+	return ROOF + Vector3.new(x * ROOF_SCALE, y, z * ROOF_SCALE)
+end
 local CABIN_BASE = Vector3.new(260, 300, 0) -- 엘리베이터 칸들 (한 사람당 하나씩)
 local BOSS_LOOK = { skin = Color3.fromRGB(225, 190, 160), shirt = Color3.fromRGB(70, 70, 85), pants = Color3.fromRGB(40, 40, 50) }
 local allowDodge = RateLimit.new(0.08) -- (화면도 0.12초 간격으로만 보내요)
@@ -39,8 +45,13 @@ end
 ---------------------------------------------------------------------------
 local function buildRoof(folder: Instance, companyId: string)
 	local B = Build.new(folder, Vector3.zero)
+	-- 📐 물건 묶음 단위로 옮겨요: group(묶음 중심)을 부르면 그 묶음은 통째로 넓어진 자리로 (모양은 그대로)
+	local shift = Vector3.zero
+	local function group(cx: number, cz: number)
+		shift = Vector3.new(cx * (ROOF_SCALE - 1), 0, cz * (ROOF_SCALE - 1))
+	end
 	local function at(x: number, y: number, z: number): Vector3
-		return ROOF + Vector3.new(x, y, z)
+		return ROOF + Vector3.new(x, y, z) + shift
 	end
 	local fancy = companyId == "nunchi"
 	-- 바닥과 난간
@@ -55,21 +66,25 @@ local function buildRoof(folder: Instance, companyId: string)
 		B:part(Vector3.new(info[1].X, 30, info[1].Z), info[2] + Vector3.new(0, 15, 0), { Transparency = 1 }) -- 못 넘어가게
 	end
 	-- 🚪 엘리베이터 탑 (왼쪽)
+	group(-30, 0)
 	B:part(Vector3.new(8, 10, 9), at(-30, 5, 0), { Color = Color3.fromRGB(190, 190, 195), Material = Enum.Material.Concrete })
 	local door = B:part(Vector3.new(0.3, 8, 5), at(-25.85, 4, 0), { Name = "RoofElevatorDoor", Color = Color3.fromRGB(170, 175, 185), Material = Enum.Material.Metal, Reflectance = 0.15 })
 	local sign = B:part(Vector3.new(0.2, 1.2, 5), at(-25.8, 9, 0), { Color = Color3.fromRGB(30, 35, 45) })
 	Build.surfaceText(sign, Enum.NormalId.Right, "🚪 사무실로 ▼", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 220, 120) })
 	-- 🛢️ 물탱크 (숨기 좋아요) + 실외기들
+	group(16, -12)
 	B:part(Vector3.new(7, 7, 7), at(16, 3.5, -12), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(80, 150, 200), Material = Enum.Material.Metal })
 	local tankLabel = B:part(Vector3.new(0.2, 1.4, 3.5), at(12.4, 4, -12), { Color = Color3.fromRGB(80, 150, 200) })
 	Build.surfaceText(tankLabel, Enum.NormalId.Left, "💧 물탱크", { TextColor3 = Color3.new(1, 1, 1) })
-	for _, xz in { { 0, -20 }, { -12, 18 }, { 28, 10 } } do
+	for _, xz in { { 0, -20 }, { -12, 18 }, { 28, 10 }, { -30, -16 }, { -2, 2 } } do
+		group(xz[1], xz[2])
 		B:part(Vector3.new(4, 3, 3), at(xz[1], 1.5, xz[2]), { Color = Color3.fromRGB(215, 215, 210), Material = Enum.Material.Metal }) -- 실외기
 		B:part(Vector3.new(0.1, 2, 2), at(xz[1] + 2.05, 1.6, xz[2]), { Color = Color3.fromRGB(60, 60, 65), Shape = Enum.PartType.Cylinder })
 	end
 	-- 🙈 숨을 곳 더 (부장님 시선을 가려요)
 	-- 📦 택배 상자 더미 (오른쪽)
 	local cardboard = Color3.fromRGB(200, 160, 110)
+	group(22, 3)
 	for _, info in {
 		{ Vector3.new(3, 2.4, 3), at(22, 1.2, 2) },
 		{ Vector3.new(2.6, 2.2, 2.6), at(24.7, 1.1, 3.3) },
@@ -80,6 +95,7 @@ local function buildRoof(folder: Instance, companyId: string)
 		B:part(info[1], info[2], { Color = cardboard, Material = Enum.Material.Cardboard })
 	end
 	-- 🧺 빨래 건조대 + 이불 (가운데, 펄럭이는 이불 뒤에 숨기)
+	group(6.5, 5)
 	for _, x in { 3, 10 } do
 		B:part(Vector3.new(0.25, 5.4, 0.25), at(x, 2.7, 5), { Color = Color3.fromRGB(190, 190, 195), Material = Enum.Material.Metal })
 	end
@@ -87,11 +103,16 @@ local function buildRoof(folder: Instance, companyId: string)
 	for _, info in { { 4.7, Color3.fromRGB(245, 245, 240) }, { 8.3, Color3.fromRGB(170, 210, 240) } } do
 		B:part(Vector3.new(3.2, 4.2, 0.12), at(info[1], 3.2, 5), { Color = info[2], Material = Enum.Material.Fabric })
 	end
-	-- 🌳 큰 화분 나무 (왼쪽 앞)
-	B:part(Vector3.new(2.2, 2.6, 2.6), at(-18, 1.1, -10), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(170, 100, 70), Material = Enum.Material.Brick })
-	B:part(Vector3.new(0.7, 4, 0.7), at(-18, 4, -10), { Color = Color3.fromRGB(110, 80, 50), Material = Enum.Material.Wood })
-	B:part(Vector3.new(6, 5, 6), at(-18, 7.4, -10), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(70, 150, 70), Material = Enum.Material.Grass })
+	-- 🌳 큰 화분 나무 (왼쪽 앞) + 넓어진 자리에 하나 더 (오른쪽 뒤)
+	for _, info in { { -18, -10 }, { 30, 18 } } do
+		local tx, tz = info[1], info[2]
+		group(tx, tz)
+		B:part(Vector3.new(2.2, 2.6, 2.6), at(tx, 1.1, tz), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(170, 100, 70), Material = Enum.Material.Brick })
+		B:part(Vector3.new(0.7, 4, 0.7), at(tx, 4, tz), { Color = Color3.fromRGB(110, 80, 50), Material = Enum.Material.Wood })
+		B:part(Vector3.new(6, 5, 6), at(tx, 7.4, tz), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(70, 150, 70), Material = Enum.Material.Grass })
+	end
 	-- 🏗️ 환기 덕트 (가운데 앞)
+	group(10, -9)
 	B:part(Vector3.new(8, 3, 2.6), at(10, 1.5, -9), { Color = Color3.fromRGB(175, 180, 185), Material = Enum.Material.DiamondPlate })
 	for _, x in { 7.5, 12.5 } do
 		B:part(Vector3.new(1.8, 1, 1.8), at(x, 3.5, -9), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(120, 125, 130), Material = Enum.Material.Metal })
@@ -115,10 +136,14 @@ local function buildRoof(folder: Instance, companyId: string)
 		Build.surfaceText(label, Enum.NormalId.Front, "📦 취급주의", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(150, 40, 30) })
 		B:part(Vector3.new(2, 0.4, 2), center + Vector3.new(0, 0.3, 0), { ClassName = "Seat", Name = "HideSeat", Color = cardboard, Transparency = 1 })
 	end
-	hideBox(at(26, 0, -17))
-	hideBox(at(-17, 0, -2))
+	-- 넓어진 옥상: 숨는 상자 3개 (경비원 순찰을 피해 들어가요)
+	for _, xz in { { 26, -17 }, { -17, -2 }, { 2, 14 } } do
+		group(xz[1], xz[2])
+		hideBox(at(xz[1], 0, xz[2]))
+	end
 
 	-- 🏖️ 선베드 + 파라솔
+	group(11, 17)
 	local loungerSeats = {}
 	for i, x in { 2, 8, 14, 20 } do
 		local seat = B:part(Vector3.new(2, 0.5, 4.5), nil, {
@@ -136,6 +161,7 @@ local function buildRoof(folder: Instance, companyId: string)
 		B:part(Vector3.new(0.6, 6, 6), at(x, 6.2, 18), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(250, 120, 90), Material = Enum.Material.Fabric })
 	end
 	-- 🌱 텃밭 상자와 벤치, 꼬마전구
+	group(-11, -20)
 	local gardenBoxes = {}
 	for _, x in { -14, -8 } do
 		B:part(Vector3.new(5, 1.2, 2.5), at(x, 0.6, -20), { Color = Color3.fromRGB(130, 90, 60), Material = Enum.Material.WoodPlanks })
@@ -144,12 +170,15 @@ local function buildRoof(folder: Instance, companyId: string)
 	end
 	local gardenSign = B:part(Vector3.new(3.4, 1, 0.15), at(-11, 2.3, -21.4), { Color = Color3.fromRGB(80, 60, 40) })
 	Build.surfaceText(gardenSign, Enum.NormalId.Back, "🌱 직장인 텃밭", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(200, 255, 170) })
+	group(-6, 20)
 	B:part(Vector3.new(6, 0.5, 1.8), at(-6, 1.3, 20), { Color = Color3.fromRGB(150, 110, 75), Material = Enum.Material.WoodPlanks }) -- 벤치
-	for i = 0, 8 do
-		local bulb = B:part(Vector3.new(0.4, 0.4, 0.4), at(-20 + i * 5, 7, 22), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(255, 220, 140), Material = Enum.Material.Neon, CanCollide = false })
+	group(0, 22)
+	for i = 0, 12 do
+		local bulb = B:part(Vector3.new(0.4, 0.4, 0.4), at(-30 + i * 5, 7, 22), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(255, 220, 140), Material = Enum.Material.Neon, CanCollide = false })
 		local _ = bulb
 	end
 	-- 🔭 망원경 (앞쪽 난간)
+	group(-2, -23)
 	B:part(Vector3.new(0.2, 3, 0.2), at(-2, 1.5, -23), { Color = Color3.fromRGB(60, 60, 65) })
 	local telescope = B:part(Vector3.new(0.6, 0.6, 2.4), nil, {
 		Name = "Telescope",
@@ -160,7 +189,7 @@ local function buildRoof(folder: Instance, companyId: string)
 	-- 🏙️ 주변 빌딩 숲 (아래로 보이는 도시)
 	for i = 1, 26 do
 		local angle = (i / 26) * math.pi * 2
-		local distance = math.random(60, 140)
+		local distance = math.random(80, 160) -- (옥상이 넓어져서 더 멀리)
 		local height = math.random(30, 110)
 		local width = math.random(10, 22)
 		local base = ROOF + Vector3.new(math.cos(angle) * distance, -height / 2 - 6, math.sin(angle) * distance)
@@ -171,15 +200,19 @@ local function buildRoof(folder: Instance, companyId: string)
 			CanQuery = false,
 		})
 	end
+	group(0, 0)
 	return {
 		door = door,
-		spawn = at(-22, 0, 0),
+		spawn = spread(-30, 0, 0) + Vector3.new(8, 0, 0), -- 엘리베이터 문 바로 앞
 		telescope = telescope,
 		loungers = loungerSeats,
 		gardenBoxes = gardenBoxes,
-		bossSpot = at(-23, 0, 0), -- 부장님이 올라와서 서는 곳
-		-- 부장님 옥상 순찰 지점 (숨을 곳 뒤까지 둘러봐요)
-		patrol = { at(-10, 0, 0), at(10, 0, 0), at(22, 0, -18), at(22, 0, 8), at(5, 0, -18), at(-18, 0, 15), at(10, 0, 12), at(28, 0, -2), at(-6, 0, -12) },
+		guardPost = ROOF + Vector3.new(44, 0, -26), -- 오른쪽 앞 구석 (경비실은 그 뒤 난간 쪽)
+		-- 👮 경비원 순찰 지점 (숨을 곳 뒤까지 둘러봐요)
+		patrol = {
+			spread(-10, 0, 0), spread(10, 0, 0), spread(22, 0, -18), spread(22, 0, 8), spread(5, 0, -18), spread(-18, 0, 15),
+			spread(10, 0, 12), spread(28, 0, -2), spread(-6, 0, -12), spread(-28, 0, -10), spread(-24, 0, 20), spread(16, 0, 20),
+		},
 	}
 end
 
@@ -226,23 +259,48 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		return math.abs(offset.X) <= ROOF_W / 2 and math.abs(offset.Z) <= ROOF_D / 2 and offset.Y > -3 and offset.Y < 25
 	end
 
-	-- 👀 옥상에 올라온 부장님이 보고 있나?
-	local roofBoss: any = nil
-	local nextVisitAt: number? = nil -- 옥상에 사람이 있으면 이 시각에 부장님이 꼭 올라와요 (🏀 공 소리가 앞당겨요)
+	-- 👮 옥상 경비원: 부장님은 사무실에만! 옥상은 경비원이 근무 시간 내내 순찰해요 (💤 가끔 경비실에서 쉬어요)
+	local roofGuard = Guard.new({
+		folder = folder,
+		post = roof.guardPost,
+		patrol = roof.patrol,
+		area = function(position: Vector3): boolean
+			return api.onRoof(position)
+		end,
+		dayCycle = dayCycle,
+		events = events,
+		remotes = remotes,
+		name = "옥상 경비원 최씨",
+		lines = { "거기! 근무 시간에 옥상에서 뭐 해요?", "어느 부서예요? 부장님께 말씀드릴까?", "내가 다 보고 있어요~ 옥상은 내 구역!" },
+		rest = true,
+		range = SalaryConfig.ROOF_GUARD_RANGE,
+	})
+	local PIGEON_SPOT = spread(-10, 0, 8)
 
 	-- 🐦 비둘기 친구 (벤치 앞 공터)
-	local pigeons = RoofPigeons.start(folder, ROOF + Vector3.new(-10, 0, 8), remotes, {
+	local pigeons = RoofPigeons.start(folder, PIGEON_SPOT, remotes, {
 		charge = hooks.charge,
 		fed = hooks.pigeonFed,
 		seen = hooks.pigeonSeen,
-		bossOnRoof = function()
-			return roofBoss ~= nil
+		guardNear = function()
+			return roofGuard.near(PIGEON_SPOT, SalaryConfig.PIGEON_GUARD_RANGE)
 		end,
 		onRoof = function(position: Vector3)
 			return api.onRoof(position)
 		end,
 	})
-	local scaredFor: number? = nil -- 이번 순찰에 비둘기가 이미 놀랐나
+	-- 🐦 경비원이 다가오면 비둘기들이 먼저 푸드덕 (한 번 다가올 때마다 한 번)
+	task.spawn(function()
+		local wasNear = false
+		while folder.Parent do
+			task.wait(0.5)
+			local near = roofGuard.watching() and roofGuard.near(PIGEON_SPOT, SalaryConfig.PIGEON_GUARD_RANGE)
+			if near and not wasNear then
+				pigeons.scare()
+			end
+			wasNear = near
+		end
+	end)
 
 	---------------------------------------------------------------- 🌅 노을 타임
 	local function isSunset(): boolean
@@ -252,7 +310,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 	local photoFrame = Instance.new("Part")
 	photoFrame.Name = "SunsetPhotoZone"
 	photoFrame.Size = Vector3.new(4, 3, 0.3)
-	photoFrame.CFrame = CFrame.new(ROOF + Vector3.new(-20, 3.2, -23.6))
+	photoFrame.CFrame = CFrame.new(spread(-20, 3.2, -23.6))
 	photoFrame.Color = Color3.fromRGB(255, 190, 120)
 	photoFrame.Material = Enum.Material.Wood
 	photoFrame.Anchored = true
@@ -318,43 +376,41 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		end
 	end)
 
-	-- 🏀 옥상 농구 (뒤쪽 왼편 구석) — 공 소리에 부장님이 더 빨리 와요
-	RoofHoop.start(folder, ROOF + Vector3.new(-26, 0, 22), remotes, {
+	-- 🏀 옥상 농구 (뒤쪽 왼편 구석) — 공 소리에 👮 경비원이 확인하러 와요
+	RoofHoop.start(folder, spread(-26, 0, 22), remotes, {
 		prize = hooks.hoopPrize,
 		unlock = hooks.unlock,
-		noise = function(seconds: number)
-			if nextVisitAt then
-				nextVisitAt = math.max(os.clock() + 6, nextVisitAt - seconds)
-			end
+		noise = function()
+			roofGuard.investigate(spread(-26, 0, 22) + Vector3.new(0, 0, -6)) -- 🔊 공 소리 → 경비원이 농구대 쪽으로 확인하러 와요
 		end,
 	})
 
 	-- 🔭 건너편 빌딩 관찰 일지 (오른쪽 난간)
-	RoofScope.start(folder, ROOF + Vector3.new(32, 0, -6), dayCycle, remotes, { found = hooks.sceneFound })
+	RoofScope.start(folder, spread(32, 0, -6), dayCycle, remotes, { found = hooks.sceneFound })
 
 	-- 🌱 텃밭 (내 화분 4칸)
 	RoofGarden.start(roof.gardenBoxes, remotes, { action = hooks.gardenAction })
 
 	-- ✈️ 종이비행기 (앞 난간, 도시 쪽으로)
-	RoofPlane.start(folder, ROOF + Vector3.new(8, 0, -21), remotes, {
+	RoofPlane.start(folder, spread(8, 0, -21), remotes, {
 		onRoof = function(position: Vector3)
 			return api.onRoof(position)
 		end,
 		bossModel = function()
-			return if roofBoss then roofBoss.model else nil
+			-- ✈️ 되돌아온 비행기는 근무 중인 경비원이 발사대 근처(20)에 있을 때만 머리에 꽂혀요
+			if roofGuard.watching() and roofGuard.near(spread(8, 0, -21), 20) then
+				return roofGuard.model
+			end
+			return nil
 		end,
 		prize = hooks.planePrize,
 		bossHit = hooks.planeBossHit,
 		unlock = hooks.unlock,
 		best = hooks.planeBest,
 	})
-	-- 세 번째 값: 이번 순찰 번호 (한 번 순찰에 한 번만 적발되게)
-	function api.sees(character: Model): (boolean, number, number)
-		if not roofBoss then
-			return false, math.huge, 0
-		end
-		local seen, distance = Boss.canSee(roofBoss, character)
-		return seen, distance, roofBoss.visit
+	-- 👮 옥상 경비원이 보고 있나: 보이나, 거리, 노려보는 중인가
+	function api.sees(character: Model): (boolean, number, boolean, number)
+		return roofGuard.sees(character)
 	end
 
 	local function notify(player: Player, message: string)
@@ -403,6 +459,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 
 		task.wait(0.1)
 		character:PivotTo(CFrame.lookAt(center + Vector3.new(1.6, 3, 1), center + Vector3.new(1.6, 3, -5)))
+		local walkSpeed = if humanoid.WalkSpeed > 0 then humanoid.WalkSpeed else 16 -- (📦 택배 들고 느려진 것도 그대로 기억)
 		humanoid.WalkSpeed = 0
 
 		local fake: Model? = nil
@@ -481,12 +538,13 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		if character.Parent then
 			local destination = if toRoof then roof.spawn else office.elevator.exit
 			character:PivotTo(CFrame.new(destination + Vector3.new(0, 3, 0)))
-			humanoid.WalkSpeed = 16
+			-- (타는 동안 택배 미션이 끝나 속도가 바뀌었으면 그대로, 아니면 원래 속도로)
+			humanoid.WalkSpeed = if humanoid.WalkSpeed > 0 then humanoid.WalkSpeed else walkSpeed
 		end
 		cabin:Destroy()
 		if toRoof then
 			hooks.unlock(player, "rooftop_first")
-			notify(player, "🌬️ 옥상 도착! (🚪 띵 소리가 나면 부장님이 올라와요. 숨으면 안 들켜요!)")
+			notify(player, "🌬️ 옥상 도착! 👮 옥상 경비원 눈에 띄지 않게 조심! (💤 경비실에서 쉴 때가 찬스, 상자·물탱크 뒤에 숨어요)")
 		end
 		if withBoss and not session.failed then
 			local count = hooks.ninja(player)
@@ -533,6 +591,9 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 			return "자리에 없음 (외출 중)"
 		end
 		local position = boss.root.Position
+		if not office.insideOffice(position) then
+			return "🌳 사무실 밖 (공원·거리 순찰 중)"
+		end
 		local spots = {
 			{ office.bossStand, "부장님 자리" },
 			{ office.pantryZone.Position, "탕비실 근처" },
@@ -541,7 +602,13 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 			{ office.printer.Position, "프린터 근처" },
 			{ office.elevator.exit, "엘리베이터 앞 (!!)" },
 		}
-		local best, bestDistance = "직원 책상 사이", 14
+		if office.meetingZone then
+			table.insert(spots, { office.meetingZone.Position, "회의실 근처" })
+		end
+		if office.shops and office.shops.store then
+			table.insert(spots, { office.shops.store.counter.Position, "매점 근처" })
+		end
+		local best, bestDistance = "직원 책상 사이", 18 -- (사무실이 넓어져서 14 → 18)
 		for _, spot in spots do
 			local distance = (Vector3.new(spot[1].X, 0, spot[1].Z) - Vector3.new(position.X, 0, position.Z)).Magnitude
 			if distance < bestDistance then
@@ -563,121 +630,23 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		notify(player, `🔭 사무실 창문 너머로… 부장님이 보여요! ({SalaryConfig.TELESCOPE_SECONDS}초 동안 위쪽에 표시)`)
 	end)
 
-	---------------------------------------------------------------- 🚪 띵! 부장님 옥상 순찰
-	local lastVisit = -math.huge
-	local visitCount = 0
-	nextVisitAt = nil -- (위에서 미리 선언)
-	local function roofTick()
-		-- 🔭 망원경 표시 갱신
-		for player, untilTime in radar do
-			if not player.Parent or os.clock() > untilTime then
-				radar[player] = nil
-				if player.Parent then
-					player:SetAttribute("BossRadar", "")
-				end
-			else
-				player:SetAttribute("BossRadar", `🔭 부장님: {bossArea()} ({math.ceil(untilTime - os.clock())}초)`)
-			end
-		end
-		-- 옥상에 있는 사람
-		local onRoof = {}
-		for _, player in Players:GetPlayers() do
-			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-			if root and api.onRoof(root.Position) then
-				table.insert(onRoof, player)
-			end
-		end
-		if #onRoof == 0 then
-			nextVisitAt = nil -- 아무도 없으면 예약 취소 (다시 올라오면 새로 예약)
-			return
-		end
-		if roofBoss or dayCycle.phase ~= "work" or not boss.active then
-			return
-		end
-		local testing = RunService:IsStudio() and SalaryConfig.TEST_ELEVATOR
-		local cooldown = if testing then 15 else SalaryConfig.ROOF_BOSS_COOLDOWN
-		if not nextVisitAt then
-			-- 옥상에 사람이 있으면 정해진 시간 안에 꼭 와요 (방금 다녀갔으면 쿨타임 뒤로)
-			local range = if ReplicatedStorage:GetAttribute("Sunset") == true then SalaryConfig.SUNSET_VISIT_AFTER else SalaryConfig.ROOF_VISIT_AFTER -- 🌅 노을 땐 부장님도 자주 와요
-			local after = if testing then 8 else math.random(range[1], range[2])
-			nextVisitAt = math.max(os.clock() + after, lastVisit + cooldown)
-		end
-		-- 🐦 부장님이 올라오기 PIGEON_EARLY초 전에 비둘기들이 먼저 푸드덕 (띵! 소리보다 먼저)
-		if scaredFor ~= nextVisitAt and os.clock() >= (nextVisitAt :: number) - SalaryConfig.PIGEON_EARLY then
-			scaredFor = nextVisitAt
-			pigeons.scare()
-		end
-		if os.clock() < (nextVisitAt :: number) then
-			return
-		end
-		nextVisitAt = nil
-		lastVisit = os.clock()
-		for _, player in onRoof do
-			remotes.RoofAlert:FireClient(player, SalaryConfig.ROOF_WARN)
-		end
-		task.wait(SalaryConfig.ROOF_WARN)
-		-- 부장님 등장! 옥상 곳곳을 걸어 다니며 숨은 사람까지 찾아요
-		visitCount += 1
-		local model = Npc.create("김부장", BOSS_LOOK, folder)
-		model.Name = "BossDouble"
-		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
-		local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
-		humanoid.WalkSpeed = 11
-		model:PivotTo(CFrame.lookAt(roof.bossSpot + Vector3.new(0, 3, 0), roof.bossSpot + Vector3.new(10, 3, 0)))
-		root:SetNetworkOwner(nil)
-		Npc.setStatus(model, "👀")
-		Npc.say(model, if ReplicatedStorage:GetAttribute("Sunset") == true
-			then pick({ "오… 노을 예쁘네. 근데 자넨 여기서 뭐 하나?", "나도 노을 좀 보자~ 흠? 거기 누구야?" })
-			else pick({ "누가 옥상에서 노나~?", "바람 쐬러 왔지… 흠?", "숨어 봤자 다 보인다~" }), 3)
-		roofBoss = {
-			active = true,
-			watching = true,
-			model = model,
-			head = model:FindFirstChild("Head"),
-			root = root,
-			range = 50,
-			fovCos = math.cos(math.rad(60)),
-			visit = visitCount,
-		}
-		local finish = os.clock() + SalaryConfig.ROOF_BOSS_STAY
-		local cancelled = function()
-			return os.clock() > finish or not model.Parent
-		end
-		while os.clock() < finish do
-			-- 다음 순찰 지점으로 걸어가서 두리번
-			Walker.walkTo(humanoid, root, pick(roof.patrol), cancelled)
-			for _ = 1, 2 do
-				if os.clock() > finish then
-					break
-				end
-				local angle = math.rad(math.random(0, 359))
-				root.CFrame = CFrame.lookAt(root.Position, root.Position + Vector3.new(math.cos(angle), 0, math.sin(angle)))
-				task.wait(0.7)
-			end
-		end
-		roofBoss = nil
-		Npc.say(model, "흠… 내려가야겠다.", 2)
-		Walker.walkTo(humanoid, root, roof.bossSpot, function()
-			return not model.Parent
-		end)
-		model:Destroy()
-		lastVisit = os.clock()
-	end
+	-- 🔭 망원경 표시 갱신
 	task.spawn(function()
 		while true do
 			task.wait(1)
-			-- (한 번 에러가 나도 순찰이 영영 멈추지 않게 감싸요)
-			local ok, err = pcall(roofTick)
-			if not ok then
-				warn("[옥상 순찰] " .. tostring(err))
-				if roofBoss and roofBoss.model then
-					roofBoss.model:Destroy()
+			for player, untilTime in radar do
+				if not player.Parent or os.clock() > untilTime then
+					radar[player] = nil
+					if player.Parent then
+						player:SetAttribute("BossRadar", "")
+					end
+				else
+					local ok, area = pcall(bossArea)
+					player:SetAttribute("BossRadar", `🔭 부장님: {if ok then area else "?"} ({math.ceil(untilTime - os.clock())}초)`)
 				end
-				roofBoss = nil
 			end
 		end
 	end)
-
 	Players.PlayerRemoving:Connect(function(player)
 		riding[player] = nil
 		radar[player] = nil

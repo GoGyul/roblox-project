@@ -25,7 +25,7 @@ Events.__index = Events
 local IS_STUDIO = RunService:IsStudio()
 
 -- 감사팀 시야
-local AUDITOR_RANGE = 26
+local AUDITOR_RANGE = 36 -- (사무실이 넓어져서 26 → 36)
 local AUDITOR_FOV = math.cos(math.rad(50))
 
 local function pick<T>(list: { T }): T
@@ -306,7 +306,7 @@ function Events:startAudit(token: number)
 		}, self.office.folder)
 		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
 		local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
-		humanoid.WalkSpeed = 7
+		humanoid.WalkSpeed = 10
 		model:PivotTo(CFrame.new(self.office.entrance + Vector3.new(i * 3 - 3, 3, 0)))
 		root:SetNetworkOwner(nil)
 		Npc.setStatus(model, "🔍")

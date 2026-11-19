@@ -1,11 +1,12 @@
 -- 🕹️ 오락실 (눈치 스트리트)
---   🔨 두더지 잡기 / 🎯 타이밍 스톱 → 점수만큼 🎟️ 티켓 → 경품 교환대에서 바꾸기
+--   🔨 두더지 잡기 / 🃏 카드 짝 맞추기 → 점수만큼 🎟️ 티켓 → 경품 교환대에서 바꾸기
 --   🏆 뒷벽 기록판: 게임별 역대 최고 점수 TOP 5 (모든 서버 공통, OrderedDataStore)
 --
 -- 🛡️ 판정은 서버가 해요:
 --   두더지: 언제 어느 구멍에서 나올지 서버가 미리 정해서 보내고, 화면은 "몇 번 두더지를 언제 때렸는지"만 보내요.
 --           서버가 그 시각에 그 두더지가 정말 나와 있었는지 확인해요.
---   타이밍: 라운드마다 목표 칸과 속도를 서버가 정하고, 화면은 "멈춘 시각"만 보내요. 막대 위치는 서버가 계산해요.
+--   카드: 16장 배치는 서버만 알아요. 화면은 "몇 번 카드를 뒤집을래요"만 보내고,
+--         서버가 그 카드 그림과 짝이 맞았는지를 알려 줘요. 점수도 서버가 센 짝 수로 계산해요.
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -20,6 +21,7 @@ local Arcade = {}
 local RANGE = 10
 local LATE_SLACK = 0.3 -- 인터넷 지연으로 늦게 도착한 클릭 봐주기 (초)
 local allowAction = RateLimit.new(0.3)
+local allowFlip = RateLimit.new(0.1) -- 카드 뒤집기는 빠르게 두 장씩 눌러요
 
 ---------------------------------------------------------------------------
 -- 게임 일정 만들기 (서버가 정해요)
@@ -41,18 +43,23 @@ local function makeMoleSchedule()
 	return moles
 end
 
-local function makeTimingSchedule()
-	local rounds = {}
-	for i = 1, SalaryConfig.TIMING_ROUNDS do
-		table.insert(rounds, {
-			target = math.random(15, 85) / 100,
-			period = 1.7 - (i - 1) * 0.22, -- 점점 빨라져요
-		})
+-- 🃏 카드 16장 섞기 (그림 8개 × 2장)
+local function makeMemoryLayout(): { string }
+	local pool = table.clone(SalaryConfig.MemoryEmoji)
+	local cards = {}
+	for _ = 1, SalaryConfig.MEMORY_PAIRS do
+		local emoji = table.remove(pool, math.random(1, #pool))
+		table.insert(cards, emoji)
+		table.insert(cards, emoji)
 	end
-	return rounds
+	for i = #cards, 2, -1 do
+		local j = math.random(1, i)
+		cards[i], cards[j] = cards[j], cards[i]
+	end
+	return cards
 end
 
----------------------------------------------------------------------------
+-------------------------------------------------------------------------
 -- 점수 계산 (화면이 보낸 기록을 검사하면서)
 ---------------------------------------------------------------------------
 local MOLE_POINTS = { normal = 1, gold = 3, boss = -2 }
@@ -85,31 +92,66 @@ local function scoreMole(session, hits: any): number
 	return math.max(0, score)
 end
 
-local function scoreTiming(session, presses: any): number
-	if typeof(presses) ~= "table" then
-		return 0
-	end
-	local now = workspace:GetServerTimeNow()
-	local roundStart = session.start
-	local score = 0
-	for i, round in session.rounds do
-		local t = presses[i]
-		if typeof(t) ~= "number" or t < roundStart or t > now + 0.05 then
-			break -- 순서가 이상하면 거기서 끝
-		end
-		local position = SalaryConfig.clawPosition(t - roundStart, round.period)
-		local gap = math.abs(position - round.target)
-		if gap <= SalaryConfig.TIMING_PERFECT then
-			score += 3
-		elseif gap <= SalaryConfig.TIMING_GOOD then
-			score += 1
-		end
-		roundStart = t + SalaryConfig.TIMING_PAUSE
+-- 🃏 찾은 짝 × 2점 + 다 찾았으면 남은 시간 보너스
+local function scoreMemory(session): number
+	local score = session.found * SalaryConfig.MEMORY_PAIR_POINTS
+	if session.clearedAt then
+		local left = session.start + SalaryConfig.MEMORY_SECONDS - session.clearedAt
+		score += math.max(0, math.floor(left / SalaryConfig.MEMORY_BONUS_EVERY))
 	end
 	return score
 end
 
----------------------------------------------------------------------------
+-- 🃏 카드 한 장 뒤집기 → 화면에 보낼 답장
+local function flipCard(session, index: any)
+	local now = workspace:GetServerTimeNow()
+	if now < session.start - 0.1 or now > session.start + SalaryConfig.MEMORY_SECONDS + LATE_SLACK then
+		return { ok = false, message = "시간이 끝났어요!" }
+	end
+	if session.clearedAt then
+		return { ok = false, message = "벌써 다 찾았어요!" }
+	end
+	if now < (session.lockUntil or 0) then
+		return { ok = false, busy = true } -- 틀린 카드 보여 주는 중
+	end
+	local total = SalaryConfig.MEMORY_PAIRS * 2
+	if typeof(index) ~= "number" or index % 1 ~= 0 or index < 1 or index > total then
+		return { ok = false, message = "없는 카드예요." }
+	end
+	if session.open[index] or session.pending == index then
+		return { ok = false, busy = true } -- 이미 뒤집힌 카드
+	end
+	local emoji = session.cards[index]
+	local first = session.pending
+	if not first then
+		session.pending = index
+		return { ok = true, index = index, emoji = emoji }
+	end
+	-- 두 번째 카드: 짝 확인
+	session.pending = nil
+	local matched = session.cards[first] == emoji
+	if matched then
+		session.open[first] = true
+		session.open[index] = true
+		session.found += 1
+		if session.found >= SalaryConfig.MEMORY_PAIRS then
+			session.clearedAt = now
+		end
+	else
+		session.lockUntil = now + SalaryConfig.MEMORY_PEEK - 0.15 -- 화면 쪽 기다림보다 살짝 짧게 (지연 봐주기)
+	end
+	return {
+		ok = true,
+		index = index,
+		emoji = emoji,
+		first = first,
+		matched = matched,
+		found = session.found,
+		cleared = session.clearedAt ~= nil,
+	}
+end
+
+-------------------------------------------------------------------------
 -- hooks.charge(player, price) → (ok, message)
 -- hooks.reward(player, gameId, score, tickets) → (best: number, isBest: boolean)
 -- hooks.exchange(player, prizeId) → (ok, message)
@@ -128,7 +170,7 @@ function Arcade.start(office, remotes, hooks)
 		end)
 		stores[gameId] = if ok then store else nil
 	end
-	local localBest: { [string]: { [string]: number } } = { mole = {}, timing = {} } -- 게임 → 이름 → 점수
+	local localBest: { [string]: { [string]: number } } = { mole = {}, memory = {} } -- 게임 → 이름 → 점수
 	local nameCache: { [number]: string } = {}
 	local function nameOf(userId: number): string
 		if nameCache[userId] then
@@ -148,7 +190,7 @@ function Arcade.start(office, remotes, hooks)
 	})
 	local function refreshBoard()
 		local lines = { "🏆 오락실 최고 기록" }
-		for _, gameId in { "mole", "timing" } do
+		for _, gameId in { "mole", "memory" } do
 			local info = SalaryConfig.ArcadeGames[gameId]
 			local entries = {}
 			local store = stores[gameId]
@@ -212,7 +254,7 @@ function Arcade.start(office, remotes, hooks)
 		if not root then
 			return false
 		end
-		for _, part in { arcade.machines.mole, arcade.machines.timing, arcade.prizeCounter } do
+		for _, part in { arcade.machines.mole, arcade.machines.memory, arcade.prizeCounter } do
 			if (root.Position - part.Position).Magnitude <= RANGE then
 				return true
 			end
@@ -220,7 +262,18 @@ function Arcade.start(office, remotes, hooks)
 		return false
 	end
 
-	remotes.Arcade.OnServerInvoke = function(player: Player, action: any, a: any, b: any)
+	remotes.Arcade.OnServerInvoke = function(player: Player, action: any, a: any)
+		-- 🃏 카드 뒤집기 (빠르게 연달아 누르니까 따로 검사해요)
+		if action == "flip" then
+			if not allowFlip(player) then
+				return { ok = false, busy = true }
+			end
+			local session = sessions[player]
+			if not session or session.gameId ~= "memory" then
+				return { ok = false, message = "먼저 시작을 눌러 주세요." }
+			end
+			return flipCard(session, a)
+		end
 		if not allowAction(player) then
 			return { ok = false, message = "천천히 눌러 주세요." }
 		end
@@ -241,18 +294,20 @@ function Arcade.start(office, remotes, hooks)
 				session.moles = makeMoleSchedule()
 				session.expires = session.start + SalaryConfig.MOLE_SECONDS + 10
 			else
-				session.rounds = makeTimingSchedule()
-				session.expires = session.start + 60
+				session.cards = makeMemoryLayout() -- 🃏 서버만 알아요 (화면에는 안 보내요)
+				session.open = {}
+				session.found = 0
+				session.expires = session.start + SalaryConfig.MEMORY_SECONDS + 10
 			end
 			sessions[player] = session
-			return { ok = true, gameId = info.id, start = session.start, moles = session.moles, rounds = session.rounds }
+			return { ok = true, gameId = info.id, start = session.start, moles = session.moles }
 		elseif action == "finish" then
 			local session = sessions[player]
 			sessions[player] = nil
 			if not session or workspace:GetServerTimeNow() > session.expires then
 				return { ok = false, message = "게임 시간이 지났어요. 다시 해 주세요." }
 			end
-			local score = if session.gameId == "mole" then scoreMole(session, a) else scoreTiming(session, a)
+			local score = if session.gameId == "mole" then scoreMole(session, a) else scoreMemory(session)
 			local tickets = SalaryConfig.arcadeTickets(session.gameId, score)
 			local best, isBest = hooks.reward(player, session.gameId, score, tickets)
 			if isBest then

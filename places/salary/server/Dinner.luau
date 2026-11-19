@@ -1,4 +1,4 @@
--- 🍻 목요일 회식 (퇴근 후 40초 미니게임)
+-- 🍻 목요일 회식 (퇴근 후 20초 미니게임)
 --   🍶 부장님 잔이 비기 전에 채워요. 거의 비었을 때 채우면 +1, 아직 많이 남았는데 채우면 -1, 잔이 비면 -1
 --   🥂 "건배사!"가 뜨면 1.6초 안에 [위하여!] → +2 (아무 때나 누르면 -1)
 --   점수가 좋으면 보너스 + 다음 날 부장님이 너그러워져요 (의심도가 덜 올라요)
@@ -44,7 +44,7 @@ function Dinner.start(dayCycle, remotes, hooks)
 	end
 
 	local function newDrain(): number
-		return math.random(70, 140) / 1000 -- 1초에 잔의 7~14%를 마셔요
+		return math.random(120, 220) / 1000 -- 1초에 잔의 12~22%를 마셔요 (짧은 회식이라 빨리빨리!)
 	end
 
 	local function run()
@@ -65,9 +65,9 @@ function Dinner.start(dayCycle, remotes, hooks)
 		hooks.stage(seated)
 		hooks.bossSay("자~ 한 주 고생했어! 오늘은 내가 쏜다! 🍻")
 
-		-- 건배사 두 번 (최소 10초 간격)
-		local first = math.random(8, 16)
-		local cheersTimes = { first, math.random(first + 10, SalaryConfig.DINNER_SECONDS - 5) }
+		-- 건배사 두 번 (짧은 회식이라 앞뒤로 한 번씩, 최소 5초 간격)
+		local first = math.random(3, 5)
+		local cheersTimes = { first, math.random(first + 5, math.max(first + 5, SalaryConfig.DINNER_SECONDS - 3)) }
 		local elapsed = 0
 		local cheersUntil = 0
 		while elapsed < SalaryConfig.DINNER_SECONDS do

@@ -2,7 +2,6 @@
 --   하루에 몇 번 출입문으로 놀러 와서 사무실을 어슬렁거려요.
 --   [E] 쓰다듬기 → 의심도 감소 (힐링). 10번 쓰다듬으면 🐱 집사 자격!
 --   😺 부장님 근처로 가면 부장님이 고양이에 정신이 팔려서 잠깐 감시를 멈춰요 → 농땡이 찬스!
---   🐾 가끔 누군가의 키보드 위에 앉아요 → 그 사람은 일하기 시간이 안 쌓여요. 쓰다듬어서 내려보내요.
 
 local PathfindingService = game:GetService("PathfindingService")
 local Players = game:GetService("Players")
@@ -234,40 +233,12 @@ function Cat.start(office, boss, dayCycle, remotes, hooks)
 
 		task.spawn(function()
 			local leaveAt = os.clock() + SalaryConfig.CAT_STAY
-			local sat = false
 			while state.token == token and os.clock() < leaveAt and dayCycle.phase == "work" do
-				-- 🐾 한 번은 누군가의 키보드 위에 앉아 봐요
-				local desks = hooks.occupiedDesks()
-				if not sat and #desks > 0 and math.random() < 0.5 then
-					sat = true
-					local entry = pick(desks)
-					local desk = entry.desk
-					if not walk(token, floorAt(desk.behind)) then
-						return
-					end
-					-- 폴짝! 책상 위 키보드 자리로
-					local top: BasePart = desk.top
-					local spot = top.Position + Vector3.new(0, top.Size.Y / 2 + 0.75, 0.3)
-					body.CFrame = CFrame.new(spot) * CFrame.Angles(0, math.rad(180), 0)
-					state.sittingDesk = desk
-					label.Text = "🐱 (키보드 위에서 꾹꾹이)"
-					remotes.Notify:FireClient(entry.player, "🐾 월급냥이 내 키보드 위에 앉았어요! 일하기 시간이 안 쌓여요. [E] 쓰다듬어서 내려보내요")
-					local untilTime = os.clock() + SalaryConfig.CAT_DESK_SIT
-					while state.sittingDesk == desk and os.clock() < untilTime do
-						if not wait(token, 0.3) then
-							return
-						end
-					end
-					state.sittingDesk = nil
-					label.Text = "🐱 월급냥"
-					body.CFrame = CFrame.new(floorAt(desk.behind))
-				else
-					if not walk(token, floorAt(pick(office.waypoints))) then
-						return
-					end
-					if not wait(token, math.random(15, 40) / 10) then
-						return
-					end
+				if not walk(token, floorAt(pick(office.waypoints))) then
+					return
+				end
+				if not wait(token, math.random(15, 40) / 10) then
+					return
 				end
 			end
 			-- 집에 갈 시간

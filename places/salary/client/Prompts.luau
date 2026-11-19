@@ -37,7 +37,7 @@ function Prompts.start()
 			return
 		end
 		local touch = inputType == Enum.ProximityPromptInputType.Touch
-		local key = if touch then "👆" else (if inputType == Enum.ProximityPromptInputType.Gamepad then "X" else prompt.KeyboardKeyCode.Name)
+		local key = if touch then "👆" else (if inputType == Enum.ProximityPromptInputType.Gamepad then (string.gsub(prompt.GamepadKeyCode.Name, "^Button", "")) else prompt.KeyboardKeyCode.Name)
 
 		local board = Instance.new("BillboardGui")
 		board.Name = "SmallPrompt"

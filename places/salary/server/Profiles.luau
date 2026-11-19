@@ -40,6 +40,13 @@ export type Profile = {
 	harvests: number, -- 🌱 수확한 횟수
 	scenes: { [string]: boolean }, -- 🔭 관찰 일지에 기록한 장면
 	sunsetPhotos: number, -- 🌅 노을 사진 앨범 (하루 한 장)
+	deskUpgrades: { [string]: number }, -- 🖥️ 책상 장비 단계 (장비 ID → 단계)
+	certs: { [string]: boolean }, -- 📚 딴 자격증
+	daily: { [string]: any }, -- 📅 하루 한 번 제한 기록 (내 근무일 기준, 서버를 옮겨도 유지)
+	outfitOwned: { [string]: boolean }, -- 👔 산 출근룩
+	deskHidden: { [string]: boolean },
+	itemUntil: { [string]: number }, -- ⏳ 사무용품 사용 기한 (이 근무일 수가 되면 끝나요) -- 🪑 책상에서 치워 둔 사무용품 (아이템 ID → true)
+	outfitEquipped: { [string]: string }, -- 👔 칸별로 입은 출근룩 ID
 	pigeonFeeds: number, -- 🐦 옥상 비둘기 친밀도 (모이 준 횟수, 안 주면 조금씩 줄어요)
 	pigeons: { [string]: number }, -- 🐦 만난 비둘기 (종류 → 만난 횟수)
 	arcadeBest: { [string]: number }, -- 🕹️ 게임별 내 최고 점수
@@ -76,6 +83,13 @@ function Profiles.default(): Profile
 		harvests = 0,
 		scenes = {},
 		sunsetPhotos = 0,
+		deskUpgrades = {},
+		certs = {},
+		daily = {},
+		outfitOwned = {},
+		deskHidden = {},
+		itemUntil = {},
+		outfitEquipped = {},
 		pigeonFeeds = 0,
 		pigeons = {},
 		arcadeBest = {},

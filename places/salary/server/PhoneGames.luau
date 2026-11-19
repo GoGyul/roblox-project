@@ -261,6 +261,7 @@ function PhoneGames.start(remotes, hooks)
 
 	---------------------------------------------------------------- ⚾ 숫자 야구
 	local baseballRounds: { [Player]: { answer: { number }, tries: number } } = {}
+	local baseballStartAt: { [Player]: number } = {}
 
 	remotes.BaseballPlay.OnServerInvoke = function(player: Player, action: any, guess: any)
 		local now = os.clock()
@@ -274,6 +275,11 @@ function PhoneGames.start(remotes, hooks)
 		local digits = SalaryConfig.BASEBALL_DIGITS
 
 		if action == "start" then
+			-- (새 게임 연타로 첫 판 대박만 노리는 걸 막아요)
+			if os.clock() < (baseballStartAt[player] or 0) then
+				return { ok = false, message = "⚾ 숨 좀 돌리고… 잠시 뒤에 새 게임!" }
+			end
+			baseballStartAt[player] = os.clock() + 4
 			-- 1~9 중 서로 다른 숫자 뽑기
 			local pool = { 1, 2, 3, 4, 5, 6, 7, 8, 9 }
 			local answer = {}
@@ -335,6 +341,7 @@ function PhoneGames.start(remotes, hooks)
 	Players.PlayerRemoving:Connect(function(player)
 		rounds[player] = nil
 		baseballRounds[player] = nil
+		baseballStartAt[player] = nil
 		shapeRounds[player] = nil
 		lastPuzzle[player] = nil
 		lastRequest[player] = nil

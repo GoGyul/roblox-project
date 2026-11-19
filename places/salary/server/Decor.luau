@@ -188,14 +188,14 @@ local function buildDecor(player: Player, d)
 	-- 🖼️ 액자 (책상 왼쪽 뒤)
 	local photo = PHOTO_TEXT[equipped(profile, "photo")]
 	if photo then
-		local frame = part(folder, Vector3.new(1.3, 1.3, 0.12), CFrame.new(surface + Vector3.new(-2.5, 0.75, -1.15)) * CFrame.Angles(math.rad(-10), 0, 0), Color3.fromRGB(120, 80, 50), { Material = Enum.Material.Wood })
+		local frame = part(folder, Vector3.new(1.3, 1.3, 0.12), CFrame.new(surface + Vector3.new(-3.4, 0.75, -1.5)) * CFrame.Angles(math.rad(-10), 0, 0), Color3.fromRGB(120, 80, 50), { Material = Enum.Material.Wood })
 		local canvas = part(folder, Vector3.new(1.1, 1.1, 0.02), frame.CFrame * CFrame.new(0, 0, 0.07), Color3.fromRGB(250, 245, 235))
 		label(canvas, Enum.NormalId.Back, photo)
 	end
 
 	-- 💡 소품 (책상 오른쪽 뒤)
 	local gadget = equipped(profile, "gadget")
-	local spot = surface + Vector3.new(2.5, 0, -1.1)
+	local spot = surface + Vector3.new(3.4, 0, -1.4)
 	if gadget == "gadget_cactus" then
 		part(folder, Vector3.new(0.6, 0.5, 0.6), CFrame.new(spot + Vector3.new(0, 0.25, 0)), Color3.fromRGB(200, 120, 70))
 		part(folder, Vector3.new(0.35, 0.9, 0.35), CFrame.new(spot + Vector3.new(0, 0.9, 0)), Color3.fromRGB(70, 150, 70), { Material = Enum.Material.Grass })
@@ -220,7 +220,7 @@ local function buildDecor(player: Player, d)
 	end
 
 	-- 🏷️ 책상 명패 (앞쪽 가장자리, 지나가는 사람이 봐요)
-	local plate = part(folder, Vector3.new(2.6, 0.75, 0.15), CFrame.new(surface + Vector3.new(0, 0.38, 1.35)), Color3.fromRGB(30, 30, 40), { Name = "Nameplate" })
+	local plate = part(folder, Vector3.new(2.6, 0.75, 0.15), CFrame.new(surface + Vector3.new(0, 0.38, 1.85)), Color3.fromRGB(30, 30, 40), { Name = "Nameplate" })
 	label(plate, Enum.NormalId.Back, `⭐ {player.DisplayName}\n{titleText(profile)} · 🪑 {decorScore(profile)}점`, Color3.fromRGB(255, 225, 130))
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "자리 구경"
@@ -328,6 +328,10 @@ function Decor.start(remotes, api)
 			end
 			local owned = option.price == 0 or profile.decorOwned[id] == true
 			if action == "buy" and not owned then
+				-- 🛒 꾸미기 물건은 인터넷 쇼핑(농땡이) 중에만 주문할 수 있어요
+				if d.state ~= "shopping" then
+					return { ok = false, message = "🛒 [온라인 쇼핑] 농땡이 중에만 주문할 수 있어요! 내 자리에서 쇼핑을 켜 봐요" }
+				end
 				local ok, message = api.charge(player, option.price)
 				if not ok then
 					return { ok = false, message = message }

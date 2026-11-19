@@ -1,9 +1,10 @@
 -- 🎈 풍선 다트 (뽑기 천국 가게)
---   [E] 풍선 다트 → 시작(1,000원) → 다트 3개. 조준점이 저절로 흔들려요 → 노린 풍선 위에서 [던지기]!
---   풍선 12개 뒤에는 경품이 숨어 있어요 (꽝, 돈, 티켓, 인형, 아주 드물게 전설 인형).
+--   [E] 풍선 다트 → 시작(1,000원) → 다트 3개. 노릴 풍선을 직접 콕 누르면 던져요!
+--   🤚 손이 살짝 떨려서 다트는 고른 풍선 근처 어딘가에 꽂혀요 (DART_SCATTER: 던질수록 더 많이 빗나가요)
+--   풍선 12개 뒤에는 경품이 숨어 있어요 (꽝, 돈, 티켓, 인형, 아주 드물게 전설 인형). → 고르기 + 운 게임
 --
--- 🛡️ 경품 배치와 조준점 움직임은 서버가 정해요. 화면은 "던진 시각"만 보내고,
---   서버가 그 시각의 조준점 위치로 어떤 풍선에 맞았는지 계산해요. 경품은 터진 다음에만 알려 줘요.
+-- 🛡️ 경품 배치와 손 떨림은 서버가 정해요. 화면은 "몇 번 풍선을 노렸는지"만 보내고,
+--   서버가 떨림을 더한 자리로 어떤 풍선에 맞았는지 계산해요. 경품은 터진 다음에만 알려 줘요.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,7 +15,7 @@ local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 local Dart = {}
 
 local RANGE = 10
-local allowAction = RateLimit.new(0.35)
+local allowAction = RateLimit.new(0.15) -- (화면이 던지는 중엔 또 못 던지게 막아 줘요)
 
 local function shuffle<T>(list: { T })
 	for i = #list, 2, -1 do
@@ -78,7 +79,7 @@ function Dart.start(office, remotes, hooks)
 		return root ~= nil and (root.Position - dart.counter.Position).Magnitude <= RANGE
 	end
 
-	remotes.Dart.OnServerInvoke = function(player: Player, action: any, clickTime: any)
+	remotes.Dart.OnServerInvoke = function(player: Player, action: any, target: any)
 		if not allowAction(player) then
 			return { ok = false, message = "천천히 던져 주세요." }
 		end
@@ -90,31 +91,36 @@ function Dart.start(office, remotes, hooks)
 			if not ok then
 				return { ok = false, message = message }
 			end
-			local aim = {
-				a = math.random(130, 230) / 100, -- 가로 흔들림 빠르기
-				b = math.random(150, 260) / 100, -- 세로 흔들림 빠르기
-				p = math.random() * math.pi * 2,
-				q = math.random() * math.pi * 2,
-			}
 			sessions[player] = {
-				start = workspace:GetServerTimeNow() + 0.6,
-				aim = aim,
 				board = makeBoard(),
 				popped = {},
 				left = SalaryConfig.DART_COUNT,
 			}
-			return { ok = true, start = sessions[player].start, aim = aim }
+			return { ok = true, left = SalaryConfig.DART_COUNT }
 		elseif action == "throw" then
 			local session = sessions[player]
 			if not session or session.left <= 0 then
 				return { ok = false, message = "먼저 시작을 눌러 주세요." }
 			end
+			-- 🛡️ 노린 풍선 번호 검사 (없는 번호·이미 터진 풍선은 다트를 안 써요)
+			local cols, rows = SalaryConfig.DART_COLS, SalaryConfig.DART_ROWS
+			if typeof(target) ~= "number" or target % 1 ~= 0 or target < 1 or target > cols * rows then
+				return { ok = false, message = "풍선을 골라 주세요." }
+			end
+			if session.popped[target] then
+				return { ok = false, message = "이미 터진 풍선이에요! 다른 풍선을 골라요." }
+			end
+			-- 🤚 손 떨림: 몇 번째 다트인지에 따라 반지름이 커져요 (원 안 아무 데나 고르게)
+			local throwIndex = SalaryConfig.DART_COUNT - session.left + 1
 			session.left -= 1
-			local now = workspace:GetServerTimeNow()
-			local t = if typeof(clickTime) == "number" and clickTime <= now + 0.05 and clickTime >= now - 0.6 then clickTime else now
-			local x, y = SalaryConfig.dartAim(math.max(0, t - session.start), session.aim)
+			local radius = SalaryConfig.DART_SCATTER[throwIndex] or SalaryConfig.DART_SCATTER[#SalaryConfig.DART_SCATTER]
+			local spread = radius * math.sqrt(math.random())
+			local angle = math.random() * math.pi * 2
+			local col, row = (target - 1) % cols, math.floor((target - 1) / cols)
+			local x = math.clamp((col + 0.5) / cols + math.cos(angle) * spread, 0.01, 0.99)
+			local y = math.clamp((row + 0.5) / rows + math.sin(angle) * spread * SalaryConfig.DART_ASPECT, 0.01, 0.99)
 			local balloon = balloonAt(x, y)
-			local result = { ok = true, x = x, y = y, left = session.left }
+			local result = { ok = true, x = x, y = y, target = target, left = session.left }
 			if balloon and not session.popped[balloon] then
 				session.popped[balloon] = true
 				local prizeId = session.board[balloon]
