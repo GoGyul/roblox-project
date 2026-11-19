@@ -83,6 +83,9 @@ export type Office = {
 	workshopBoss: Vector3, -- 술래(부장님) 자리
 	workshopLook: Vector3, -- 술래가 직원들을 볼 때 방향
 	candyZone: BasePart?, -- 🍭 흡연구역(사탕) — 눈치물산 공원에만
+	shops: { [string]: { counter: BasePart, clerkSpot: Vector3 } }, -- 🏙️ 눈치 스트리트 가게
+	clawMachines: { BasePart }, -- 🧸 인형뽑기 기계
+	arcade: any?, -- 🕹️ 오락실 (눈치물산만)
 	dinnerSeats: { Seat }, -- 🍻 회식 자리 (없으면 화면 미니게임만)
 	dinnerBoss: Vector3?,
 	dinnerLook: Vector3?,
@@ -292,34 +295,36 @@ function OfficeBuilder.build(companyId: string?): Office
 	Build.surfaceText(toiletSign, Enum.NormalId.Right, "🚻 화장실")
 	local toiletZone = zone(B, "ToiletZone", Vector3.new(13, 10, 15), v(-31.5, 5, 14.5))
 
-	-- ☕ 탕비실 (오른쪽 뒤, x 24~38 / z 6~22)
-	B:wall("Z", 24.5, 6, 22, FLOOR_Y, WALL_HEIGHT, { { center = 10, width = 4, height = 8 } }, wall)
-	B:wall("X", 6.5, 24, HALF_WIDTH, FLOOR_Y, WALL_HEIGHT, nil, wall)
-	B:part(Vector3.new(13, 0.2, 15), v(31.5, 0.1, 14.5), { Color = Color3.fromRGB(225, 215, 195), Material = Enum.Material.Wood })
-	local pantryCounter = B:part(Vector3.new(2.5, 3, 9), v(36.75, 1.5, 12.5), {
+	-- ☕ 탕비실 (오른쪽 뒤, x 19~38 / z 1.5~22) — 넓혔어요
+	B:wall("Z", 19.5, 1.5, 22, FLOOR_Y, WALL_HEIGHT, { { center = 8, width = 5, height = 8 } }, wall)
+	B:wall("X", 1.5, 19, HALF_WIDTH, FLOOR_Y, WALL_HEIGHT, nil, wall)
+	B:part(Vector3.new(19, 0.2, 21), v(28.75, 0.1, 11.75), { Color = Color3.fromRGB(225, 215, 195), Material = Enum.Material.Wood })
+	local pantryCounter = B:part(Vector3.new(2.5, 3, 12.5), v(36.75, 1.5, 12.25), {
 		Name = "PantryCounter",
 		Color = Color3.fromRGB(230, 230, 230),
 	}) -- 조리대 (라면)
-	B:part(Vector3.new(1.4, 2, 1.4), v(36.75, 4, 9.5), { Color = Color3.fromRGB(30, 30, 30) }) -- 커피머신
-	B:part(Vector3.new(1.6, 0.6, 1.6), v(36.75, 3.3, 14.5), { Color = Color3.fromRGB(60, 60, 65) }) -- 전기레인지
+	B:part(Vector3.new(1.4, 2, 1.4), v(36.75, 4, 7.5), { Color = Color3.fromRGB(30, 30, 30) }) -- 커피머신
+	B:part(Vector3.new(1.6, 0.6, 1.6), v(36.75, 3.3, 16), { Color = Color3.fromRGB(60, 60, 65) }) -- 전기레인지
 	B:part(Vector3.new(2.5, 7, 2.5), v(36.75, 3.5, 20.5), { Color = Color3.fromRGB(200, 200, 205), Material = Enum.Material.Metal }) -- 냉장고
-	B:part(Vector3.new(1.2, 4, 1.2), v(26, 2, 21.2), { Color = Color3.fromRGB(240, 240, 250) }) -- 정수기
+	B:part(Vector3.new(1.2, 4, 1.2), v(21, 2, 21), { Color = Color3.fromRGB(240, 240, 250) }) -- 정수기
 	-- 식탁과 의자
-	B:part(Vector3.new(4, 2.5, 3), v(30.5, 1.25, 20.5), { Color = Color3.fromRGB(200, 170, 130), Material = Enum.Material.Wood })
-	for _, x in { 29, 32 } do
-		B:part(Vector3.new(1.5, 1.5, 1.5), v(x, 0.75, 18.4), { Color = Color3.fromRGB(120, 90, 60) })
+	B:part(Vector3.new(5, 2.5, 3), v(27, 1.25, 19.5), { Color = Color3.fromRGB(200, 170, 130), Material = Enum.Material.Wood })
+	for _, x in { 25.5, 28.5 } do
+		B:part(Vector3.new(1.5, 1.5, 1.5), v(x, 0.75, 17.2), { Color = Color3.fromRGB(120, 90, 60) })
 	end
-	local pantrySign = B:part(Vector3.new(0.2, 1.5, 3), v(23.85, 9, 10), { Color = COLORS.accent })
+	local pantrySign = B:part(Vector3.new(0.2, 1.5, 3), v(18.85, 9, 8), { Color = COLORS.accent })
 	Build.surfaceText(pantrySign, Enum.NormalId.Left, "☕ 탕비실")
-	local pantryZone = zone(B, "PantryZone", Vector3.new(13, 10, 15), v(31.5, 5, 14.5))
+	local pantryZone = zone(B, "PantryZone", Vector3.new(19, 10, 21), v(28.75, 5, 11.75))
 
 	-- 간식 테이블 (탕비실 가운데, 위에 과자 8개)
-	B:part(Vector3.new(4, 3, 6), v(30.5, 1.5, 12.5), { Color = Color3.fromRGB(170, 120, 80), Material = Enum.Material.Wood })
-	local snackSign = B:part(Vector3.new(3, 0.9, 0.2), v(30.5, 3.7, 9.4), { Color = Color3.fromRGB(255, 240, 200) })
+	B:part(Vector3.new(5, 3, 7), v(28, 1.5, 9), { Color = Color3.fromRGB(170, 120, 80), Material = Enum.Material.Wood })
+	-- 테이블 위로 못 올라가게 투명한 덮개 (간식은 [E]로 옆에서 가져가요)
+	B:part(Vector3.new(5, 8, 7), v(28, 7, 9), { Name = "SnackTableGuard", Transparency = 1, CanQuery = false })
+	local snackSign = B:part(Vector3.new(3, 0.9, 0.2), v(28, 3.7, 5.4), { Color = Color3.fromRGB(255, 240, 200) })
 	Build.surfaceText(snackSign, Enum.NormalId.Front, "🍪 간식 (1인 1개)", { TextColor3 = Color3.fromRGB(80, 50, 30) })
 	local snackSpots = {}
-	for _, z in { 10.3, 11.8, 13.3, 14.8 } do
-		for _, x in { 29.7, 31.3 } do
+	for _, z in { 6.6, 8.2, 9.8, 11.4 } do
+		for _, x in { 27.2, 28.8 } do
 			table.insert(snackSpots, v(x, 3, z)) -- 테이블 윗면 위치
 		end
 	end
@@ -381,7 +386,7 @@ function OfficeBuilder.build(companyId: string?): Office
 		v(17, 0, 7),
 		v(-6, 0, 8.5), -- 뒷줄 의자 뒤
 		v(6, 0, 8.5),
-		v(21, 0, 10), -- 탕비실 문 앞 (안을 들여다봐요)
+		v(16, 0, 8), -- 탕비실 문 앞 (안을 들여다봐요)
 		v(-28, 0, -4), -- 왼쪽 끝 (프린터 쪽)
 		v(28, 0, -4), -- 오른쪽 끝
 	}
@@ -407,11 +412,14 @@ function OfficeBuilder.build(companyId: string?): Office
 		assemblyZone = assemblyZone,
 		assemblyPoint = assemblyPoint,
 		setAssemblyVisible = setAssemblyVisible,
-		cakeSpots = { v(36.6, 3, 11.2), v(36.6, 3, 12.6), v(36.6, 3, 16.4) },
+		cakeSpots = { v(36.6, 3, 10), v(36.6, 3, 11.5), v(36.6, 3, 13) },
 		workshopStart = v(0, 0, 10), -- 뒷줄 의자와 부장 책상 사이
 		workshopBoss = v(0, 0, -21), -- 출입문 앞
 		workshopLook = Vector3.new(0, 0, 1),
 		candyZone = nil,
+		shops = {},
+		clawMachines = {},
+		arcade = nil,
 		dinnerSeats = {}, -- 대충상사는 회식 장소가 없어서 화면 미니게임만
 		dinnerBoss = nil,
 		dinnerLook = nil,

@@ -16,6 +16,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Build = require(ReplicatedStorage.Shared.Build)
+local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 
 local OfficeNunchi = {}
 
@@ -177,10 +178,10 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	Build.surfaceText(toiletSign, Enum.NormalId.Left, "🚻 화장실")
 	local toiletZone = zone(B, "ToiletZone", Vector3.new(16, 10, 16), v(44, 5, -22))
 
-	---------------------------------------------------------------- ☕ 카페 라운지 = 탕비실 (뒤쪽 왼쪽, x -52~-34 / z 10~30)
-	B:wall("Z", -34.5, 10, HD, FLOOR_Y, WALL_HEIGHT, { { center = 14, width = 5, height = 8 } }, wall)
-	B:wall("X", 9.5, -HW, -34, FLOOR_Y, WALL_HEIGHT, nil, wall)
-	B:part(Vector3.new(18, 0.2, 20), v(-43, 0.1, 20), { Color = Color3.fromRGB(170, 120, 80), Material = Enum.Material.WoodPlanks })
+	---------------------------------------------------------------- ☕ 카페 라운지 = 탕비실 (뒤쪽 왼쪽, x -52~-30 / z 5.5~30) — 넓혔어요
+	B:wall("Z", -30.5, 5.5, HD, FLOOR_Y, WALL_HEIGHT, { { center = 12, width = 5, height = 8 } }, wall)
+	B:wall("X", 5.5, -HW, -30, FLOOR_Y, WALL_HEIGHT, nil, wall)
+	B:part(Vector3.new(22, 0.2, 24.5), v(-41, 0.1, 17.75), { Color = Color3.fromRGB(170, 120, 80), Material = Enum.Material.WoodPlanks })
 	local pantryCounter = B:part(Vector3.new(2.5, 3, 12), v(-50.75, 1.5, 19.5), {
 		Name = "PantryCounter",
 		Color = Color3.fromRGB(40, 40, 45),
@@ -190,12 +191,14 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	B:part(Vector3.new(1.6, 0.6, 1.6), v(-50.75, 3.3, 21), { Color = Color3.fromRGB(60, 60, 65) }) -- 인덕션
 	B:part(Vector3.new(2.5, 7, 2.5), v(-50.75, 3.5, 28), { Color = Color3.fromRGB(200, 200, 205), Material = Enum.Material.Metal }) -- 냉장고
 	-- 간식 테이블 (가운데, 위에 과자 8개)
-	B:part(Vector3.new(4, 3, 6), v(-42, 1.5, 20), { Color = C.white, Material = Enum.Material.Marble })
-	local snackSign = B:part(Vector3.new(3, 0.9, 0.2), v(-42, 3.7, 16.9), { Color = Color3.fromRGB(255, 240, 200) })
+	B:part(Vector3.new(5, 3, 7), v(-40, 1.5, 17), { Color = C.white, Material = Enum.Material.Marble })
+	-- 테이블 위로 못 올라가게 투명한 덮개 (간식은 [E]로 옆에서 가져가요)
+	B:part(Vector3.new(5, 8, 7), v(-40, 7, 17), { Name = "SnackTableGuard", Transparency = 1, CanQuery = false })
+	local snackSign = B:part(Vector3.new(3, 0.9, 0.2), v(-40, 3.7, 13.4), { Color = Color3.fromRGB(255, 240, 200) })
 	Build.surfaceText(snackSign, Enum.NormalId.Front, "🍪 간식 (1인 1개)", { TextColor3 = Color3.fromRGB(80, 50, 30) })
 	local snackSpots = {}
-	for _, z in { 17.8, 19.3, 20.8, 22.3 } do
-		for _, x in { -42.8, -41.2 } do
+	for _, z in { 14.6, 16.2, 17.8, 19.4 } do
+		for _, x in { -40.8, -39.2 } do
 			table.insert(snackSpots, v(x, 3, z))
 		end
 	end
@@ -204,9 +207,9 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	for _, x in { -42, -40, -38 } do
 		B:part(Vector3.new(2.4, 1.2, 1.2), v(x, 1.2, 25.8), { Color = Color3.fromRGB(40, 40, 45), Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90) })
 	end
-	local pantrySign = B:part(Vector3.new(0.2, 1.5, 4), v(-33.85, 9, 14), { Color = Color3.fromRGB(110, 70, 40) })
+	local pantrySign = B:part(Vector3.new(0.2, 1.5, 4), v(-29.85, 9, 12), { Color = Color3.fromRGB(110, 70, 40) })
 	Build.surfaceText(pantrySign, Enum.NormalId.Right, "☕ 카페 라운지")
-	local pantryZone = zone(B, "PantryZone", Vector3.new(18, 10, 20), v(-43, 5, 20))
+	local pantryZone = zone(B, "PantryZone", Vector3.new(22, 10, 24.5), v(-41, 5, 17.75))
 
 	---------------------------------------------------------------- 🛋️ 휴게 라운지 (뒤쪽 오른쪽, 장식)
 	B:part(Vector3.new(16, 0.1, 14), v(43, 0.05, 22), { Color = Color3.fromRGB(150, 140, 125), Material = Enum.Material.Carpet, CanCollide = false })
@@ -219,7 +222,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	plant(v(50, 0, 17), 0.8)
 
 	-- 장식: 화분, 프린터
-	for _, position in { v(-30, 0, -27), v(30, 0, -27), v(-30, 0, 7), v(30, 0, 7), v(-24, 0, 27), v(24, 0, 27) } do
+	for _, position in { v(-30, 0, -27), v(30, 0, -27), v(-26, 0, 3), v(30, 0, 7), v(-24, 0, 27), v(24, 0, 27) } do
 		plant(position)
 	end
 	local printer = B:part(Vector3.new(3, 2.5, 2.5), v(-30, 1.25, -4), { Name = "Printer", Color = Color3.fromRGB(230, 230, 235) })
@@ -251,7 +254,9 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	B:part(Vector3.new(HW * 2 + 2, 1, parkDepth), Vector3.new(0, FLOOR_Y - 0.5, parkCenterZ), { Color = Color3.fromRGB(95, 165, 75), Material = Enum.Material.Grass })
 	-- 공원 울타리: 보이는 낮은 산울타리 + 못 넘어가게 투명한 높은 벽
 	for _, info in {
-		{ Vector3.new(HW * 2 + 2, 3, 1.5), v(0, 1.5, PARK_FAR) },
+		-- 맨 끝 울타리는 가운데에 정문(폭 10)을 뚫어 눈치 스트리트로 이어져요
+		{ Vector3.new(HW - 4, 3, 1.5), v(-(HW + 6) / 2 - 0.5, 1.5, PARK_FAR) },
+		{ Vector3.new(HW - 4, 3, 1.5), v((HW + 6) / 2 + 0.5, 1.5, PARK_FAR) },
 		{ Vector3.new(1.5, 3, parkDepth), v(-HW - 0.5, 1.5, parkCenterZ) },
 		{ Vector3.new(1.5, 3, parkDepth), v(HW + 0.5, 1.5, parkCenterZ) },
 	} do
@@ -348,6 +353,133 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	end
 	local candyZone = zone(B, "CandyZone", Vector3.new(14, 10, 12), v(candyX, 5, candyZ))
 
+	---------------------------------------------------------------- 🏙️ 눈치 스트리트 (공원 정문 밖 상가 거리, z -84 ~ -132)
+	local STREET_FAR = -132
+	local streetCenterZ = (PARK_FAR + STREET_FAR) / 2
+	local streetDepth = PARK_FAR - STREET_FAR
+	-- 정문 아치
+	for _, x in { -5.5, 5.5 } do
+		B:part(Vector3.new(1.2, 10, 1.2), v(x, 5, PARK_FAR), { Color = Color3.fromRGB(60, 65, 75), Material = Enum.Material.Metal })
+	end
+	local gateSign = B:part(Vector3.new(12.2, 1.8, 0.6), v(0, 10.6, PARK_FAR), { Color = Color3.fromRGB(30, 35, 45) })
+	for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
+		Build.surfaceText(gateSign, face, "🏙️ 눈치 스트리트", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 220, 120) })
+	end
+	-- 바닥: 보도 → 차도 → 보도
+	B:part(Vector3.new(HW * 2 + 2, 1, streetDepth), Vector3.new(0, FLOOR_Y - 0.5, streetCenterZ), { Color = Color3.fromRGB(190, 185, 175), Material = Enum.Material.Concrete })
+	B:part(Vector3.new(HW * 2 + 2, 0.1, 14), v(0, 0.05, -100), { Color = Color3.fromRGB(55, 55, 60), Material = Enum.Material.Asphalt, CanCollide = false })
+	for x = -46, 46, 8 do -- 차선
+		B:part(Vector3.new(4, 0.12, 0.4), v(x, 0.07, -100), { Color = Color3.fromRGB(240, 210, 80), CanCollide = false })
+	end
+	for x = -4, 4, 2 do -- 정문 앞 횡단보도
+		B:part(Vector3.new(1, 0.13, 13), v(x, 0.07, -100), { Color = Color3.fromRGB(245, 245, 245), CanCollide = false })
+	end
+	-- 거리 양옆과 뒤는 높은 건물 벽 (밖으로 못 나가요)
+	for _, info in {
+		{ Vector3.new(1, 16, streetDepth), v(-HW - 0.5, 8, streetCenterZ) },
+		{ Vector3.new(1, 16, streetDepth), v(HW + 0.5, 8, streetCenterZ) },
+		{ Vector3.new(HW * 2 + 2, 16, 1), v(0, 8, STREET_FAR - 0.5) },
+	} do
+		B:part(info[1], info[2], { Color = Color3.fromRGB(150, 145, 140), Material = Enum.Material.Brick })
+		B:part(Vector3.new(info[1].X, 30, info[1].Z), info[2] + Vector3.new(0, 23, 0), { Transparency = 1 })
+	end
+	-- 가로등
+	for x = -40, 40, 20 do
+		B:part(Vector3.new(0.5, 9, 0.5), v(x, 4.5, -91), { Color = Color3.fromRGB(40, 40, 45), Material = Enum.Material.Metal })
+		local bulb = B:part(Vector3.new(1.2, 1.2, 1.2), v(x, 9.4, -91), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(255, 240, 200), Material = Enum.Material.Neon })
+		local light = Instance.new("PointLight")
+		light.Range = 18
+		light.Brightness = 0.6
+		light.Parent = bulb
+	end
+
+	-- 가게 건물 (뒤쪽에 4칸, 앞이 뚫려 있어 거리 쪽을 봐요)
+	local SHOP_FRONT, SHOP_BACK = -114, STREET_FAR
+	local shops = {}
+	local function shopBuilding(cx: number, title: string, wallColor: Color3, awning: Color3, noCounter: boolean?): BasePart?
+		local depth = SHOP_FRONT - SHOP_BACK
+		local cz = (SHOP_FRONT + SHOP_BACK) / 2
+		B:part(Vector3.new(22, 12, 1), v(cx, 6, SHOP_BACK + 0.5), { Color = wallColor, Material = Enum.Material.Plaster }) -- 뒷벽
+		for _, dx in { -11, 11 } do
+			B:part(Vector3.new(1, 12, depth), v(cx + dx, 6, cz), { Color = wallColor, Material = Enum.Material.Plaster }) -- 옆벽
+		end
+		B:part(Vector3.new(23, 1, depth + 1), v(cx, 12.5, cz), { Color = wallColor }) -- 지붕
+		B:part(Vector3.new(21, 0.1, depth - 1), v(cx, 0.08, cz), { Color = Color3.fromRGB(235, 225, 210), Material = Enum.Material.WoodPlanks, CanCollide = false })
+		B:part(Vector3.new(23, 0.4, 4), v(cx, 9.4, SHOP_FRONT - 1.6), { Color = awning, Material = Enum.Material.Fabric, Orientation = Vector3.new(-15, 0, 0) }) -- 차양
+		local sign = B:part(Vector3.new(16, 2, 0.4), v(cx, 11, SHOP_FRONT + 0.3), { Color = Color3.fromRGB(35, 30, 30) })
+		Build.surfaceText(sign, Enum.NormalId.Front, title, { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 235, 200) })
+		if noCounter then
+			return nil
+		end
+		-- 계산대 (가운데 안쪽)
+		local counter = B:part(Vector3.new(10, 3.5, 2), v(cx, 1.75, -124), { Name = "ShopCounter", Color = Color3.fromRGB(120, 85, 60), Material = Enum.Material.Wood })
+		return counter
+	end
+
+	-- ☕ 눈치 커피
+	local cafeCounter = shopBuilding(-39, "☕ 눈치 커피", Color3.fromRGB(110, 80, 60), Color3.fromRGB(40, 120, 80))
+	B:part(Vector3.new(1.4, 2, 1.4), v(-42, 4.5, -124), { Color = Color3.fromRGB(190, 190, 195), Material = Enum.Material.Metal }) -- 커피머신
+	B:part(Vector3.new(8, 3, 0.4), v(-39, 6.5, -131), { Color = Color3.fromRGB(30, 30, 30) }) -- 메뉴판
+	for _, dx in { -6, 6 } do -- 손님 테이블
+		B:part(Vector3.new(3, 0.3, 3), v(-39 + dx, 2.6, -118), { Color = Color3.fromRGB(240, 240, 235) })
+		B:part(Vector3.new(0.4, 2.5, 0.4), v(-39 + dx, 1.25, -118), { Color = Color3.fromRGB(40, 40, 45) })
+	end
+	shops.cafe = { counter = cafeCounter, clerkSpot = v(-39, 0, -127) }
+
+	-- 🍰 달콤 디저트
+	local dessertCounter = shopBuilding(-13, "🍰 달콤 디저트", Color3.fromRGB(250, 215, 225), Color3.fromRGB(230, 110, 150))
+	B:part(Vector3.new(6, 1.6, 1.6), v(-13, 4.3, -124), { Color = Color3.fromRGB(220, 240, 250), Material = Enum.Material.Glass, Transparency = 0.4 }) -- 진열장
+	for i, color in { Color3.fromRGB(255, 170, 200), Color3.fromRGB(180, 230, 170), Color3.fromRGB(220, 160, 80), Color3.fromRGB(255, 240, 240), Color3.fromRGB(190, 170, 255) } do
+		B:part(Vector3.new(0.7, 0.5, 0.7), v(-15.6 + i * 0.9, 3.9, -124), { Color = color, CanCollide = false })
+	end
+	shops.dessert = { counter = dessertCounter, clerkSpot = v(-13, 0, -127) }
+
+	-- 🧸 인형뽑기 (기계 3대)
+	shopBuilding(13, "🧸 인형뽑기", Color3.fromRGB(255, 220, 120), Color3.fromRGB(240, 90, 90), true)
+	local clawMachines = {}
+	local machineColors = { Color3.fromRGB(255, 120, 170), Color3.fromRGB(110, 190, 255), Color3.fromRGB(150, 220, 120) }
+	for i, dx in { -6, 0, 6 } do
+		local mx, mz = 13 + dx, -125
+		local cabinet = B:part(Vector3.new(3.4, 3, 3.4), v(mx, 1.5, mz), { Name = "ClawMachine", Color = machineColors[i] })
+		B:part(Vector3.new(3.4, 3.6, 3.4), v(mx, 4.8, mz), { Color = Color3.fromRGB(220, 240, 255), Material = Enum.Material.Glass, Transparency = 0.6 })
+		B:part(Vector3.new(3.6, 0.6, 3.6), v(mx, 6.9, mz), { Color = machineColors[i], Material = Enum.Material.Neon })
+		B:part(Vector3.new(0.15, 1.4, 0.15), v(mx, 5.9, mz), { Color = Color3.fromRGB(200, 200, 205), Material = Enum.Material.Metal, CanCollide = false }) -- 집게 줄
+		B:part(Vector3.new(0.7, 0.3, 0.7), v(mx, 5.1, mz), { Color = Color3.fromRGB(200, 200, 205), Material = Enum.Material.Metal, CanCollide = false }) -- 집게
+		for j = 1, 7 do -- 안에 쌓인 인형들
+			local plush = SalaryConfig.Plushies[(i + j) % #SalaryConfig.Plushies + 1]
+			B:part(Vector3.new(0.8, 0.8, 0.8), v(mx + math.random(-10, 10) / 10, 3.4 + (j % 2) * 0.5, mz + math.random(-10, 10) / 10), {
+				Shape = Enum.PartType.Ball,
+				Color = plush.color,
+				CanCollide = false,
+			})
+		end
+		table.insert(clawMachines, cabinet)
+	end
+
+	-- 🕹️ 오락실: 게임기 2대 + 경품 교환대 + 최고 기록판
+	shopBuilding(39, "🕹️ 오락실", Color3.fromRGB(60, 60, 110), Color3.fromRGB(150, 80, 230), true)
+	B:part(Vector3.new(21, 0.12, 17), v(39, 0.1, -123), { Color = Color3.fromRGB(40, 30, 70), Material = Enum.Material.Carpet, CanCollide = false })
+	local arcade = { machines = {} :: { [string]: BasePart } }
+	for _, info in { { "mole", 33, "🔨 두더지 잡기", Color3.fromRGB(230, 90, 60) }, { "timing", 39, "🎯 타이밍 스톱", Color3.fromRGB(60, 170, 230) } } do
+		local gameId, mx = info[1], info[2]
+		local cabinet = B:part(Vector3.new(3.2, 6, 2.6), v(mx, 3, -126.5), { Name = "ArcadeMachine", Color = info[4] })
+		B:part(Vector3.new(2.6, 2, 0.1), v(mx, 4.2, -125.15), { Color = Color3.fromRGB(120, 255, 200), Material = Enum.Material.Neon })
+		B:part(Vector3.new(3.2, 0.3, 1.2), v(mx, 2.9, -124.8), { Color = Color3.fromRGB(40, 40, 45) }) -- 조작판
+		local title = B:part(Vector3.new(3.2, 0.9, 0.2), v(mx, 6.5, -125.1), { Color = Color3.fromRGB(30, 30, 40) })
+		Build.surfaceText(title, Enum.NormalId.Front, info[3], { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 230, 120) })
+		arcade.machines[gameId] = cabinet
+	end
+	-- 경품 교환대 (오른쪽) + 뒤쪽 선반의 경품들
+	arcade.prizeCounter = B:part(Vector3.new(4.5, 3.5, 2), v(46, 1.75, -124), { Name = "PrizeCounter", Color = Color3.fromRGB(250, 200, 80) })
+	local prizeSign = B:part(Vector3.new(4.5, 0.9, 0.2), v(46, 4, -122.9), { Color = Color3.fromRGB(30, 30, 40) })
+	Build.surfaceText(prizeSign, Enum.NormalId.Front, "🎟️ 경품 교환", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 230, 120) })
+	B:part(Vector3.new(5, 0.3, 1.5), v(46, 5, -129.5), { Color = Color3.fromRGB(120, 85, 60) }) -- 선반
+	for i, plush in { SalaryConfig.Plushies[1], SalaryConfig.Plushies[8], SalaryConfig.Plushies[10] } do
+		B:part(Vector3.new(0.9, 0.9, 0.9), v(44.5 + (i - 1) * 1.5, 5.6, -129.5), { Shape = Enum.PartType.Ball, Color = plush.color, CanCollide = false })
+	end
+	-- 🏆 최고 기록판 (뒷벽, 서버가 글씨를 채워요)
+	arcade.board = B:part(Vector3.new(12, 4.5, 0.3), v(36, 9, -130.8), { Name = "ArcadeBoard", Color = Color3.fromRGB(20, 20, 30) })
+
 	---------------------------------------------------------------- 🚒 집결지(=🏁 워크숍 결승선)와 시작 지점
 	-- 소방 훈련 때는 건물 밖 공원으로 대피해요
 	local assemblyZone, assemblyPoint, setAssemblyVisible = helpers.makeAssembly(B, 0, -HD - 9)
@@ -374,12 +506,14 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		v(24, 0, 6),
 		v(-7, 0, 6), -- 뒷줄 의자 뒤
 		v(7, 0, 6),
-		v(-30, 0, 14), -- 카페 라운지 문 앞
+		v(-27, 0, 12), -- 카페 라운지 문 앞
 		v(-32, 0, -10), -- 회의실·프린터 쪽
 		v(32, 0, -10), -- 화장실 쪽
 		v(38, 0, 18), -- 휴게 라운지
 		v(0, 0, -44), -- 🌳 공원 (가끔 나가 봐요)
 		v(28, 0, -64), -- 흡연구역 근처
+		v(-20, 0, -100), -- 🏙️ 눈치 스트리트 (근무 중 외출 감시!)
+		v(20, 0, -100),
 	}
 
 	return {
@@ -408,6 +542,9 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		workshopBoss = v(0, 0, -HD - 4), -- 부장님은 건물 출입문 바로 앞에서 술래
 		workshopLook = Vector3.new(0, 0, -1), -- 술래가 직원들을 볼 때 방향 (공원 쪽)
 		candyZone = candyZone,
+		shops = shops, -- 🏙️ 눈치 스트리트 가게들 (계산대, 사장님 자리)
+		clawMachines = clawMachines, -- 🧸 인형뽑기 기계
+		arcade = arcade, -- 🕹️ 오락실 (게임기, 경품 교환대, 기록판)
 		dinnerSeats = dinnerSeats, -- 🍻 회식은 공원 식탁에서
 		dinnerBoss = v(dinnerX - 8.5, 0, dinnerZ), -- 부장님은 식탁 끝 상석
 		dinnerLook = Vector3.new(1, 0, 0),

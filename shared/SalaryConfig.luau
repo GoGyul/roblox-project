@@ -237,6 +237,7 @@ export type SnackInfo = {
 	count: number,
 	size: Vector3,
 	color: Color3,
+	street: boolean?, -- 🏙️ 눈치 스트리트 디저트집에서 산 간식
 }
 
 SalaryConfig.Snacks = {
@@ -246,6 +247,10 @@ SalaryConfig.Snacks = {
 	{ id = "donut", emoji = "🍩", name = "도넛", seconds = 14, bonus = 900, count = 1, size = Vector3.new(1, 0.4, 1), color = Color3.fromRGB(240, 170, 200) },
 	{ id = "cake", emoji = "🍰", name = "케이크 한 조각", seconds = 20, bonus = 1500, count = 1, size = Vector3.new(1.2, 0.9, 1.2), color = Color3.fromRGB(250, 240, 230) },
 	-- 🎂 생일 케이크 이벤트 때만 나와요 (count = 0이라 매일 아침에는 안 놓여요)
+	-- 🏙️ 디저트집에서 사는 간식 (count = 0이라 탕비실엔 안 놓여요)
+	{ id = "macaron", emoji = "🧁", name = "마카롱", seconds = 8, bonus = 1800, count = 0, size = Vector3.new(0.7, 0.45, 0.7), color = Color3.fromRGB(255, 170, 200), street = true },
+	{ id = "croffle", emoji = "🥐", name = "크로플", seconds = 14, bonus = 4000, count = 0, size = Vector3.new(1.2, 0.35, 0.9), color = Color3.fromRGB(220, 160, 80), street = true },
+	{ id = "strawcake", emoji = "🍓", name = "딸기 생크림 케이크", seconds = 20, bonus = 7000, count = 0, size = Vector3.new(1.2, 1, 1.2), color = Color3.fromRGB(255, 240, 240), street = true },
 	{ id = "birthday", emoji = "🎂", name = "생일 케이크", seconds = 25, bonus = 4000, count = 0, size = Vector3.new(1.3, 1, 1.3), color = Color3.fromRGB(255, 190, 210) },
 } :: { SnackInfo }
 
@@ -360,6 +365,14 @@ SalaryConfig.Achievements = {
 	{ id = "audit_survivor", emoji = "🔍", name = "감사 생존자", description = "감사 기간에 한 번도 안 걸리고 퇴근하기" },
 	{ id = "workshop_winner", emoji = "🌸", name = "무궁화 챔피언", description = "워크숍 무궁화꽃이 피었습니다 1등 하기" },
 	{ id = "dinner_ace", emoji = "🍻", name = "회식 에이스", description = "회식에서 6점 이상 받기" },
+	{ id = "first_plush", emoji = "🧸", name = "첫 인형", description = "인형뽑기에서 처음으로 인형 뽑기" },
+	{ id = "legend_plush", emoji = "🦄", name = "전설의 집게손", description = "전설 등급 인형 뽑기 (유니콘 또는 김부장 인형)" },
+	{ id = "plush_all", emoji = "📚", name = "인형 수집가", description = "인형 10종을 모두 모으기 (오락실 한정 포함)" },
+	{ id = "arcade_first", emoji = "🕹️", name = "오락실 데뷔", description = "오락실 게임 처음 해 보기" },
+	{ id = "arcade_champ", emoji = "🏆", name = "오락실 챔피언", description = "두더지 30점 또는 타이밍 13점 이상" },
+	{ id = "dragon_plush", emoji = "🐲", name = "용용이 입양", description = "티켓으로 오락실 한정 인형 용용이 받기" },
+	{ id = "street_cafe", emoji = "☕", name = "카페인 수혈", description = "눈치 스트리트 카페에서 음료 사 마시기" },
+	{ id = "dessert_lover", emoji = "🍰", name = "디저트 탐방", description = "디저트집 디저트를 자리에서 끝까지 몰래 먹기" },
 	{ id = "company_nunchi", emoji = "🏢", name = "이직 성공", description = "대리가 돼서 (주)눈치물산으로 스카우트되기" },
 	{ id = "lee_bribe", emoji = "☕", name = "커피 외교", description = "이과장에게 커피를 상납해서 고자질 막기" },
 	{ id = "lee_dodge", emoji = "🫣", name = "눈치 싸움 승리", description = "이과장의 ❗를 보고 들키기 전에 일하는 척하기" },
@@ -489,6 +502,7 @@ SalaryConfig.Companies = {
 	},
 } :: { CompanyInfo }
 
+SalaryConfig.TEST_MONEY = 0 -- 🧪 스튜디오에서 통장을 최소 이만큼 채워 줘요 (가게·인형뽑기 테스트용, 실제 게임엔 영향 없음)
 SalaryConfig.TEST_COMPANY = "" -- 🧪 스튜디오에서 "nunchi"를 넣으면 눈치물산 사무실로 시작 (실제 게임엔 영향 없음)
 
 function SalaryConfig.getCompany(companyId: string): CompanyInfo
@@ -541,5 +555,157 @@ function SalaryConfig.getEvent(eventId: string): EventInfo?
 	end
 	return nil
 end
+
+---------------------------------------------------------------------------
+-- 🏙️ 눈치 스트리트 (눈치물산 공원 뒤 상가 거리) — 근무 중에도 갈 수 있지만 자리 부재 게이지가 차요!
+--   buff: 사면 바로 마시고 오늘 하루 효과 (같은 음료는 하루 한 번)
+--   snack: 들고 가서 자리에서 [8] 몰래 먹기 (간식 시스템과 같아요)
+---------------------------------------------------------------------------
+export type StreetItem = { id: string, emoji: string, name: string, price: number, description: string, snack: string? }
+export type StreetShop = { id: string, name: string, clerk: string, items: { StreetItem } }
+
+SalaryConfig.StreetShops = {
+	cafe = {
+		id = "cafe",
+		name = "☕ 눈치 커피",
+		clerk = "카페 사장님",
+		items = {
+			{ id = "americano", emoji = "☕", name = "아메리카노", price = 1500, description = "오늘 하루 업무 시간이 1.3배 빨리 채워져요" },
+			{ id = "latte", emoji = "🥛", name = "바닐라 라떼", price = 2000, description = "오늘 하루 의심도가 25% 더 빨리 줄어요" },
+			{ id = "smoothie", emoji = "🍹", name = "에너지 스무디", price = 3000, description = "오늘 하루 자리 부재 게이지가 30% 천천히 차요" },
+		},
+	},
+	dessert = {
+		id = "dessert",
+		name = "🍰 달콤 디저트",
+		clerk = "디저트 사장님",
+		items = {
+			{ id = "macaron", emoji = "🧁", name = "마카롱", price = 1200, snack = "macaron", description = "자리에서 몰래 다 먹으면 +1,800원 (8초)" },
+			{ id = "croffle", emoji = "🥐", name = "크로플", price = 2500, snack = "croffle", description = "자리에서 몰래 다 먹으면 +4,000원 (14초)" },
+			{ id = "strawcake", emoji = "🍓", name = "딸기 생크림 케이크", price = 4000, snack = "strawcake", description = "자리에서 몰래 다 먹으면 +7,000원 (20초)" },
+		},
+	},
+} :: { [string]: StreetShop }
+
+SalaryConfig.AMERICANO_WORK = 1.3 -- 아메리카노: 업무 시간 배율
+SalaryConfig.LATTE_DECAY = 1.25 -- 바닐라 라떼: 의심도 줄어드는 속도 배율
+SalaryConfig.SMOOTHIE_AWAY = 0.7 -- 에너지 스무디: 자리 부재 게이지 속도 배율
+
+function SalaryConfig.getStreetItem(shopId: string, itemId: string): StreetItem?
+	local shop = SalaryConfig.StreetShops[shopId]
+	if not shop then
+		return nil
+	end
+	for _, item in shop.items do
+		if item.id == itemId then
+			return item
+		end
+	end
+	return nil
+end
+
+---------------------------------------------------------------------------
+-- 🧸 인형뽑기 (눈치 스트리트)
+--   한 판 CLAW_PRICE원. 좌우로 움직이는 집게를 노리는 인형 위에서 내리면 성공!
+--   딱 맞춰도 가끔 미끄러져요 (CLAW_GRIP 확률로만 잡아요). 뽑은 인형은 책상에 3개까지 진열할 수 있어요.
+---------------------------------------------------------------------------
+export type PlushInfo = { id: string, emoji: string, name: string, rarity: string, color: Color3 }
+
+SalaryConfig.Plushies = {
+	{ id = "bear", emoji = "🐻", name = "곰돌이", rarity = "common", color = Color3.fromRGB(160, 110, 70) },
+	{ id = "bunny", emoji = "🐰", name = "토끼", rarity = "common", color = Color3.fromRGB(245, 240, 240) },
+	{ id = "puppy", emoji = "🐶", name = "강아지", rarity = "common", color = Color3.fromRGB(230, 200, 150) },
+	{ id = "kitty", emoji = "🐱", name = "고양이", rarity = "common", color = Color3.fromRGB(250, 200, 120) },
+	{ id = "penguin", emoji = "🐧", name = "펭귄", rarity = "rare", color = Color3.fromRGB(45, 45, 55) },
+	{ id = "fox", emoji = "🦊", name = "여우", rarity = "rare", color = Color3.fromRGB(240, 130, 50) },
+	{ id = "panda", emoji = "🐼", name = "판다", rarity = "rare", color = Color3.fromRGB(245, 245, 245) },
+	{ id = "unicorn", emoji = "🦄", name = "유니콘", rarity = "legend", color = Color3.fromRGB(255, 200, 240) },
+	{ id = "bujang", emoji = "👔", name = "김부장 인형", rarity = "legend", color = Color3.fromRGB(70, 70, 80) },
+	-- 🕹️ 오락실 경품으로만 받을 수 있어요 (인형뽑기엔 안 나와요)
+	{ id = "dragon", emoji = "🐲", name = "용용이 (오락실 한정)", rarity = "special", color = Color3.fromRGB(110, 200, 120) },
+} :: { PlushInfo }
+
+SalaryConfig.PlushRarity = {
+	common = { name = "일반", weight = 70, color = Color3.fromRGB(150, 150, 160) },
+	rare = { name = "희귀", weight = 25, color = Color3.fromRGB(80, 150, 255) },
+	legend = { name = "전설", weight = 5, color = Color3.fromRGB(255, 180, 40) },
+	special = { name = "오락실 한정", weight = 0, color = Color3.fromRGB(200, 90, 230) },
+}
+
+SalaryConfig.CLAW_PRICE = 500
+SalaryConfig.CLAW_HIT = 0.07 -- 집게와 인형 위치 차이가 이 안이면 명중 (0~1 범위 기준)
+SalaryConfig.CLAW_GRIP = 0.75 -- 명중해도 이 확률로만 꽉 잡아요
+SalaryConfig.DESK_PLUSH_MAX = 3
+
+function SalaryConfig.getPlush(plushId: string): PlushInfo?
+	for _, plush in SalaryConfig.Plushies do
+		if plush.id == plushId then
+			return plush
+		end
+	end
+	return nil
+end
+
+-- 집게 위치 (0 ~ 1 ~ 0 왕복). 서버와 화면이 같은 식을 써서 보이는 대로 판정돼요
+function SalaryConfig.clawPosition(elapsed: number, period: number): number
+	local f = (elapsed / period) % 1
+	return if f < 0.5 then f * 2 else 2 - f * 2
+end
+
+-- 인형뽑기에서 나올 인형 하나 고르기 (등급 확률 → 그 등급 안에서 무작위)
+function SalaryConfig.rollClawPlush(): PlushInfo
+	local total = 0
+	for _, rarity in SalaryConfig.PlushRarity do
+		total += rarity.weight
+	end
+	local roll = math.random() * total
+	local chosen = "common"
+	for id, rarity in SalaryConfig.PlushRarity do
+		if rarity.weight <= 0 then
+			continue
+		end
+		roll -= rarity.weight
+		if roll <= 0 then
+			chosen = id
+			break
+		end
+	end
+	local pool = {}
+	for _, plush in SalaryConfig.Plushies do
+		if plush.rarity == chosen then
+			table.insert(pool, plush)
+		end
+	end
+	return pool[math.random(1, #pool)]
+end
+
+---------------------------------------------------------------------------
+-- 🕹️ 오락실 (눈치 스트리트): 한 판 ARCADE_PRICE원 → 점수만큼 🎟️ 티켓 → 경품 교환
+---------------------------------------------------------------------------
+SalaryConfig.ARCADE_PRICE = 300
+SalaryConfig.ArcadeGames = {
+	mole = { id = "mole", emoji = "🔨", name = "두더지 잡기", description = "20초 동안 튀어나오는 두더지를 콕! ⭐ 황금 두더지 +3, 👔 부장님 두더지는 때리면 -2" },
+	timing = { id = "timing", emoji = "🎯", name = "타이밍 스톱", description = "왔다 갔다 하는 막대를 초록 칸에서 멈춰요! 5라운드, 점점 빨라져요" },
+}
+SalaryConfig.MOLE_SECONDS = 20
+SalaryConfig.TIMING_ROUNDS = 5
+SalaryConfig.TIMING_PAUSE = 0.8 -- 라운드 사이 쉬는 시간
+SalaryConfig.TIMING_PERFECT = 0.035 -- 정중앙 ±이 안이면 퍼펙트(3점)
+SalaryConfig.TIMING_GOOD = 0.09 -- ±이 안이면 굿(1점)
+
+-- 점수 → 티켓
+function SalaryConfig.arcadeTickets(gameId: string, score: number): number
+	if gameId == "mole" then
+		return math.max(0, math.floor(score / 2))
+	end
+	return math.max(0, score)
+end
+
+export type ArcadePrize = { id: string, emoji: string, name: string, tickets: number, description: string }
+SalaryConfig.ArcadePrizes = {
+	{ id = "coffee", emoji = "☕", name = "아메리카노 쿠폰", tickets = 30, description = "바로 마셔요: 오늘 업무 시간 1.3배 빨리" },
+	{ id = "plush", emoji = "🧸", name = "랜덤 인형", tickets = 80, description = "인형뽑기에서 나오는 인형 중 하나 (전설 포함!)" },
+	{ id = "dragon", emoji = "🐲", name = "용용이 (오락실 한정 인형)", tickets = 250, description = "여기서만 받을 수 있는 인형" },
+} :: { ArcadePrize }
 
 return SalaryConfig

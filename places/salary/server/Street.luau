@@ -1,0 +1,77 @@
+-- 🏙️ 눈치 스트리트 가게: 사장님 NPC + [E] 주문하기 → 화면에 메뉴 창
+-- 실제 구매(돈 빼기, 효과 주기)는 Employees.buyStreet가 해요.
+-- 🛡️ 서버가 "그 가게 계산대 근처에 있는지"를 다시 확인해요 (멀리서 몰래 사는 걸 막아요).
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
+local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
+local Npc = require(script.Parent.Npc)
+
+local Street = {}
+
+local ORDER_RANGE = 12 -- 계산대에서 이 거리 안이어야 살 수 있어요
+local allowBuy = RateLimit.new(0.3)
+
+local CLERK_LOOKS = {
+	cafe = { skin = Color3.fromRGB(235, 200, 170), shirt = Color3.fromRGB(40, 120, 80), pants = Color3.fromRGB(50, 40, 35) },
+	dessert = { skin = Color3.fromRGB(240, 210, 185), shirt = Color3.fromRGB(250, 190, 210), pants = Color3.fromRGB(240, 240, 240) },
+}
+local GREETINGS = {
+	cafe = { "어서 오세요~ 오늘도 출근 고생 많으세요!", "근무 중이세요? 빨리 해 드릴게요 😉", "아아 한 잔 어떠세요?" },
+	dessert = { "갓 구운 크로플 있어요~", "회사에 몰래 가져가시게요? 포장해 드릴게요!", "달콤한 거 드시고 힘내세요!" },
+}
+
+-- buy(player, shopId, itemId) → (성공 여부, 메시지)
+function Street.start(office, remotes, buy: (Player, string, string) -> (boolean, string))
+	if next(office.shops) == nil then
+		return -- 눈치물산에만 거리가 있어요
+	end
+
+	for shopId, spot in office.shops do
+		local shop = SalaryConfig.StreetShops[shopId]
+		if not shop then
+			continue
+		end
+		-- 사장님 (계산대 뒤에 가만히 서 있어요)
+		local clerk = Npc.create(shop.clerk, CLERK_LOOKS[shopId] or CLERK_LOOKS.cafe, office.folder)
+		clerk:PivotTo(CFrame.lookAt(spot.clerkSpot + Vector3.new(0, 3, 0), spot.clerkSpot + Vector3.new(0, 3, 5)))
+		local clerkRoot = clerk:FindFirstChild("HumanoidRootPart") :: BasePart
+		clerkRoot.Anchored = true
+		Npc.setStatus(clerk, utf8.char(utf8.codepoint(shop.name, 1))) -- 가게 이름 맨 앞 이모지
+
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.ActionText = "주문하기"
+		prompt.ObjectText = shop.name
+		prompt.MaxActivationDistance = 8
+		prompt.RequiresLineOfSight = false
+		prompt.Parent = spot.counter
+		prompt.Triggered:Connect(function(player)
+			local greetings = GREETINGS[shopId]
+			if greetings then
+				Npc.say(clerk, greetings[math.random(1, #greetings)], 3)
+			end
+			remotes.StreetMenu:FireClient(player, shopId)
+		end)
+	end
+
+	remotes.BuyStreet.OnServerInvoke = function(player: Player, shopId: any, itemId: any): (boolean, string)
+		if not allowBuy(player) then
+			return false, "천천히 주문해 주세요."
+		end
+		if typeof(shopId) ~= "string" or typeof(itemId) ~= "string" then
+			return false, "잘못된 주문이에요."
+		end
+		local spot = office.shops[shopId]
+		if not spot or not SalaryConfig.getStreetItem(shopId, itemId) then
+			return false, "없는 메뉴예요."
+		end
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root or (root.Position - spot.counter.Position).Magnitude > ORDER_RANGE then
+			return false, "가게 계산대 앞에서 주문해 주세요!"
+		end
+		return buy(player, shopId, itemId)
+	end
+end
+
+return Street

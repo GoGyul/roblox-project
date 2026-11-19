@@ -644,6 +644,10 @@ RunService.RenderStepped:Connect(function()
 		local percent = math.floor((player:GetAttribute("SnackProgress") or 0) * 100)
 		comboLine = `{heldSnack.emoji} {heldSnack.name} {percent}%  ` .. comboLine
 	end
+	local buffs = player:GetAttribute("Buffs") or ""
+	if buffs ~= "" then
+		comboLine = `오늘 버프 {buffs}  ` .. comboLine -- 🏙️ 카페 음료
+	end
 	comboText.Text = comboLine
 
 	-- 행동 버튼

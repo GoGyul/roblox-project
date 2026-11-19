@@ -40,12 +40,15 @@ function Walker.walkTo(humanoid: Humanoid, root: BasePart, target: Vector3, isCa
 		local stuckSince = os.clock()
 		while not done and os.clock() < giveUp and not isCancelled() do
 			task.wait(0.05)
-			-- 1초 넘게 거의 못 움직였으면 끼인 거예요 → 살짝 점프해서 빠져나와요
+			-- 1초 넘게 거의 못 움직였으면 끼인 거예요 → 가려던 쪽으로 살짝 밀어서 빠져나와요 (NPC는 점프 금지)
 			if (root.Position - lastPosition).Magnitude > 0.3 then
 				lastPosition = root.Position
 				stuckSince = os.clock()
 			elseif os.clock() - stuckSince > 1 then
-				humanoid.Jump = true
+				local toward = Vector3.new(point.X - root.Position.X, 0, point.Z - root.Position.Z)
+				if toward.Magnitude > 0.1 then
+					root.CFrame += toward.Unit * 1 + Vector3.new(0, 0.3, 0)
+				end
 				stuckSince = os.clock()
 			end
 		end

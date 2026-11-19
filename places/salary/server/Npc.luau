@@ -27,6 +27,13 @@ function Npc.create(name: string, look: Look, parent: Instance): Model
 	-- 애니메이션이 없는 NPC는 넘어지면 잘 못 일어나요 → 넘어지는 상태를 꺼 둬요
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+	-- NPC는 점프를 못 해요 (부장님·동료·이과장·감사팀·가게 사장님 모두)
+	humanoid.UseJumpPower = true
+	humanoid.JumpPower = 0
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+	-- 걸어 다니다가 빈 의자(플레이어 자리 등)에 닿아도 저절로 앉지 않게 해요.
+	-- 앉힐 때는 Npc.sit이 잠깐 켜 줘요.
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
 	-- 팔다리가 의자·책상에 부딪혀 덜덜 떨지 않게, 몸통 중심(HumanoidRootPart)만 충돌해요
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
@@ -163,13 +170,14 @@ function Npc.stand(model: Model, seat: Seat)
 			child:Destroy()
 		end
 	end
-	humanoid.Sit = false
-	humanoid.Jump = true
+	humanoid.Sit = false -- (점프는 못 하니까 의자 고정만 풀고 일어나요)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false) -- 다시 "아무 의자에나 앉기" 금지
 end
 
 -- 의자에 앉히기
 function Npc.sit(model: Model, seat: Seat)
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true) -- 이 의자에만 앉도록 잠깐 허용
 	model:PivotTo(seat.CFrame + Vector3.new(0, 3, 0))
 	seat:Sit(humanoid)
 	Npc.setSitPose(model, true)

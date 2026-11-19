@@ -24,6 +24,11 @@ export type Profile = {
 	stockCost: { [string]: number }, -- 주식 산 값 합계 (수익률 계산용)
 	stockGift: boolean, -- 입문 지원금을 받았나
 	unsettled: number, -- 퇴근 전에 나가서 아직 통장에 안 들어간 돈 (다음 입장 때 정산)
+	plushies: { [string]: number }, -- 🧸 뽑은 인형 (ID → 개수)
+	deskPlushies: { string }, -- 🧸 책상에 진열한 인형 (최대 3개)
+	tickets: number, -- 🎟️ 오락실 티켓
+	lastCompany: string, -- 🏢 지난번에 다닌 회사 (바뀌면 이직/좌천 안내)
+	arcadeBest: { [string]: number }, -- 🕹️ 게임별 내 최고 점수
 	stats: { days: number, nearMiss: number, caught: number, fired: number, stockProfit: number },
 }
 
@@ -41,6 +46,11 @@ function Profiles.default(): Profile
 		stockCost = {},
 		stockGift = false,
 		unsettled = 0,
+		plushies = {},
+		deskPlushies = {},
+		tickets = 0,
+		lastCompany = "",
+		arcadeBest = {},
 		stats = { days = 0, nearMiss = 0, caught = 0, fired = 0, stockProfit = 0 },
 	}
 end

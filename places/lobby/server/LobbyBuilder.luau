@@ -109,8 +109,8 @@ local function buildPortal(B, frame: CFrame, info: Places.GameInfo): Portal
 	}))
 
 	local billboard = Instance.new("BillboardGui")
-	billboard.Size = UDim2.fromOffset(360, 90)
-	billboard.StudsOffset = Vector3.new(0, 7, 0)
+	billboard.Size = UDim2.fromOffset(320, 80)
+	billboard.StudsOffset = Vector3.new(0, 21, 0) -- 포탈 아치(높이 18)보다 위에 떠서 포탈을 가리지 않아요
 	billboard.MaxDistance = 120
 	billboard.Parent = pad
 	local statusLabel = Instance.new("TextLabel")
