@@ -130,7 +130,7 @@ local function refreshInventory()
 		local item = inventory:FindFirstChild(itemId)
 		if item then
 			count += 1
-			line(`• {item.Value}`, order, C.text)
+			line(`· {item.Value}`, order, C.text)
 		end
 	end
 	if count == 0 then

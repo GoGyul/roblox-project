@@ -44,6 +44,9 @@ function Boss.new(office)
 		fovCos = math.cos(math.rad(58)),
 		noiseSource = nil :: (() -> (Vector3?, number))?,
 		summon = nil :: Vector3?, -- 이과장이 고자질한 위치
+		distractedUntil = 0, -- 😺 고양이한테 정신 팔린 시각까지 (감시 멈춤)
+		stareAt = nil :: Model?, -- 👀 사무실 밖에서 들킨 사람 (계속 노려봐요)
+		stareUntil = 0,
 	}, Boss)
 
 	-- 빨간 넥타이
@@ -96,6 +99,54 @@ function Boss:face(direction: Vector3)
 	end
 end
 
+---------------------------------------------------------------------------
+-- 👀 노려보기: 사무실 밖(옥상·공원·거리)에서 농땡이를 들키면 하던 걸 멈추고 그 사람만 봐요
+---------------------------------------------------------------------------
+function Boss:isStaring(): boolean
+	local target = self.stareAt
+	return target ~= nil
+		and target.Parent ~= nil
+		and os.clock() < self.stareUntil
+		and self.active
+		and self.watching
+		and not self.scolding
+		and self.model.Parent ~= nil
+end
+
+-- 보일 때마다 불러요 (안 보이면 BOSS_STARE_GRACE초 뒤 풀려요)
+function Boss:stare(character: Model)
+	if self.stareAt ~= character and self:isStaring() then
+		return -- 이미 다른 사람을 노려보는 중
+	end
+	local fresh = not self:isStaring()
+	self.stareAt = character
+	self.stareUntil = os.clock() + SalaryConfig.BOSS_STARE_GRACE
+	if fresh then
+		self:status("😠")
+		self:say(pick({ "거기! 사무실 밖에서 뭐 하나?", "흠… 자네 지금 근무 시간 아닌가?", "어디 보자… 계속 지켜볼 거야." }), 3)
+	end
+end
+
+-- 노려보는 동안은 제자리에 서서 그 사람 쪽만 봐요
+function Boss:holdStare(token: number)
+	if not self:isStaring() then
+		return
+	end
+	self.footsteps.Playing = false
+	while self:isStaring() and self.token == token do
+		self.humanoid:MoveTo(self.root.Position)
+		local targetRoot = (self.stareAt :: Model):FindFirstChild("HumanoidRootPart") :: BasePart?
+		if targetRoot then
+			self:face(targetRoot.Position - self.root.Position)
+		end
+		task.wait(0.1)
+	end
+	self.stareAt = nil
+	if self.token == token and self.active and not self.scolding then
+		self:status("👀")
+	end
+end
+
 -- seconds 동안 기다리기. 도중에 다른 행동으로 끊기면 false
 function Boss:wait(seconds: number, token: number): boolean
 	local finish = os.clock() + seconds
@@ -103,19 +154,29 @@ function Boss:wait(seconds: number, token: number): boolean
 		if self.token ~= token then
 			return false
 		end
+		self:holdStare(token)
 		task.wait(0.1)
 	end
 	return self.token == token
 end
 
 -- 길찾기로 target까지 걸어가기 (도중에 다른 행동으로 끊기면 false)
+--   👀 가다가 누굴 노려보게 되면 멈췄다가, 다 보고 나서 다시 걸어가요
 function Boss:walkTo(target: Vector3, token: number): boolean
-	self.footsteps.Playing = true
-	local arrived = Walker.walkTo(self.humanoid, self.root, target, function()
-		return self.token ~= token
-	end)
-	self.footsteps.Playing = false
-	return arrived
+	while true do
+		self:holdStare(token)
+		if self.token ~= token then
+			return false
+		end
+		self.footsteps.Playing = true
+		local arrived = Walker.walkTo(self.humanoid, self.root, target, function()
+			return self.token ~= token or self:isStaring()
+		end)
+		self.footsteps.Playing = false
+		if not self:isStaring() then
+			return arrived
+		end
+	end
 end
 
 ---------------------------------------------------------------------------
@@ -189,7 +250,14 @@ function Boss:patrol(token: number)
 		if math.random() < 0.3 then
 			self:say(pick(SalaryConfig.BossLines.patrol), 3)
 		end
-		if not self:walkTo(pick(self.office.waypoints), token) then
+		-- 🏢 부장님은 사무실 안만 순찰해요 (공원·거리는 👮 경비원 담당)
+		local inside = {}
+		for _, point in self.office.waypoints do
+			if self.office.insideOffice(point) then
+				table.insert(inside, point)
+			end
+		end
+		if not self:walkTo(pick(if #inside > 0 then inside else self.office.waypoints), token) then
 			return
 		end
 		-- 두리번두리번
@@ -222,6 +290,7 @@ function Boss:scold(character: Model, line: string)
 	end
 	self.token += 1
 	local token = self.token
+	self.stareAt = nil -- 혼내러 가면 노려보기는 끝
 	self.scolding = true
 	self.watching = true
 	self.model:SetAttribute("Pose", "scold")
@@ -232,6 +301,13 @@ function Boss:scold(character: Model, line: string)
 		if targetRoot then
 			local away = self.root.Position - targetRoot.Position
 			local stand = targetRoot.Position + (if away.Magnitude > 0.1 then away.Unit * 4 else Vector3.new(0, 0, 4))
+			-- 의자에 앉아 있으면 의자 뒤에 서요 (책상 쪽으로 가면 책상 위로 올라가 버려요)
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			local seat = humanoid and humanoid.SeatPart
+			if seat then
+				local back = -seat.CFrame.LookVector
+				stand = seat.Position + Vector3.new(back.X, 0, back.Z).Unit * 3.5
+			end
 			self:walkTo(stand, token)
 			if self.token == token then
 				self:face(targetRoot.Position - self.root.Position)
@@ -284,6 +360,23 @@ function Boss:goLunch()
 	end)
 end
 
+-- ✈️ 쿠폰: 급한 출장 (사무실을 비워요)
+function Boss:goTrip()
+	self.token += 1
+	local token = self.token
+	self.active = false
+	self.scolding = false
+	self.watching = false
+	self:status("✈️")
+	self:say("뭐? 급한 출장이라고? …금방 다녀오지!", 4)
+	task.spawn(function()
+		self:walkTo(self.office.entrance, token)
+		if self.token == token then
+			self.model.Parent = nil
+		end
+	end)
+end
+
 function Boss:backFromLunch()
 	self.token += 1
 	self.scolding = false
@@ -301,6 +394,20 @@ function Boss:leaveWork()
 	self.model.Parent = nil
 end
 
+-- 😺 고양이한테 정신이 팔렸어요: seconds 동안 멈춰서 고양이만 봐요 (감시 안 함)
+function Boss:distract(seconds: number, lookAt: Vector3)
+	if not self.active or self.scolding then
+		return
+	end
+	self.token += 1
+	self.distractedUntil = os.clock() + seconds
+	self.watching = false
+	self.footsteps.Playing = false
+	self:face(lookAt - self.root.Position)
+	self:status("😻")
+	self:say("어머, 고양이다~ 쮸쮸쮸 😺", seconds)
+end
+
 -- 👀 이과장이 고자질하면 하던 걸 멈추고 그 자리로 바로 와요
 function Boss:callTo(position: Vector3)
 	if not self.active or self.scolding then
@@ -310,8 +417,40 @@ function Boss:callTo(position: Vector3)
 	self.summon = position
 end
 
+-- 🌸 워크숍 술래: 감시를 멈추고 이 자리에 서요
+function Boss:host(position: Vector3, look: Vector3)
+	if self.model.Parent == nil then
+		self:appearAt(position) -- ✈️ 출장 중이었어도 행사엔 나타나요
+	end
+	self.token += 1
+	self.active = false
+	self.scolding = false
+	self.watching = false
+	self.footsteps.Playing = false
+	self.model:PivotTo(CFrame.lookAt(position + Vector3.new(0, 3, 0), position + Vector3.new(0, 3, 0) - look))
+	self:status("🌸")
+end
+
+-- 🍻 회식 자리에 나타나기 / 회식 끝나면 퇴근
+function Boss:joinDinner(position: Vector3, look: Vector3)
+	self.token += 1
+	self.active = false
+	self.watching = false
+	self.model.Parent = self.office.folder
+	self.model:PivotTo(CFrame.lookAt(position + Vector3.new(0, 3, 0), position + Vector3.new(0, 3, 0) + look))
+	self.root:SetNetworkOwner(nil)
+	self:status("🍻")
+end
+
+function Boss:leaveDinner()
+	self.model.Parent = nil
+end
+
 -- 🚒 소방 훈련: 감시를 멈추고 집결지로 가요
 function Boss:evacuate(position: Vector3)
+	if self.model.Parent == nil then
+		self:appearAt(self.office.entrance) -- ✈️ 출장 중이었으면 훈련하러 돌아와요
+	end
 	self.token += 1
 	local token = self.token
 	self.active = false
@@ -327,7 +466,7 @@ end
 -- 훈련이 끝나면 다시 감시 시작
 function Boss:resume()
 	if self.model.Parent == nil then
-		return
+		return -- (점심·퇴근 중이면 원래 일정대로 돌아와요)
 	end
 	self.token += 1
 	self.scolding = false
@@ -339,6 +478,11 @@ function Boss:run()
 	task.spawn(function()
 		while true do
 			if not self.active or self.scolding then
+				task.wait(0.2)
+				continue
+			end
+			if os.clock() < self.distractedUntil then
+				self.watching = false -- 😺 고양이 보는 중
 				task.wait(0.2)
 				continue
 			end

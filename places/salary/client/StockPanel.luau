@@ -238,8 +238,8 @@ local function refresh()
 	end
 
 	local realized = player:GetAttribute("StockProfitTotal") or 0
-	local left = player:GetAttribute("ToiletLeft") or 0
-	local warning = if left > 0 then `⏰ 자리 비움 들키기까지 {left}초` else "🚨 자리 비운 게 티 나요! 얼른 자리로!"
+	local away = player:GetAttribute("AwayGauge") or 0
+	local warning = if away < 70 then `🖥️ 자리 부재 {away}% (100%면 경고)` else `🚨 자리 부재 {away}%! 얼른 자리로!`
 	footerText.Text = `누적 실현 손익 {signed(realized)}원 · {warning} (게임 속 가짜 주식)`
 end
 

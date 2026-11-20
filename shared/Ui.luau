@@ -89,17 +89,31 @@ local toastLabel = Ui.make("TextLabel", {
 }, { Ui.corner(10), Ui.padding(12) })
 local toastToken = 0
 
+-- 안내 문구 크기 바꾸기 (게임마다 원하는 크기로)
+function Ui.setToastStyle(width: number, textSize: number, padding: number?)
+	toastLabel.Size = UDim2.fromOffset(width, 0)
+	toastLabel.TextSize = textSize
+	local pad = toastLabel:FindFirstChildOfClass("UIPadding")
+	if pad and padding then
+		pad.PaddingTop = UDim.new(0, padding)
+		pad.PaddingBottom = UDim.new(0, padding)
+		pad.PaddingLeft = UDim.new(0, padding + 2)
+		pad.PaddingRight = UDim.new(0, padding + 2)
+	end
+end
+
 -- 안내 문구 위치 바꾸기 (화면 아래 버튼과 겹칠 때)
 function Ui.setToastPosition(position: UDim2)
 	toastLabel.Position = position
 end
 
-function Ui.toast(text: string)
+-- seconds: 보여 줄 시간 (안 주면 4.5초. 💬 수다 대사처럼 빨리 넘어가는 건 짧게)
+function Ui.toast(text: string, seconds: number?)
 	toastToken += 1
 	local myToken = toastToken
 	toastLabel.Text = text
 	toastLabel.Visible = true
-	task.delay(4.5, function()
+	task.delay(if typeof(seconds) == "number" then seconds else 4.5, function()
 		if myToken == toastToken then
 			toastLabel.Visible = false
 		end

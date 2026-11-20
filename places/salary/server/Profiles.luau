@@ -24,6 +24,41 @@ export type Profile = {
 	stockCost: { [string]: number }, -- 주식 산 값 합계 (수익률 계산용)
 	stockGift: boolean, -- 입문 지원금을 받았나
 	unsettled: number, -- 퇴근 전에 나가서 아직 통장에 안 들어간 돈 (다음 입장 때 정산)
+	plushies: { [string]: number }, -- 🧸 뽑은 인형 (ID → 개수)
+	deskPlushies: { string }, -- 🧸 책상에 진열한 인형 (최대 3개)
+	tickets: number, -- 🎟️ 오락실 티켓
+	lastCompany: string, -- 🏢 지난번에 다닌 회사 (바뀌면 이직/좌천 안내)
+	missionsDone: { [string]: boolean }, -- 📋 성공한 긴급 프로젝트 종류
+	lastHongsamDay: number, -- 🎁 홍삼 선물을 마지막으로 드린 날
+	decorOwned: { [string]: boolean }, -- 🪑 산 꾸미기 아이템
+	decorEquipped: { [string]: string }, -- 🪑 칸(slot)별 장착한 아이템 ID
+	title: string, -- 🏆 장착한 칭호 ID
+	catPets: number, -- 🐱 월급냥 쓰다듬은 횟수
+	elevatorNinja: number, -- 🚪 부장님 엘리베이터에서 눈 안 마주친 횟수
+	planeBest: number, -- ✈️ 종이비행기 최고 기록 (m)
+	garden: { { seed: string, growth: number, watered: number, missed: number, readyAt: number? } }, -- 🌱 옥상 텃밭 (칸마다, readyAt = ⚡쾌속 식물이 익는 os.time)
+	seeds: { [string]: number }, -- 🌱 🎒에 보관 중인 씨앗 (씨앗 ID → 개수, 🏪 사내 매점에서 사요)
+	harvests: number, -- 🌱 수확한 횟수
+	parkBeds: { { flower: string, growth: number, watered: number, fedStage: number } }, -- 🌷 눈치물산 공원 화단 (화단마다, fedStage = 🧪 거름 준 단계)
+	flowerSeeds: { [string]: number }, -- 🌷 🎒 꽃씨 (꽃 ID → 개수)
+	fertilizer: number, -- 🧪 🎒 거름 개수
+	scenes: { [string]: boolean }, -- 🔭 관찰 일지에 기록한 장면
+	sunsetPhotos: number, -- 🌅 노을 사진 앨범 (하루 한 장)
+	deskUpgrades: { [string]: number }, -- 🖥️ 책상 장비 단계 (장비 ID → 단계)
+	certs: { [string]: boolean }, -- 📚 딴 자격증
+	daily: { [string]: any }, -- 📅 하루 한 번 제한 기록 (내 근무일 기준, 서버를 옮겨도 유지)
+	outfitOwned: { [string]: boolean }, -- 👔 산 출근룩
+	guardGifts: { [string]: number }, -- 🎁 🎒에 보관 중인 경비원 선물 (선물 ID → 개수)
+	deskHidden: { [string]: boolean },
+	itemUntil: { [string]: number }, -- ⏳ 사무용품 사용 기한 (이 근무일 수가 되면 끝나요) -- 🪑 책상에서 치워 둔 사무용품 (아이템 ID → true)
+	outfitEquipped: { [string]: string }, -- 👔 칸별로 입은 출근룩 ID
+	pigeonFeeds: number, -- 🐦 옥상 비둘기 친밀도 점수 (과자 줄 때마다 +1~3, 안 주면 조금씩 줄어요 · 예전엔 모이 준 횟수)
+	pigeons: { [string]: number }, -- 🐦 만난 비둘기 (종류 → 만난 횟수)
+	pigeonSnacks: { [string]: number }, -- 🍪 🎒 비둘기 과자 (과자 ID → 개수, 🏪 사내 매점에서 사요)
+	pigeonTreasures: { [string]: number }, -- 🎁 비둘기가 물어 온 선물 (선물 ID → 주운 횟수) → 📒 관찰 노트 🐦 비둘기 보물
+	arcadeBest: { [string]: number }, -- 🕹️ 게임별 내 최고 점수
+	friendship: { [string]: number }, -- 🤝 동료 친밀도 (동료 이름 → 점수)
+	fitness: { strength: number, stamina: number, agility: number, flexibility: number, balance: number }, -- 🏋️ 체력 단련실에서 키운 스탯 (10점마다 Lv.1 → 효과는 SalaryConfig.FitnessEffects)
 	stats: { days: number, nearMiss: number, caught: number, fired: number, stockProfit: number },
 }
 
@@ -41,6 +76,41 @@ function Profiles.default(): Profile
 		stockCost = {},
 		stockGift = false,
 		unsettled = 0,
+		plushies = {},
+		deskPlushies = {},
+		tickets = 0,
+		lastCompany = "",
+		missionsDone = {},
+		lastHongsamDay = -100,
+		decorOwned = {},
+		decorEquipped = {},
+		title = "newbie",
+		catPets = 0,
+		elevatorNinja = 0,
+		planeBest = 0,
+		garden = {},
+		seeds = {},
+		harvests = 0,
+		parkBeds = {},
+		flowerSeeds = {},
+		fertilizer = 0,
+		scenes = {},
+		sunsetPhotos = 0,
+		deskUpgrades = {},
+		certs = {},
+		daily = {},
+		outfitOwned = {},
+		guardGifts = {},
+		deskHidden = {},
+		itemUntil = {},
+		outfitEquipped = {},
+		pigeonFeeds = 0,
+		pigeons = {},
+		pigeonSnacks = {},
+		pigeonTreasures = {},
+		arcadeBest = {},
+		friendship = {},
+		fitness = { strength = 0, stamina = 0, agility = 0, flexibility = 0, balance = 0 },
 		stats = { days = 0, nearMiss = 0, caught = 0, fired = 0, stockProfit = 0 },
 	}
 end
@@ -72,6 +142,11 @@ local function fillDefaults(profile: any): Profile
 	for field, value in base.stats do
 		if profile.stats[field] == nil then
 			profile.stats[field] = value
+		end
+	end
+	for field, value in base.fitness do -- 🏋️ 나중에 스탯이 늘어나도 0부터
+		if profile.fitness[field] == nil then
+			profile.fitness[field] = value
 		end
 	end
 	return profile

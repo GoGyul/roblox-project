@@ -14,6 +14,9 @@ function DayCycle.new()
 	return setmetatable({
 		day = 0,
 		started = false, -- 첫 플레이어가 들어와 날짜를 불러오면 true
+		extraOffwork = 0, -- 퇴근 후 추가 시간 (회식)
+		waiting = false, -- 🏢 출근하기 버튼을 기다리는 중
+		readyGate = nil :: (() -> ())?, -- 출근해도 되는지 기다리는 함수 (Employees가 채워요)
 		minute = SalaryConfig.START_MINUTE,
 		phase = "offwork" :: Phase,
 		listeners = {} :: { [string]: { (...any) -> () } },
@@ -48,6 +51,17 @@ end
 function DayCycle:run()
 	task.spawn(function()
 		while true do
+			-- 🏢 출근 대기: 다들 [출근하기]를 누를 때까지 08:50에 멈춰 있어요
+			if self.readyGate then
+				self.waiting = true
+				self.minute = SalaryConfig.START_MINUTE - 10
+				ReplicatedStorage:SetAttribute("SalaryWaiting", true)
+				self:publish()
+				self.readyGate()
+				self.waiting = false
+				ReplicatedStorage:SetAttribute("SalaryWaiting", false)
+			end
+
 			self.day += 1
 			self.minute = SalaryConfig.START_MINUTE
 			self.phase = "work"
@@ -73,10 +87,12 @@ function DayCycle:run()
 
 			self.phase = "offwork"
 			self.minute = SalaryConfig.END_MINUTE
-			ReplicatedStorage:SetAttribute("SalaryNextDayAt", workspace:GetServerTimeNow() + SalaryConfig.PAYSLIP_SECONDS)
+			self.extraOffwork = 0 -- 🍻 회식 같은 퇴근 후 일정이 있으면 dayEnd에서 늘려요
 			self:publish()
 			self:emit("dayEnd")
-			task.wait(SalaryConfig.PAYSLIP_SECONDS)
+			local rest = SalaryConfig.PAYSLIP_SECONDS + self.extraOffwork
+			ReplicatedStorage:SetAttribute("SalaryNextDayAt", workspace:GetServerTimeNow() + rest)
+			task.wait(rest)
 		end
 	end)
 end
