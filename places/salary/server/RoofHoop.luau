@@ -111,7 +111,7 @@ function RoofHoop.start(folder: Instance, base: Vector3, remotes, hooks)
 			end
 			round.shot += 1
 			local gauge = SalaryConfig.hoopGauge(math.max(0, pressTime(value) - round.gaugeStart), round.shot)
-			local result = SalaryConfig.hoopResult(gauge)
+			local result = SalaryConfig.hoopResult(gauge, SalaryConfig.playerFitnessEffect(player, "hoop")) -- 💪 근력: 성공 범위가 넓어져요 (최대 +20%)
 			local points = 0
 			if result == "swish" or result == "make" then
 				points = if result == "swish" then 3 else 2

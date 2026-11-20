@@ -106,6 +106,7 @@ SalaryConfig.RAMEN_SECONDS = 15 -- 라면 먹는 시간
 SalaryConfig.RAMEN_PER_DAY = 2 -- 하루에 끓일 수 있는 라면 수
 SalaryConfig.CHAT_RANGE = 7 -- 수다가 이어지는 거리
 SalaryConfig.CHAT_TOPIC_BONUS = 500 -- 수다 주제 하나를 끝까지 하면 받는 보너스
+SalaryConfig.CHAT_REACTS_PER_DAY = 2 -- 💬 맞장구를 이만큼 하면 "오늘 대화 끝" (같은 동료와는 하루 한 번)
 SalaryConfig.CHAT_LINE_SECONDS = 2.2 -- 수다 대사 한 줄이 보이는 시간 (짧을수록 수다 성공이 쉬워요)
 SalaryConfig.CHAT_REACT_SECONDS = 4 -- 🗣️ 맞장구 고르기 제한 시간
 SalaryConfig.CHAT_REACT_BONUS = 200 -- 🗣️ 좋은 맞장구 하나마다 이번 주제 보너스 +
@@ -380,9 +381,28 @@ SalaryConfig.States = {
 --   운동기구 의자(GymSeat)에 [E] → "gym" 상태 (돈 + 자리 부재 게이지)
 --   GYM_STAT_SECONDS초 운동할 때마다 그 기구가 키우는 스탯이 +1 (profile.fitness)
 --   pose: 내 캐릭터 운동 자세 (client/Poses.luau)
---   🔮 스탯 효과는 다음 업데이트에서! (지금은 숫자만 쌓여요 → Employees의 "2.6 체력 단련" 참고)
+--   💪 스탯 FITNESS_POINTS_PER_LEVEL점마다 Lv.1 (최대 Lv.FITNESS_MAX_LEVEL) → 레벨만큼 효과 (아래 FitnessEffects)
+--   📅 스탯이 오르는 건 하루 GYM_DAILY_SETS번까지 (그다음은 그냥 농땡이로 운동해요)
 ---------------------------------------------------------------------------
-SalaryConfig.GYM_STAT_SECONDS = 10
+SalaryConfig.GYM_STAT_SECONDS = 15 -- 🏋️ 운동 게이지가 꽉 차는 시간 (초): 다 차야 스탯 +1, 중간에 내리면 처음부터
+SalaryConfig.GYM_DAILY_SETS = 3 -- 📅 하루에 스탯이 오르는 운동 횟수 (게이지 꽉 채우기)
+SalaryConfig.FITNESS_POINTS_PER_LEVEL = 10 -- 스탯 10점마다 레벨 +1
+SalaryConfig.FITNESS_MAX_LEVEL = 10
+-- 이 기구가 올려 주는 스탯 글자 ("🔋 지구력 · 💪 근력")
+function SalaryConfig.gymStatText(machineId: string): string
+	local machine = SalaryConfig.GymMachines[machineId]
+	if not machine then
+		return ""
+	end
+	local parts = {}
+	for _, statId in machine.stats do
+		local stat = SalaryConfig.getFitnessStat(statId)
+		if stat then
+			table.insert(parts, `{stat.emoji} {stat.name}`)
+		end
+	end
+	return table.concat(parts, " · ")
+end
 SalaryConfig.FitnessStats = {
 	{ id = "strength", emoji = "💪", name = "근력" },
 	{ id = "stamina", emoji = "🔋", name = "지구력" },
@@ -407,6 +427,121 @@ SalaryConfig.GymMachines = {
 	stretch = { emoji = "🤸", name = "스트레칭 매트", pose = "stretch", stats = { "flexibility" } },
 	balance = { emoji = "⚖️", name = "밸런스 볼", pose = "balance", stats = { "balance" } },
 } :: { [string]: { emoji: string, name: string, pose: string, stats: { string } } }
+
+-- 💪 스탯 레벨 (점수 10점마다 Lv.1, 최대 Lv.10)
+function SalaryConfig.fitnessLevel(points: number?): number
+	return math.clamp(math.floor((tonumber(points) or 0) / SalaryConfig.FITNESS_POINTS_PER_LEVEL), 0, SalaryConfig.FITNESS_MAX_LEVEL)
+end
+
+-- 🏋️ 스탯 효과: 최대 레벨(10)에서 max만큼, 레벨에 비례해요 (Lv.3 = max의 30%)
+--   kind: "plusPct"(+%) / "minusPct"(-%) / "plusSec"(+초) → 화면 글자 모양
+--   서버(판정)와 화면(설명·조준선)이 같은 숫자를 써요
+SalaryConfig.FitnessEffects = {
+	strength = {
+		{ id = "carry", emoji = "📦", label = "택배 느려짐", max = 0.5, kind = "minusPct" }, -- 택배 들고 느려지는 정도
+		{ id = "hoop", emoji = "🏀", label = "농구 성공 범위", max = 0.2, kind = "plusPct" }, -- 슛 게이지 초록·노랑·주황 칸 넓이
+	},
+	stamina = {
+		{ id = "away", emoji = "🖥️", label = "자리 부재 게이지 버티기", max = 0.4, kind = "plusPct" }, -- 게이지가 꽉 차는 시간
+		{ id = "hunch", emoji = "🤨", label = "오래 농땡이 눈치", max = 30, kind = "plusSec" }, -- SLACK_HUNCH_AFTER에 더해요
+	},
+	agility = {
+		{ id = "return", emoji = "⏪", label = "복귀 시간", max = 0.3, kind = "minusPct" },
+		{ id = "walk", emoji = "🏃", label = "걷는 속도", max = 0.1, kind = "plusPct" },
+	},
+	flexibility = {
+		{ id = "hide", emoji = "📦", label = "상자 숨기", max = 15, kind = "plusSec" }, -- HIDE_MAX에 더해요
+		{ id = "sleep", emoji = "😴", label = "졸기·의자 젖히기 들킴", max = 0.2, kind = "minusPct" },
+	},
+	balance = {
+		{ id = "claw", emoji = "🧸", label = "인형 뽑기 미끄러짐", max = 0.3, kind = "minusPct" },
+		{ id = "aim", emoji = "🎯", label = "다트·✈️ 비행기 조준선", max = 0.6, kind = "plusPct" },
+	},
+} :: { [string]: { { id: string, emoji: string, label: string, max: number, kind: string } } }
+-- 레벨이 오를 때 한 줄 알림 ("💪 근력 Lv.3! 택배가 가벼워졌어요")
+SalaryConfig.FitnessLevelUpText = {
+	strength = "📦 택배 가볍게 · 🏀 슛 정확",
+	stamina = "🖥️ 자리 비우기 더 오래",
+	agility = "🏃 더 빨리 걷고 복귀",
+	flexibility = "📦 숨기 더 오래 · 😴 덜 들킴",
+	balance = "🎯 손이 더 정확해요",
+}
+-- 효과 id → (스탯 id, 효과 정보)
+local FITNESS_EFFECT_BY_ID: { [string]: { statId: string, info: any } } = {}
+for statId, list in SalaryConfig.FitnessEffects do
+	for _, info in list do
+		FITNESS_EFFECT_BY_ID[info.id] = { statId = statId, info = info }
+	end
+end
+
+-- 이 레벨에서 효과 값 (예: carry Lv.3 → 0.15)
+function SalaryConfig.fitnessEffect(effectId: string, level: number?): number
+	local entry = FITNESS_EFFECT_BY_ID[effectId]
+	if not entry then
+		return 0
+	end
+	return entry.info.max * math.clamp(tonumber(level) or 0, 0, SalaryConfig.FITNESS_MAX_LEVEL) / SalaryConfig.FITNESS_MAX_LEVEL
+end
+
+-- 효과 하나를 글자로 ("📦 택배 느려짐 -15%")
+local function fitnessNumberText(value: number): string
+	if math.abs(value - math.floor(value + 0.5)) < 0.01 then
+		return tostring(math.floor(value + 0.5))
+	end
+	return string.format("%.1f", value)
+end
+function SalaryConfig.fitnessEffectLine(info: { emoji: string, label: string, max: number, kind: string }, level: number?): string
+	local value = info.max * math.clamp(tonumber(level) or 0, 0, SalaryConfig.FITNESS_MAX_LEVEL) / SalaryConfig.FITNESS_MAX_LEVEL
+	local amount = if info.kind == "plusSec" then `+{fitnessNumberText(value)}초`
+		elseif info.kind == "minusPct" then `-{fitnessNumberText(value * 100)}%`
+		else `+{fitnessNumberText(value * 100)}%`
+	return `{info.emoji} {info.label} {amount}`
+end
+-- 스탯 하나의 효과 전부 ("📦 택배 느려짐 -15% · 🏀 농구 성공 범위 +6%")
+function SalaryConfig.fitnessEffectText(statId: string, level: number?): string
+	local parts = {}
+	for _, info in SalaryConfig.FitnessEffects[statId] or {} do
+		table.insert(parts, SalaryConfig.fitnessEffectLine(info, level))
+	end
+	return table.concat(parts, " · ")
+end
+
+-- 플레이어의 체력 스탯 (서버가 넣어 주는 "Fitness" 속성 JSON) → 없는 칸은 0
+local HttpService = game:GetService("HttpService")
+function SalaryConfig.playerFitness(player: Player): { [string]: number }
+	local ok, value = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("Fitness") or "{}")
+	end)
+	local result = {}
+	for _, stat in SalaryConfig.FitnessStats do
+		result[stat.id] = if ok and typeof(value) == "table" then tonumber(value[stat.id]) or 0 else 0
+	end
+	return result
+end
+function SalaryConfig.playerFitnessLevel(player: Player, statId: string): number
+	return SalaryConfig.fitnessLevel(SalaryConfig.playerFitness(player)[statId])
+end
+-- 스탯 표(profile.fitness 같은 것)로 효과 값 (없는 칸은 0)
+function SalaryConfig.fitnessEffectFor(fitness: { [string]: any }?, effectId: string): number
+	local entry = FITNESS_EFFECT_BY_ID[effectId]
+	if not entry or typeof(fitness) ~= "table" then
+		return 0
+	end
+	return SalaryConfig.fitnessEffect(effectId, SalaryConfig.fitnessLevel(tonumber((fitness :: any)[entry.statId]) or 0))
+end
+-- 플레이어 레벨로 효과 값 (서버·화면 어디서나)
+function SalaryConfig.playerFitnessEffect(player: Player, effectId: string): number
+	return SalaryConfig.fitnessEffectFor(SalaryConfig.playerFitness(player), effectId)
+end
+-- ⚡ 걷는 속도: base(보통 16) × (1 + 민첩성 보너스)
+function SalaryConfig.walkSpeed(player: Player, base: number?): number
+	return (base or 16) * (1 + SalaryConfig.playerFitnessEffect(player, "walk"))
+end
+-- 📦 택배 들고 걷는 속도: 느려지는 만큼을 💪 근력으로 줄이고, ⚡ 민첩성 보너스도 곱해요
+function SalaryConfig.carrySpeed(player: Player, slowSpeed: number): number
+	local slowdown = math.max(0, 16 - slowSpeed) * (1 - SalaryConfig.playerFitnessEffect(player, "carry"))
+	return SalaryConfig.walkSpeed(player, 16 - slowdown)
+end
 
 -- 자리에서 고를 수 있는 행동 (숫자키 1~7, 직급이 오르면 하나씩 열려요)
 ---------------------------------------------------------------------------
@@ -721,16 +856,24 @@ SalaryConfig.Achievements = {
 	{ id = "scope_first", emoji = "🔭", name = "관찰자", description = "건너편 빌딩에서 첫 장면 발견하기" },
 	{ id = "scope_ten", emoji = "📒", name = "프로 관찰러", description = "관찰 일지 10장면 채우기" },
 	{ id = "scope_all", emoji = "🕵️", name = "건너편 빌딩 전문가", description = "관찰 일지 20장면 모두 채우기" },
-	{ id = "garden_first", emoji = "🌱", name = "옥상 농부", description = "텃밭에서 처음 수확하기" },
+	{ id = "garden_first", emoji = "🌱", name = "옥상 농부", description = "매점 씨앗을 옥상 텃밭에 심어 처음 수확하기" },
 	{ id = "garden_strawberry", emoji = "🍓", name = "딸기 농장주", description = "딸기 수확하기" },
 	{ id = "garden_gift", emoji = "🥬", name = "유기농 아부", description = "직접 기른 채소를 부장님께 선물하기" },
+	{ id = "garden_clover", emoji = "🍀", name = "행운의 농부", description = "네잎클로버 수확에서 행운 대박 터뜨리기" },
+	{ id = "garden_pumpkin", emoji = "🎃", name = "왕호박 농부", description = "6일 걸리는 호박을 끝까지 길러 수확하기" },
+	{ id = "garden_master", emoji = "🚜", name = "주말농장 사장님", description = "텃밭에서 30번 수확하기" },
+	{ id = "park_gardener", emoji = "🌷", name = "공원 정원사", description = "눈치물산 공원 화단을 모두 꽃피우기" },
+	{ id = "park_rainbow", emoji = "🌈", name = "무지개 정원", description = "공원 화단 6곳에 서로 다른 꽃 6종을 피우기" },
 	{ id = "plane_first", emoji = "✈️", name = "종이비행기 조종사", description = "옥상에서 종이비행기 처음 날리기" },
 	{ id = "plane_target", emoji = "🎯", name = "명중!", description = "종이비행기를 건너편 빌딩 🎯 과녁에 꽂기" },
 	{ id = "plane_boss", emoji = "🤕", name = "보고서 반송", description = "되돌아온 종이비행기가 옥상 경비원 머리에 꽂히기" },
-	{ id = "pigeon_friend", emoji = "🐦", name = "비둘기 친구", description = "옥상에서 비둘기에게 처음 모이 주기" },
+	{ id = "pigeon_friend", emoji = "🐦", name = "비둘기 친구", description = "옥상에서 비둘기에게 처음 과자 주기" },
 	{ id = "pigeon_white", emoji = "🕊️", name = "평화주의자", description = "흰 비둘기 만나기" },
 	{ id = "pigeon_legend", emoji = "👑", name = "전설의 비둘기", description = "왕관 비둘기나 무지개 비둘기 만나기" },
 	{ id = "pigeon_all", emoji = "📒", name = "비둘기 박사", description = "비둘기 관찰 노트 완성하기" },
+	{ id = "pigeon_gift", emoji = "🎁", name = "비둘기의 보은", description = "비둘기가 물어 온 선물 처음 줍기" },
+	{ id = "pigeon_gem", emoji = "💎", name = "보석 물어 온 비둘기", description = "비둘기가 물어 온 💎 커다란 보석 줍기" },
+	{ id = "pigeon_socks", emoji = "🧦", name = "양말 컬렉터", description = "비둘기의 장난 선물(양말·빈 캔·낙엽) 모두 모으기" },
 	{ id = "audit_reveal", emoji = "🕶️", name = "감사관 색출", description = "동료로 위장한 감사관의 정체를 밝혀내기" },
 	{ id = "workshop_winner", emoji = "🌸", name = "무궁화 챔피언", description = "워크숍 무궁화꽃이 피었습니다 1등 하기" },
 	{ id = "dinner_ace", emoji = "🍻", name = "회식 에이스", description = "회식에서 6점 이상 받기" },
@@ -1648,15 +1791,95 @@ SalaryConfig.ELEVATOR_FAIL = 35 -- 틀릴 때마다 오르는 의심도
 SalaryConfig.ElevatorTalkLines = { "어이, 자네.", "흠흠.", "요즘 어때?" } -- 짧게!
 
 -- 🐦 옥상 비둘기 친구
---   🍞 모이 통 [E] (PIGEON_FEED_PRICE원) → 비둘기들이 날아와 PIGEON_STAY초 동안 콕콕 쪼아 먹어요
+--   🍪 🏪 사내 매점 [🐦 비둘기] 탭에서 과자를 사서 🎒에 넣어 둬요
+--   🍞 모이 통 [E] → 과자 고르기 → 비둘기들이 날아와 PIGEON_STAY초 동안 콕콕 쪼아 먹어요 (과자 1개 사용)
 --   ⚠️ 👮 옥상 경비원이 PIGEON_GUARD_RANGE 안으로 다가오면 비둘기들이 먼저 놀라서 푸드덕 날아가요 (살아 있는 근접 알람)
---   💕 친밀도(모이 준 횟수)가 오를수록 더 많이, 더 희귀한 비둘기가 와요. 하루 동안 모이를 안 주면 친밀도가 조금 줄어요
---   📒 비둘기 관찰 노트에 만난 비둘기가 기록돼요
-SalaryConfig.PIGEON_FEED_PRICE = 300
+--   💕 친밀도(과자 줄 때마다 +1~3점)가 오를수록 더 많이, 더 희귀한 비둘기가 와요. 하루 동안 과자를 안 주면 친밀도가 조금 줄어요
+--   🎁 비둘기의 보은: 친해지면 가끔 비둘기가 선물을 물어 와요 (좋은 과자일수록 자주, 좋은 걸로)
+--   📒 비둘기 관찰 노트에 만난 비둘기와 🐦 비둘기 보물이 기록돼요
 SalaryConfig.PIGEON_STAY = 60
-SalaryConfig.PIGEON_MAX_FLOCK = 8
-SalaryConfig.PIGEON_DECAY = 1 -- 모이를 안 준 하루마다 줄어드는 친밀도
--- 친밀도 단계: 모이를 준 횟수 → 이름과 한 번에 오는 비둘기 수
+SalaryConfig.PIGEON_MAX_FLOCK = 9
+SalaryConfig.PIGEON_DECAY = 1 -- 과자를 안 준 하루마다 줄어드는 친밀도
+SalaryConfig.PIGEON_SNACK_MAX = 20 -- 🎒 과자는 한 종류에 이만큼까지
+-- 🍪 비둘기 과자 (🏪 매점에서 사요)
+--   friend: 친밀도 +점수 / flock: 더 오는 비둘기 수 / luck: 희귀 비둘기·좋은 선물 운 / gift: 선물 확률 +
+SalaryConfig.PigeonSnacks = {
+	{ id = "cookie", emoji = "🍪", name = "쿠키 부스러기", price = 150, friend = 1, flock = 0, luck = 0, gift = 0, description = "책상 서랍에서 나온 부스러기. 일단 먹긴 해요" },
+	{ id = "pretzel", emoji = "🥨", name = "프레첼 조각", price = 300, friend = 1, flock = 1, luck = 0.5, gift = 0.05, description = "짭짤해서 비둘기들이 은근 좋아해요" },
+	{ id = "popcorn", emoji = "🍿", name = "버터 팝콘", price = 550, friend = 2, flock = 1, luck = 1, gift = 0.1, description = "고소한 냄새에 옆 건물 비둘기까지 와요" },
+	{ id = "shrimp", emoji = "🍘", name = "새우 과자", price = 900, friend = 2, flock = 2, luck = 1.5, gift = 0.15, description = "새우깡 같은 과자. 손이 가요 부리가 가요~" },
+	{ id = "croissant", emoji = "🥐", name = "버터 크루아상", price = 1600, friend = 3, flock = 3, luck = 2.5, gift = 0.25, description = "빵집 고급 크루아상. 비둘기계의 오마카세" },
+}
+function SalaryConfig.getPigeonSnack(snackId: string): any
+	for _, snack in SalaryConfig.PigeonSnacks do
+		if snack.id == snackId then
+			return snack
+		end
+	end
+	return nil
+end
+-- 🎁 비둘기의 보은: 과자를 줄 때마다 선물 확률 = 친밀도 단계 확률 + 과자 확률 (하루 PIGEON_GIFT_DAILY번까지)
+--   선물은 PIGEON_GIFT_DELAY초 뒤 비둘기가 물고 와서 모이 통 근처에 떨어뜨려요 → [E] 줍기 (나만 주울 수 있어요)
+SalaryConfig.PIGEON_GIFT_DAILY = 1 -- (과자는 하루 한 번이라 선물도 하루 한 번)
+SalaryConfig.PIGEON_GIFT_CHANCE = { 0, 0.3, 0.45, 0.6, 0.75 } -- 친밀도 단계별 (낯가림 단계에선 아직 안 줘요 · 하루 한 번이라 넉넉하게)
+SalaryConfig.PIGEON_GIFT_MAX_CHANCE = 0.95
+SalaryConfig.PIGEON_GIFT_DELAY = { 20, 50 } -- 과자를 주고 몇 초 뒤에 오나 (최소, 최대)
+SalaryConfig.PIGEON_GIFT_WAIT = 120 -- 내가 옥상에 없으면 이만큼 더 기다려 줘요 (그래도 없으면 다음 기회에)
+SalaryConfig.PIGEON_GIFT_LIFETIME = 150 -- 떨어진 선물이 남아 있는 시간 (초)
+SalaryConfig.PIGEON_TREASURE_RESELL = 0.5 -- 🐦 비둘기 보물: 두 번째부터는 중고로 팔아서 이 비율만큼
+-- 🐦 선물 목록 (weight: 기본 가중치 / perLuck: 운 1마다 더해지는 가중치)
+--   kind = "money" 바로 돈 · "tickets" 🎟️ 오락실 티켓 · "valuable" 귀중품(처음엔 주인에게 사례금, 다음부턴 중고로 팔아요) · "joke" 장난(0원, 수집용)
+--   운 = (친밀도 단계 - 1) + 과자의 luck
+SalaryConfig.PigeonTreasures = {
+	{ id = "coin", emoji = "💰", name = "반짝이는 동전", kind = "money", min = 30, max = 150, weight = 40, perLuck = -4, description = "자판기 밑에서 주워 왔나 봐요" },
+	{ id = "bill", emoji = "💵", name = "꼬깃꼬깃 지폐", kind = "money", min = 300, max = 800, weight = 16, perLuck = 1.5, description = "누가 옥상에서 흘린 비상금?!" },
+	{ id = "ticket", emoji = "🎟️", name = "오락실 티켓 뭉치", kind = "tickets", min = 2, max = 5, weight = 14, perLuck = 0, description = "오락실 앞 비둘기들의 전리품" },
+	{ id = "sock", emoji = "🧦", name = "짝 잃은 양말", kind = "joke", weight = 12, perLuck = -1, description = "냄새는 묻지 마세요…" },
+	{ id = "can", emoji = "🥫", name = "빈 캔", kind = "joke", weight = 10, perLuck = -1, description = "분리수거는 비둘기도 하는 시대" },
+	{ id = "leaf", emoji = "🍂", name = "마른 낙엽", kind = "joke", weight = 8, perLuck = -0.8, description = "비둘기 눈엔 이게 보물이래요" },
+	{ id = "key", emoji = "🔑", name = "잃어버린 열쇠", kind = "valuable", value = 600, weight = 6, perLuck = 1.5, description = "경비실 비상 열쇠 같은데…?" },
+	{ id = "ring", emoji = "💍", name = "반짝 반지", kind = "valuable", value = 1800, weight = 3, perLuck = 1.2, description = "옆 회사 대리님의 프러포즈 반지?!" },
+	{ id = "watch", emoji = "⌚", name = "손목시계", kind = "valuable", value = 3000, weight = 2, perLuck = 1, description = "아직 째깍째깍 잘 가요" },
+	{ id = "gem", emoji = "💎", name = "커다란 보석", kind = "valuable", value = 10000, weight = 0.4, perLuck = 0.5, rare = true, description = "비둘기가 어디서 이런 걸…? 전설의 보은" },
+}
+function SalaryConfig.getPigeonTreasure(treasureId: string): any
+	for _, treasure in SalaryConfig.PigeonTreasures do
+		if treasure.id == treasureId then
+			return treasure
+		end
+	end
+	return nil
+end
+-- 선물 확률 (친밀도 단계, 과자)
+function SalaryConfig.pigeonGiftChance(levelIndex: number, snack: any): number
+	local base = SalaryConfig.PIGEON_GIFT_CHANCE[levelIndex] or 0
+	if base <= 0 then
+		return 0
+	end
+	return math.min(SalaryConfig.PIGEON_GIFT_MAX_CHANCE, base + (if snack then snack.gift else 0))
+end
+-- 선물 뽑기 (친밀도 단계, 과자) → 선물
+function SalaryConfig.rollPigeonTreasure(levelIndex: number, snack: any): any
+	local luck = (levelIndex - 1) + (if snack then snack.luck else 0)
+	local total = 0
+	local pool = {}
+	for _, treasure in SalaryConfig.PigeonTreasures do
+		local weight = math.max(0, treasure.weight + treasure.perLuck * luck)
+		if weight > 0 then
+			total += weight
+			table.insert(pool, { treasure = treasure, weight = weight })
+		end
+	end
+	local roll = math.random() * total
+	for _, entry in pool do
+		roll -= entry.weight
+		if roll <= 0 then
+			return entry.treasure
+		end
+	end
+	return SalaryConfig.PigeonTreasures[1]
+end
+-- 친밀도 단계: 친밀도 점수 → 이름과 한 번에 오는 비둘기 수 (예전엔 모이 준 횟수 = 점수)
 SalaryConfig.PigeonLevels = {
 	{ feeds = 0, name = "낯가림", flock = 3 },
 	{ feeds = 3, name = "눈인사", flock = 4 },
@@ -1702,13 +1925,15 @@ function SalaryConfig.hoopGauge(t: number, shot: number): number
 	return 0.5 + 0.5 * math.sin(t * (2.4 + 0.45 * (shot - 1)) - 1.2)
 end
 -- 결과: "swish" / "make" / "rim" / "miss"
-function SalaryConfig.hoopResult(value: number): string
+--   widen: 💪 근력 보너스 (0.2면 모든 칸이 20% 넓어져요)
+function SalaryConfig.hoopResult(value: number, widen: number?): string
 	local off = math.abs(value - SalaryConfig.HOOP_TARGET)
-	if off <= SalaryConfig.HOOP_PERFECT then
+	local scale = 1 + (widen or 0)
+	if off <= SalaryConfig.HOOP_PERFECT * scale then
 		return "swish"
-	elseif off <= SalaryConfig.HOOP_GOOD then
+	elseif off <= SalaryConfig.HOOP_GOOD * scale then
 		return "make"
-	elseif off <= SalaryConfig.HOOP_RIM then
+	elseif off <= SalaryConfig.HOOP_RIM * scale then
 		return "rim"
 	end
 	return "miss"
@@ -1997,16 +2222,41 @@ function SalaryConfig.getOutfit(itemId: string): (any, any)
 end
 
 -- 🌱 옥상 텃밭 (내 화분 GARDEN_SLOTS칸, 저장돼요)
---   씨앗 심기 → 하루에 한 번 💧 물 주기 → (물 준 날 수가 다 차면) 🧺 수확 → 💰 팔기 또는 🎁 부장님 선물
+--   🏪 사내 매점 [🌱 씨앗] 탭에서 씨앗 사기 → 🎒 소지품에 보관 → 옥상 화분에 심기 (화분에선 돈 안 내요)
+--   → 하루에 한 번 💧 물 주기 → (물 준 날 수가 다 차면) 🧺 수확 → 💰 팔기 또는 🎁 부장님 선물
 --   물을 하루 안 주면 🥀 시들고, 이틀 연속 안 주면 💀 말라 죽어요 (뽑고 다시 심어야 해요)
 --   (하루 = 내가 출근해서 퇴근한 하루. 퇴근할 때 자라요)
-SalaryConfig.GARDEN_SLOTS = 4
-SalaryConfig.GARDEN_GIFT_DELTA = -0.1 -- 🎁 직접 기른 채소 선물: 오늘의 의심도 속도
+--   씨앗 특징 (없으면 평범한 식물)
+--     minutes = 쾌속 식물: 물 주고 게임 시간 N분 뒤 바로 수확 (퇴근을 안 기다려요)
+--     noWater = 물을 안 줘도 퇴근할 때마다 자라고 안 시들어요 / thirsty = 하루만 물을 걸러도 💀
+--     regrow = 수확해도 안 뽑혀요! N일 뒤 또 열려요 (나무)
+--     sunsetBonus = 🌅 노을 시간에 팔면 N배 / luck = { chance, prize } 확률로 대박 / giftDelta = 부장님 선물 효과
+--     rank = 이 직급부터 살 수 있어요 / kind = 화분 위 생김새 (leafy·root·fruit·stalk·flower·cactus·tree·vine·mushroom·clover)
+--   ⚖️ 밸런스 (화분 한 칸 하루 순이익 = (판매가 - 씨앗값) / 일수, 예전 4종 150~275원 기준)
+--     🥬150 🥕170 🌶️175 🍅217 🌹217 🌵150(물 X) 🌻183(노을 373) 🍀≈200(기댓값) 🌽250 🍓275 🍉350(물 필수) 🎃367
+--     🍄 버섯은 한 번에 +50원이지만 물 주고 약 1분 반이면 다시 심을 수 있어요 (계속 지켜보면 하루 ~200원)
+--     🍇 포도나무는 첫 수확은 손해(-400)지만 그 뒤로 2일마다 800원 = 하루 400원 (오래 키울수록 이득)
+--   🏷️ 오늘의 특가: 내 근무일마다 씨앗 하나가 SEED_DEAL_RATE 가격 (SalaryConfig.seedDealId)
+SalaryConfig.GARDEN_SLOTS = 6 -- (텃밭을 넓혀서 4 → 6칸)
+SalaryConfig.GARDEN_GIFT_DELTA = -0.1 -- 🎁 직접 기른 채소 선물: 오늘의 의심도 속도 (씨앗마다 giftDelta로 바꿀 수 있어요)
+SalaryConfig.SEED_MAX = 99 -- 🎒 씨앗 한 종류당 최대 보관 개수
+SalaryConfig.SEED_DEAL_RATE = 0.7 -- 🏷️ 오늘의 특가 = 30% 할인
 SalaryConfig.GardenSeeds = {
-	{ id = "lettuce", emoji = "🥬", name = "상추", price = 100, days = 1, sell = 250, color = Color3.fromRGB(110, 200, 90), description = "하루면 쑥쑥! 초보 농부용" },
-	{ id = "pepper", emoji = "🌶️", name = "고추", price = 200, days = 2, sell = 550, color = Color3.fromRGB(220, 40, 40), description = "맵게 잘 자라요" },
-	{ id = "tomato", emoji = "🍅", name = "방울토마토", price = 350, days = 3, sell = 1000, color = Color3.fromRGB(240, 70, 50), description = "주렁주렁 열려요" },
-	{ id = "strawberry", emoji = "🍓", name = "딸기", price = 600, days = 4, sell = 1700, color = Color3.fromRGB(255, 60, 90), description = "정성이 많이 들지만 제일 비싸요" },
+	-- ⚠️ lettuce·pepper·tomato·strawberry ID는 예전 저장 화분이 써요. 바꾸지 마세요!
+	{ id = "mushroom", emoji = "🍄", name = "느타리버섯", price = 80, days = 1, minutes = 120, sell = 130, kind = "mushroom", color = Color3.fromRGB(190, 160, 130), description = "⚡ 쾌속! 물 주고 2시간이면 쏙" },
+	{ id = "lettuce", emoji = "🥬", name = "상추", price = 100, days = 1, sell = 250, kind = "leafy", color = Color3.fromRGB(110, 200, 90), description = "하루면 쑥쑥! 초보 농부용" },
+	{ id = "carrot", emoji = "🥕", name = "당근", price = 180, days = 2, sell = 520, kind = "root", color = Color3.fromRGB(255, 140, 40), description = "땅속에서 몰래 자라요 (월급루팡처럼)" },
+	{ id = "pepper", emoji = "🌶️", name = "고추", price = 200, days = 2, sell = 550, kind = "fruit", color = Color3.fromRGB(220, 40, 40), description = "맵게 잘 자라요" },
+	{ id = "clover", emoji = "🍀", name = "네잎클로버", price = 300, days = 2, sell = 350, kind = "clover", color = Color3.fromRGB(60, 200, 90), luck = { chance = 0.1, prize = 4000 }, description = "🎰 10% 확률로 행운 대박 4,000원!" },
+	{ id = "cactus", emoji = "🌵", name = "선인장", price = 250, days = 3, sell = 700, kind = "cactus", color = Color3.fromRGB(70, 160, 80), noWater = true, description = "🏜️ 물 안 줘도 알아서 자라요 (바쁜 직장인용)" },
+	{ id = "tomato", emoji = "🍅", name = "방울토마토", price = 350, days = 3, sell = 1000, kind = "fruit", color = Color3.fromRGB(240, 70, 50), description = "주렁주렁 열려요" },
+	{ id = "corn", emoji = "🌽", name = "옥수수", price = 400, days = 3, sell = 1150, kind = "stalk", color = Color3.fromRGB(250, 210, 60), rank = 2, description = "키가 쑥쑥! 옥상 위로 삐죽" },
+	{ id = "rose", emoji = "🌹", name = "장미", price = 450, days = 3, sell = 1100, kind = "flower", color = Color3.fromRGB(220, 30, 60), rank = 2, giftDelta = -0.2, description = "💘 부장님 선물 효과 2배 (의심도 속도 -0.2)" },
+	{ id = "sunflower", emoji = "🌻", name = "해바라기", price = 400, days = 3, sell = 950, kind = "flower", color = Color3.fromRGB(255, 200, 30), rank = 2, sunsetBonus = 1.6, description = "🌅 노을 시간에 팔면 1.6배!" },
+	{ id = "strawberry", emoji = "🍓", name = "딸기", price = 600, days = 4, sell = 1700, kind = "fruit", color = Color3.fromRGB(255, 60, 90), description = "정성이 많이 들지만 달콤하게 비싸요" },
+	{ id = "watermelon", emoji = "🍉", name = "수박", price = 700, days = 4, sell = 2100, kind = "vine", color = Color3.fromRGB(60, 150, 60), rank = 3, thirsty = true, description = "💦 물귀신! 하루만 걸러도 말라 죽어요" },
+	{ id = "grape", emoji = "🍇", name = "포도나무", price = 1200, days = 5, sell = 800, kind = "tree", color = Color3.fromRGB(130, 60, 170), rank = 3, regrow = 2, description = "🔁 한 번 심으면 2일마다 또 열려요" },
+	{ id = "pumpkin", emoji = "🎃", name = "호박", price = 1000, days = 6, sell = 3200, kind = "vine", color = Color3.fromRGB(255, 130, 20), rank = 4, description = "느리지만 엄청 커요! 끈기의 상징" },
 }
 function SalaryConfig.getSeed(seedId: string): any
 	for _, seed in SalaryConfig.GardenSeeds do
@@ -2015,6 +2265,137 @@ function SalaryConfig.getSeed(seedId: string): any
 		end
 	end
 	return nil
+end
+-- 🏷️ 오늘의 특가 씨앗 ID (내 근무일 수로 돌아가요)
+function SalaryConfig.seedDealId(day: number): string
+	local seeds = SalaryConfig.GardenSeeds
+	return seeds[(math.floor(day) * 5) % #seeds + 1].id
+end
+-- 오늘 씨앗 가격 (특가면 할인)
+function SalaryConfig.seedPrice(seed: any, day: number): number
+	if SalaryConfig.seedDealId(day) == seed.id then
+		return math.floor(seed.price * SalaryConfig.SEED_DEAL_RATE / 10) * 10
+	end
+	return seed.price
+end
+-- "2일" / "물 주고 2시간"
+function SalaryConfig.seedGrowText(seed: any): string
+	if seed.minutes then
+		return `물 주고 {SalaryConfig.gameDurationText(seed.minutes)}`
+	end
+	return `{seed.days}일`
+end
+-- 씨앗 특징 한 줄 (없으면 "")
+function SalaryConfig.seedPerkText(seed: any): string
+	local parts = {}
+	if seed.minutes then
+		table.insert(parts, "⚡쾌속")
+	end
+	if seed.noWater then
+		table.insert(parts, "🏜️물 X")
+	end
+	if seed.thirsty then
+		table.insert(parts, "💦물 필수")
+	end
+	if seed.regrow then
+		table.insert(parts, `🔁{seed.regrow}일마다`)
+	end
+	if seed.sunsetBonus then
+		table.insert(parts, `🌅x{seed.sunsetBonus}`)
+	end
+	if seed.luck then
+		table.insert(parts, "🎰대박")
+	end
+	if seed.giftDelta then
+		table.insert(parts, "💘선물")
+	end
+	return table.concat(parts, " ")
+end
+-- 화분 상태: "empty" / "dead" / "ripe" / "wilted" / "growing" (now = 서버 os.time / 클라 GetServerTimeNow)
+function SalaryConfig.gardenState(slot: any, now: number): string
+	local seed = SalaryConfig.getSeed(slot.seed)
+	if not seed then
+		return "empty"
+	end
+	local missed = slot.missed or 0
+	if not seed.noWater and missed >= (if seed.thirsty then 1 else 2) then
+		return "dead"
+	elseif (slot.growth or 0) >= seed.days or (seed.minutes and (slot.readyAt or 0) > 0 and now >= slot.readyAt) then
+		return "ripe"
+	elseif not seed.noWater and missed >= 1 then
+		return "wilted"
+	end
+	return "growing"
+end
+
+-- 🌷 내 공원 화단 (눈치물산 공원, 대리부터 · 화단 PARK_BEDS곳, 사람마다 저장돼요)
+--   🏪 사내 매점 [🌱 씨앗] 탭 → [🌷 꽃씨·거름] 에서 꽃씨와 🧪 거름 사기 → 🎒 보관
+--   공원 화단 [E] → 꽃씨 심기 → 매일 💧 물 주기 (하루 한 번) → 퇴근하면 한 단계 자라요
+--   🧪 거름: 꽃마다 마지막 feeds단계(꽃봉오리 때)엔 거름도 한 번 줘야 자라요 (단계마다 1개, 준 건 그 단계 동안 유지)
+--   물을 안 준 날은 그냥 멈춰요 (안 죽어요!) · 활짝 피면 영원히 안 시들어요 · 🧹 뽑으면 다시 심을 수 있어요
+--   💰 공원 정원 수당 (눈치물산에서 퇴근할 때마다): 핀 화단 1곳마다 PARK_BED_BONUS원
+--      + 🌈 정원 완성 (화단 전부 활짝 + 꽃 PARK_FULL_KINDS종 이상) PARK_FULL_BONUS원
+--   shape = 화단 위 생김새 (cup·daisy·rose·sunflower·tree·hydrangea·hibiscus·pompom·mist·spike)
+--   colors = 꽃 색 (여러 개면 섞어서 피어요)
+SalaryConfig.PARK_BEDS = 6
+SalaryConfig.PARK_BED_BONUS = 15 -- (보너스일 뿐이라 작게)
+SalaryConfig.PARK_FULL_BONUS = 60
+SalaryConfig.PARK_FULL_KINDS = 3
+SalaryConfig.FERTILIZER_PRICE = 100 -- 🧪 거름 1개
+SalaryConfig.FERTILIZER_MAX = 99
+SalaryConfig.FLOWER_SEED_MAX = 99 -- 🎒 꽃씨 한 종류당 최대
+SalaryConfig.ParkFlowers = {
+	{ id = "daisy", emoji = "🌼", name = "데이지", price = 150, days = 2, feeds = 0, shape = "daisy", colors = { Color3.fromRGB(250, 250, 245) }, description = "거름 없이도 피는 초보용 꽃" },
+	{ id = "tulip", emoji = "🌷", name = "튤립", price = 200, days = 2, feeds = 1, shape = "cup", colors = { Color3.fromRGB(240, 60, 90), Color3.fromRGB(255, 200, 60), Color3.fromRGB(255, 140, 190) }, description = "알록달록 세 가지 색으로 피어요" },
+	{ id = "babybreath", emoji = "💮", name = "안개꽃", price = 250, days = 2, feeds = 1, shape = "mist", colors = { Color3.fromRGB(255, 255, 255) }, description = "몽글몽글 하얀 구름 같아요" },
+	{ id = "lavender", emoji = "💜", name = "라벤더", price = 300, days = 3, feeds = 1, shape = "spike", colors = { Color3.fromRGB(150, 110, 210) }, description = "보랏빛 힐링 (향기는 상상으로)" },
+	{ id = "sunflower", emoji = "🌻", name = "해바라기", price = 350, days = 3, feeds = 1, shape = "sunflower", colors = { Color3.fromRGB(255, 200, 30) }, description = "키가 커서 멀리서도 잘 보여요" },
+	{ id = "mum", emoji = "🏵️", name = "국화", price = 400, days = 3, feeds = 1, shape = "pompom", colors = { Color3.fromRGB(255, 180, 40), Color3.fromRGB(255, 230, 120) }, description = "동글동글 가을 감성" },
+	{ id = "rose", emoji = "🌹", name = "장미", price = 450, days = 3, feeds = 2, shape = "rose", colors = { Color3.fromRGB(210, 25, 50) }, description = "새빨간 장미 정원 (가시 조심)" },
+	{ id = "hydrangea", emoji = "💐", name = "수국", price = 550, days = 4, feeds = 2, shape = "hydrangea", colors = { Color3.fromRGB(120, 160, 240), Color3.fromRGB(180, 130, 230), Color3.fromRGB(255, 160, 200) }, description = "파랑·보라·분홍 꽃송이 덤불" },
+	{ id = "hibiscus", emoji = "🌺", name = "히비스커스", price = 650, days = 4, feeds = 2, shape = "hibiscus", colors = { Color3.fromRGB(255, 70, 90), Color3.fromRGB(255, 140, 60) }, description = "휴가 가고 싶어지는 열대 꽃" },
+	{ id = "cherry", emoji = "🌸", name = "벚꽃 나무", price = 1000, days = 4, feeds = 3, shape = "tree", colors = { Color3.fromRGB(255, 190, 215), Color3.fromRGB(255, 225, 235) }, description = "작은 벚나무가 화단 가득 (공원의 주인공)" },
+}
+function SalaryConfig.getFlower(flowerId: string): any
+	for _, flower in SalaryConfig.ParkFlowers do
+		if flower.id == flowerId then
+			return flower
+		end
+	end
+	return nil
+end
+-- 화단 상태: "empty" / "growing" / "bloomed"
+function SalaryConfig.parkBedState(bed: any): string
+	local flower = typeof(bed) == "table" and SalaryConfig.getFlower(bed.flower or "")
+	if not flower then
+		return "empty"
+	end
+	return if (bed.growth or 0) >= flower.days then "bloomed" else "growing"
+end
+-- 지금 단계(growth)에 🧪 거름이 필요한가 (마지막 feeds단계)
+function SalaryConfig.parkNeedsFeed(flower: any, growth: number): boolean
+	return growth < flower.days and growth >= flower.days - (flower.feeds or 0)
+end
+-- "💧2일 · 🧪1번"
+function SalaryConfig.flowerCareText(flower: any): string
+	return `💧{flower.days}일` .. (if (flower.feeds or 0) > 0 then ` · 🧪{flower.feeds}번` else " · 🧪없이")
+end
+-- 💰 공원 정원 수당 → (총액, 핀 화단 수, 꽃 종류 수, 정원 완성인가)
+function SalaryConfig.parkBonus(beds: any): (number, number, number, boolean)
+	local bloomed, kinds = 0, {}
+	local kindCount = 0
+	for i = 1, SalaryConfig.PARK_BEDS do
+		local bed = typeof(beds) == "table" and beds[i]
+		if bed and SalaryConfig.parkBedState(bed) == "bloomed" then
+			bloomed += 1
+			if not kinds[bed.flower] then
+				kinds[bed.flower] = true
+				kindCount += 1
+			end
+		end
+	end
+	local full = bloomed >= SalaryConfig.PARK_BEDS and kindCount >= SalaryConfig.PARK_FULL_KINDS
+	return bloomed * SalaryConfig.PARK_BED_BONUS + (if full then SalaryConfig.PARK_FULL_BONUS else 0), bloomed, kindCount, full
 end
 
 -- ✈️ 옥상 종이비행기

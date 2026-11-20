@@ -127,7 +127,7 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 		end
 		clearBoxes(player)
 		if state.slowed then
-			setSpeed(player, 16)
+			setSpeed(player, SalaryConfig.walkSpeed(player, 16)) -- ⚡ 민첩성 보너스를 넣은 평소 속도로
 			state.slowed = false
 		end
 		state.status = if success then "success" else "fail"
@@ -203,7 +203,8 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 				box:Destroy()
 				state.progress += 1
 				state.slowed = true
-				setSpeed(player, SalaryConfig.BOX_SPEEDS[math.min(state.progress, #SalaryConfig.BOX_SPEEDS)])
+				-- 💪 근력: 택배 들고 느려지는 정도가 줄어요 (최대 -50%) · ⚡ 민첩성 보너스도 곱해요
+				setSpeed(player, SalaryConfig.carrySpeed(player, SalaryConfig.BOX_SPEEDS[math.min(state.progress, #SalaryConfig.BOX_SPEEDS)]))
 				state.progressText = `{state.progress}/{count}개`
 				if state.progress >= count then
 					state.advanceNow = true

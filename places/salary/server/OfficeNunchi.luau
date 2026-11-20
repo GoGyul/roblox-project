@@ -68,15 +68,15 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	-- 업무 공간 카펫
 	B:part(Vector3.new(86, 0.1, 50), v(0, 0.05, -9), { Color = C.rug, Material = Enum.Material.Carpet, CanCollide = false })
 	B:wall("X", -HD - 0.5, -HW - 1, HW + 1, FLOOR_Y, WALL_HEIGHT, { { center = 0, width = 6, height = 9 } }, wall) -- 앞 (출입문)
-	-- 🏋️ 체력 단련실 별관 (뒷벽 너머, 안쪽 x -40~0 / z 43~73): 카페 라운지(x ≤ -44.5)·매점(x ≥ 49)·부장님 자리와 안 겹쳐요
-	local GYM_X, GYM_HX, GYM_HZ = -20, 20, 15
-	local GYM_Z = HD + 1 + GYM_HZ -- 58
+	-- 🏋️ 체력 단련실 별관 (뒷벽 너머, 안쪽 x -52~12 / z 43~91): 카페 라운지(x ≤ -44.5)·매점(x ≥ 49)·부장님 자리와 안 겹쳐요
+	local GYM_X, GYM_HX, GYM_HZ = -20, 32, 24 -- 📐 1.6배로 넓혔어요 (40×30 → 64×48)
+	local GYM_Z = HD + 1 + GYM_HZ
 	B:wall("X", HD + 0.5, -HW - 1, HW + 1, FLOOR_Y, WALL_HEIGHT, { { center = GYM_X, width = 8, height = 9 } }, wall) -- 뒤 (🏋️ 체력 단련실 문)
 	B:wall("Z", -HW - 0.5, -HD, HD, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 왼쪽
 	B:wall("Z", HW + 0.5, -HD, HD, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 오른쪽
 	-- 출입문 바깥은 🌳 잔디 공원이에요 (아래에서 지어요)
 	-- 🏋️ 체력 단련실 별관: 바닥·천장·벽 3개 (사무실 뒷벽과 이어져서 밖은 막혀 있어요)
-	local gymNear, gymFar = HD + 1, GYM_Z + GYM_HZ -- z 43 ~ 73
+	local gymNear, gymFar = HD + 1, GYM_Z + GYM_HZ -- z 43 ~ 91
 	B:part(Vector3.new(GYM_HX * 2 + 2, 1, gymFar + 1 - gymNear), Vector3.new(GYM_X, FLOOR_Y - 0.5, (gymNear + gymFar + 1) / 2), { Color = C.floor, Material = Enum.Material.Marble })
 	B:part(Vector3.new(GYM_HX * 2 + 2, 1, gymFar + 1 - gymNear), v(GYM_X, WALL_HEIGHT + 0.5, (gymNear + gymFar + 1) / 2), { Color = C.wall })
 	B:wall("Z", GYM_X - GYM_HX - 0.5, gymNear, gymFar + 1, FLOOR_Y, WALL_HEIGHT, nil, wall)
@@ -325,6 +325,32 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		light.Range = 18
 		light.Brightness = 0.6
 		light.Parent = bulb
+	end
+
+	-- 🌷 내 공원 화단 6곳 (8×5칸, 돌 테두리): 꽃은 각자 화면에 "내 것"으로 그려져요 (ParkGarden 모듈)
+	--   나무·벤치·분수·가로등·회식 테이블·흡연구역·경비실·경비원 순찰 지점·돌길을 피해서 놓았어요
+	--   ① 왼쪽 나무 사이 (-32,-62) ② 오른쪽 나무 사이 (32,-62) ③④ 건물 앞 양쪽 구석 (±58,-48) ⑤⑥ 양옆 울타리 쪽 (±60,-76)
+	local parkBeds = {}
+	for _, xz in { { -32, -62 }, { 32, -62 }, { -58, -48 }, { 58, -48 }, { -60, -76 }, { 60, -76 } } do
+		local x, z = xz[1], xz[2]
+		local stone = { Color = Color3.fromRGB(170, 160, 145), Material = Enum.Material.Cobblestone }
+		for _, side in { -1, 1 } do
+			B:part(Vector3.new(8, 0.7, 0.6), v(x, 0.35, z + side * 2.2), stone) -- 앞뒤 테두리
+			B:part(Vector3.new(0.6, 0.7, 3.8), v(x + side * 3.7, 0.35, z), stone) -- 양옆 테두리
+		end
+		for _, dx in { -3.7, 3.7 } do -- 모서리 나무 기둥
+			for _, dz in { -2.2, 2.2 } do
+				B:part(Vector3.new(0.8, 0.9, 0.8), v(x + dx, 0.45, z + dz), { Color = C.wood, Material = Enum.Material.Wood })
+			end
+		end
+		local soil = B:part(Vector3.new(6.8, 0.5, 3.8), v(x, 0.25, z), { Name = "ParkBed", Color = Color3.fromRGB(105, 75, 50), Material = Enum.Material.Ground })
+		table.insert(parkBeds, soil)
+	end
+	-- 안내판 (출입문 오른쪽 옆, 워크숍 결승선보다 뒤라 길을 안 막아요)
+	B:part(Vector3.new(0.3, 3, 0.3), v(9, 1.5, -44.5), { Color = C.darkWood, Material = Enum.Material.Wood })
+	local parkSign = B:part(Vector3.new(3.6, 1.6, 0.25), v(9, 3.4, -44.5), { Color = Color3.fromRGB(245, 235, 210), Material = Enum.Material.Wood })
+	for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
+		Build.surfaceText(parkSign, face, "🌷 내 공원 화단 [E]", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(200, 70, 110) })
 	end
 
 	-- 🍻 회식 테이블 (공원 왼쪽): 긴 식탁 + 양쪽 벤치 의자 8개 + 가운데 불판
@@ -586,7 +612,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		v(-62, 0, -6), -- 엘리베이터 앞
 		v(48.5, 0, -32), -- 화장실 문 앞
 		v(45.5, 0, 29.5), -- 매점 문 앞
-		v(-20, 0, 50), -- 🏋️ 체력 단련실 (가끔 들여다봐요)
+		v(-20, 0, 56), -- 🏋️ 체력 단련실 (가끔 들여다봐요)
 		v(0, 0, -56), -- 🌳 공원 (가끔 나가 봐요)
 		v(28, 0, -76), -- 흡연구역 근처
 		v(-20, 0, -112), -- 🏙️ 눈치 스트리트 (근무 중 외출 감시!)
@@ -652,6 +678,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		dart = { board = dartBoard, counter = dartCounter }, -- 🎯 풍선 다트
 		arcade = arcade, -- 🕹️ 오락실 (게임기, 경품 교환대, 기록판)
 		dinnerSeats = dinnerSeats, -- 🍻 회식은 공원 식탁에서
+		parkBeds = parkBeds, -- 🌷 내 공원 화단 (흙 Part 6개)
 		dinnerBoss = v(dinnerX - 7.6, 0, dinnerZ), -- 부장님은 식탁 끝 상석
 		dinnerLook = Vector3.new(1, 0, 0),
 		setClock = setClock,

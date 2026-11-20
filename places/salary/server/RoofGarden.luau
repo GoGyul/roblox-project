@@ -1,5 +1,6 @@
 -- 🌱 옥상 텃밭
---   옥상 화단 [E] → 내 화분 창 (심기 · 💧 물 주기 · 🧺 수확)
+--   옥상 화단 [E] → 내 화분 창 (🎒 씨앗 심기 · 💧 물 주기 · 🧺 수확)
+--   씨앗은 🏪 사내 매점 [🌱 씨앗] 탭에서 사서 🎒에 보관해요 (화분에선 돈을 안 내요)
 --   화분 데이터는 사람마다 저장돼요. 화분 위 식물은 각자 화면에 "내 것"으로 그려져요 (GardenSlots 위치)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,7 +17,7 @@ function RoofGarden.start(boxes: { BasePart }, remotes, hooks)
 	-- 화단 하나에 화분 두 칸씩 (왼쪽·오른쪽)
 	local slots = {}
 	for _, box in boxes do
-		for _, dx in { -1.2, 1.2 } do
+		for _, dx in { -1.5, 1.5 } do
 			local top = box.Position + Vector3.new(dx, box.Size.Y / 2, 0)
 			table.insert(slots, { top.X, top.Y, top.Z })
 			if #slots >= SalaryConfig.GARDEN_SLOTS then

@@ -87,6 +87,7 @@ end
 local cat = Cat.start(office, boss, dayCycle, Remotes, Employees.catHooks) -- 🐱 사무실 고양이 월급냥
 Employees.hooks.catOn = cat.sittingOn
 local rooftop = Rooftop.start(office, boss, dayCycle, Remotes, Employees.roofHooks, events) -- 🏢 옥상 + 🚪 엘리베이터
+require(script.ParkGarden).start(office.parkBeds, Remotes, { action = Employees.parkAction }) -- 🌷 내 공원 화단 (눈치물산만)
 -- 🪑 부장님·동료가 책상·탁자 위로 올라가지 않게 (사무실 바닥 높이 1, 옥상 300)
 require(script.Npc).guardFurniture(office.folder, { 1, 300 })
 SeatPrompts.start(Remotes) -- 🪑 의자마다 [E] 앉기

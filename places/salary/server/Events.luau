@@ -260,7 +260,7 @@ function Events:cleanup()
 			player:SetAttribute("WorkshopStatus", nil)
 			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if humanoid then
-				humanoid.WalkSpeed = 16
+				humanoid.WalkSpeed = SalaryConfig.walkSpeed(player, 16) -- ⚡ 민첩성 보너스 포함 평소 속도
 			end
 		end
 	end
@@ -576,7 +576,7 @@ function Events:runWorkshop(token: number)
 		if racer.player then
 			racer.player:SetAttribute("WorkshopStatus", status)
 			if racer.humanoid.Parent then
-				racer.humanoid.WalkSpeed = 16
+				racer.humanoid.WalkSpeed = SalaryConfig.walkSpeed(racer.player, 16) -- ⚡ 민첩성 보너스 포함 평소 속도 (게임 중엔 모두 같은 속도)
 			end
 		else
 			racer.humanoid:MoveTo(racer.root.Position) -- 그 자리에 멈춰요

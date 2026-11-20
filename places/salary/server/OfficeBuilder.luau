@@ -99,6 +99,7 @@ export type Office = {
 	wheel: any?, -- 🎡 돌림판 (눈치물산만)
 	dart: any?, -- 🎯 풍선 다트 (눈치물산만)
 	dinnerSeats: { Seat }, -- 🍻 회식 자리 (없으면 화면 미니게임만)
+	parkBeds: { BasePart }?, -- 🌷 내 공원 화단 흙 (눈치물산만)
 	dinnerBoss: Vector3?,
 	dinnerLook: Vector3?,
 	setClock: (number, number) -> (),
@@ -465,7 +466,7 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 	-- 🤸 스트레칭 매트 (입구 쪽 왼편, 바닥에 앉아서) · ⚖️ 밸런스 볼 (입구 쪽 오른편, 공 위에 앉아서)
 	--   (가운데 입구 길은 비워 둬요)
 	do
-		local mx, mz = -0.6 * hx, -hz + 6
+		local mx, mz = -0.62 * hx, -hz + 8
 		B:part(Vector3.new(3, 0.12, 6.5), at(mx, 0.16, mz), { Color = Color3.fromRGB(150, 90, 200), Material = Enum.Material.Rubber, CanCollide = false }) -- 요가 매트
 		B:part(Vector3.new(3, 0.5, 0.5), at(mx, 0.35, mz + 3.4), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 90, 0), Color = Color3.fromRGB(120, 70, 170), Material = Enum.Material.Rubber, CanCollide = false }) -- 말아 둔 매트 끝
 		gymSeat("stretch", CFrame.new(at(mx, 0.45, mz + 1.2)) * FACE, Vector3.new(2, 0.3, 2), { Transparency = 1, CanCollide = false })
@@ -473,7 +474,7 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 		Build.surfaceText(signPart, Enum.NormalId.Back, "🤸 스트레칭", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(120, 70, 170) })
 	end
 	do
-		local mx, mz = 0.6 * hx, -hz + 6
+		local mx, mz = 0.62 * hx, -hz + 8
 		B:part(Vector3.new(3.2, 3.2, 3.2), at(mx, 1.6, mz), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(240, 120, 60), Material = Enum.Material.Rubber })
 		B:part(Vector3.new(3.6, 0.1, 3.6), at(mx, 0.12, mz), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(70, 70, 80), CanCollide = false }) -- 받침 매트
 		gymSeat("balance", CFrame.new(at(mx, 3.3, mz)) * FACE, Vector3.new(1.6, 0.2, 1.6), { Transparency = 1, CanCollide = false })
@@ -481,7 +482,7 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 
 	-- 조명 (정전 때 같이 꺼지게 lamps로 돌려줘요)
 	local lamps = {}
-	for _, x in { -hx / 2, hx / 2 } do
+	for _, x in { -hx * 2 / 3, 0, hx * 2 / 3 } do -- (넓어진 방이라 조명 6개)
 		for _, z in { -hz / 2, hz / 2 } do
 			local lamp = B:part(Vector3.new(6, 0.3, 1.4), at(x, wallHeight - 0.2, z), {
 				Color = Color3.fromRGB(245, 250, 255),
@@ -546,9 +547,9 @@ function OfficeBuilder.build(companyId: string?): Office
 	B:part(Vector3.new(HALF_WIDTH * 2 + 2, 1, floorDepth), Vector3.new(0, FLOOR_Y - 0.5, 0), { Color = COLORS.floor, Material = Enum.Material.Carpet })
 	B:part(Vector3.new(HALF_WIDTH * 2 + 2, 1, floorDepth), v(0, WALL_HEIGHT + 0.5, 0), { Color = COLORS.wall })
 	B:wall("X", -HALF_DEPTH, -HALF_WIDTH - 1, HALF_WIDTH + 1, FLOOR_Y, WALL_HEIGHT, { { center = 0, width = 6, height = 8 } }, wall) -- 앞 (출입문)
-	-- 🏋️ 체력 단련실 별관 (뒷벽 너머, 안쪽 x -40~-4 / z 32~60 — 화장실·탕비실·부장님 자리와 안 겹쳐요)
-	local GYM_X, GYM_HX, GYM_HZ = -22, 18, 14
-	local GYM_Z = HALF_DEPTH + 0.5 + GYM_HZ -- 46
+	-- 🏋️ 체력 단련실 별관 (뒷벽 너머, 안쪽 x -51~7 / z 32~76 — 화장실·탕비실·부장님 자리와 안 겹쳐요)
+	local GYM_X, GYM_HX, GYM_HZ = -22, 29, 22 -- 📐 1.6배로 넓혔어요 (36×28 → 58×44)
+	local GYM_Z = HALF_DEPTH + 0.5 + GYM_HZ
 	B:wall("X", HALF_DEPTH, -HALF_WIDTH - 1, HALF_WIDTH + 1, FLOOR_Y, WALL_HEIGHT, { { center = GYM_X, width = 8, height = 9 } }, wall) -- 뒤 (🏋️ 체력 단련실 문)
 	B:wall("Z", -HALF_WIDTH - 0.5, -HALF_DEPTH + 0.5, HALF_DEPTH - 0.5, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 왼쪽
 	B:wall("Z", HALF_WIDTH + 0.5, -HALF_DEPTH + 0.5, HALF_DEPTH - 0.5, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 오른쪽
@@ -558,7 +559,7 @@ function OfficeBuilder.build(companyId: string?): Office
 	B:part(Vector3.new(1, WALL_HEIGHT, 3), v(4, WALL_HEIGHT / 2, -HALF_DEPTH - 1.5), wall)
 
 	-- 🏋️ 체력 단련실 별관: 바닥·천장·벽 3개 (사무실 뒷벽과 이어져서 밖은 막혀 있어요)
-	local gymFar = GYM_Z + GYM_HZ -- 안쪽 뒷벽 (z 60)
+	local gymFar = GYM_Z + GYM_HZ -- 안쪽 뒷벽
 	local gymNear = HALF_DEPTH + 0.5 -- 사무실 뒷벽 안쪽 면 (z 32)
 	B:part(Vector3.new(GYM_HX * 2 + 2, 1, gymFar + 1 - gymNear), Vector3.new(GYM_X, FLOOR_Y - 0.5, (gymNear + gymFar + 1) / 2), { Color = COLORS.floor, Material = Enum.Material.Carpet })
 	B:part(Vector3.new(GYM_HX * 2 + 2, 1, gymFar + 1 - gymNear), v(GYM_X, WALL_HEIGHT + 0.5, (gymNear + gymFar + 1) / 2), { Color = COLORS.wall })
@@ -763,7 +764,7 @@ function OfficeBuilder.build(companyId: string?): Office
 		v(38, 0, 13), -- 탕비실 문 앞 (안을 들여다봐요)
 		v(-52, 0, -1), -- 왼쪽 끝 (프린터·엘리베이터 쪽)
 		v(54, 0, -6), -- 오른쪽 끝
-		v(-22, 0, 36), -- 🏋️ 체력 단련실 (가끔 들여다봐요)
+		v(-22, 0, 44), -- 🏋️ 체력 단련실 (가끔 들여다봐요)
 	}
 
 	return {

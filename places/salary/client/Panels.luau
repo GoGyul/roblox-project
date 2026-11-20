@@ -39,9 +39,9 @@ end
 local function fitScale(width: number, height: number, keepClear: boolean?): number
 	local camera = workspace.CurrentCamera
 	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
-	-- 위쪽 로블록스 메뉴 막대 빼고 / keepClear면 위 시계(~70) + 아래 행동 버튼줄과 안내 문구(~130)도 빼고
-	local availableHeight = if keepClear then (viewport.Y - 36 - 70 - 130) * 0.95 else (viewport.Y - 70) * 0.95
-	local availableWidth = (viewport.X - (if keepClear then 440 else 0)) * 0.95
+	-- 위쪽 로블록스 메뉴 막대 빼고 / keepClear면 아래 행동 버튼줄과 안내 문구(~120)는 비워 둬요 (양옆 정보창은 살짝만 비켜요)
+	local availableHeight = if keepClear then (viewport.Y - 36 - 8 - 120) * 0.95 else (viewport.Y - 70) * 0.95
+	local availableWidth = (viewport.X - (if keepClear then 300 else 0)) * 0.95
 	return math.clamp(math.min(availableWidth / width, availableHeight / height), 0.4, 1)
 end
 
@@ -49,7 +49,7 @@ local function sheet(width: number, height: number, keepClear: boolean?): Frame
 	close()
 	local frame = Ui.make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = if keepClear then UDim2.new(0.5, 0, 0.5, -30) else UDim2.fromScale(0.5, 0.5), -- (위 70·아래 130 사이 가운데)
+		Position = if keepClear then UDim2.new(0.5, 0, 0.5, -56) else UDim2.fromScale(0.5, 0.5), -- (위 8·아래 120 사이 가운데)
 		Size = UDim2.fromOffset(width, height),
 		BackgroundColor3 = Color3.fromRGB(250, 250, 245),
 		ZIndex = 30,
@@ -116,6 +116,36 @@ local function closeWhenAway(frame: GuiObject, station: any, range: number)
 	end)
 end
 
+-- 🖱️ 창 바깥(빈 화면)을 누르면 창이 닫혀요 (소지품·꾸미기·스탯·인형·도감·매점 같은 정보 창)
+local function closeOnOutside(frame: GuiObject)
+	local backdrop = Ui.make("TextButton", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		AutoButtonColor = false,
+		Text = "",
+		ZIndex = 29, -- (창 바로 아래)
+		Parent = gui,
+	})
+	backdrop.Activated:Connect(function()
+		if current == frame then
+			close()
+		end
+	end)
+	frame.Destroying:Connect(function()
+		backdrop:Destroy()
+	end)
+end
+
+-- 📜 스크롤 막대를 잘 보이게 (모든 창의 목록에 자동 적용)
+local function styleScroll(item: Instance)
+	if item:IsA("ScrollingFrame") then
+		item.ScrollBarImageColor3 = Color3.fromRGB(120, 95, 50)
+		item.ScrollBarImageTransparency = 0.1
+		item.ScrollBarThickness = math.max(item.ScrollBarThickness, 10)
+	end
+end
+gui.DescendantAdded:Connect(styleScroll)
+
 local function line(parent: Instance, y: number, height: number, content: string, props: { [string]: any }?): TextLabel
 	local options = {
 		Position = UDim2.fromOffset(0, y),
@@ -147,6 +177,95 @@ local function button(parent: Instance, x: number, label: string, onClick: () ->
 		Parent = parent,
 	})
 	b.Activated:Connect(onClick)
+end
+
+-- ❓ 자세한 설명은 이 작은 버튼 뒤에 숨겨 둬요: 누르면 창 안에 설명 팝업이 떴다가, 다시 누르면(팝업·X·❓) 닫혀요
+--   body는 글자 또는 (열 때마다 새로 만드는) 함수 / window = 팝업을 띄울 창 (없으면 parent)
+local function helpButton(parent: GuiObject, position: UDim2, title: string, body: string | () -> string, window: GuiObject?): TextButton
+	local host = window or parent
+	local popup: GuiObject? = nil
+	local b = Ui.button({
+		Position = position,
+		Size = UDim2.fromOffset(28, 28),
+		Text = "❓",
+		TextSize = 15,
+		BackgroundColor3 = Color3.fromRGB(225, 232, 248),
+		ZIndex = 34,
+		Parent = parent,
+	})
+	local function hide()
+		if popup then
+			popup:Destroy()
+			popup = nil
+		end
+	end
+	b.Activated:Connect(function()
+		if popup and popup.Parent then
+			hide()
+			return
+		end
+		for _, child in host:GetChildren() do
+			if child.Name == "HelpPopup" then
+				child:Destroy() -- (다른 ❓ 팝업은 닫아요)
+			end
+		end
+		local box = Ui.make("TextButton", {
+			Name = "HelpPopup",
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 38),
+			Size = UDim2.new(1, -16, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundColor3 = Color3.fromRGB(255, 252, 238),
+			AutoButtonColor = false,
+			Text = "",
+			ZIndex = 60,
+			Parent = host,
+		}, { Ui.corner(10), Ui.stroke(Color3.fromRGB(150, 130, 80), 2), Ui.padding(14) })
+		popup = box
+		box.Activated:Connect(hide)
+		Ui.make("TextLabel", {
+			Size = UDim2.new(1, -34, 0, 24),
+			BackgroundTransparency = 1,
+			Text = "❓ " .. title,
+			TextColor3 = INK,
+			Font = Enum.Font.GothamBlack,
+			TextSize = 18,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			ZIndex = 61,
+			Parent = box,
+		})
+		local x = Ui.button({
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, 4, 0, -4),
+			Size = UDim2.fromOffset(28, 28),
+			Text = "X",
+			TextSize = 15,
+			Font = Enum.Font.GothamBlack,
+			BackgroundColor3 = Color3.fromRGB(225, 225, 228),
+			ZIndex = 62,
+			Parent = box,
+		})
+		x.Activated:Connect(hide)
+		Ui.make("TextLabel", {
+			Position = UDim2.fromOffset(0, 30),
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Text = if type(body) == "function" then body() else body,
+			RichText = true,
+			TextColor3 = INK,
+			Font = Enum.Font.GothamMedium,
+			TextSize = 16,
+			LineHeight = 1.15,
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			ZIndex = 61,
+			Parent = box,
+		})
+	end)
+	b.Destroying:Connect(hide)
+	return b
 end
 
 local function goLobby()
@@ -337,54 +456,74 @@ end)
 -- 🏪 매점
 ---------------------------------------------------------------------------
 -- 🏪 사내 매점 (사무실의 매점 계산대에서 [E] 주문하기로 열려요)
---   탭 두 개: 🧰 사무용품(화분·텀블러·이어폰…) / 🎁 부장님 선물(홍삼·꽃다발·초콜릿)
+--   탭: 🧰 사무용품 / 🎁 부장님 선물 / 👮 경비원 선물 / 🌱 씨앗(🎒 보관 → 옥상 텃밭) / 🐦 비둘기 과자(🎒 보관 → 옥상 모이 통) / 🎟️ 쿠폰 / 📚 자격증
 function Panels.showShop(startTab: string?)
 	local items = SalaryConfig.Items
 	local gifts = SalaryConfig.StreetShops.store.items
 	local coupons = SalaryConfig.Coupons
 	local certs = SalaryConfig.Certificates
 	local guardGifts = SalaryConfig.GuardBribes -- 👮 경비원 선물 (🎒에 보관)
-	local rowsMax = math.max(#items, #gifts, #coupons, #certs, #guardGifts)
-	local frame = sheet(560, 170 + rowsMax * 64)
-	line(frame, 0, 30, "🏪 사내 매점", { Font = Enum.Font.GothamBlack, TextSize = 24 })
-	local balance = line(frame, 0, 30, "", {
+	local rowsMax = math.max(#items, #gifts, #coupons, #certs, #guardGifts, math.ceil((30 + math.ceil(math.max(#SalaryConfig.GardenSeeds, #SalaryConfig.ParkFlowers + 1) / 2) * 59) / 64)) -- (🌱 씨앗은 [채소]/[꽃씨] 고르기 + 두 줄)
+	-- 📐 창을 넓히고 글씨를 키웠어요 (목록이 길면 탭마다 스크롤)
+	local _ = rowsMax
+	local frame = sheet(720, 600)
+	closeOnOutside(frame)
+	line(frame, 0, 32, "🏪 사내 매점", { Font = Enum.Font.GothamBlack, TextSize = 26 })
+	local balance = line(frame, 0, 32, "", {
 		TextXAlignment = Enum.TextXAlignment.Right,
 		Font = Enum.Font.GothamBold,
-		Size = UDim2.new(1, -44, 0, 30), -- 오른쪽 위 닫기 버튼 자리는 비워 둬요
+		TextSize = 18,
+		Size = UDim2.new(1, -44, 0, 32), -- 오른쪽 위 닫기 버튼 자리는 비워 둬요
 	})
-	local message = line(frame, 76 + rowsMax * 64 + 6, 22, "", { TextSize = 15, TextColor3 = MUTED })
+	local message = line(frame, 0, 26, "", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, -50),
+		TextSize = 16,
+		TextColor3 = MUTED,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
 
 	-- 탭
 	local pages: { [string]: Frame } = {}
 	local tabButtons: { [string]: TextButton } = {}
 	local function page(id: string): Frame
-		local f = Ui.make("Frame", {
-			Position = UDim2.fromOffset(0, 80),
-			Size = UDim2.new(1, 0, 0, rowsMax * 64),
+		local f = Ui.make("ScrollingFrame", {
+			Position = UDim2.fromOffset(0, 90),
+			Size = UDim2.new(1, 0, 1, -170),
 			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 10,
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			CanvasSize = UDim2.new(),
 			ZIndex = 31,
 			Parent = frame,
 		})
-		pages[id] = f
-		return f
+		pages[id] = f :: any
+		return f :: any
 	end
+	local seedMode = "veg" -- 🌱 씨앗 탭 안: "veg" 🥬 채소 씨앗 / "flower" 🌷 꽃씨·거름
+	local SEED_HINT = "🌱 🎒에 보관 → 옥상 텃밭 · 🏷️ 특가는 매일 바뀌어요"
+	local FLOWER_HINT = "🌷 🎒에 보관 → 공원 화단"
 	local function selectTab(id: string)
 		for tabId, f in pages do
 			f.Visible = tabId == id
 			tabButtons[tabId].BackgroundColor3 = if tabId == id then Color3.fromRGB(255, 200, 80) else Color3.fromRGB(200, 200, 205)
 		end
-		message.Text = if id == "gifts" then "🎁 산 선물은 부장님께 다가가 [E] 말 걸기로 드려요" elseif id == "coupons" then "🎟️ 쿠폰은 사자마자 바로 써요!" elseif id == "certs" then `📚 퀴즈 {SalaryConfig.CERT_QUESTIONS}문제 중 {SalaryConfig.CERT_PASS}문제 맞히면 합격 · 시험은 하루 한 번` else ""
+		message.Text = if id == "gifts" then "🎁 부장님께 [E]로 드려요" elseif id == "guard" then "👮 🎒에 보관 → 경비원에게 [E]" elseif id == "pigeon" then "🐦 🎒에 보관 → 옥상 모이 통 [E]" elseif id == "seeds" then (if seedMode == "flower" then FLOWER_HINT else SEED_HINT) elseif id == "coupons" then "🎟️ 사자마자 바로 써요" elseif id == "certs" then `📚 {SalaryConfig.CERT_QUESTIONS}문제 중 {SalaryConfig.CERT_PASS}개 맞히면 합격 · 하루 한 번` else ""
 		message.TextColor3 = MUTED
 	end
-	for i, info in { { "goods", "🧰 사무용품" }, { "gifts", "🎁 부장님 선물" }, { "guard", "👮 경비원 선물" }, { "coupons", "🎟️ 특수 쿠폰" }, { "certs", "📚 자격증" } } do
+	-- (탭 7개: 680px 안에 글자 수만큼 폭을 나눠요 · 사이 간격 4px)
+	local tabX = 0
+	for _, info in { { "goods", "🧰 사무용품", 104 }, { "gifts", "🎁 부장님", 96 }, { "guard", "👮 경비원", 96 }, { "seeds", "🌱 씨앗", 84 }, { "pigeon", "🐦 비둘기", 96 }, { "coupons", "🎟️ 쿠폰", 84 }, { "certs", "📚 자격증", 96 } } do
 		local b = Ui.button({
-			Position = UDim2.fromOffset((i - 1) * 104, 36),
-			Size = UDim2.fromOffset(100, 34),
+			Position = UDim2.fromOffset(tabX, 40),
+			Size = UDim2.fromOffset(info[3], 42),
 			Text = info[2],
-			TextSize = 13,
+			TextSize = 16,
 			ZIndex = 31,
 			Parent = frame,
 		})
+		tabX += info[3] + 4
 		b.Activated:Connect(function()
 			Sounds.play("click", 0.4)
 			selectTab(info[1])
@@ -393,14 +532,14 @@ function Panels.showShop(startTab: string?)
 	end
 
 	local function row(parent: Frame, i: number, title: string, description: string): TextButton
-		local y = (i - 1) * 64
-		line(parent, y, 22, title, { Font = Enum.Font.GothamBold })
-		line(parent, y + 22, 36, description, { TextSize = 14, TextColor3 = MUTED, Size = UDim2.new(1, -120, 0, 36) })
+		local y = (i - 1) * 84
+		line(parent, y, 28, title, { Font = Enum.Font.GothamBold, TextSize = 20, Size = UDim2.new(1, -175, 0, 28) })
+		line(parent, y + 30, 46, description, { TextSize = 16, TextColor3 = MUTED, Size = UDim2.new(1, -175, 0, 46) })
 		return Ui.button({
 			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, 0, 0, y + 8),
-			Size = UDim2.fromOffset(110, 40),
-			TextSize = 16,
+			Position = UDim2.new(1, -14, 0, y + 14), -- (스크롤 막대 자리는 비워 둬요)
+			Size = UDim2.fromOffset(150, 48),
+			TextSize = 18,
 			ZIndex = 32,
 			Parent = parent,
 		})
@@ -448,7 +587,7 @@ function Panels.showShop(startTab: string?)
 	-- 👮 경비원 선물 (사서 🎒에 보관 → 경비원 앞에서 [E]로 드려요)
 	local guardPage = page("guard")
 	for i, gift in guardGifts do
-		local buy = row(guardPage, i, `{gift.emoji} {gift.name} · {comma(gift.price)}원`, `🙈 경비원이 {SalaryConfig.gameDurationText(gift.minutes)} 동안 못 본 척 · 🎒에 보관`)
+		local buy = row(guardPage, i, `{gift.emoji} {gift.name} · {comma(gift.price)}원`, `🙈 {SalaryConfig.gameDurationText(gift.minutes)} 동안 못 본 척`)
 		buy.Text = "사기"
 		buy.Activated:Connect(function()
 			local ok, result = Remotes.BuyGuardGift:InvokeServer(gift.id)
@@ -456,6 +595,165 @@ function Panels.showShop(startTab: string?)
 			message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
 			Sounds.play(if ok then "ping" else "bass", 0.6, 1.2)
 		end)
+	end
+	-- 🌱 씨앗 (사서 🎒에 보관 → 옥상 화분에 심어요) · 두 줄로 칸칸이
+	local seedPage = page("seeds")
+	-- 위쪽 [🥬 채소 씨앗] [🌷 꽃씨·거름] 고르기 → 아래 칸칸이 (두 줄)
+	local seedPanes: { [string]: Frame } = {}
+	local seedModeButtons: { [string]: TextButton } = {}
+	local function selectSeedMode(mode: string)
+		seedMode = mode
+		for paneId, pane in seedPanes do
+			pane.Visible = paneId == mode
+			seedModeButtons[paneId].BackgroundColor3 = if paneId == mode then Color3.fromRGB(150, 210, 120) else Color3.fromRGB(215, 215, 215)
+		end
+		message.Text = if mode == "flower" then FLOWER_HINT else SEED_HINT
+		message.TextColor3 = MUTED
+	end
+	for k, info in { { "veg", "🥬 채소 씨앗 (옥상)" }, { "flower", "🌷 꽃씨·거름 (공원)" } } do
+		seedPanes[info[1]] = Ui.make("Frame", {
+			Position = UDim2.fromOffset(0, 42),
+			Size = UDim2.new(1, -14, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y, -- (스크롤 길이가 칸 수만큼 늘어나게)
+			BackgroundTransparency = 1,
+			ZIndex = 31,
+			Parent = seedPage,
+		})
+		local b = Ui.button({
+			Position = UDim2.fromOffset((k - 1) * 230, 0),
+			Size = UDim2.fromOffset(222, 36),
+			Text = info[2],
+			TextSize = 16,
+			ZIndex = 33,
+			Parent = seedPage,
+		})
+		b.Activated:Connect(function()
+			Sounds.play("click", 0.4)
+			selectSeedMode(info[1])
+		end)
+		seedModeButtons[info[1]] = b
+	end
+	-- 칸 하나 (제목 · 설명 · [사기] [5개])
+	local function seedCell(parent: Frame, i: number, color: Color3, description: string, onBuy: (number) -> ()): (TextLabel, TextButton, TextButton)
+		local col, rowIndex = (i - 1) % 2, math.floor((i - 1) / 2)
+		local cell = Ui.make("Frame", {
+			Position = UDim2.fromOffset(col * 330, rowIndex * 86),
+			Size = UDim2.fromOffset(320, 80),
+			BackgroundColor3 = color,
+			ZIndex = 32,
+			Parent = parent,
+		}, { Ui.corner(8), Ui.padding(7) })
+		local title = line(cell, 0, 24, "", { Font = Enum.Font.GothamBold, TextSize = 18, ZIndex = 33, Size = UDim2.new(1, -86, 0, 24), TextScaled = true })
+		Ui.make("UITextSizeConstraint", { MaxTextSize = 18, MinTextSize = 11, Parent = title })
+		line(cell, 26, 40, description, { TextSize = 14, ZIndex = 33, TextColor3 = MUTED, Size = UDim2.new(1, -86, 0, 40), TextWrapped = true })
+		local buy = Ui.button({
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, 0, 0, 0),
+			Size = UDim2.fromOffset(80, 30),
+			Text = "사기",
+			TextSize = 15,
+			ZIndex = 34,
+			Parent = cell,
+		})
+		local buy5 = Ui.button({
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, 0, 1, 0),
+			Size = UDim2.fromOffset(80, 30),
+			Text = "5개",
+			TextSize = 15,
+			ZIndex = 34,
+			Parent = cell,
+		})
+		for _, pair in { { buy, 1 }, { buy5, 5 } } do
+			pair[1].Activated:Connect(function()
+				onBuy(pair[2])
+			end)
+		end
+		return title, buy, buy5
+	end
+	-- 🌷 꽃씨 + 🧪 거름 (🎒에 보관 → 눈치물산 공원 화단)
+	local flowerTitles: { [string]: TextLabel } = {}
+	local function buyFlower(itemId: string, count: number)
+		local ok, result = Remotes.BuyFlower:InvokeServer(itemId, count)
+		message.Text = result
+		message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
+		Sounds.play(if ok then "ping" else "bass", 0.6, 1.2)
+	end
+	for i, flower in SalaryConfig.ParkFlowers do
+		local title = seedCell(seedPanes.flower, i, Color3.fromRGB(250, 236, 242), `{SalaryConfig.flowerCareText(flower)} · {flower.description}`, function(count: number)
+			buyFlower(flower.id, count)
+		end)
+		flowerTitles[flower.id] = title
+	end
+	flowerTitles.fertilizer = seedCell(seedPanes.flower, #SalaryConfig.ParkFlowers + 1, Color3.fromRGB(232, 240, 250), "🌿 꽃봉오리에 1개씩", function(count: number)
+		buyFlower("fertilizer", count)
+	end)
+	selectSeedMode("veg")
+	local seedButtons = {}
+	for i, seed in SalaryConfig.GardenSeeds do
+		local col, rowIndex = (i - 1) % 2, math.floor((i - 1) / 2)
+		local cell = Ui.make("Frame", {
+			Position = UDim2.fromOffset(col * 330, rowIndex * 86),
+			Size = UDim2.fromOffset(320, 80),
+			BackgroundColor3 = Color3.fromRGB(238, 245, 232),
+			ZIndex = 32,
+			Parent = seedPanes.veg,
+		}, { Ui.corner(8), Ui.padding(7) })
+		local title = line(cell, 0, 24, "", { Font = Enum.Font.GothamBold, TextSize = 18, ZIndex = 33, Size = UDim2.new(1, -86, 0, 24), TextScaled = true })
+		Ui.make("UITextSizeConstraint", { MaxTextSize = 18, MinTextSize = 11, Parent = title })
+		line(cell, 26, 40, `{SalaryConfig.seedGrowText(seed)} → 💰{comma(seed.sell)}원 {SalaryConfig.seedPerkText(seed)}`, { TextSize = 14, ZIndex = 33, TextColor3 = MUTED, Size = UDim2.new(1, -86, 0, 40), TextWrapped = true })
+		local buy = Ui.button({
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, 0, 0, 0),
+			Size = UDim2.fromOffset(80, 30),
+			Text = "사기",
+			TextSize = 15,
+			ZIndex = 34,
+			Parent = cell,
+		})
+		local buy5 = Ui.button({
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, 0, 1, 0),
+			Size = UDim2.fromOffset(80, 30),
+			Text = "5개",
+			TextSize = 15,
+			ZIndex = 34,
+			Parent = cell,
+		})
+		for _, pair in { { buy, 1 }, { buy5, 5 } } do
+			pair[1].Activated:Connect(function()
+				local ok, result = Remotes.BuySeed:InvokeServer(seed.id, pair[2])
+				message.Text = result
+				message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
+				Sounds.play(if ok then "ping" else "bass", 0.6, 1.2)
+			end)
+		end
+		seedButtons[seed.id] = { title = title, buy = buy, buy5 = buy5 }
+	end
+	-- 🐦 비둘기 과자 (사서 🎒에 보관 → 옥상 모이 통에서 골라 뿌려요)
+	local pigeonPage = page("pigeon")
+	local snackTitles: { [string]: TextLabel } = {}
+	for i, snack in SalaryConfig.PigeonSnacks do
+		local y = (i - 1) * 84
+		snackTitles[snack.id] = line(pigeonPage, y, 28, "", { Font = Enum.Font.GothamBold, TextSize = 20, Size = UDim2.new(1, -200, 0, 28) })
+		line(pigeonPage, y + 30, 46, `💕 친밀도 +{snack.friend} · 🐦 +{snack.flock}마리 · 🎁 선물 +{math.floor(snack.gift * 100)}%`, { TextSize = 15, TextColor3 = MUTED, Size = UDim2.new(1, -200, 0, 46) })
+		for k, amount in { 1, 5 } do
+			local b = Ui.button({
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, if k == 1 then -100 else -14, 0, y + 14), -- (스크롤 막대 자리는 비워 둬요)
+				Size = UDim2.fromOffset(80, 48),
+				Text = if amount == 1 then "사기" else "5개",
+				TextSize = 18,
+				ZIndex = 32,
+				Parent = pigeonPage,
+			})
+			b.Activated:Connect(function()
+				local ok, result = Remotes.BuyPigeonSnack:InvokeServer(snack.id, amount)
+				message.Text = result
+				message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
+				Sounds.play(if ok then "ping" else "bass", 0.6, 1.2)
+			end)
+		end
 	end
 	-- 📚 자격증 (응시 → 시험 창)
 	local certPage = page("certs")
@@ -479,6 +777,43 @@ function Panels.showShop(startTab: string?)
 			end)
 			myCerts = if okCerts and typeof(myCerts) == "table" then myCerts else {}
 			local rank = player:GetAttribute("Rank") or 1
+			-- 🌱 씨앗: 가격(🏷️ 특가) · 🎒 개수 · 🔒 직급
+			local okSeeds, mySeeds = pcall(function()
+				return HttpService:JSONDecode(player:GetAttribute("Seeds") or "{}")
+			end)
+			mySeeds = if okSeeds and typeof(mySeeds) == "table" then mySeeds else {}
+			local day = player:GetAttribute("GardenToday") or 0
+			for _, seed in SalaryConfig.GardenSeeds do
+				local ui = seedButtons[seed.id]
+				local price = SalaryConfig.seedPrice(seed, day)
+				local have = mySeeds[seed.id] or 0
+				local locked = seed.rank ~= nil and rank < seed.rank
+				ui.title.Text = `{seed.emoji} {seed.name} {comma(price)}원` .. (if price < seed.price then " 🏷️특가" else "") .. (if have > 0 then ` · 🎒{have}` else "")
+				ui.buy.Text = if locked then `🔒{Ranks[seed.rank].name}` else "사기"
+				ui.buy.BackgroundColor3 = if locked then Color3.fromRGB(200, 200, 200) else Ui.COLORS.brass
+				ui.buy.AutoButtonColor = not locked
+				ui.buy5.Visible = not locked
+			end
+			-- 🌷 꽃씨 · 🧪 거름: 🎒 개수
+			local okFlowers, myFlowers = pcall(function()
+				return HttpService:JSONDecode(player:GetAttribute("FlowerSeeds") or "{}")
+			end)
+			myFlowers = if okFlowers and typeof(myFlowers) == "table" then myFlowers else {}
+			for _, flower in SalaryConfig.ParkFlowers do
+				local have = myFlowers[flower.id] or 0
+				flowerTitles[flower.id].Text = `{flower.emoji} {flower.name} {comma(flower.price)}원` .. (if have > 0 then ` · 🎒{have}` else "")
+			end
+			-- 🐦 비둘기 과자: 🎒 개수
+			local okSnacks, mySnacks = pcall(function()
+				return HttpService:JSONDecode(player:GetAttribute("PigeonSnacks") or "{}")
+			end)
+			mySnacks = if okSnacks and typeof(mySnacks) == "table" then mySnacks else {}
+			for _, snack in SalaryConfig.PigeonSnacks do
+				local have = mySnacks[snack.id] or 0
+				snackTitles[snack.id].Text = `{snack.emoji} {snack.name} · {comma(snack.price)}원` .. (if have > 0 then ` · 🎒{have}` else "")
+			end
+			local fertilizer = player:GetAttribute("Fertilizer") or 0
+			flowerTitles.fertilizer.Text = `🧪 거름 {comma(SalaryConfig.FERTILIZER_PRICE)}원` .. (if fertilizer > 0 then ` · 🎒{fertilizer}` else "")
 			for _, cert in certs do
 				local b = certButtons[cert.id]
 				b.Text = if myCerts[cert.id] then "합격 ✅" elseif rank < cert.rank then `🔒 {Ranks[cert.rank].name}` else "📝 응시"
@@ -507,21 +842,22 @@ end
 ---------------------------------------------------------------------------
 -- 사무용품마다 "어떻게 쓰는지" 설명 (모두 사면 자동으로 효과가 켜져요)
 local ITEM_HOW = {
-	plant = "책상 위에 놓여 있어요. 부장님 의심도가 25% 더 빨리 줄어요.",
-	tumbler = "책상 위에 있어요. 탕비실에서 커피 타는 척을 90초까지 버텨요.",
-	cover = "모니터를 감싸요. 웹툰·폰·쇼핑 같은 화면 농땡이가 30% 덜 들켜요.",
-	earphones = "책상 위에 있어요. 부장님 발소리를 멀리서 듣고, 화면 위에 부장님 상태가 보여요.",
-	dummy = "의자에 앉혀 두면, 자리를 비울 때 대신 앉아 있어요. 부재 게이지가 천천히 차요 (150초).",
-	dummy_pro = "의자에 앉혀 두면 정장 입고 타자까지 쳐요. 부재 게이지 240초 + 감사관 빈자리 사진 무효!",
+	plant = "👔 의심도 25% 더 빨리 줄어요",
+	tumbler = "☕ 커피 타는 척 90초까지",
+	cover = "🖥️ 화면 농땡이 30% 덜 들켜요",
+	earphones = "👂 부장님 발소리·상태가 보여요",
+	dummy = "🪑 자리 비울 때 대신 앉아요 (부재 150초)",
+	dummy_pro = "🪑 타자까지! 부재 240초 · 감사관 사진 무효",
 }
 
 function Panels.showBag()
 	local frame = sheet(600, 560)
+	closeOnOutside(frame)
 	line(frame, 0, 32, "🎒 내 소지품", { Font = Enum.Font.GothamBlack, TextSize = 26 })
-	line(frame, 34, 22, "🪑 책상에 놓을 물건을 골라요 (치워도 효과는 그대로, 인형만 앉혀 둬야 효과). 소모품은 여기서 써요!", { TextSize = 14, TextColor3 = MUTED })
+	helpButton(frame, UDim2.new(1, -70, 0, 2), "소지품", "🧰 사무용품은 <b>사면 바로 효과</b>가 켜져요\n🪑 [책상에 놓기]/[서랍에 넣기]는 꾸미기예요 (치워도 효과는 그대로)\n🧍 단, 인형은 <b>의자에 앉혀 둬야</b> 효과가 있어요\n⏳ 사무용품은 기한이 지나면 사라져요 · 🏪 매점에서 연장\n⚡ 소모품(에너지 드링크)은 여기서 바로 써요")
 	local list = Ui.make("ScrollingFrame", {
-		Position = UDim2.fromOffset(0, 62),
-		Size = UDim2.new(1, 0, 1, -122),
+		Position = UDim2.fromOffset(0, 40),
+		Size = UDim2.new(1, 0, 1, -100),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 6,
@@ -538,21 +874,24 @@ function Panels.showBag()
 	local function entry(title: string, description: string, owned: boolean, buttonText: string?, onClick: (() -> ())?): TextButton?
 		order += 1
 		local row = Ui.make("Frame", {
-			Size = UDim2.new(1, -10, 0, 54),
+			Size = UDim2.new(1, -12, 0, 68),
 			BackgroundColor3 = if owned then Color3.fromRGB(235, 245, 235) else Color3.fromRGB(235, 235, 235),
 			LayoutOrder = order,
 			ZIndex = 32,
 			Parent = list,
-		}, { Ui.corner(8), Ui.padding(6) })
-		line(row, 0, 20, title, { Font = Enum.Font.GothamBold, TextSize = 16, ZIndex = 33, TextColor3 = if owned then INK else MUTED })
-		line(row, 20, 22, description, { TextSize = 13, ZIndex = 33, TextColor3 = MUTED, Size = UDim2.new(1, if buttonText then -110 else 0, 0, 22) })
+		}, { Ui.corner(8), Ui.padding(8) })
+		-- (글씨를 키웠어요. 길면 살짝 줄여서 한 줄에 · 목록은 스크롤)
+		local titleLabel = line(row, 0, 26, title, { Font = Enum.Font.GothamBold, TextSize = 19, ZIndex = 33, TextColor3 = if owned then INK else MUTED, Size = UDim2.new(1, if buttonText then -130 else 0, 0, 26), TextScaled = true })
+		Ui.make("UITextSizeConstraint", { MaxTextSize = 19, MinTextSize = 12, Parent = titleLabel })
+		local descLabel = line(row, 27, 24, description, { TextSize = 15, ZIndex = 33, TextColor3 = MUTED, Size = UDim2.new(1, if buttonText then -130 else 0, 0, 24), TextScaled = true })
+		Ui.make("UITextSizeConstraint", { MaxTextSize = 15, MinTextSize = 10, Parent = descLabel })
 		if buttonText then
 			local b = Ui.button({
 				AnchorPoint = Vector2.new(1, 0.5),
 				Position = UDim2.new(1, 0, 0.5, 0),
-				Size = UDim2.fromOffset(100, 34),
+				Size = UDim2.fromOffset(120, 40),
 				Text = buttonText,
-				TextSize = 15,
+				TextSize = 16,
 				ZIndex = 34,
 				Parent = row,
 			})
@@ -580,7 +919,7 @@ function Panels.showBag()
 			return if placed then "서랍에 넣기" else "책상에 놓기"
 		end
 		local b = entry(
-			`{item.emoji} {item.name} {if owned then `✅ ⏳ {player:GetAttribute(`ItemDays_{item.id}`) or 0}일 남음` else "· 🏪 사내 매점에서 구매"}`,
+			`{item.emoji} {item.name} {if owned then `✅ ⏳ {player:GetAttribute(`ItemDays_{item.id}`) or 0}일` else "· 🏪 매점"}`,
 			ITEM_HOW[item.id] or item.description,
 			owned,
 			if owned then label() else nil
@@ -617,11 +956,67 @@ function Panels.showBag()
 		local n = myGifts[gift.id] or 0
 		if n > 0 then
 			anyGift = true
-			entry(`{gift.emoji} {gift.name} x{n}`, `👮 경비원 앞에서 [E] → {SalaryConfig.gameDurationText(gift.minutes)} 동안 못 본 척`, true)
+			entry(`{gift.emoji} {gift.name} x{n}`, `👮 경비원에게 [E] · {SalaryConfig.gameDurationText(gift.minutes)} 못 본 척`, true)
 		end
 	end
 	if not anyGift then
-		entry("🎁 경비원 선물 없음", "🏪 사내 매점 [👮 경비원 선물] 탭에서 사 둘 수 있어요", false)
+		entry("🎁 경비원 선물 없음", "🏪 매점 [👮 경비원] 탭", false)
+	end
+
+	-- 🌱 씨앗 (🏪 사내 매점에서 사서 보관 → 옥상 텃밭 화분에 심어요)
+	header("🌱 씨앗")
+	local okSeeds, mySeeds = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("Seeds") or "{}")
+	end)
+	mySeeds = if okSeeds and typeof(mySeeds) == "table" then mySeeds else {}
+	local anySeed = false
+	for _, seed in SalaryConfig.GardenSeeds do
+		local n = mySeeds[seed.id] or 0
+		if n > 0 then
+			anySeed = true
+			entry(`{seed.emoji} {seed.name} 씨앗 x{n}`, `🌱 옥상 텃밭 · {SalaryConfig.seedGrowText(seed)} → 💰{comma(seed.sell)}원 {SalaryConfig.seedPerkText(seed)}`, true)
+		end
+	end
+	if not anySeed then
+		entry("🌱 씨앗 없음", "🏪 매점 [🌱 씨앗] 탭", false)
+	end
+
+	-- 🌷 꽃씨 · 🧪 거름 (🏪 사내 매점에서 사서 보관 → 눈치물산 공원 화단)
+	header("🌷 꽃씨 · 🧪 거름")
+	local okFlowers, myFlowers = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("FlowerSeeds") or "{}")
+	end)
+	myFlowers = if okFlowers and typeof(myFlowers) == "table" then myFlowers else {}
+	local anyFlower = false
+	for _, flower in SalaryConfig.ParkFlowers do
+		local n = myFlowers[flower.id] or 0
+		if n > 0 then
+			anyFlower = true
+			entry(`{flower.emoji} {flower.name} 꽃씨 x{n}`, `🌷 공원 화단 · {SalaryConfig.flowerCareText(flower)}`, true)
+		end
+	end
+	if not anyFlower then
+		entry("🌷 꽃씨 없음", "🏪 매점 [🌷 꽃씨·거름] 탭", false)
+	end
+	local fertilizer = player:GetAttribute("Fertilizer") or 0
+	entry(`🧪 거름 x{fertilizer}`, "🌿 꽃봉오리에 1개씩", fertilizer > 0)
+
+	-- 🐦 비둘기 과자 (🏪 사내 매점에서 사서 보관 → 옥상 모이 통)
+	header("🐦 비둘기 과자")
+	local okSnacks, mySnacks = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("PigeonSnacks") or "{}")
+	end)
+	mySnacks = if okSnacks and typeof(mySnacks) == "table" then mySnacks else {}
+	local anySnack = false
+	for _, snack in SalaryConfig.PigeonSnacks do
+		local n = mySnacks[snack.id] or 0
+		if n > 0 then
+			anySnack = true
+			entry(`{snack.emoji} {snack.name} x{n}`, `🐦 옥상 모이 통 · 💕+{snack.friend} · 🐦+{snack.flock}마리`, true)
+		end
+	end
+	if not anySnack then
+		entry("🍪 비둘기 과자 없음", "🏪 매점 [🐦 비둘기] 탭", false)
 	end
 
 	header("🖐️ 쓰는 물건")
@@ -629,7 +1024,7 @@ function Panels.showBag()
 	local energyActive = player:GetAttribute("EnergyActive") == true
 	entry(
 		`⚡ 에너지 드링크 x{energy}`,
-		if energyActive then "오늘 마셨어요! 복귀 시간 절반 효과 중" else "마시면 오늘 하루 일하는 척 복귀 시간이 절반!",
+		if energyActive then "✅ 오늘 복귀 시간 절반" else "오늘 하루 복귀 시간 절반",
 		energy > 0 or energyActive,
 		if energy > 0 and not energyActive then "마시기" else nil,
 		function()
@@ -641,19 +1036,19 @@ function Panels.showBag()
 	local snack = SalaryConfig.getSnack(player:GetAttribute("HeldSnack") or "")
 	if snack then
 		local percent = math.floor((player:GetAttribute("SnackProgress") or 0) * 100)
-		entry(`{snack.emoji} {snack.name} ({percent}% 먹음)`, "내 자리에 앉아서 [8] 간식 먹기로 몰래 먹어요. 다 먹으면 보너스!", true)
+		entry(`{snack.emoji} {snack.name} ({percent}% 먹음)`, "🪑 자리에서 [8]로 몰래 먹기", true)
 	else
-		entry("🍪 들고 있는 간식 없음", "탕비실 간식 테이블이나 눈치 스트리트 디저트집에서 가져와요", false)
+		entry("🍪 들고 있는 간식 없음", "탕비실·디저트집에서 가져와요", false)
 	end
 	local giftId = player:GetAttribute("HeldGiftId") or ""
 	local gift = giftId ~= "" and SalaryConfig.getStreetItem("store", giftId)
 	if gift then
-		entry(`{gift.emoji} {gift.name}`, "부장님께 다가가서 [E] 말 걸기 → 선물 드리기! " .. gift.description, true)
+		entry(`{gift.emoji} {gift.name}`, gift.description, true)
 	else
-		entry("🎁 들고 있는 선물 없음", "🏪 사내 매점 '부장님 선물' 탭에서 사요 (홍삼 = 경고 -1)", false)
+		entry("🎁 들고 있는 선물 없음", "🏪 매점 [부장님 선물] 탭", false)
 	end
 	local buffs = player:GetAttribute("Buffs") or ""
-	entry(if buffs ~= "" then `☕ 오늘 마신 음료 {buffs}` else "☕ 오늘 마신 음료 없음", "눈치 스트리트 카페 음료는 오늘 하루 효과가 있어요", buffs ~= "")
+	entry(if buffs ~= "" then `☕ 오늘 마신 음료 {buffs}` else "☕ 오늘 마신 음료 없음", "☕ 카페 음료 · 오늘 하루 효과", buffs ~= "")
 
 	-- 🎟️ 모은 것
 	header("📦 모은 것")
@@ -663,24 +1058,160 @@ function Panels.showBag()
 		kinds += 1
 		total += count
 	end
-	entry(`🧸 인형 {total}개 ({kinds}/{#SalaryConfig.Plushies}종)`, "🧸 버튼에서 보고, 책상에 3개까지 진열할 수 있어요", total > 0, "보기", function()
+	entry(`🧸 인형 {total}개 ({kinds}/{#SalaryConfig.Plushies}종)`, "책상에 3개까지 진열", total > 0, "보기", function()
 		Panels.showPlushies(Panels.showBag) -- (◀ 뒤로 누르면 소지품으로 돌아와요)
 	end)
-	entry(`🎟️ 오락실 티켓 {player:GetAttribute("Tickets") or 0}장`, "눈치 스트리트 오락실 경품 교환대에서 써요", (player:GetAttribute("Tickets") or 0) > 0)
-	-- 🏋️ 체력 스탯 (지금은 숫자만 쌓여요 — 효과는 다음 업데이트!)
-	local okFit, fitness = pcall(function()
-		return HttpService:JSONDecode(player:GetAttribute("Fitness") or "{}")
-	end)
-	fitness = if okFit and typeof(fitness) == "table" then fitness else {}
+	entry(`🎟️ 오락실 티켓 {player:GetAttribute("Tickets") or 0}장`, "🕹️ 오락실 경품 교환대", (player:GetAttribute("Tickets") or 0) > 0)
+	-- 🏋️ 체력 스탯 (레벨마다 효과! [보기]에서 자세히)
+	local fitness = SalaryConfig.playerFitness(player)
 	local fitParts, fitTotal = {}, 0
 	for _, stat in SalaryConfig.FitnessStats do
-		local value = tonumber(fitness[stat.id]) or 0
+		local value = fitness[stat.id] or 0
 		fitTotal += value
-		table.insert(fitParts, `{stat.emoji} {stat.name} {value}`)
+		table.insert(fitParts, `{stat.emoji} Lv.{SalaryConfig.fitnessLevel(value)}`)
 	end
-	entry(`🏋️ 체력  {table.concat(fitParts, " · ")}`, "사무실 뒤 🏋️ 체력 단련실 운동기구에서 키워요 (효과는 곧 공개!)", fitTotal > 0)
+	entry(
+		`🏋️ 체력  {table.concat(fitParts, " · ")}`,
+		`오늘 운동 {player:GetAttribute("GymSets") or 0}/{SalaryConfig.GYM_DAILY_SETS}`,
+		fitTotal > 0,
+		"보기",
+		function()
+			Panels.showFitness(Panels.showBag) -- (◀ 뒤로 누르면 소지품으로 돌아와요)
+		end
+	)
 
 	button(frame, 0, "닫기", close)
+	Sounds.play("swoosh", 0.4)
+end
+
+---------------------------------------------------------------------------
+-- 💪 체력 스탯 창: 스탯마다 레벨·진행 막대·지금 효과·다음 레벨 효과·키우는 기구
+--   backTo가 있으면 [◀ 소지품으로] 버튼 (🎒에서 열었을 때)
+---------------------------------------------------------------------------
+function Panels.showFitness(backTo: (() -> ())?)
+	-- 창 크기는 고정하고, 스탯 목록은 스크롤해서 봐요 (자세한 효과는 줄마다 ❓)
+	local ROW_H = 78
+	local frame = sheet(600, 560) -- (🎒 소지품 창과 같은 크기)
+	closeOnOutside(frame)
+	if backTo then
+		button(frame, 0, "◀ 소지품으로", backTo)
+	end
+	line(frame, 0, 32, "💪 내 체력 스탯", { Font = Enum.Font.GothamBlack, TextSize = 26 })
+	local todayText = line(frame, 0, 32, "", { TextXAlignment = Enum.TextXAlignment.Right, Font = Enum.Font.GothamBold, TextSize = 18, Size = UDim2.new(1, -44, 0, 32) })
+	local statList = Ui.make("ScrollingFrame", {
+		Position = UDim2.fromOffset(0, 42),
+		Size = UDim2.new(1, 0, 1, if backTo then -98 else -46),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 8,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ZIndex = 31,
+		Parent = frame,
+	}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }) })
+
+	-- 스탯마다 키우는 기구 이름 (이름순으로 늘 같은 순서)
+	local machineIds = {}
+	for machineId in SalaryConfig.GymMachines do
+		table.insert(machineIds, machineId)
+	end
+	table.sort(machineIds)
+	local function machinesFor(statId: string): string
+		local parts = {}
+		for _, machineId in machineIds do
+			local machine = SalaryConfig.GymMachines[machineId]
+			if table.find(machine.stats, statId) then
+				table.insert(parts, `{machine.emoji} {machine.name}`)
+			end
+		end
+		return if #parts > 0 then table.concat(parts, " · ") else "-"
+	end
+	-- 짧은 효과 줄 ("📦 -15% · 🏀 +6%"): 효과 이름은 ❓ 안에서 보여 줘요
+	local function shortEffects(statId: string, level: number): string
+		local parts = {}
+		for _, info in SalaryConfig.FitnessEffects[statId] or {} do
+			local full = SalaryConfig.fitnessEffectLine(info, level) -- "{emoji} {label} {amount}"
+			table.insert(parts, `{info.emoji} {string.sub(full, #info.emoji + #info.label + 3)}`)
+		end
+		return table.concat(parts, " · ")
+	end
+	local function statLevel(statId: string): (number, number)
+		local points = SalaryConfig.playerFitness(player)[statId] or 0
+		return SalaryConfig.fitnessLevel(points), points
+	end
+	-- ❓ 스탯 자세히: 효과 이름·지금/다음 레벨 값, 키우는 기구, 규칙
+	local function detailText(stat): string
+		local level, points = statLevel(stat.id)
+		local maxed = level >= SalaryConfig.FITNESS_MAX_LEVEL
+		local per = SalaryConfig.FITNESS_POINTS_PER_LEVEL
+		local lines = { `<b>Lv.{level}</b> ({points}점)` .. (if maxed then " 🏆 최고 레벨!" else ` · 다음 레벨까지 {per - (points - level * per)}점`) }
+		for _, info in SalaryConfig.FitnessEffects[stat.id] or {} do
+			local nowText = SalaryConfig.fitnessEffectLine(info, level)
+			if maxed then
+				table.insert(lines, nowText)
+			else
+				local nextFull = SalaryConfig.fitnessEffectLine(info, level + 1)
+				table.insert(lines, `{nowText} → <b>{string.sub(nextFull, #info.emoji + #info.label + 3)}</b>`)
+			end
+		end
+		table.insert(lines, `🏋️ 기구: {machinesFor(stat.id)}`)
+		table.insert(lines, `<font color="#6e6e78">게이지를 꽉 채우면 +1점 · {per}점마다 레벨 업 (최대 Lv.{SalaryConfig.FITNESS_MAX_LEVEL}) · 하루 {SalaryConfig.GYM_DAILY_SETS}번까지</font>`)
+		return table.concat(lines, "\n")
+	end
+
+	local rows = {}
+	for i, stat in SalaryConfig.FitnessStats do
+		local row = Ui.make("Frame", {
+			Size = UDim2.new(1, -12, 0, ROW_H),
+			LayoutOrder = i,
+			BackgroundColor3 = Color3.fromRGB(240, 242, 236),
+			ZIndex = 32,
+			Parent = statList,
+		}, { Ui.corner(8), Ui.padding(8) })
+		local title = line(row, 0, 28, "", { Font = Enum.Font.GothamBold, TextSize = 22, ZIndex = 33, Size = UDim2.new(1, -210, 0, 28) })
+		-- 다음 레벨까지 진행 막대 (오른쪽 위, ❓ 왼쪽)
+		local track = Ui.make("Frame", {
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -38, 0, 8),
+			Size = UDim2.fromOffset(160, 14),
+			BackgroundColor3 = Color3.fromRGB(205, 208, 215),
+			ZIndex = 33,
+			Parent = row,
+		}, { Ui.corner(7) })
+		local fill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.fromRGB(110, 200, 120), ZIndex = 34, Parent = track }, { Ui.corner(7) })
+		helpButton(row, UDim2.new(1, -28, 0, 0), `{stat.emoji} {stat.name}`, function()
+			return detailText(stat)
+		end, frame)
+		local now = line(row, 34, 26, "", { TextSize = 18, ZIndex = 33, TextColor3 = INK })
+		rows[stat.id] = { title = title, fill = fill, now = now }
+	end
+
+	local function refresh()
+		local fitness = SalaryConfig.playerFitness(player)
+		local sets = player:GetAttribute("GymSets") or 0
+		todayText.Text = if sets >= SalaryConfig.GYM_DAILY_SETS
+			then `💦 오늘 운동 끝 {sets}/{SalaryConfig.GYM_DAILY_SETS}`
+			else `오늘 운동 {sets}/{SalaryConfig.GYM_DAILY_SETS}`
+		for _, stat in SalaryConfig.FitnessStats do
+			local info = rows[stat.id]
+			local points = fitness[stat.id] or 0
+			local level = SalaryConfig.fitnessLevel(points)
+			local maxed = level >= SalaryConfig.FITNESS_MAX_LEVEL
+			local into = points - level * SalaryConfig.FITNESS_POINTS_PER_LEVEL -- 이번 레벨에서 모은 점수
+			info.title.Text = `{stat.emoji} {stat.name} Lv.{level}` .. (if maxed then " 🏆" else "")
+			info.fill.Size = UDim2.fromScale(if maxed then 1 else math.clamp(into / SalaryConfig.FITNESS_POINTS_PER_LEVEL, 0, 1), 1)
+			info.now.Text = shortEffects(stat.id, level)
+		end
+	end
+	refresh()
+	task.spawn(function()
+		while current == frame do
+			task.wait(0.5)
+			if current == frame then
+				refresh()
+			end
+		end
+	end)
 	Sounds.play("swoosh", 0.4)
 end
 
@@ -700,7 +1231,10 @@ local function isShopping(): boolean
 end
 
 function Panels.showDecor(startTab: string?)
-	local frame = sheet(640, 500, true) -- 🛒 쇼핑하면서 보는 창이라 HUD를 가리지 않게 작게
+	-- 🎒 소지품 창과 같은 크기 (쇼핑 중일 때만 HUD를 가리지 않게 빈 곳에 맞춰요)
+	local frameWidth = if isShopping() then 720 else 600 -- 🛒 쇼핑몰은 옆으로 더 넓게
+	local frame = if isShopping() then sheet(frameWidth, 580, true) else sheet(frameWidth, 560)
+	closeOnOutside(frame)
 	local titleText = line(frame, 0, 32, "🪑 내 자리 꾸미기", { Font = Enum.Font.GothamBlack, TextSize = 26 })
 	local balance = line(frame, 0, 32, "", { TextXAlignment = Enum.TextXAlignment.Right, Font = Enum.Font.GothamBold, Size = UDim2.new(1, -44, 0, 32) })
 	local scoreText = line(frame, 34, 22, "", { TextSize = 15, TextColor3 = MUTED })
@@ -720,11 +1254,11 @@ function Panels.showDecor(startTab: string?)
 	table.insert(tabs, { id = "gear", text = "⚙️ 장비" }) -- 🖥️ 책상 업그레이드 (실제 효과!)
 	local tabButtons: { [string]: TextButton } = {}
 	local list = Ui.make("ScrollingFrame", {
-		Position = UDim2.fromOffset(0, 104),
-		Size = UDim2.new(1, 0, 1, -170),
+		Position = UDim2.fromOffset(0, 108),
+		Size = UDim2.new(1, 0, 1, -174),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		ScrollBarThickness = 6,
+		ScrollBarThickness = 8,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		CanvasSize = UDim2.new(),
 		ZIndex = 31,
@@ -735,19 +1269,20 @@ function Panels.showDecor(startTab: string?)
 
 	local function row(order: number, title: string, description: string, onClick: () -> ()): TextButton
 		local r = Ui.make("Frame", {
-			Size = UDim2.new(1, -10, 0, 56),
+			Size = UDim2.new(1, -12, 0, 76),
 			BackgroundColor3 = Color3.fromRGB(240, 240, 236),
 			LayoutOrder = order,
 			ZIndex = 32,
 			Parent = list,
-		}, { Ui.corner(8), Ui.padding(6) })
-		line(r, 0, 22, title, { Font = Enum.Font.GothamBold, TextSize = 16, ZIndex = 33, Size = UDim2.new(1, -130, 0, 22) })
-		line(r, 22, 22, description, { TextSize = 13, ZIndex = 33, TextColor3 = MUTED, Size = UDim2.new(1, -130, 0, 22) })
+		}, { Ui.corner(8), Ui.padding(8) })
+		line(r, 0, 28, title, { Font = Enum.Font.GothamBold, TextSize = 21, ZIndex = 33, Size = UDim2.new(1, -160, 0, 28) })
+		local descLabel = line(r, 30, 28, description, { TextSize = 17, ZIndex = 33, TextColor3 = MUTED, Size = UDim2.new(1, -160, 0, 28), TextScaled = true })
+		Ui.make("UITextSizeConstraint", { MaxTextSize = 17, MinTextSize = 11, Parent = descLabel }) -- (긴 설명은 살짝 줄여서 한 줄에)
 		local b = Ui.button({
 			AnchorPoint = Vector2.new(1, 0.5),
 			Position = UDim2.new(1, 0, 0.5, 0),
-			Size = UDim2.fromOffset(120, 36),
-			TextSize = 14,
+			Size = UDim2.fromOffset(150, 46),
+			TextSize = 18,
 			ZIndex = 34,
 			Parent = r,
 		})
@@ -825,10 +1360,10 @@ function Panels.showDecor(startTab: string?)
 
 	for i, tab in tabs do
 		local b = Ui.button({
-			Position = UDim2.fromOffset((i - 1) * 85, 62),
-			Size = UDim2.fromOffset(81, 34),
+			Position = UDim2.fromOffset((i - 1) * ((frameWidth - 40) / #tabs), 62),
+			Size = UDim2.fromOffset((frameWidth - 40) / #tabs - 4, 40),
 			Text = tab.text,
-			TextSize = 13,
+			TextSize = if frameWidth > 650 then 16 else 14,
 			ZIndex = 31,
 			Parent = frame,
 		})
@@ -1010,6 +1545,7 @@ function Panels.showCollection()
 	local found = 0
 	-- 가로로 넓게: 왼쪽 = 농땡이 칸, 오른쪽 = 업적 목록
 	local frame = sheet(900, 430)
+	closeOnOutside(frame)
 	local title = line(frame, 0, 30, "📖 농땡이 도감", { Font = Enum.Font.GothamBlack, TextSize = 24 })
 
 	local left = Ui.make("Frame", {
@@ -1116,14 +1652,67 @@ end
 ---------------------------------------------------------------------------
 -- 도구 버튼 (왼쪽 상태창 아래)
 ---------------------------------------------------------------------------
-local function toolButton(label: string, width: number, onClick: () -> ()): TextButton
+-- 💬 툴바 버튼에 마우스를 올리면 무슨 버튼인지 말풍선으로 알려 줘요
+local TOOL_TIPS = {
+	["📖 도감"] = "📖 도감 · 농땡이 기록, 업적, 수다 주제, 친한 동료",
+	["🪑"] = "🪑 내 자리 꾸미기 · 산 물건 장착, 칭호 (새 물건은 🛒 온라인 쇼핑 중에)",
+	["🎒"] = "🎒 내 소지품 · 사무용품, 경비원 선물, 간식, 체력 스탯",
+	["🧸"] = "🧸 내 인형 · 눌러서 책상에 진열 (최대 3개)",
+	["💪"] = "💪 체력 스탯 · 레벨과 효과, 오늘 운동 횟수",
+	["👔"] = "👔 출근룩 · 옷 사고 입기",
+}
+local toolTip = Ui.make("TextLabel", {
+	AutomaticSize = Enum.AutomaticSize.X,
+	Size = UDim2.fromOffset(0, 26),
+	BackgroundColor3 = Color3.fromRGB(25, 28, 36),
+	BackgroundTransparency = 0.1,
+	TextColor3 = Color3.new(1, 1, 1),
+	Font = Enum.Font.GothamBold,
+	TextSize = 14,
+	Visible = false,
+	ZIndex = 60,
+	Parent = gui,
+}, { Ui.corner(6), Ui.padding(6) })
+local toolTipOwner: GuiObject? = nil
+local function showToolTip(button: GuiObject, tip: string)
+	if Hud.isPhone() then
+		return -- 📱 폰은 마우스가 없어서 말풍선이 안 사라질 수 있어요 → 안 띄워요
+	end
+	toolTipOwner = button
+	toolTip.Text = tip
+	toolTip.Visible = true
+	-- 화면 오른쪽 밖으로 안 나가게
+	local viewport = if workspace.CurrentCamera then workspace.CurrentCamera.ViewportSize.X else 1280
+	local x = math.min(button.AbsolutePosition.X, viewport - toolTip.AbsoluteSize.X - 8)
+	toolTip.Position = UDim2.fromOffset(math.max(4, x), button.AbsolutePosition.Y + button.AbsoluteSize.Y + 6)
+end
+local function hideToolTip(button: GuiObject)
+	if toolTipOwner == button then
+		toolTip.Visible = false
+		toolTipOwner = nil
+	end
+end
+
+local function toolButton(label: string, width: number, onClick: () -> (), tip: string?): TextButton
 	local b = Ui.button({
 		Size = UDim2.fromOffset(width, 36),
 		Text = label,
 		TextSize = 15,
 		Parent = Hud.toolbar,
 	})
-	b.Activated:Connect(onClick)
+	b.Activated:Connect(function()
+		hideToolTip(b)
+		onClick()
+	end)
+	local tipText = tip or TOOL_TIPS[label]
+	if tipText then
+		b.MouseEnter:Connect(function()
+			showToolTip(b, tipText :: string)
+		end)
+		b.MouseLeave:Connect(function()
+			hideToolTip(b)
+		end)
+	end
 	return b
 end
 
@@ -1156,6 +1745,13 @@ toolButton("🧸", 46, function()
 		Panels.showPlushies()
 	end
 end)
+toolButton("💪", 46, function()
+	if current then
+		close()
+	else
+		Panels.showFitness()
+	end
+end)
 if SalaryConfig.OUTFIT_ENABLED then -- 🚧 출근룩 잠시 꺼 둠
 	toolButton("👔", 46, function()
 		if current then
@@ -1167,7 +1763,7 @@ if SalaryConfig.OUTFIT_ENABLED then -- 🚧 출근룩 잠시 꺼 둠
 end
 local energyButton = toolButton("⚡ 0", 86, function()
 	Remotes.UseEnergy:FireServer()
-end)
+end, "⚡ 에너지 드링크 마시기 · 오늘 하루 일하는 척 복귀 시간 절반")
 task.spawn(function()
 	while true do
 		local count = player:GetAttribute("Energy") or 0
@@ -1611,6 +2207,8 @@ function Panels.showPlane(station: any)
 	-- 미리보기: 바람 없을 때 경로의 앞쪽 PLANE_PREVIEW만큼 (떨어지는 곳은 안 보여 줘요)
 	local spot: any = nil -- 서버가 알려 준 발사 위치 { start, launch, roofY }
 	local flying = false
+	-- ⚖️ 균형감: 미리보기 점선이 길어져요 (최대 +60%, 창을 열 때 레벨로)
+	local previewLength = math.min(1, SalaryConfig.PLANE_PREVIEW * (1 + SalaryConfig.playerFitnessEffect(player, "aim")))
 	local function updatePreview()
 		local forward, side, distance = SalaryConfig.planeLanding(planeSettings.angle, planeSettings.power / 100, planeSettings.aim, 0, 0)
 		local start = if spot then spot.start else Vector3.new(0, 3.2, -1.5)
@@ -1619,7 +2217,7 @@ function Panels.showPlane(station: any)
 		local finish = Vector3.new(launch.X + side, roofY, launch.Z - forward)
 		local control = SalaryConfig.planeControl(start, finish, distance, planeSettings.angle)
 		for i = 1, DOTS do
-			local t = i / DOTS * SalaryConfig.PLANE_PREVIEW
+			local t = i / DOTS * previewLength
 			local position = start:Lerp(control, t):Lerp(control:Lerp(finish, t), t)
 			local dot = mapDots[i]
 			dot.Position = mapPoint(launch.Z - position.Z, position.X - launch.X)
@@ -1796,26 +2394,139 @@ local function readGarden(): ({ any }, number)
 	return garden, player:GetAttribute("GardenToday") or 0
 end
 
--- 화분 상태: "empty" / "dead" / "ripe" / "wilted" / "growing"
-local function slotState(slot): string
-	local seed = SalaryConfig.getSeed(slot.seed)
-	if not seed then
-		return "empty"
-	elseif slot.missed >= 2 then
-		return "dead"
-	elseif slot.growth >= seed.days then
-		return "ripe"
-	elseif slot.missed == 1 then
-		return "wilted"
-	end
-	return "growing"
+-- 🎒 내 씨앗 (씨앗 ID → 개수)
+local function readSeeds(): { [string]: number }
+	local ok, seeds = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("Seeds") or "{}")
+	end)
+	return if ok and typeof(seeds) == "table" then seeds else {}
 end
 
--- 🌱 화분 위 식물 그리기
+-- 화분 상태: "empty" / "dead" / "ripe" / "wilted" / "growing" (⚡ 쾌속 식물은 서버 시각으로 익어요)
+local function slotState(slot): string
+	return SalaryConfig.gardenState(slot, workspace:GetServerTimeNow())
+end
+
+-- 자란 정도 0~1 (⚡ 쾌속 식물은 물 준 뒤 남은 시간으로)
+local function growRatio(slot, seed): number
+	if seed.minutes and (slot.readyAt or 0) > 0 then
+		local total = SalaryConfig.gameMinutesToSeconds(seed.minutes)
+		return math.clamp(1 - (slot.readyAt - workspace:GetServerTimeNow()) / total, 0, 1)
+	end
+	return math.clamp(slot.growth / seed.days, 0, 1)
+end
+
+-- 🌱 화분 위 식물 그리기 (씨앗 kind마다 생김새가 달라요)
+--   piece(크기, 위치, 색, 모양) / r = 자란 정도 0~1 / ripe = 다 자람 / leaf = 잎 색 (시들면 누렇게)
+local function drawPlant(piece, seed, r: number, ripe: boolean, leaf: Color3)
+	local kind = seed.kind or "fruit"
+	local c = seed.color
+	local stem = Color3.fromRGB(90, 140, 60)
+	local wood = Color3.fromRGB(120, 85, 50)
+	if kind == "leafy" or kind == "clover" then
+		-- 🥬 동그란 잎 뭉치 / 🍀 낮게 깔린 잎 네 장
+		if kind == "leafy" then
+			local size = 0.6 + r * 1
+			piece(Vector3.new(size, size * 0.7, size), Vector3.new(0, size * 0.35, 0), if ripe then c else leaf, Enum.PartType.Ball)
+		else
+			for k = 0, 3 do
+				local angle = k * math.pi / 2
+				local size = 0.3 + r * 0.35
+				local p = piece(Vector3.new(size, 0.1, size), Vector3.new(math.cos(angle) * size * 0.55, 0.25 + r * 0.25, math.sin(angle) * size * 0.55), if ripe then c else leaf, Enum.PartType.Ball)
+				p.Material = if ripe then Enum.Material.Neon else Enum.Material.SmoothPlastic
+			end
+			piece(Vector3.new(0.06, 0.25 + r * 0.25, 0.06), Vector3.new(0, (0.25 + r * 0.25) / 2, 0), stem)
+		end
+	elseif kind == "root" then
+		-- 🥕 잎만 삐죽, 다 자라면 머리가 쏙
+		for k = -1, 1 do
+			piece(Vector3.new(0.12, 0.4 + r * 0.6, 0.12), Vector3.new(k * 0.15, (0.4 + r * 0.6) / 2, 0), leaf)
+		end
+		if ripe then
+			piece(Vector3.new(0.45, 0.35, 0.45), Vector3.new(0, 0.1, 0), c, Enum.PartType.Ball)
+		end
+	elseif kind == "stalk" then
+		-- 🌽 키 큰 줄기 + 옥수수
+		local h = 0.8 + r * 2
+		piece(Vector3.new(0.16, h, 0.16), Vector3.new(0, h / 2, 0), stem)
+		for k = 1, 3 do
+			piece(Vector3.new(0.7, 0.06, 0.2), Vector3.new((k % 2 * 2 - 1) * 0.3, h * k / 4, 0), leaf)
+		end
+		if ripe then
+			piece(Vector3.new(0.3, 0.7, 0.3), Vector3.new(0.18, h * 0.7, 0), c)
+		end
+	elseif kind == "flower" then
+		-- 🌹🌻 긴 줄기 + 꽃잎 (덜 자라면 꽃봉오리)
+		local h = 0.6 + r * 1.3
+		piece(Vector3.new(0.1, h, 0.1), Vector3.new(0, h / 2, 0), stem)
+		piece(Vector3.new(0.5, 0.06, 0.2), Vector3.new(0.2, h * 0.45, 0), leaf)
+		if ripe then
+			for k = 1, 6 do
+				local angle = k / 6 * math.pi * 2
+				piece(Vector3.new(0.32, 0.32, 0.1), Vector3.new(math.cos(angle) * 0.28, h + math.sin(angle) * 0.28, 0), c, Enum.PartType.Ball)
+			end
+			piece(Vector3.new(0.3, 0.3, 0.14), Vector3.new(0, h, 0), Color3.fromRGB(110, 70, 30), Enum.PartType.Ball)
+		else
+			piece(Vector3.new(0.25, 0.35, 0.25), Vector3.new(0, h, 0), leaf, Enum.PartType.Ball)
+		end
+	elseif kind == "cactus" then
+		-- 🌵 기둥 + 팔 (다 자라면 분홍 꽃)
+		local h = 0.5 + r * 1.3
+		piece(Vector3.new(0.4, h, 0.4), Vector3.new(0, h / 2, 0), c)
+		if r >= 0.5 then
+			piece(Vector3.new(0.25, 0.5, 0.25), Vector3.new(0.32, h * 0.6, 0), c)
+			piece(Vector3.new(0.25, 0.4, 0.25), Vector3.new(-0.32, h * 0.45, 0), c)
+		end
+		if ripe then
+			piece(Vector3.new(0.3, 0.2, 0.3), Vector3.new(0, h + 0.05, 0), Color3.fromRGB(255, 120, 180), Enum.PartType.Ball)
+		end
+	elseif kind == "tree" then
+		-- 🍇 나무줄기 + 둥근 잎 (열매 주렁주렁)
+		local h = 0.6 + r * 1.2
+		piece(Vector3.new(0.22, h, 0.22), Vector3.new(0, h / 2, 0), wood)
+		local crown = 0.8 + r * 0.9
+		piece(Vector3.new(crown, crown * 0.8, crown), Vector3.new(0, h + crown * 0.25, 0), leaf, Enum.PartType.Ball)
+		if ripe then
+			for k = 1, 6 do
+				local angle = k / 6 * math.pi * 2
+				piece(Vector3.new(0.26, 0.4, 0.26), Vector3.new(math.cos(angle) * crown * 0.42, h, math.sin(angle) * crown * 0.42), c, Enum.PartType.Ball)
+			end
+		end
+	elseif kind == "vine" then
+		-- 🍉🎃 바닥에 덩굴 + 점점 커지는 큰 열매
+		piece(Vector3.new(1.4, 0.12, 0.9), Vector3.new(-0.2, 0.06, 0), leaf, Enum.PartType.Ball)
+		local size = 0.25 + r * 0.85
+		local fruit = piece(Vector3.new(size * 1.2, size, size), Vector3.new(0.25, size / 2, 0), if r > 0.3 then c else leaf, Enum.PartType.Ball)
+		fruit.Material = if ripe then Enum.Material.Glass else Enum.Material.SmoothPlastic
+	elseif kind == "mushroom" then
+		-- 🍄 하얀 기둥 + 갓
+		local h = 0.2 + r * 0.5
+		piece(Vector3.new(0.18, h, 0.18), Vector3.new(0, h / 2, 0), Color3.fromRGB(240, 235, 220))
+		local cap = 0.3 + r * 0.5
+		piece(Vector3.new(cap, cap * 0.45, cap), Vector3.new(0, h, 0), c, Enum.PartType.Ball)
+	else
+		-- 🍅🌶️🍓 덤불 + 열매
+		local h = 0.6 + r * 1.1
+		piece(Vector3.new(0.12, h, 0.12), Vector3.new(0, h / 2, 0), stem)
+		local bush = 0.7 + r * 0.9
+		piece(Vector3.new(bush, bush * 0.8, bush), Vector3.new(0, h, 0), leaf, Enum.PartType.Ball)
+		if ripe then
+			for k = 1, 5 do
+				local angle = k / 5 * math.pi * 2
+				local fruit = piece(Vector3.new(0.32, 0.32, 0.32), Vector3.new(math.cos(angle) * bush * 0.45, h - 0.1 + (k % 2) * 0.25, math.sin(angle) * bush * 0.45), c, Enum.PartType.Ball)
+				fruit.Material = Enum.Material.Glass
+			end
+		end
+	end
+end
+
 local gardenFolder = Instance.new("Folder")
 gardenFolder.Name = "MyGarden"
 gardenFolder.Parent = workspace
+local renderVersion = 0
 local function renderGarden()
+	renderVersion += 1
+	local version = renderVersion
 	gardenFolder:ClearAllChildren()
 	local ok, slots = pcall(function()
 		return HttpService:JSONDecode(ReplicatedStorage:GetAttribute("GardenSlots") or "[]")
@@ -1824,6 +2535,7 @@ local function renderGarden()
 		return
 	end
 	local garden, today = readGarden()
+	local nextReady = math.huge -- ⚡ 쾌속 식물이 익는 시각에 다시 그려요
 	for i, pos in slots do
 		local slot = garden[i]
 		local seed = slot and SalaryConfig.getSeed(slot.seed)
@@ -1847,37 +2559,26 @@ local function renderGarden()
 			return p
 		end
 		local leaf = if state == "wilted" then Color3.fromRGB(150, 140, 70) else Color3.fromRGB(80, 170, 70)
-		local ratio = math.clamp(slot.growth / seed.days, 0, 1)
+		if state == "growing" and seed.minutes and (slot.readyAt or 0) > 0 then
+			nextReady = math.min(nextReady, slot.readyAt)
+		end
 		if state == "dead" then
 			piece(Vector3.new(0.12, 0.9, 0.12), Vector3.new(0, 0.45, 0), Color3.fromRGB(110, 80, 50))
 			piece(Vector3.new(0.5, 0.08, 0.3), Vector3.new(0.15, 0.85, 0), Color3.fromRGB(130, 100, 60))
-		elseif slot.growth == 0 then
+		elseif state ~= "ripe" and slot.growth == 0 and not (seed.minutes and (slot.readyAt or 0) > 0) then
 			-- 🌱 새싹
 			piece(Vector3.new(0.08, 0.35, 0.08), Vector3.new(0, 0.18, 0), leaf)
 			piece(Vector3.new(0.35, 0.06, 0.18), Vector3.new(-0.15, 0.36, 0), leaf)
 			piece(Vector3.new(0.35, 0.06, 0.18), Vector3.new(0.15, 0.38, 0), leaf)
 		else
-			local height = 0.6 + ratio * 1.1
-			piece(Vector3.new(0.12, height, 0.12), Vector3.new(0, height / 2, 0), Color3.fromRGB(90, 140, 60))
-			local bush = 0.7 + ratio * 0.9
-			piece(Vector3.new(bush, bush * 0.8, bush), Vector3.new(0, height, 0), leaf, Enum.PartType.Ball)
-			if state == "ripe" then
-				-- 🍅 열매 주렁주렁 (상추는 큼직한 잎)
-				if seed.id == "lettuce" then
-					piece(Vector3.new(1.6, 1, 1.6), Vector3.new(0, height, 0), seed.color, Enum.PartType.Ball)
-				else
-					for k = 1, 5 do
-						local angle = k / 5 * math.pi * 2
-						local fruit = piece(Vector3.new(0.32, 0.32, 0.32), Vector3.new(math.cos(angle) * bush * 0.45, height - 0.1 + (k % 2) * 0.25, math.sin(angle) * bush * 0.45), seed.color, Enum.PartType.Ball)
-						fruit.Material = Enum.Material.Glass
-					end
-				end
-			end
+			local ripe = state == "ripe"
+			drawPlant(piece, seed, if ripe then 1 else growRatio(slot, seed), ripe, leaf)
 		end
 		-- 머리 위 표시: 다 자랐어요 / 목말라요
-		local mark = if state == "ripe" then `✨{seed.emoji}` elseif state == "dead" then "💀" elseif slot.watered ~= today then "💧?" else nil
+		local thirsty = not seed.noWater and slot.watered ~= today
+		local mark = if state == "ripe" then `✨{seed.emoji}` elseif state == "dead" then "💀" elseif thirsty then "💧?" else nil
 		if mark then
-			local holder = piece(Vector3.new(0.2, 0.2, 0.2), Vector3.new(0, 2.6, 0), Color3.new(1, 1, 1))
+			local holder = piece(Vector3.new(0.2, 0.2, 0.2), Vector3.new(0, 2.8, 0), Color3.new(1, 1, 1))
 			holder.Transparency = 1
 			local gui = Instance.new("BillboardGui")
 			gui.Size = UDim2.fromOffset(46, 24)
@@ -1894,6 +2595,14 @@ local function renderGarden()
 			text.Parent = gui
 		end
 	end
+	if nextReady < math.huge then
+		-- ⚡ 쾌속 식물: 자라는 모습을 몇 번 더 그리고, 익는 순간 ✨
+		task.delay(math.clamp(nextReady - workspace:GetServerTimeNow(), 1, 15) + 0.2, function()
+			if renderVersion == version then
+				renderGarden()
+			end
+		end)
+	end
 end
 player:GetAttributeChangedSignal("Garden"):Connect(renderGarden)
 player:GetAttributeChangedSignal("GardenToday"):Connect(renderGarden)
@@ -1901,12 +2610,13 @@ ReplicatedStorage:GetAttributeChangedSignal("GardenSlots"):Connect(renderGarden)
 task.defer(renderGarden)
 
 function Panels.showGarden(station: any)
-	local frame = sheet(380, 560)
+	local frame = sheet(565, 560) -- (화분 6칸: 3칸씩 두 줄)
 	closeWhenAway(frame, station, 11) -- 🚪 화분에서 11칸 넘게 멀어지면 닫혀요 (서버는 12칸까지 받아요)
 	frame.AnchorPoint = Vector2.new(1, 0.5)
 	frame.Position = UDim2.new(1, -20, 0.5, 0)
 	line(frame, 0, 30, "🌱 직장인 텃밭", { Font = Enum.Font.GothamBlack, TextSize = 24 })
-	line(frame, 32, 20, "심고 → 매일 💧 물 주기 → 퇴근하면 자라요 → 🧺 수확 (이틀 안 주면 💀)", { TextSize = 12, TextColor3 = MUTED })
+	line(frame, 32, 20, "💧 매일 물 주기 · 퇴근하면 자라요", { TextSize = 13, TextColor3 = MUTED })
+	helpButton(frame, UDim2.new(1, -70, 0, 1), "텃밭 규칙", "🏪 사내 매점 <b>[🌱 씨앗]</b> 탭에서 씨앗을 사면 🎒에 들어와요\n🌱 빈 화분에서 <b>[씨앗 심기]</b>\n💧 하루 한 번 물을 주고 퇴근하면 하루만큼 자라요\n🥀 하루 안 주면 시들고, <font color=\"#c83228\">이틀 안 주면 💀 말라 죽어요</font> (예민한 식물은 하루만 걸러도 💀)\n🧺 다 자라면 💰 팔거나 🎁 부장님 선물로 챙겨요\n⚡ 쾌속 식물은 물 주면 바로 자라요 · 🌵 선인장은 물이 필요 없어요")
 	local message = line(frame, 0, 24, "", {
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 0, 1, 0),
@@ -1916,6 +2626,8 @@ function Panels.showGarden(station: any)
 	})
 	local busy = false
 	local cards = {}
+	local timers: { { label: TextLabel, readyAt: number } } = {} -- ⏳ 쾌속 식물 남은 시간
+	local picker: Frame? = nil
 	local CARD_W, CARD_H = 165, 210
 
 	local function act(action: string, index: number, seedId: string?)
@@ -1933,17 +2645,108 @@ function Panels.showGarden(station: any)
 		Sounds.play(if result.ok then "ping" else "bass", 0.4, if action == "water" then 1.4 else 1.1)
 	end
 
+	-- 🌱 씨앗 고르기 창: 🎒에 있는 씨앗은 [심기], 없는 건 "🏪 매점에서"
+	local function closePicker()
+		if picker then
+			picker:Destroy()
+			picker = nil
+		end
+	end
+	local function openPicker(index: number)
+		closePicker()
+		local box = Ui.make("Frame", {
+			Position = UDim2.fromOffset(0, 58),
+			Size = UDim2.fromOffset(CARD_W * 2 + 10, CARD_H * 2 + 10),
+			BackgroundColor3 = Color3.fromRGB(245, 250, 240),
+			ZIndex = 40,
+			Parent = frame,
+		}, { Ui.corner(10), Ui.padding(8), Ui.stroke(Color3.fromRGB(110, 170, 90), 2) })
+		picker = box
+		line(box, 0, 22, `🌱 {index}번 화분에 뭘 심을까요?`, { Font = Enum.Font.GothamBlack, TextSize = 16, ZIndex = 41 })
+		local cancel = Ui.button({
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, 0, 0, 0),
+			Size = UDim2.fromOffset(64, 22),
+			Text = "◀ 취소",
+			TextSize = 12,
+			BackgroundColor3 = Color3.fromRGB(215, 215, 215),
+			ZIndex = 41,
+			Parent = box,
+		})
+		cancel.Activated:Connect(closePicker)
+		local list = Ui.make("ScrollingFrame", {
+			Position = UDim2.fromOffset(0, 28),
+			Size = UDim2.new(1, 0, 1, -28),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 5,
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			CanvasSize = UDim2.new(),
+			ZIndex = 41,
+			Parent = box,
+		}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+		local seeds = readSeeds()
+		-- 가진 씨앗 먼저
+		local sorted = table.clone(SalaryConfig.GardenSeeds)
+		table.sort(sorted, function(a, b)
+			local ha, hb = (seeds[a.id] or 0) > 0, (seeds[b.id] or 0) > 0
+			if ha ~= hb then
+				return ha
+			end
+			return (table.find(SalaryConfig.GardenSeeds, a) or 0) < (table.find(SalaryConfig.GardenSeeds, b) or 0)
+		end)
+		for k, seed in sorted do
+			local n = seeds[seed.id] or 0
+			local row = Ui.make("Frame", {
+				Size = UDim2.new(1, -8, 0, 44),
+				BackgroundColor3 = if n > 0 then Color3.fromRGB(225, 242, 215) else Color3.fromRGB(232, 232, 232),
+				LayoutOrder = k,
+				ZIndex = 42,
+				Parent = list,
+			}, { Ui.corner(6), Ui.padding(4) })
+			line(row, 0, 18, `{seed.emoji} {seed.name}` .. (if n > 0 then ` 🎒x{n}` else ""), { Font = Enum.Font.GothamBold, TextSize = 14, ZIndex = 43, TextColor3 = if n > 0 then INK else MUTED, Size = UDim2.new(1, -84, 0, 18) })
+			line(row, 18, 18, `{SalaryConfig.seedGrowText(seed)} → 💰{comma(seed.sell)}원 {SalaryConfig.seedPerkText(seed)}`, { TextSize = 11, ZIndex = 43, TextColor3 = MUTED, Size = UDim2.new(1, -84, 0, 18), TextScaled = true })
+			local b = Ui.button({
+				AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, 0, 0.5, 0),
+				Size = UDim2.fromOffset(80, 30),
+				Text = if n > 0 then "🌱 심기" else "🏪 매점에서",
+				TextSize = 12,
+				BackgroundColor3 = if n > 0 then Color3.fromRGB(150, 210, 120) else Color3.fromRGB(210, 210, 210),
+				AutoButtonColor = n > 0,
+				ZIndex = 43,
+				Parent = row,
+			})
+			b.Activated:Connect(function()
+				if n <= 0 then
+					message.Text = `🏪 매점에서 {seed.emoji} 씨앗을 사 와요`
+					message.TextColor3 = MUTED
+					return
+				end
+				closePicker()
+				act("plant", index, seed.id)
+			end)
+		end
+	end
+
 	local function rebuild()
 		for _, card in cards do
 			card:Destroy()
 		end
 		table.clear(cards)
+		table.clear(timers)
 		local garden, today = readGarden()
+		local seedKinds = 0
+		for _, n in readSeeds() do
+			if n > 0 then
+				seedKinds += 1
+			end
+		end
 		for i = 1, SalaryConfig.GARDEN_SLOTS do
 			local slot = garden[i]
 			local seed = SalaryConfig.getSeed(slot.seed)
 			local state = slotState(slot)
-			local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
+			local col, row = (i - 1) % 3, math.floor((i - 1) / 3)
 			local card = Ui.make("Frame", {
 				Position = UDim2.fromOffset(col * (CARD_W + 10), 58 + row * (CARD_H + 10)),
 				Size = UDim2.fromOffset(CARD_W, CARD_H),
@@ -1966,10 +2769,10 @@ function Panels.showGarden(station: any)
 					Parent = card,
 				})
 			end
-			local function smallButton(x: number, y: number, w: number, text: string, color: Color3, onClick: () -> ())
+			local function smallButton(x: number, y: number, w: number, text: string, color: Color3, onClick: () -> (), h: number?)
 				local b = Ui.button({
 					Position = UDim2.fromOffset(x, y),
-					Size = UDim2.fromOffset(w, 32),
+					Size = UDim2.fromOffset(w, h or 32),
 					Text = text,
 					TextSize = 12,
 					TextWrapped = true,
@@ -1983,65 +2786,96 @@ function Panels.showGarden(station: any)
 			if not seed then
 				label(0, 34, "➕", 28) -- (🪴 화분 이모지는 로블록스에서 네모로 보여요)
 				label(36, 20, `{i}번 화분 · 비었어요`, 13, MUTED)
-				for k, option in SalaryConfig.GardenSeeds do
-					local cx, cy = ((k - 1) % 2) * 76, 62 + math.floor((k - 1) / 2) * 38
-					smallButton(cx, cy, 72, `{option.emoji} {option.price}원\n{option.days}일`, Color3.fromRGB(210, 235, 200), function()
-						act("plant", i, option.id)
-					end)
+				smallButton(0, 70, CARD_W - 16, "🌱 씨앗 심기", Color3.fromRGB(170, 220, 140), function()
+					openPicker(i)
+				end, 40)
+				if seedKinds > 0 then
+					label(120, 24, `🎒 씨앗 {seedKinds}종`, 12, MUTED)
 				end
-				label(140, 50, "씨앗을 골라 심어요", 11, MUTED)
 			else
 				local stageEmoji = if state == "dead" then "💀" elseif state == "ripe" then seed.emoji elseif slot.growth == 0 then "🌱" elseif state == "wilted" then "🥀" else "🌿"
 				label(0, 34, stageEmoji, 28)
 				label(36, 20, `{seed.emoji} {seed.name}`, 14)
+				local pending = seed.minutes and (slot.readyAt or 0) > 0
 				local statusText = if state == "dead"
 					then "말라 죽었어요…"
 					elseif state == "ripe" then "🧺 다 자랐어요!"
-					elseif state == "wilted" then "🥀 시들었어요! 오늘 꼭 물을"
+					elseif state == "wilted" then "🥀 시들었어요! 물 주세요"
+					elseif pending then "⏳ 쑥쑥 자라는 중…"
+					elseif seed.noWater then `🏜️ 물 필요 없어요 ({slot.growth}/{seed.days}일)`
 					elseif slot.watered == today then `✅ 오늘 물 줌 ({slot.growth}/{seed.days}일)`
+					elseif seed.minutes then "💧 물 주면 바로 자라요"
 					else `💧 목말라요 ({slot.growth}/{seed.days}일)`
-				label(58, 32, statusText, 12, if state == "wilted" or state == "dead" then RED else MUTED)
+				local status = label(58, 32, statusText, 12, if state == "wilted" or state == "dead" then RED else MUTED)
+				if pending and state ~= "ripe" and state ~= "dead" then
+					table.insert(timers, { label = status, readyAt = slot.readyAt })
+				end
 				-- 자란 정도 막대
 				local back = Ui.make("Frame", { Position = UDim2.fromOffset(0, 94), Size = UDim2.new(1, 0, 0, 8), BackgroundColor3 = Color3.fromRGB(215, 215, 210), ZIndex = 32, Parent = card }, { Ui.corner(4) })
-				Ui.make("Frame", { Size = UDim2.fromScale(math.clamp(slot.growth / seed.days, 0, 1), 1), BackgroundColor3 = Color3.fromRGB(110, 190, 90), ZIndex = 33, Parent = back }, { Ui.corner(4) })
+				Ui.make("Frame", { Size = UDim2.fromScale(if state == "ripe" then 1 else growRatio(slot, seed), 1), BackgroundColor3 = Color3.fromRGB(110, 190, 90), ZIndex = 33, Parent = back }, { Ui.corner(4) })
 				if state == "dead" then
 					smallButton(0, 112, CARD_W - 16, "🧹 뽑고 비우기", Color3.fromRGB(225, 210, 195), function()
 						act("clear", i)
 					end)
 				elseif state == "ripe" then
-					smallButton(0, 112, CARD_W - 16, `💰 팔기 +{comma(seed.sell)}원`, Color3.fromRGB(255, 215, 110), function()
+					local bonus = if seed.sunsetBonus and ReplicatedStorage:GetAttribute("Sunset") == true then ` 🌅x{seed.sunsetBonus}` else ""
+					smallButton(0, 112, CARD_W - 16, `💰 팔기 +{comma(seed.sell)}원{bonus}`, Color3.fromRGB(255, 215, 110), function()
 						act("sell", i)
 					end)
 					smallButton(0, 150, CARD_W - 16, "🎁 부장님 선물로 챙기기", Color3.fromRGB(200, 225, 255), function()
 						act("gift", i)
 					end)
 				else
-					local watered = slot.watered == today
-					local waterButton = smallButton(0, 112, CARD_W - 16, if watered then "✅ 오늘은 충분해요" else "💧 물 주기", if watered then Color3.fromRGB(215, 215, 215) else Color3.fromRGB(150, 205, 255), function()
+					local done = seed.noWater or slot.watered == today
+					local waterButton = smallButton(0, 112, CARD_W - 16, if seed.noWater then "🌵 알아서 자라요" elseif done then "✅ 오늘은 충분해요" else "💧 물 주기", if done then Color3.fromRGB(215, 215, 215) else Color3.fromRGB(150, 205, 255), function()
 						act("water", i)
 					end)
-					waterButton.AutoButtonColor = not watered
-					label(150, 40, `다 자라면 {comma(seed.sell)}원 · {seed.description}`, 11, MUTED)
+					waterButton.AutoButtonColor = not done
+					label(146, 22, `다 자라면 💰{comma(seed.sell)}원`, 11, MUTED)
+					-- 🧹 뽑기 (두 번 눌러야 뽑혀요)
+					local armed = false
+					local clearButton
+					clearButton = smallButton(0, 170, CARD_W - 16, "🧹 뽑기", Color3.fromRGB(230, 225, 215), function()
+						if armed then
+							act("clear", i)
+						else
+							armed = true
+							clearButton.Text = "정말 뽑을까요? (한 번 더)"
+							clearButton.BackgroundColor3 = Color3.fromRGB(255, 190, 170)
+						end
+					end, 24)
 				end
 			end
 		end
 	end
 	rebuild()
+	local function refresh()
+		if current == frame then
+			rebuild()
+		end
+	end
 	local connections = {
-		player:GetAttributeChangedSignal("Garden"):Connect(function()
-			if current == frame then
-				rebuild()
-			end
-		end),
-		player:GetAttributeChangedSignal("GardenToday"):Connect(function()
-			if current == frame then
-				rebuild()
-			end
-		end),
+		player:GetAttributeChangedSignal("Garden"):Connect(refresh),
+		player:GetAttributeChangedSignal("GardenToday"):Connect(refresh),
+		player:GetAttributeChangedSignal("Seeds"):Connect(refresh),
 	}
 	task.spawn(function()
 		while current == frame do
 			task.wait(0.5)
+			-- ⏳ 쾌속 식물 남은 시간 → 익으면 다시 그려요
+			local now = workspace:GetServerTimeNow()
+			local ripened = false
+			for _, timer in timers do
+				local left = timer.readyAt - now
+				if left <= 0 then
+					ripened = true
+				else
+					timer.label.Text = `⏳ 수확까지 {math.ceil(left)}초`
+				end
+			end
+			if ripened and current == frame then
+				rebuild()
+			end
 		end
 		for _, connection in connections do
 			connection:Disconnect()
@@ -2051,6 +2885,532 @@ function Panels.showGarden(station: any)
 end
 Remotes:WaitForChild("GardenOpen").OnClientEvent:Connect(function(station)
 	Panels.showGarden(station)
+end)
+
+---------------------------------------------------------------------------
+-- 🌷 내 공원 화단 (눈치물산): 화단 창 + 화단 위에 내 꽃 그리기 (내 화면에만 보여요)
+---------------------------------------------------------------------------
+local function readPark(): ({ any }, number)
+	local ok, beds = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("ParkGarden") or "[]")
+	end)
+	beds = if ok and typeof(beds) == "table" then beds else {}
+	for i = 1, SalaryConfig.PARK_BEDS do
+		if typeof(beds[i]) ~= "table" then
+			beds[i] = { flower = "", growth = 0, watered = -1, fedStage = -1 }
+		end
+	end
+	return beds, player:GetAttribute("GardenToday") or 0
+end
+
+-- 🎒 내 꽃씨 (꽃 ID → 개수)
+local function readFlowerSeeds(): { [string]: number }
+	local ok, seeds = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("FlowerSeeds") or "{}")
+	end)
+	return if ok and typeof(seeds) == "table" then seeds else {}
+end
+
+-- 오늘 이 화단에 할 일 → (💧 물 필요, 🧪 거름 필요)
+local function bedTodo(bed, flower, today: number): (boolean, boolean)
+	if not flower or (bed.growth or 0) >= flower.days then
+		return false, false
+	end
+	local needWater = bed.watered ~= today
+	local needFeed = SalaryConfig.parkNeedsFeed(flower, bed.growth or 0) and bed.fedStage ~= bed.growth
+	return needWater, needFeed
+end
+
+local UP = CFrame.Angles(0, 0, math.pi / 2) -- 원기둥(Cylinder)을 세워서 납작한 꽃잎 원반으로
+local STEM = Color3.fromRGB(80, 150, 60)
+local LEAF = Color3.fromRGB(70, 160, 70)
+
+-- 🌸 활짝 핀 꽃 한 송이(또는 한 덤불) 그리기 — piece(크기, 위치, 색, 모양, 회전) / c = 꽃 색 / rng = 송이마다 조금씩 다르게
+local function drawFlower(piece, flower, c: Color3, rng: Random)
+	local shape = flower.shape
+	local yaw = rng:NextNumber(0, math.pi * 2)
+	if shape == "daisy" then
+		local h = rng:NextNumber(0.5, 0.75)
+		piece(Vector3.new(0.07, h, 0.07), Vector3.new(0, h / 2, 0), STEM)
+		piece(Vector3.new(0.06, 0.62, 0.62), Vector3.new(0, h, 0), c, Enum.PartType.Cylinder, UP)
+		piece(Vector3.new(0.24, 0.24, 0.24), Vector3.new(0, h + 0.04, 0), Color3.fromRGB(255, 200, 40), Enum.PartType.Ball)
+	elseif shape == "cup" then
+		local h = rng:NextNumber(0.7, 1)
+		piece(Vector3.new(0.08, h, 0.08), Vector3.new(0, h / 2, 0), STEM)
+		piece(Vector3.new(0.5, 0.06, 0.16), Vector3.new(0.12, h * 0.35, 0), LEAF, nil, CFrame.Angles(0, yaw, 0.5))
+		piece(Vector3.new(0.36, 0.36, 0.36), Vector3.new(0, h, 0), c, Enum.PartType.Ball)
+		piece(Vector3.new(0.3, 0.36, 0.36), Vector3.new(0, h + 0.16, 0), c, Enum.PartType.Cylinder, UP)
+	elseif shape == "rose" then
+		local h = rng:NextNumber(0.7, 1)
+		piece(Vector3.new(0.08, h, 0.08), Vector3.new(0, h / 2, 0), Color3.fromRGB(50, 110, 50))
+		piece(Vector3.new(0.5, 0.06, 0.2), Vector3.new(-0.12, h * 0.5, 0), LEAF, nil, CFrame.Angles(0, yaw, -0.4))
+		piece(Vector3.new(0.44, 0.44, 0.44), Vector3.new(0, h, 0), c, Enum.PartType.Ball)
+		piece(Vector3.new(0.26, 0.26, 0.26), Vector3.new(0, h + 0.17, 0), c:Lerp(Color3.new(0, 0, 0), 0.25), Enum.PartType.Ball)
+	elseif shape == "sunflower" then
+		local h = rng:NextNumber(1.9, 2.5)
+		piece(Vector3.new(0.12, h, 0.12), Vector3.new(0, h / 2, 0), STEM)
+		piece(Vector3.new(0.7, 0.06, 0.26), Vector3.new(0.2, h * 0.45, 0), LEAF, nil, CFrame.Angles(0, yaw, 0.3))
+		local face = CFrame.Angles(0, yaw, 0) * CFrame.Angles(0, 0, 0.35) -- 해를 보며 살짝 위로
+		piece(Vector3.new(0.1, 0.95, 0.95), Vector3.new(0, h, 0), c, Enum.PartType.Cylinder, face)
+		piece(Vector3.new(0.14, 0.45, 0.45), Vector3.new(0, h, 0) + face.XVector * 0.04, Color3.fromRGB(110, 70, 30), Enum.PartType.Cylinder, face)
+	elseif shape == "tree" then
+		-- 🌸 작은 벚나무 (줄기 + 분홍 구름 + 바닥에 떨어진 꽃잎)
+		local h = rng:NextNumber(1.8, 2.2)
+		piece(Vector3.new(0.35, h, 0.35), Vector3.new(0, h / 2, 0), Color3.fromRGB(110, 75, 55))
+		piece(Vector3.new(0.18, 0.9, 0.18), Vector3.new(0.3, h * 0.8, 0), Color3.fromRGB(110, 75, 55), nil, CFrame.Angles(0, yaw, -0.6))
+		for k, info in { { 0, 0.25, 0, 1.9 }, { 0.6, 0, 0.3, 1.3 }, { -0.6, 0.05, -0.2, 1.35 }, { 0.1, 0.6, -0.4, 1.1 } } do
+			local blossom = piece(Vector3.new(info[4], info[4], info[4]), Vector3.new(info[1], h + info[2], info[3]), if k % 2 == 0 then flower.colors[2] or c else c, Enum.PartType.Ball)
+			blossom.Material = Enum.Material.Fabric
+		end
+		piece(Vector3.new(0.05, 2.2, 2.2), Vector3.new(0, 0.03, 0), flower.colors[2] or c, Enum.PartType.Cylinder, UP)
+	elseif shape == "hydrangea" then
+		-- 💐 둥근 덤불 + 꽃송이 공 네 개
+		local bush = piece(Vector3.new(1.1, 1.1, 1.1), Vector3.new(0, 0.45, 0), Color3.fromRGB(60, 130, 60), Enum.PartType.Ball)
+		bush.Material = Enum.Material.Grass
+		for k = 1, 4 do
+			local angle = yaw + k / 4 * math.pi * 2
+			local ball = piece(Vector3.new(0.55, 0.55, 0.55), Vector3.new(math.cos(angle) * 0.32, 0.85 + (k % 2) * 0.12, math.sin(angle) * 0.32), c, Enum.PartType.Ball)
+			ball.Material = Enum.Material.Fabric
+		end
+	elseif shape == "hibiscus" then
+		-- 🌺 초록 덤불 + 크고 납작한 꽃 세 송이
+		local bush = piece(Vector3.new(1.2, 1.2, 1.2), Vector3.new(0, 0.5, 0), Color3.fromRGB(50, 120, 55), Enum.PartType.Ball)
+		bush.Material = Enum.Material.Grass
+		for k = 1, 3 do
+			local angle = yaw + k / 3 * math.pi * 2
+			local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
+			local tilt = CFrame.lookAt(Vector3.zero, out + Vector3.new(0, 0.8, 0)) * CFrame.Angles(0, math.pi / 2, 0) -- 원기둥 축이 바깥 위쪽을 봐요
+			piece(Vector3.new(0.06, 0.62, 0.62), out * 0.5 + Vector3.new(0, 0.85, 0), c, Enum.PartType.Cylinder, tilt.Rotation)
+			piece(Vector3.new(0.14, 0.14, 0.14), out * 0.56 + Vector3.new(0, 0.9, 0), Color3.fromRGB(255, 230, 90), Enum.PartType.Ball)
+		end
+	elseif shape == "pompom" then
+		local h = rng:NextNumber(0.55, 0.8)
+		piece(Vector3.new(0.08, h, 0.08), Vector3.new(0, h / 2, 0), STEM)
+		piece(Vector3.new(0.45, 0.06, 0.18), Vector3.new(0.1, h * 0.4, 0), LEAF, nil, CFrame.Angles(0, yaw, 0.4))
+		local pom = piece(Vector3.new(0.5, 0.5, 0.5), Vector3.new(0, h + 0.1, 0), c, Enum.PartType.Ball)
+		pom.Material = Enum.Material.Fabric
+	elseif shape == "mist" then
+		-- 💮 연두 덤불 위에 하얀 점점이
+		local bush = piece(Vector3.new(0.9, 0.9, 0.9), Vector3.new(0, 0.35, 0), Color3.fromRGB(120, 170, 100), Enum.PartType.Ball)
+		bush.Material = Enum.Material.Grass
+		for k = 1, 6 do
+			local angle = yaw + k / 6 * math.pi * 2
+			local radius = if k % 2 == 0 then 0.35 else 0.18
+			local dot = piece(Vector3.new(0.22, 0.22, 0.22), Vector3.new(math.cos(angle) * radius, 0.78 + (k % 3) * 0.06, math.sin(angle) * radius), c, Enum.PartType.Ball)
+			dot.Material = Enum.Material.Neon
+		end
+	else
+		-- 💜 spike: 라벤더 꽃대 세 줄기
+		for k = 1, 3 do
+			local angle = yaw + k / 3 * math.pi * 2
+			local spot = Vector3.new(math.cos(angle) * 0.16, 0, math.sin(angle) * 0.16)
+			local h = rng:NextNumber(0.6, 0.9)
+			piece(Vector3.new(0.05, h, 0.05), spot + Vector3.new(0, h / 2, 0), STEM)
+			piece(Vector3.new(0.15, 0.5, 0.15), spot + Vector3.new(0, h + 0.2, 0), c)
+		end
+	end
+end
+
+-- 화단 위 꽃 자리 (cols × rows 격자 + 살짝 흔들기)
+local function bedSpots(sx: number, sz: number, flower, rng: Random): { Vector3 }
+	local shape = flower.shape
+	local cols, rows = 5, 3
+	if shape == "tree" then
+		cols, rows = 2, 1
+	elseif shape == "hydrangea" or shape == "hibiscus" or shape == "mist" then
+		cols, rows = 4, 2
+	elseif shape == "sunflower" or shape == "spike" then
+		cols, rows = 5, 2
+	end
+	local spots = {}
+	local w, d = sx - 1.2, sz - 1.2
+	for row = 1, rows do
+		for col = 1, cols do
+			local x = if cols == 1 then 0 else -w / 2 + (col - 1) * w / (cols - 1)
+			local z = if rows == 1 then 0 else -d / 2 + (row - 1) * d / (rows - 1)
+			local jitter = if shape == "tree" then 0 else 0.18
+			table.insert(spots, Vector3.new(x + rng:NextNumber(-jitter, jitter), 0, z + rng:NextNumber(-jitter, jitter)))
+		end
+	end
+	return spots
+end
+
+local parkFolder = Instance.new("Folder")
+parkFolder.Name = "MyParkGarden"
+parkFolder.Parent = workspace
+local function renderPark()
+	parkFolder:ClearAllChildren()
+	local ok, spots = pcall(function()
+		return HttpService:JSONDecode(ReplicatedStorage:GetAttribute("ParkBeds") or "[]")
+	end)
+	if not ok or typeof(spots) ~= "table" then
+		return
+	end
+	local beds, today = readPark()
+	for i, spot in spots do
+		local bed = beds[i]
+		local flower = bed and SalaryConfig.getFlower(bed.flower)
+		local top = Vector3.new(spot[1], spot[2], spot[3])
+		local sx, sz = spot[4] or 6.8, spot[5] or 3.8
+		local model = Instance.new("Model")
+		model.Name = `ParkBed{i}`
+		model.Parent = parkFolder
+		local origin = top
+		local function piece(size: Vector3, offset: Vector3, color: Color3, shape: Enum.PartType?, rotation: CFrame?)
+			local p = Instance.new("Part")
+			p.Shape = shape or Enum.PartType.Block
+			p.Size = size
+			p.Color = color
+			p.Material = Enum.Material.SmoothPlastic
+			p.Anchored = true
+			p.CanCollide = false
+			p.CanQuery = false
+			p.CanTouch = false
+			p.CastShadow = false
+			p.CFrame = CFrame.new(origin + offset) * (rotation or CFrame.identity)
+			p.Parent = model
+			return p
+		end
+		local mark: string? = nil
+		if not flower then
+			mark = `➕ 빈 화단 {i}`
+		else
+			local rng = Random.new(i * 97 + #bed.flower) -- 매번 같은 모양으로 (다시 그려도 안 흔들려요)
+			local colors = flower.colors
+			if (bed.growth or 0) >= flower.days then
+				-- 🌸 활짝! 화단 가득
+				for k, at in bedSpots(sx, sz, flower, rng) do
+					origin = top + at
+					drawFlower(piece, flower, colors[(k - 1) % #colors + 1], rng)
+				end
+				origin = top
+			else
+				local r = (bed.growth or 0) / flower.days
+				for k, at in bedSpots(sx, sz, { shape = if flower.shape == "tree" then "hydrangea" else "spike" }, rng) do
+					origin = top + at
+					if (bed.growth or 0) == 0 then
+						-- 🌱 새싹
+						piece(Vector3.new(0.06, 0.3, 0.06), Vector3.new(0, 0.15, 0), LEAF)
+						piece(Vector3.new(0.28, 0.05, 0.14), Vector3.new(0, 0.3, 0), LEAF, nil, CFrame.Angles(0, rng:NextNumber(0, math.pi), 0))
+					else
+						-- 🌿 쑥쑥 → 꽃봉오리 (꽃 색이 살짝 비쳐요)
+						local h = 0.35 + r * 0.8
+						piece(Vector3.new(0.08, h, 0.08), Vector3.new(0, h / 2, 0), STEM)
+						piece(Vector3.new(0.34, 0.05, 0.14), Vector3.new(0, h * 0.5, 0), LEAF, nil, CFrame.Angles(0, rng:NextNumber(0, math.pi), 0))
+						if r >= 0.5 then
+							piece(Vector3.new(0.22, 0.22, 0.22), Vector3.new(0, h + 0.06, 0), colors[(k - 1) % #colors + 1]:Lerp(LEAF, 0.45), Enum.PartType.Ball)
+						end
+					end
+				end
+				origin = top
+				local needWater, needFeed = bedTodo(bed, flower, today)
+				mark = `{flower.emoji} {bed.growth or 0}/{flower.days}` .. (if needWater then " 💧?" else "") .. (if needFeed then " 🧪?" else "")
+			end
+		end
+		if mark then
+			local holder = piece(Vector3.new(0.2, 0.2, 0.2), Vector3.new(0, 2.6, 0), Color3.new(1, 1, 1))
+			holder.Transparency = 1
+			local board = Instance.new("BillboardGui")
+			board.Size = UDim2.fromOffset(110, 24)
+			board.MaxDistance = 35
+			board.Parent = holder
+			local text = Instance.new("TextLabel")
+			text.Size = UDim2.fromScale(1, 1)
+			text.BackgroundTransparency = 1
+			text.Text = mark
+			text.TextScaled = true
+			text.Font = Enum.Font.GothamBold
+			text.TextColor3 = Color3.new(1, 1, 1)
+			text.TextStrokeTransparency = 0.3
+			text.Parent = board
+		end
+	end
+end
+player:GetAttributeChangedSignal("ParkGarden"):Connect(renderPark)
+player:GetAttributeChangedSignal("GardenToday"):Connect(renderPark)
+ReplicatedStorage:GetAttributeChangedSignal("ParkBeds"):Connect(renderPark)
+task.defer(renderPark)
+
+function Panels.showParkBed(index: number, station: any)
+	local frame = sheet(420, 540)
+	closeWhenAway(frame, station, 12) -- 🚪 화단에서 12칸 넘게 멀어지면 닫혀요 (서버는 13칸까지 받아요)
+	frame.AnchorPoint = Vector2.new(1, 0.5)
+	frame.Position = UDim2.new(1, -20, 0.5, 0)
+	line(frame, 0, 28, `🌷 내 공원 화단 {index}`, { Font = Enum.Font.GothamBlack, TextSize = 22 })
+	line(frame, 32, 20, "💧 매일 물 · 🧪 봉오리 땐 거름 · 활짝 피면 매일 수당", { TextSize = 13, TextColor3 = MUTED })
+	helpButton(frame, UDim2.new(1, -70, 0, 0), "공원 화단 규칙", `🏪 사내 매점 <b>[🌱 씨앗] → [🌷 꽃씨·거름]</b>에서 꽃씨·🧪 거름을 사요\n🌷 화단 하나에 꽃 한 종류를 가득 피워요\n💧 매일 물을 주고 퇴근하면 한 단계 자라요 (🌿 꽃봉오리 땐 🧪 거름도 줘야 해요)\n😌 안 줘도 죽지 않고, 활짝 피면 영원히 안 시들어요\n💰 활짝 핀 화단마다 퇴근할 때 +{SalaryConfig.PARK_BED_BONUS}원\n🌈 {SalaryConfig.PARK_BEDS}곳 모두 활짝 + 꽃 {SalaryConfig.PARK_FULL_KINDS}종 이상이면 +{SalaryConfig.PARK_FULL_BONUS}원 더 (오늘 핀 꽃도 바로 쳐 줘요)`)
+	local message = line(frame, 0, 24, "", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, 0),
+		TextSize = 13,
+		Font = Enum.Font.GothamBold,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
+	local busy = false
+	local content: { Instance } = {}
+	local picker: Frame? = nil
+	local W = 380
+
+	local function act(action: string, flowerId: string?)
+		if busy then
+			return
+		end
+		busy = true
+		local result = Remotes.ParkAction:InvokeServer(action, index, flowerId)
+		busy = false
+		if current ~= frame then
+			return
+		end
+		message.Text = result.message
+		message.TextColor3 = if result.ok then Color3.fromRGB(40, 140, 70) else RED
+		Sounds.play(if result.ok then "ping" else "bass", 0.4, if action == "water" then 1.4 else 1.1)
+	end
+
+	-- 🌷 꽃씨 고르기: 🎒에 있는 꽃씨는 [심기], 없는 건 "🏪 매점에서"
+	local function closePicker()
+		if picker then
+			picker:Destroy()
+			picker = nil
+		end
+	end
+	local function openPicker()
+		closePicker()
+		local box = Ui.make("Frame", {
+			Position = UDim2.fromOffset(0, 68),
+			Size = UDim2.fromOffset(W, 390),
+			BackgroundColor3 = Color3.fromRGB(252, 244, 248),
+			ZIndex = 40,
+			Parent = frame,
+		}, { Ui.corner(10), Ui.padding(8), Ui.stroke(Color3.fromRGB(220, 130, 170), 2) })
+		picker = box
+		line(box, 0, 22, `🌷 {index}번 화단에 뭘 심을까요?`, { Font = Enum.Font.GothamBlack, TextSize = 16, ZIndex = 41 })
+		local cancel = Ui.button({
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, 0, 0, 0),
+			Size = UDim2.fromOffset(64, 22),
+			Text = "◀ 취소",
+			TextSize = 12,
+			BackgroundColor3 = Color3.fromRGB(215, 215, 215),
+			ZIndex = 41,
+			Parent = box,
+		})
+		cancel.Activated:Connect(closePicker)
+		local list = Ui.make("ScrollingFrame", {
+			Position = UDim2.fromOffset(0, 28),
+			Size = UDim2.new(1, 0, 1, -28),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 5,
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			CanvasSize = UDim2.new(),
+			ZIndex = 41,
+			Parent = box,
+		}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+		local seeds = readFlowerSeeds()
+		local sorted = table.clone(SalaryConfig.ParkFlowers)
+		table.sort(sorted, function(a, b)
+			local ha, hb = (seeds[a.id] or 0) > 0, (seeds[b.id] or 0) > 0
+			if ha ~= hb then
+				return ha
+			end
+			return (table.find(SalaryConfig.ParkFlowers, a) or 0) < (table.find(SalaryConfig.ParkFlowers, b) or 0)
+		end)
+		for k, flower in sorted do
+			local n = seeds[flower.id] or 0
+			local row = Ui.make("Frame", {
+				Size = UDim2.new(1, -8, 0, 44),
+				BackgroundColor3 = if n > 0 then Color3.fromRGB(250, 228, 238) else Color3.fromRGB(232, 232, 232),
+				LayoutOrder = k,
+				ZIndex = 42,
+				Parent = list,
+			}, { Ui.corner(6), Ui.padding(4) })
+			line(row, 0, 18, `{flower.emoji} {flower.name}` .. (if n > 0 then ` 🎒x{n}` else ""), { Font = Enum.Font.GothamBold, TextSize = 14, ZIndex = 43, TextColor3 = if n > 0 then INK else MUTED, Size = UDim2.new(1, -84, 0, 18) })
+			line(row, 18, 18, `{SalaryConfig.flowerCareText(flower)} · {flower.description}`, { TextSize = 11, ZIndex = 43, TextColor3 = MUTED, Size = UDim2.new(1, -84, 0, 18), TextScaled = true })
+			local b = Ui.button({
+				AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, 0, 0.5, 0),
+				Size = UDim2.fromOffset(80, 30),
+				Text = if n > 0 then "🌷 심기" else "🏪 매점에서",
+				TextSize = 12,
+				BackgroundColor3 = if n > 0 then Color3.fromRGB(240, 160, 190) else Color3.fromRGB(210, 210, 210),
+				AutoButtonColor = n > 0,
+				ZIndex = 43,
+				Parent = row,
+			})
+			b.Activated:Connect(function()
+				if n <= 0 then
+					message.Text = `🏪 매점에서 {flower.emoji} 꽃씨를 사 와요`
+					message.TextColor3 = MUTED
+					return
+				end
+				closePicker()
+				act("plant", flower.id)
+			end)
+		end
+	end
+
+	local function rebuild()
+		for _, item in content do
+			item:Destroy()
+		end
+		table.clear(content)
+		local beds, today = readPark()
+		local bed = beds[index]
+		local flower = SalaryConfig.getFlower(bed.flower)
+		local state = SalaryConfig.parkBedState(bed)
+		local fertilizer = player:GetAttribute("Fertilizer") or 0
+
+		-- 🪴 이 화단 카드
+		local card = Ui.make("Frame", {
+			Position = UDim2.fromOffset(0, 68),
+			Size = UDim2.fromOffset(W, 196),
+			BackgroundColor3 = if state == "bloomed" then Color3.fromRGB(252, 236, 244) else Color3.fromRGB(240, 238, 232),
+			ZIndex = 31,
+			Parent = frame,
+		}, { Ui.corner(10), Ui.padding(10) })
+		table.insert(content, card)
+		local function label(x: number, y: number, w: number, h: number, text: string, size: number, color: Color3?, align: Enum.TextXAlignment?)
+			return Ui.make("TextLabel", {
+				Position = UDim2.fromOffset(x, y),
+				Size = UDim2.fromOffset(w, h),
+				BackgroundTransparency = 1,
+				Text = text,
+				TextSize = size,
+				TextWrapped = true,
+				Font = Enum.Font.GothamBold,
+				TextColor3 = color or INK,
+				TextXAlignment = align or Enum.TextXAlignment.Left,
+				ZIndex = 32,
+				Parent = card,
+			})
+		end
+		local function smallButton(x: number, y: number, w: number, h: number, text: string, color: Color3, onClick: () -> ())
+			local b = Ui.button({
+				Position = UDim2.fromOffset(x, y),
+				Size = UDim2.fromOffset(w, h),
+				Text = text,
+				TextSize = 13,
+				TextWrapped = true,
+				BackgroundColor3 = color,
+				ZIndex = 33,
+				Parent = card,
+			})
+			b.Activated:Connect(onClick)
+			return b
+		end
+		local CW = W - 20
+		if not flower then
+			label(0, 0, CW, 40, "➕", 30, nil, Enum.TextXAlignment.Center)
+			label(0, 42, CW, 20, "빈 화단이에요", 13, MUTED, Enum.TextXAlignment.Center)
+			smallButton(0, 74, CW, 44, "🌷 꽃씨 심기", Color3.fromRGB(240, 170, 200), openPicker)
+			local kinds = 0
+			for _, n in readFlowerSeeds() do
+				if n > 0 then
+					kinds += 1
+				end
+			end
+			if kinds > 0 then
+				label(0, 128, CW, 24, `🎒 꽃씨 {kinds}종`, 12, MUTED, Enum.TextXAlignment.Center)
+			end
+		else
+			local bloomed = state == "bloomed"
+			local stageEmoji = if bloomed then flower.emoji elseif bed.growth == 0 then "🌱" else "🌿"
+			label(0, 0, 44, 40, stageEmoji, 30, nil, Enum.TextXAlignment.Center)
+			label(50, 0, CW - 50, 22, `{flower.emoji} {flower.name}`, 16)
+			label(50, 22, CW - 50, 18, if bloomed then "🌸 활짝 폈어요!" elseif SalaryConfig.parkNeedsFeed(flower, bed.growth) then `🌿 꽃봉오리 ({bed.growth}/{flower.days}일)` else `🌱 자라는 중 ({bed.growth}/{flower.days}일)`, 12, MUTED)
+			-- 자란 정도 막대
+			local back = Ui.make("Frame", { Position = UDim2.fromOffset(0, 46), Size = UDim2.fromOffset(CW, 8), BackgroundColor3 = Color3.fromRGB(215, 215, 210), ZIndex = 32, Parent = card }, { Ui.corner(4) })
+			Ui.make("Frame", { Size = UDim2.fromScale(math.clamp(bed.growth / flower.days, 0, 1), 1), BackgroundColor3 = Color3.fromRGB(240, 130, 170), ZIndex = 33, Parent = back }, { Ui.corner(4) })
+			if bloomed then
+				label(0, 62, CW, 40, `💰 퇴근할 때마다 +{SalaryConfig.PARK_BED_BONUS}원`, 13, Color3.fromRGB(40, 140, 70))
+			else
+				local needWater, needFeed = bedTodo(bed, flower, today)
+				local feedNow = SalaryConfig.parkNeedsFeed(flower, bed.growth)
+				local waterText = if needWater then "💧 물 ❌" else "💧 물 ✅"
+				local feedText = if not feedNow then (if flower.feeds > 0 then "🧪 거름 아직" else "🧪 거름 X") elseif needFeed then "🧪 거름 ❌" else "🧪 거름 ✅"
+				label(0, 60, CW, 18, `📋 오늘 할 일: {waterText} · {feedText}`, 12)
+				local waterButton = smallButton(0, 82, (CW - 8) / 2, 38, if needWater then "💧 물 주기" else "✅ 오늘 물 줌", if needWater then Color3.fromRGB(150, 205, 255) else Color3.fromRGB(215, 215, 215), function()
+					act("water")
+				end)
+				waterButton.AutoButtonColor = needWater
+				local feedButton = smallButton((CW - 8) / 2 + 8, 82, (CW - 8) / 2, 38, if needFeed then `🧪 거름 주기 (🎒{fertilizer})` elseif feedNow then "✅ 거름 줌" else "🧪 아직이에요", if needFeed then Color3.fromRGB(200, 230, 170) else Color3.fromRGB(215, 215, 215), function()
+					act("feed")
+				end)
+				feedButton.AutoButtonColor = needFeed
+				label(0, 124, CW, 18, if not needWater and not needFeed then "😊 오늘 끝! 퇴근하면 자라요" else "다 주면 퇴근할 때 자라요", 11, MUTED)
+			end
+			-- 🧹 뽑기 (두 번 눌러야 뽑혀요)
+			local armed = false
+			local clearButton
+			clearButton = smallButton(0, 148, CW, 28, "🧹 뽑고 다른 꽃 심기", Color3.fromRGB(230, 225, 215), function()
+				if armed then
+					act("clear")
+				else
+					armed = true
+					clearButton.Text = "정말 뽑을까요? 꽃이 사라져요 (한 번 더)"
+					clearButton.BackgroundColor3 = Color3.fromRGB(255, 190, 170)
+				end
+			end)
+		end
+
+		-- 🏞️ 내 공원 한눈에 (화단 6곳)
+		table.insert(content, line(frame, 272, 20, "🏞️ 내 공원 한눈에", { Font = Enum.Font.GothamBlack, TextSize = 15 }))
+		local TILE_W = (W - 12) / 3
+		for i = 1, SalaryConfig.PARK_BEDS do
+			local b = beds[i]
+			local f = SalaryConfig.getFlower(b.flower)
+			local s = SalaryConfig.parkBedState(b)
+			local col, row = (i - 1) % 3, math.floor((i - 1) / 3)
+			local needWater, needFeed = bedTodo(b, f, today)
+			local text = if not f then `{i}. ➕ 비었어요` elseif s == "bloomed" then `{i}. {f.emoji} 활짝!` else `{i}. {f.emoji} {b.growth}/{f.days}` .. (if needWater then " 💧" else "") .. (if needFeed then " 🧪" else "")
+			local tile = Ui.make("TextLabel", {
+				Position = UDim2.fromOffset(col * (TILE_W + 6), 296 + row * 40),
+				Size = UDim2.fromOffset(TILE_W, 34),
+				BackgroundColor3 = if s == "bloomed" then Color3.fromRGB(250, 220, 235) elseif f then Color3.fromRGB(225, 240, 215) else Color3.fromRGB(232, 232, 232),
+				Text = text,
+				TextSize = 13,
+				TextScaled = false,
+				TextWrapped = true,
+				Font = Enum.Font.GothamBold,
+				TextColor3 = if f then INK else MUTED,
+				ZIndex = 31,
+				Parent = frame,
+			}, { Ui.corner(6), if i == index then Ui.stroke(Color3.fromRGB(220, 90, 140), 2) else nil })
+			table.insert(content, tile)
+		end
+		-- 💰 오늘 정원 수당 미리보기 + 규칙
+		local pay, bloomedBeds, kinds, full = SalaryConfig.parkBonus(beds)
+		local onNunchi = ReplicatedStorage:GetAttribute("SalaryCompany") == "nunchi"
+		local bonusText = `💰 정원 수당: 활짝 {bloomedBeds}곳 x {SalaryConfig.PARK_BED_BONUS}원`
+			.. (if full then ` + 🌈 {SalaryConfig.PARK_FULL_BONUS}원` else "")
+			.. ` = {comma(pay)}원`
+		table.insert(content, line(frame, 380, 20, bonusText, { TextSize = 13, Font = Enum.Font.GothamBold, TextColor3 = if onNunchi then Color3.fromRGB(40, 140, 70) else MUTED }))
+		table.insert(content, line(frame, 404, 18, `🌈 정원 완성: {SalaryConfig.PARK_BEDS}곳 활짝 + 꽃 {SalaryConfig.PARK_FULL_KINDS}종 (지금 {kinds}종) → +{SalaryConfig.PARK_FULL_BONUS}원`, { TextSize = 12, TextColor3 = MUTED }))
+		table.insert(content, line(frame, 426, 18, `🎒 🧪 거름 {fertilizer}개`, { TextSize = 12, TextColor3 = MUTED }))
+	end
+	rebuild()
+	local function refresh()
+		if current == frame then
+			rebuild()
+		end
+	end
+	local connections = {
+		player:GetAttributeChangedSignal("ParkGarden"):Connect(refresh),
+		player:GetAttributeChangedSignal("GardenToday"):Connect(refresh),
+		player:GetAttributeChangedSignal("FlowerSeeds"):Connect(refresh),
+		player:GetAttributeChangedSignal("Fertilizer"):Connect(refresh),
+	}
+	frame.Destroying:Connect(function()
+		for _, connection in connections do
+			connection:Disconnect()
+		end
+	end)
+	Sounds.play("swoosh", 0.4)
+end
+Remotes:WaitForChild("ParkOpen").OnClientEvent:Connect(function(index, station)
+	if typeof(index) == "number" then
+		Panels.showParkBed(index, station)
+	end
 end)
 
 ---------------------------------------------------------------------------
@@ -2189,8 +3549,23 @@ function Panels.showScope(station: any)
 		ZIndex = 31,
 		Parent = overlay,
 	})
-	local logButton = Ui.button({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(0.5, -6, 0.47, LENS / 2 + 60), Size = UDim2.fromOffset(150, 40), Text = "📒 관찰 일지", TextSize = 16, ZIndex = 31, Parent = overlay })
-	local quitButton = Ui.button({ AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0.5, 6, 0.47, LENS / 2 + 60), Size = UDim2.fromOffset(150, 40), Text = "🔭 그만 보기", TextSize = 16, ZIndex = 31, Parent = overlay })
+	-- (작은 화면에서도 보이게 화면 아래쪽에 붙여요)
+	local logButton = Ui.button({ AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, -6, 1, -40), Size = UDim2.fromOffset(170, 46), Text = "📒 관찰 일지", TextSize = 17, ZIndex = 45, Parent = overlay })
+	local quitButton = Ui.button({ AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0.5, 6, 1, -40), Size = UDim2.fromOffset(170, 46), Text = "🔭 그만 보기 (Esc)", TextSize = 17, ZIndex = 45, Parent = overlay })
+	-- ✕ 닫기 (오른쪽 위, 다른 창들과 같은 자리)
+	local closeX = Ui.make("TextButton", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -20, 0, 20),
+		Size = UDim2.fromOffset(52, 52),
+		BackgroundColor3 = Color3.fromRGB(225, 225, 230),
+		Text = "X",
+		Font = Enum.Font.GothamBlack,
+		TextSize = 24,
+		TextColor3 = INK,
+		ZIndex = 45,
+		Parent = overlay,
+	}, { Ui.corner(26) })
+	closeX.Activated:Connect(close)
 	logButton.Activated:Connect(function()
 		Panels.showScopeLog(true)
 	end)
@@ -2211,6 +3586,12 @@ function Panels.showScope(station: any)
 	local dragging = false
 	local held: { [Enum.KeyCode]: boolean } = {}
 	local connections = {}
+	-- ⎋ Esc로도 그만 보기
+	table.insert(connections, UserInputService.InputBegan:Connect(function(input)
+		if input.KeyCode == Enum.KeyCode.Escape and current == overlay then
+			close()
+		end
+	end))
 	table.insert(connections, lens.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
@@ -2609,7 +3990,10 @@ function Panels.showHoop(station: any)
 	local scoreText = line(frame, 92, 26, "", { TextSize = 18, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Center })
 	-- 슛 게이지
 	local back = Ui.make("Frame", { Position = UDim2.fromOffset(0, 130), Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = Color3.fromRGB(215, 218, 226), ZIndex = 31, Parent = frame }, { Ui.corner(6) })
+	-- 💪 근력: 칸이 넓어져요 (최대 +20% · 판정은 서버가 같은 식으로)
+	local hoopWiden = SalaryConfig.playerFitnessEffect(player, "hoop")
 	local function zone(half: number, color: Color3, z: number)
+		half *= 1 + hoopWiden
 		Ui.make("Frame", {
 			Position = UDim2.fromScale(SalaryConfig.HOOP_TARGET - half, 0),
 			Size = UDim2.fromScale(half * 2, 1),
@@ -2682,7 +4066,7 @@ function Panels.showHoop(station: any)
 		frozen = true
 		local predicted = SalaryConfig.hoopGauge(press - gaugeStart, shot + 1)
 		marker.Position = UDim2.fromScale(predicted, 0.5)
-		local guess = SalaryConfig.hoopResult(predicted)
+		local guess = SalaryConfig.hoopResult(predicted, hoopWiden)
 		result.Text = HOOP_TEXT[guess]
 		result.TextColor3 = if guess == "swish" or guess == "make" then Color3.fromRGB(40, 140, 70) else RED
 		Sounds.play("swoosh", 0.4, 1.3)
@@ -2990,36 +4374,152 @@ function Panels.showExam(certId: string)
 	Sounds.play("swoosh", 0.4)
 end
 
--- 🐦 옥상 비둘기 관찰 노트
+-- 🐦 옥상 비둘기 관찰 노트: 📒 만난 비둘기 + 🎁 비둘기 보물 (목록은 스크롤)
 Remotes:WaitForChild("PigeonBook").OnClientEvent:Connect(function(station)
-	local ok, seen = pcall(function()
-		return HttpService:JSONDecode(player:GetAttribute("Pigeons") or "{}")
-	end)
-	seen = if ok and typeof(seen) == "table" then seen else {}
+	local function decode(name: string): { [string]: number }
+		local ok, value = pcall(function()
+			return HttpService:JSONDecode(player:GetAttribute(name) or "{}")
+		end)
+		return if ok and typeof(value) == "table" then value else {}
+	end
+	local seen = decode("Pigeons")
+	local treasures = decode("PigeonTreasures")
 	local feeds = player:GetAttribute("PigeonFeeds") or 0
 	local levelIndex, level = SalaryConfig.pigeonLevel(feeds)
 	local nextLevel = SalaryConfig.PigeonLevels[levelIndex + 1]
-	local lines = {}
 	local found = 0
+	for _, kind in SalaryConfig.Pigeons do
+		if (seen[kind.id] or 0) > 0 then
+			found += 1
+		end
+	end
+	local treasureFound = 0
+	for _, treasure in SalaryConfig.PigeonTreasures do
+		if (treasures[treasure.id] or 0) > 0 then
+			treasureFound += 1
+		end
+	end
+	local frame = sheet(640, 580)
+	closeOnOutside(frame)
+	line(frame, 0, 34, "📒 비둘기 관찰 노트", { Font = Enum.Font.GothamBlack, TextSize = 26 })
+	local chance = math.floor(SalaryConfig.pigeonGiftChance(levelIndex, nil) * 100)
+	line(frame, 38, 22, `💕 {level.name} · {feeds}점` .. (if nextLevel then ` (다음까지 {nextLevel.feeds - feeds}점)` else " 🏆") .. (if chance > 0 then ` · 🎁 {chance}%` else ""), { TextSize = 16, TextColor3 = MUTED })
+	helpButton(
+		frame,
+		UDim2.new(1, -70, 0, 2),
+		"비둘기 친밀도",
+		`🍪 옥상 모이 통 [E]에서 과자를 뿌리면 💕 친밀도가 올라요\n🐦 지금 단계: <b>{level.name}</b> · 한 번에 {level.flock}마리` .. (if nextLevel then ` · 다음 단계까지 {nextLevel.feeds - feeds}점` else " · 최고 단계!") .. "\n" .. (if chance > 0
+			then `🎁 과자를 주면 {chance}% 확률로 선물을 물어 와요 (좋은 과자일수록 +) · 하루 {SalaryConfig.PIGEON_GIFT_DAILY}번까지`
+			else `🎁 '{SalaryConfig.PigeonLevels[2].name}' 단계부터 선물을 물어 와요`) .. "\n✨ 친해질수록 귀한 비둘기도 와요"
+	)
+	local list = Ui.make("ScrollingFrame", {
+		Position = UDim2.fromOffset(0, 66),
+		Size = UDim2.new(1, 0, 1, -126),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 8,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ZIndex = 31,
+		Parent = frame,
+	}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local order = 0
+	local function row(text: string, props: { [string]: any }?)
+		order += 1
+		local options: { [string]: any } = { Size = UDim2.new(1, -14, 0, 30), LayoutOrder = order, ZIndex = 32, TextSize = 17, TextTruncate = Enum.TextTruncate.AtEnd }
+		for key, value in props or {} do
+			options[key] = value
+		end
+		line(list, 0, 30, text, options)
+	end
+	row(`🐦 만난 비둘기 ({found}/{#SalaryConfig.Pigeons})`, { Font = Enum.Font.GothamBlack, TextSize = 19 })
 	for _, kind in SalaryConfig.Pigeons do
 		local count = seen[kind.id] or 0
 		if count > 0 then
-			found += 1
-			table.insert(lines, `{kind.emoji} {kind.name} ×{count} — {kind.description}`)
+			row(`{kind.emoji} {kind.name} x{count} — {kind.description}`)
 		else
 			local hint = if kind.minLevel > levelIndex then ` (💕 {SalaryConfig.PigeonLevels[kind.minLevel].name}부터)` else ""
-			table.insert(lines, `❔ ??? 아직 못 만났어요{hint}`)
+			row(`❔ ??? 아직 못 만났어요{hint}`, { TextColor3 = MUTED })
 		end
 	end
-	showCard({
-		title = `📒 비둘기 관찰 노트 ({found}/{#SalaryConfig.Pigeons})`,
-		subtitle = `💕 친밀도: {level.name} (모이 {feeds}번 · 한 번에 {level.flock}마리)`
-			.. (if nextLevel then ` · 다음 단계까지 {nextLevel.feeds - feeds}번` else " · 최고 단계!"),
-		lines = lines,
-	})
-	if current then
-		closeWhenAway(current, station, 10) -- 🚪 모이 상자에서 멀어지면 노트가 닫혀요
+	row("", { Size = UDim2.new(1, -14, 0, 8) })
+	row(`🎁 비둘기 보물 ({treasureFound}/{#SalaryConfig.PigeonTreasures})`, { Font = Enum.Font.GothamBlack, TextSize = 19 })
+	for _, treasure in SalaryConfig.PigeonTreasures do
+		local count = treasures[treasure.id] or 0
+		local worth = if treasure.kind == "money"
+			then `💰 {comma(treasure.min)}~{comma(treasure.max)}원`
+			elseif treasure.kind == "tickets" then `🎟️ 티켓 {treasure.min}~{treasure.max}장`
+			elseif treasure.kind == "valuable" then `💰 사례금 {comma(treasure.value)}원 (다음부턴 {comma(math.floor(treasure.value * SalaryConfig.PIGEON_TREASURE_RESELL))}원)`
+			else "😂 0원 (수집용)"
+		if count > 0 then
+			row(`{treasure.emoji} {treasure.name} x{count} · {worth}`)
+			row(`      {treasure.description}`, { TextSize = 14, TextColor3 = MUTED, Size = UDim2.new(1, -14, 0, 20) })
+		else
+			row(`❔ ??? · {if treasure.rare then "✨ 아주 드물어요" elseif treasure.kind == "valuable" then "💍 귀중품" elseif treasure.kind == "joke" then "😂 장난 선물" else worth}`, { TextColor3 = MUTED })
+		end
 	end
+	button(frame, 0, "알겠어요", close)
+	Sounds.play("swoosh", 0.4)
+	closeWhenAway(frame, station, 10) -- 🚪 모이 상자에서 멀어지면 노트가 닫혀요
+end)
+
+-- 🍪 모이 통 [E] → 뿌릴 과자 고르기 (🎒에 있는 과자만 [뿌리기])
+Remotes:WaitForChild("PigeonSnackOpen").OnClientEvent:Connect(function(station)
+	local snacks = SalaryConfig.PigeonSnacks
+	local frame = sheet(440, 146 + #snacks * 58)
+	line(frame, 0, 30, "🍪 어떤 과자를 뿌릴까요?", { Font = Enum.Font.GothamBlack, TextSize = 22 })
+	local message = line(frame, 0, 22, "", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, -50),
+		TextSize = 15,
+		TextColor3 = MUTED,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
+	local ok, mySnacks = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("PigeonSnacks") or "{}")
+	end)
+	mySnacks = if ok and typeof(mySnacks) == "table" then mySnacks else {}
+	local busy = false
+	for i, snack in snacks do
+		local y = 38 + (i - 1) * 58
+		local have = mySnacks[snack.id] or 0
+		line(frame, y, 24, `{snack.emoji} {snack.name} (🎒 {have}개)`, { Font = Enum.Font.GothamBold, TextSize = 18, Size = UDim2.new(1, -120, 0, 24), TextColor3 = if have > 0 then INK else MUTED })
+		line(frame, y + 25, 20, `💕 +{snack.friend} · 🐦 +{snack.flock}마리 · 🎁 선물 +{math.floor(snack.gift * 100)}%`, { TextSize = 15, TextColor3 = MUTED, Size = UDim2.new(1, -120, 0, 20) })
+		local b = Ui.button({
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, 0, 0, y + 4),
+			Size = UDim2.fromOffset(110, 38),
+			Text = if have > 0 then "뿌리기" else "없음",
+			TextSize = 16,
+			ZIndex = 32,
+			Parent = frame,
+		})
+		if have <= 0 then
+			b.AutoButtonColor = false
+			b.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+		end
+		b.Activated:Connect(function()
+			if busy or have <= 0 then
+				return
+			end
+			busy = true
+			local fed, result = Remotes.PigeonFeed:InvokeServer(snack.id)
+			busy = false
+			if current ~= frame then
+				return
+			end
+			Sounds.play(if fed then "ping" else "bass", 0.6, 1.2)
+			if fed then
+				close()
+			else
+				message.Text = result
+				message.TextColor3 = RED
+			end
+		end)
+	end
+	button(frame, 0, "닫기", close)
+	Sounds.play("swoosh", 0.4)
+	closeWhenAway(frame, station, 10) -- 🚪 모이 통에서 멀어지면 닫혀요
 end)
 
 -- 🐦 비둘기가 놀라서 날아갔어요 = 부장님이 곧 와요!
@@ -3275,10 +4775,11 @@ local function showClaw()
 	local BOX = 300 -- 기계 안 (위에서 본 모습) 크기
 	local frame = sheet(520, 560)
 	line(frame, 0, 32, "🧸 인형뽑기", { Font = Enum.Font.GothamBlack, TextSize = 26 })
-	line(frame, 34, 40, `① 좌우로 움직일 때 [멈춤] → ② 앞뒤로 움직일 때 [내리기]! 한 판 {comma(SalaryConfig.CLAW_PRICE)}원\n정중앙을 노려야 잘 잡혀요. 희귀할수록 미끄러워요 😅`, {
-		TextSize = 14,
+	line(frame, 34, 40, `[멈춤] → [내리기] · 한 판 {comma(SalaryConfig.CLAW_PRICE)}원`, {
+		TextSize = 16,
 		TextColor3 = MUTED,
 	})
+	helpButton(frame, UDim2.new(1, -70, 0, 2), "인형뽑기", "① 집게가 좌우로 움직일 때 <b>[멈춤]</b>\n② 앞뒤로 움직일 때 <b>[내리기]</b>\n🎯 인형 정중앙을 노려야 잘 잡혀요\n✨ 희귀한 인형일수록 미끄러워요 😅")
 	local box = Ui.make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 82),
@@ -3530,12 +5031,14 @@ Remotes:WaitForChild("ClawOpen").OnClientEvent:Connect(showClaw)
 -- backTo: 다른 창(🎒 소지품 등)에서 열었으면 아래에 [◀ 뒤로] 버튼을 달아 그 창으로 돌아가요
 function Panels.showPlushies(backTo: (() -> ())?)
 	local plushRows = math.ceil(#SalaryConfig.Plushies / 3)
-	local frame = sheet(540, 90 + plushRows * 92 + (if backTo then 52 else 0))
+	local frame = sheet(600, 560) -- (🎒 소지품 창과 같은 크기)
+	closeOnOutside(frame)
+	local _ = plushRows
 	if backTo then
 		button(frame, 0, "◀ 소지품으로", backTo)
 	end
 	line(frame, 0, 32, "🧸 내 인형", { Font = Enum.Font.GothamBlack, TextSize = 26 })
-	line(frame, 34, 22, `눌러서 책상에 진열하기 (최대 {SalaryConfig.DESK_PLUSH_MAX}개) · 눈치 스트리트 인형뽑기에서 뽑아요`, { TextSize = 14, TextColor3 = MUTED })
+	line(frame, 34, 22, `눌러서 책상에 진열 (최대 {SalaryConfig.DESK_PLUSH_MAX}개)`, { TextSize = 14, TextColor3 = MUTED })
 	local cards = {}
 	for i, plush in SalaryConfig.Plushies do
 		local col, row = (i - 1) % 3, math.floor((i - 1) / 3)
@@ -4180,10 +5683,11 @@ local function showDart()
 	local MIN_ANGLE = SalaryConfig.DART_MIN_ANGLE
 	local frame = sheet(420, 480)
 	line(frame, 0, 28, "🎯 풍선 다트", { Font = Enum.Font.GothamBlack, TextSize = 24 })
-	line(frame, 28, 32, "판을 누른 채 아래로 끌었다 놓으면 다트가 슝! 많이 당길수록 세게\n맞힌 풍선에 써 있는 경품을 받아요 · 🧸 풍선은 가끔 전설 인형!", {
-		TextSize = 12,
+	line(frame, 32, 26, "아래로 끌었다 놓으면 슝!", {
+		TextSize = 14,
 		TextColor3 = MUTED,
 	})
+	helpButton(frame, UDim2.new(1, -70, 0, 0), "풍선 다트", "🖱️ 판을 누른 채 <b>아래로 끌었다 놓으면</b> 다트가 날아가요 (많이 당길수록 세게)\n🎈 맞힌 풍선에 써 있는 경품을 받아요\n🧸 인형 풍선은 가끔 전설 인형!\n🔁 닫았다 열어도 같은 풍선 벽이에요")
 	-- 풍선 벽 (하늘색 판, 넘어가는 다트는 잘려 보여요)
 	local field = Ui.make("Frame", {
 		Position = UDim2.fromOffset(0, 62),
@@ -4306,14 +5810,15 @@ local function showDart()
 	end
 
 	-- 겨냥 점선 (처음 조금만 보여 줘요 → 나머지 포물선은 감으로!)
-	local GUIDE_DOTS, GUIDE_GAP = 6, 0.02
+	--   ⚖️ 균형감: 점선이 길어져요 (최대 +60% → 점 6개 → 10개)
+	local GUIDE_DOTS, GUIDE_GAP = math.floor(6 * (1 + SalaryConfig.playerFitnessEffect(player, "aim")) + 0.5), 0.02
 	local dots: { Frame } = {}
 	for i = 1, GUIDE_DOTS do
 		dots[i] = Ui.make("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Size = UDim2.fromOffset(6, 6),
 			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-			BackgroundTransparency = 0.1 + i * 0.1,
+			BackgroundTransparency = 0.1 + i / GUIDE_DOTS * 0.6,
 			BorderSizePixel = 0,
 			Visible = false,
 			ZIndex = 43,
@@ -4359,9 +5864,9 @@ local function showDart()
 	end
 	local function idleText()
 		if mode == "playing" then
-			setStatus(`🎯 다트 {left}개 남음 · 이번 판 💰 {comma(total)}원{ticketText(totalTickets)}\n판을 누른 채 아래로 끌었다 놓아요!`)
+			setStatus(`🎯 다트 {left}개 남음 · 이번 판 💰 {comma(total)}원{ticketText(totalTickets)}`)
 		elseif mode == "preview" then
-			setStatus("이번 풍선 벽이에요! 어느 풍선을 노릴까요?\n마음에 들면 시작 (닫았다 열어도 같은 벽이에요)")
+			setStatus("이번 풍선 벽이에요! 마음에 들면 시작")
 		end
 	end
 
@@ -4536,7 +6041,7 @@ local function showDart()
 			mode = "finished"
 			dart.Visible = false
 			mainButton.Text = "🎯 새 풍선 벽 보기"
-			setStatus(`🏁 끝! 이번 판 💰 {comma(total)}원{ticketText(totalTickets)}\n아래 버튼으로 새 풍선 벽을 볼 수 있어요`, Color3.fromRGB(40, 140, 70))
+			setStatus(`🏁 끝! 이번 판 💰 {comma(total)}원{ticketText(totalTickets)}`, Color3.fromRGB(40, 140, 70))
 		end
 	end
 
@@ -5933,7 +7438,8 @@ Remotes:WaitForChild("GuardBribeOpen").OnClientEvent:Connect(function(guardId: s
 	local count = #SalaryConfig.GuardBribes
 	local frame = sheet(400, 200 + count * 58) -- (아래 안내 문구가 버튼과 안 겹치게 여유)
 	line(frame, 0, 30, "🎁 경비원에게 선물", { Font = Enum.Font.GothamBlack, TextSize = 22 })
-	line(frame, 32, 20, `👮 {guardName} · 🎒 소지품의 선물을 드려요 (하루 한 번, 좋을수록 오래)`, { TextSize = 13, TextColor3 = MUTED })
+	line(frame, 32, 20, `👮 {guardName} · 하루 한 번`, { TextSize = 14, TextColor3 = MUTED })
+	helpButton(frame, UDim2.new(1, -70, 0, 0), "경비원 선물", "🏪 사내 매점 <b>[👮 경비원]</b> 탭에서 선물을 사면 🎒에 보관돼요\n🎁 선물을 받은 경비원은 그동안 <b>못 본 척</b> (의심도가 안 올라요)\n⏳ 좋은 선물일수록 오래가요\n📅 경비원마다 하루 한 번만 받아요")
 	local message = line(frame, 0, 22, "", {
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 0, 1, -50),
@@ -5950,7 +7456,7 @@ Remotes:WaitForChild("GuardBribeOpen").OnClientEvent:Connect(function(guardId: s
 		local y = 60 + (i - 1) * 58
 		local have = myGifts[bribe.id] or 0
 		line(frame, y, 22, `{bribe.emoji} {bribe.name} (🎒 {have}개)`, { Font = Enum.Font.GothamBold, TextSize = 16, Size = UDim2.new(1, -130, 0, 22), TextColor3 = if have > 0 then INK else MUTED })
-		line(frame, y + 22, 20, `🙈 {SalaryConfig.gameDurationText(bribe.minutes)} 동안 의심도 안 올라요`, { TextSize = 13, TextColor3 = MUTED, Size = UDim2.new(1, -130, 0, 20) })
+		line(frame, y + 22, 20, `🙈 {SalaryConfig.gameDurationText(bribe.minutes)} 동안 못 본 척`, { TextSize = 13, TextColor3 = MUTED, Size = UDim2.new(1, -130, 0, 20) })
 		local buy = Ui.button({
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, 0, 0, y + 4),

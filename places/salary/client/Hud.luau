@@ -251,6 +251,8 @@ Ui.make("UITextSizeConstraint", { MaxTextSize = 22, MinTextSize = 12, Parent = s
 local suspicionLabel, suspicionFill = bar(statusPanel, 34, "")
 suspicionLabel.RichText = true
 local workLabel, workFill = bar(statusPanel, 74, "")
+workLabel.TextScaled = true -- 직급이 높아 숫자가 길어져도 패널 밖으로 안 나가게
+Ui.make("UITextSizeConstraint", { MaxTextSize = 15, MinTextSize = 10, Parent = workLabel })
 local awayLabel, awayFill = bar(statusPanel, 114, "") -- 🖥️ 자리 부재 게이지
 local targetLabel, targetFill = bar(statusPanel, 154, "") -- 💰 하루 실적 목표 (사원부터)
 local warningText = text({ Position = UDim2.fromOffset(0, 196), Size = UDim2.new(1, 0, 0, 22), Parent = statusPanel })
@@ -344,9 +346,28 @@ local function refreshSpeedInfo()
 		.. `\n<font color="#9A9AA5">🍻 회식·🎁 홍삼은 다음 날 아침에 반영돼요</font>`
 end
 
+-- 📄 오늘 업무 게이지 설명
+local function refreshWorkInfo()
+	local work = math.floor(player:GetAttribute("WorkSeconds") or 0)
+	local quota = player:GetAttribute("WorkQuota") or SalaryConfig.WORK_QUOTA
+	local rank = SalaryConfig.Ranks[player:GetAttribute("Rank") or 1] or SalaryConfig.Ranks[1]
+	comboInfoText.Text = `<font size="18"><b>📄 오늘 업무 {work}/{quota}초</b></font>\n`
+		.. (if work >= quota then `<font color="#7CE08A"><b>✅ 오늘 업무 완료! 이제 마음껏 농땡이~</b></font>\n\n` else `퇴근까지 <b>{quota - work}초</b> 더 채워야 해요\n\n`)
+		.. `<b>🪑 업무가 쌓이는 법</b>\n`
+		.. `<b>내 자리에 앉아 있기만 하면</b> 1초에 1초씩 쌓여요!\n`
+		.. `일하기든, 앉아서 하는 농땡이(멍때리기·웹툰·폰·쇼핑·꿀잠·간식…)든 똑같아요\n`
+		.. `<font color="#9A9AA5">옥상·거리·화장실·탕비실·체력 단련실처럼 자리를 비우면 안 쌓여요</font>\n`
+		.. `<font color="#7CE08A">☕ 아메리카노를 마시면 더 빨리 쌓여요</font>\n\n`
+		.. `<b>📏 기준</b> {rank.name}: 하루 <b>{quota}초</b> (직급이 오를수록 늘어나요)\n`
+		.. `<font color="#FF7A7A">🚨 퇴근 때 못 채웠으면 경고 1개 + 감봉 -{comma(rank.quotaPenalty or 0)}원</font>`
+end
+
 local function refreshComboInfo()
 	if infoMode == "speed" then
 		refreshSpeedInfo()
+		return
+	elseif infoMode == "work" then
+		refreshWorkInfo()
 		return
 	end
 	local combo = player:GetAttribute("Combo") or 1
@@ -392,6 +413,20 @@ local speedButton = Ui.make("TextButton", {
 speedButton.Activated:Connect(function()
 	local same = infoMode == "speed"
 	infoMode = "speed"
+	toggleComboInfo(not (comboInfo.Visible and same))
+end)
+-- 📄 업무 줄을 누르면 업무 게이지 설명
+local workButton = Ui.make("TextButton", {
+	Position = UDim2.fromOffset(0, 72),
+	Size = UDim2.new(1, 0, 0, 36),
+	BackgroundTransparency = 1,
+	Text = "",
+	ZIndex = 5,
+	Parent = statusPanel,
+})
+workButton.Activated:Connect(function()
+	local same = infoMode == "work"
+	infoMode = "work"
 	toggleComboInfo(not (comboInfo.Visible and same))
 end)
 comboInfoClose.Activated:Connect(function()
@@ -733,7 +768,7 @@ local function applyLayout()
 	actionPanel.Position = UDim2.new(0.5, 0, 1, if phone then -90 else -6)
 	scales[actionPanel].Scale = math.clamp((viewport.X - 24) / width, 0.5, 1)
 	hintText.Size = UDim2.new(0, math.max(width, 720), 0, 18) -- 버튼 줄보다 넓게 (설명이 잘리지 않게)
-	hintText.TextSize = if phone then 14 else 13
+	hintText.TextSize = if phone then 16 else 16 -- (작다는 의견이 있어 키웠어요)
 	buttonRow.Position = UDim2.fromOffset(0, 22)
 	for _, button in buttons do
 		button.TextSize = if phone then 13 else 12
@@ -1029,7 +1064,7 @@ RunService.RenderStepped:Connect(function()
 
 	local work = player:GetAttribute("WorkSeconds") or 0
 	local quota = player:GetAttribute("WorkQuota") or SalaryConfig.WORK_QUOTA
-	workLabel.Text = if work >= quota then "📄 오늘 업무 완료! ✅" else `📄 오늘 업무 {work}/{quota}초 (못 채우면 경고)`
+	workLabel.Text = if work >= quota then "📄 오늘 업무 완료! ✅ ❓" else `📄 업무 {work}/{quota}초 · 🪑앉으면 ⬆️ ❓`
 	workFill.Size = UDim2.fromScale(math.clamp(work / quota, 0, 1), 1)
 
 	local warnings = player:GetAttribute("Warnings") or 0
@@ -1395,13 +1430,14 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- 🗣️ 맞장구 고르기 (수다 중에 보기 3개, [1]·[2]·[3] 또는 누르기)
+-- 💬 수다 창: 수다 중에는 동료·내 대사가 여기에 차례로 보이고 (최근 3줄), 맞장구 보기 3개도 같은 창에 떠요
 --   떠 있는 동안 숫자 키 1~3은 맞장구에 써요 (Hud.chatReactOpen)
 Hud.chatReactOpen = false
+local CHAT_LOG_LINES = 3
 local chatReactBar = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0),
 	Position = UDim2.new(0.5, 0, 0, 150),
-	Size = UDim2.fromOffset(500, 100),
+	Size = UDim2.fromOffset(560, 116),
 	BackgroundColor3 = Color3.fromRGB(36, 30, 26),
 	BackgroundTransparency = 0.05,
 	Visible = false,
@@ -1409,8 +1445,31 @@ local chatReactBar = Ui.make("Frame", {
 	Parent = gui,
 }, { Ui.corner(12), Ui.stroke(Color3.fromRGB(255, 190, 90), 2), Ui.padding(8) })
 local chatReactTitle = text({ Size = UDim2.new(1, 0, 0, 20), TextSize = 15, TextColor3 = Color3.fromRGB(255, 210, 130), ZIndex = 41, Parent = chatReactBar })
+-- 대사 기록 (위가 오래된 것, 아래가 방금 한 말)
+local chatLogLabels: { TextLabel } = {}
+local chatLog: { string } = {}
+for i = 1, CHAT_LOG_LINES do
+	chatLogLabels[i] = text({
+		Position = UDim2.fromOffset(0, 24 + (i - 1) * 25),
+		Size = UDim2.new(1, 0, 0, 24),
+		TextSize = 17,
+		RichText = true,
+		TextScaled = true,
+		ZIndex = 41,
+		Parent = chatReactBar,
+	})
+	Ui.make("UITextSizeConstraint", { MaxTextSize = 17, MinTextSize = 11, Parent = chatLogLabels[i] })
+end
+local function renderChatLog()
+	for i, label in chatLogLabels do
+		local entry = chatLog[#chatLog - CHAT_LOG_LINES + i]
+		label.Text = entry or ""
+		label.TextTransparency = if i == CHAT_LOG_LINES then 0 else 0.35 -- (방금 한 말이 제일 진하게)
+	end
+end
+local REACT_TOP = 24 + CHAT_LOG_LINES * 25 + 4
 local chatReactTimer = Ui.make("Frame", {
-	Position = UDim2.fromOffset(0, 24),
+	Position = UDim2.fromOffset(0, REACT_TOP),
 	Size = UDim2.new(1, 0, 0, 5),
 	BackgroundColor3 = Color3.fromRGB(255, 190, 90),
 	BorderSizePixel = 0,
@@ -1421,10 +1480,45 @@ local chatReactButtons = {}
 local chatReactId = 0
 local chatReactDeadline = 0
 local chatReactSeconds = 4
+local chatName = "동료"
+local chatEnded = false -- 👋 "오늘 대화 끝": 창은 남아 있다가 ✕·바깥 클릭·잠시 뒤에 닫혀요
+local chatEndToken = 0
+-- ✕ 닫기 (오늘 대화가 끝났을 때만 보여요)
+local chatCloseButton = Ui.make("TextButton", {
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, 0, 0, -2),
+	Size = UDim2.fromOffset(26, 24),
+	BackgroundColor3 = Color3.fromRGB(80, 70, 60),
+	Text = "X",
+	TextColor3 = Color3.new(1, 1, 1),
+	Font = Enum.Font.GothamBlack,
+	TextSize = 14,
+	Visible = false,
+	ZIndex = 42,
+	Parent = chatReactBar,
+}, { Ui.corner(6) })
+local function hideChatDialog()
+	chatEnded = false
+	chatCloseButton.Visible = false
+	chatReactBar.Visible = false
+	table.clear(chatLog)
+	renderChatLog()
+end
+chatCloseButton.Activated:Connect(hideChatDialog)
+local function setReactVisible(on: boolean)
+	chatReactTimer.Visible = on
+	for _, b in chatReactButtons do
+		b.Visible = on
+	end
+	chatReactBar.Size = UDim2.fromOffset(560, if on then REACT_TOP + 70 else REACT_TOP)
+	chatReactTitle.Text = if on then `💬 {chatName}와(과) 수다 · 🗣️ 맞장구! [1]·[2]·[3]` elseif chatEnded then `💬 {chatName}와(과) 오늘 대화 끝 👋` else `💬 {chatName}와(과) 수다 중`
+end
 local function closeChatReact()
 	chatReactId = 0
-	chatReactBar.Visible = false
 	Hud.chatReactOpen = false
+	setReactVisible(false)
+	-- 수다가 이어지는 중이면(또는 "오늘 대화 끝"을 보여 주는 중이면) 창은 남겨 둬요
+	chatReactBar.Visible = (chatEnded or player:GetAttribute("SalaryState") == "chat") and #chatLog > 0
 end
 local function answerChatReact(index: number)
 	if chatReactId == 0 then
@@ -1438,9 +1532,9 @@ local function answerChatReact(index: number)
 end
 for i = 1, 3 do
 	local b = Ui.button({
-		Position = UDim2.new((i - 1) / 3, if i == 1 then 0 else 3, 0, 36),
-		Size = UDim2.new(1 / 3, -4, 0, 48),
-		TextSize = 14,
+		Position = UDim2.new((i - 1) / 3, if i == 1 then 0 else 3, 0, REACT_TOP + 12),
+		Size = UDim2.new(1 / 3, -4, 0, 50),
+		TextSize = 15,
 		TextWrapped = true,
 		ZIndex = 41,
 		Parent = chatReactBar,
@@ -1458,10 +1552,11 @@ Remotes:WaitForChild("ChatReact").OnClientEvent:Connect(function(id: number, nam
 	chatReactId = id
 	chatReactSeconds = seconds or 4
 	chatReactDeadline = os.clock() + chatReactSeconds
-	chatReactTitle.Text = `🗣️ {name or "동료"}에게 맞장구! [1]·[2]·[3]`
+	chatName = name or chatName
 	for i, b in chatReactButtons do
 		b.Text = `[{i}] {options[i] or ""}`
 	end
+	setReactVisible(true)
 	chatReactBar.Visible = true
 	Hud.chatReactOpen = true
 	Sounds.play("ping", 0.5, 1.8)
@@ -1485,8 +1580,130 @@ RunService.Heartbeat:Connect(function()
 		end
 	end
 end)
+-- 💬 대사 한 줄 받기
+Remotes:WaitForChild("ChatLine").OnClientEvent:Connect(function(kind: string, name: string, line: string)
+	if chatName ~= name or (chatEnded and kind ~= "end") then
+		table.clear(chatLog) -- 다른 동료와(또는 새로) 수다 시작
+		chatEnded = false
+		chatCloseButton.Visible = false
+	end
+	chatName = name
+	local entry = if kind == "me"
+		then `<font color="#8FD3FF"><b>나:</b></font> {line}`
+		elseif kind == "sys" then `<font color="#7CE08A">{line}</font>`
+		elseif kind == "end" then `<font color="#FFB36B"><b>{line}</b></font>`
+		else `<font color="#FFD27A"><b>{name}:</b></font> {line}`
+	if kind == "end" then
+		-- 👋 오늘 대화 끝: 창은 그대로 두고 ✕ / 바깥 클릭 / 8초 뒤에 닫혀요
+		chatEnded = true
+		chatCloseButton.Visible = true
+		chatEndToken += 1
+		local myToken = chatEndToken
+		task.delay(8, function()
+			if chatEnded and chatEndToken == myToken then
+				hideChatDialog()
+			end
+		end)
+	end
+	table.insert(chatLog, entry)
+	if #chatLog > 12 then
+		table.remove(chatLog, 1)
+	end
+	renderChatLog()
+	setReactVisible(chatReactId ~= 0)
+	chatReactBar.Visible = true
+end)
+-- 다른 곳(화면 빈 곳)을 누르면 "오늘 대화 끝" 창을 닫아요
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if chatEnded and not gameProcessed and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+		hideChatDialog()
+	end
+end)
+-- 수다가 끝나면(다른 행동을 하면) 창을 닫고 기록도 지워요
+player:GetAttributeChangedSignal("SalaryState"):Connect(function()
+	if player:GetAttribute("SalaryState") ~= "chat" and chatReactId == 0 and not chatEnded then
+		hideChatDialog() -- (들키거나 멀어져서 끊긴 거예요. "오늘 대화 끝"은 남겨 둬요)
+	end
+end)
 -- 죽거나 다시 태어나면 닫아요
-player.CharacterAdded:Connect(closeChatReact)
+player.CharacterAdded:Connect(function()
+	closeChatReact()
+	hideChatDialog()
+end)
+
+-- 🏋️ 운동 게이지 (체력 단련실 기구 위에 있을 때만, 화면 아래쪽)
+--   꽉 차면 그 기구의 스탯 +1 · 중간에 내리면 처음부터
+--   (위쪽 시계 아래는 👞 부장님 발소리·이벤트 경고 자리라 가리지 않게 아래로)
+do
+	local gymPill = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -140),
+		Size = UDim2.fromOffset(390, 40),
+		BackgroundColor3 = Color3.fromRGB(20, 22, 30),
+		BackgroundTransparency = 0.15,
+		Visible = false,
+		ZIndex = 40,
+		Parent = gui,
+	}, { Ui.corner(10), Ui.stroke(Color3.fromRGB(255, 200, 80), 1.5) })
+	local gymLabel = text({
+		Position = UDim2.fromOffset(6, 2),
+		Size = UDim2.new(1, -12, 0, 18),
+		TextSize = 14,
+		TextScaled = true,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		ZIndex = 41,
+		Parent = gymPill,
+	})
+	Ui.make("UITextSizeConstraint", { MaxTextSize = 14, MinTextSize = 9, Parent = gymLabel })
+	local gymTrack = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -5),
+		Size = UDim2.new(1, -20, 0, 10),
+		BackgroundColor3 = Color3.fromRGB(60, 62, 72),
+		ZIndex = 41,
+		Parent = gymPill,
+	}, { Ui.corner(5) })
+	local gymFill = Ui.make("Frame", {
+		Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = Color3.fromRGB(110, 210, 120),
+		ZIndex = 42,
+		Parent = gymTrack,
+	}, { Ui.corner(5) })
+	local shown = 0
+	RunService.RenderStepped:Connect(function(dt)
+		local machineId = player:GetAttribute("GymMachine") or ""
+		local machine = SalaryConfig.GymMachines[machineId]
+		local onGym = player:GetAttribute("SalaryState") == "gym" and machine ~= nil
+		gymPill.Visible = onGym
+		if not onGym then
+			shown = 0
+			return
+		end
+		-- 📅 오늘 스탯이 오르는 운동을 다 했으면 게이지 대신 안내 (운동은 계속 농땡이로 OK)
+		local sets = player:GetAttribute("GymSets") or 0
+		if sets >= SalaryConfig.GYM_DAILY_SETS then
+			shown = 0
+			gymFill.Size = UDim2.fromScale(0, 1)
+			gymTrack.Visible = false
+			gymLabel.Size = UDim2.new(1, 0, 1, 0)
+			gymLabel.Position = UDim2.fromOffset(0, 0)
+			gymLabel.Text = `💦 오늘 운동 끝 ({sets}/{SalaryConfig.GYM_DAILY_SETS})`
+			return
+		end
+		gymTrack.Visible = true
+		gymLabel.Size = UDim2.new(1, 0, 0, 18)
+		gymLabel.Position = UDim2.fromOffset(0, 2)
+		-- 서버 값(1초에 몇 번)을 부드럽게 따라가요
+		local target = player:GetAttribute("GymProgress") or 0
+		if target < shown - 0.3 then
+			shown = target -- 꽉 차서 처음부터
+		else
+			shown += (target - shown) * math.min(1, dt * 8)
+		end
+		gymFill.Size = UDim2.fromScale(math.clamp(shown, 0, 1), 1)
+		gymLabel.Text = `{machine.emoji} {math.floor(math.clamp(target, 0, 1) * 100)}% → {SalaryConfig.gymStatText(machineId)} +1 · {sets}/{SalaryConfig.GYM_DAILY_SETS}`
+	end)
+end
 
 -- 🚪 어색한 엘리베이터 (부장님과 단둘이 타면 미니게임)
 --   📱 폰 보기 [1] / 🙂 앞 보기 [2] 버튼
@@ -1690,7 +1907,7 @@ Remotes:WaitForChild("RoofAlert").OnClientEvent:Connect(function(seconds: number
 		Sounds.play("ping", 0.8, 0.7)
 	end)
 	Hud.popup(`🚪 띵… 엘리베이터가 올라와요! {seconds}초 뒤 도착`, COLORS.bad, 3)
-	Ui.toast("🚪 부장님이 옥상으로 올라와요! 보이면 의심도가 차요. 물탱크·실외기 뒤에 숨어요 (부장님이 돌아다녀요)")
+	Ui.toast("🚪 부장님이 옥상에 와요! 물탱크·실외기 뒤에 숨어요")
 end)
 
 -- 🖥️ 컴퓨터 자동 감지 시스템 경보 (자리 부재 70%)
@@ -1703,7 +1920,7 @@ Remotes:WaitForChild("AwayAlert").OnClientEvent:Connect(function()
 	flash.BackgroundTransparency = 0.6
 	TweenService:Create(flash, TweenInfo.new(1), { BackgroundTransparency = 1 }):Play()
 	Hud.popup("🖥️ 장시간 입력 없음 감지!", COLORS.bad, 3)
-	Ui.toast("🖥️ 컴퓨터 자동 감지 시스템: 장시간 일을 안 하고 있는 걸 발견했습니다! 빠르게 자리로 복귀하세요!")
+	Ui.toast("🖥️ 빨리 자리로 복귀하세요!")
 end)
 
 Remotes:WaitForChild("Bonus").OnClientEvent:Connect(function(message: string, amount: number)

@@ -135,6 +135,10 @@ function Claw.start(office, remotes, hooks)
 				local accuracy = 1 - distance / SalaryConfig.CLAW_RADIUS -- 1이면 정중앙
 				local grip = (SalaryConfig.CLAW_GRIP[plush.rarity] or 0.5) * (0.6 + 0.4 * accuracy)
 				local carry = SalaryConfig.CLAW_CARRY + 0.15 * accuracy
+				-- ⚖️ 균형감: 미끄러질(놓칠) 확률이 줄어요 (최대 -30%)
+				local steady = 1 - SalaryConfig.playerFitnessEffect(player, "claw")
+				grip = 1 - (1 - grip) * steady
+				carry = 1 - (1 - math.min(1, carry)) * steady
 				result.plushId = plush.id
 				result.accuracy = math.floor(accuracy * 100)
 				if math.random() >= grip then

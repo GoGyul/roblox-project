@@ -202,7 +202,7 @@ function Guard.new(opts)
 				Npc.say(model, pick(lines), 3)
 				local player = Players:GetPlayerFromCharacter(character)
 				if player then
-					remotes.Notify:FireClient(player, "👮 경비원한테 딱 걸렸어요! 가려지는 곳으로 숨어서 시야에서 벗어나요")
+					remotes.Notify:FireClient(player, "👮 경비원한테 걸렸어요! 숨어서 시야를 벗어나요")
 				end
 			end
 			if guard.stareAt == character then
@@ -382,11 +382,11 @@ function Guard.new(opts)
 		end
 		if record.count >= SalaryConfig.GUARD_BRIBE_DAILY then
 			Npc.say(model, "어허, 오늘은 너무 많이 받았어요. 내일 봐요~", 2.5)
-			return { ok = false, message = "🎁 오늘은 이 경비원에게 이미 드렸어요. 내일 다시!" }
+			return { ok = false, message = "🎁 오늘은 이미 드렸어요" }
 		end
 		-- 🎒 소지품에 있는 선물을 꺼내 드려요 (🏪 사내 매점에서 미리 사 둬야 해요)
 		if not opts.useGift(player, bribe.id) then
-			return { ok = false, message = `🎒 {bribe.emoji} {bribe.name}이(가) 없어요. 🏪 사내 매점에서 사 오세요!` }
+			return { ok = false, message = `🎒 {bribe.emoji} {bribe.name}이(가) 없어요` }
 		end
 		record.count += 1
 		local now = os.clock()
@@ -400,7 +400,7 @@ function Guard.new(opts)
 		return {
 			ok = true,
 			seconds = bribe.seconds,
-			message = `{bribe.emoji} {bribe.name} 드림! {opts.name or "경비원"}이(가) {SalaryConfig.gameDurationText(bribe.minutes)} 동안 못 본 척해요`,
+			message = `{bribe.emoji} 드림! 🙈 {SalaryConfig.gameDurationText(bribe.minutes)} 동안 못 본 척`,
 		}
 	end
 	if not bribeBound then

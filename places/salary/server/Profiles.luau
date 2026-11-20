@@ -36,8 +36,12 @@ export type Profile = {
 	catPets: number, -- 🐱 월급냥 쓰다듬은 횟수
 	elevatorNinja: number, -- 🚪 부장님 엘리베이터에서 눈 안 마주친 횟수
 	planeBest: number, -- ✈️ 종이비행기 최고 기록 (m)
-	garden: { { seed: string, growth: number, watered: number, missed: number } }, -- 🌱 옥상 텃밭 (칸마다)
+	garden: { { seed: string, growth: number, watered: number, missed: number, readyAt: number? } }, -- 🌱 옥상 텃밭 (칸마다, readyAt = ⚡쾌속 식물이 익는 os.time)
+	seeds: { [string]: number }, -- 🌱 🎒에 보관 중인 씨앗 (씨앗 ID → 개수, 🏪 사내 매점에서 사요)
 	harvests: number, -- 🌱 수확한 횟수
+	parkBeds: { { flower: string, growth: number, watered: number, fedStage: number } }, -- 🌷 눈치물산 공원 화단 (화단마다, fedStage = 🧪 거름 준 단계)
+	flowerSeeds: { [string]: number }, -- 🌷 🎒 꽃씨 (꽃 ID → 개수)
+	fertilizer: number, -- 🧪 🎒 거름 개수
 	scenes: { [string]: boolean }, -- 🔭 관찰 일지에 기록한 장면
 	sunsetPhotos: number, -- 🌅 노을 사진 앨범 (하루 한 장)
 	deskUpgrades: { [string]: number }, -- 🖥️ 책상 장비 단계 (장비 ID → 단계)
@@ -48,11 +52,13 @@ export type Profile = {
 	deskHidden: { [string]: boolean },
 	itemUntil: { [string]: number }, -- ⏳ 사무용품 사용 기한 (이 근무일 수가 되면 끝나요) -- 🪑 책상에서 치워 둔 사무용품 (아이템 ID → true)
 	outfitEquipped: { [string]: string }, -- 👔 칸별로 입은 출근룩 ID
-	pigeonFeeds: number, -- 🐦 옥상 비둘기 친밀도 (모이 준 횟수, 안 주면 조금씩 줄어요)
+	pigeonFeeds: number, -- 🐦 옥상 비둘기 친밀도 점수 (과자 줄 때마다 +1~3, 안 주면 조금씩 줄어요 · 예전엔 모이 준 횟수)
 	pigeons: { [string]: number }, -- 🐦 만난 비둘기 (종류 → 만난 횟수)
+	pigeonSnacks: { [string]: number }, -- 🍪 🎒 비둘기 과자 (과자 ID → 개수, 🏪 사내 매점에서 사요)
+	pigeonTreasures: { [string]: number }, -- 🎁 비둘기가 물어 온 선물 (선물 ID → 주운 횟수) → 📒 관찰 노트 🐦 비둘기 보물
 	arcadeBest: { [string]: number }, -- 🕹️ 게임별 내 최고 점수
 	friendship: { [string]: number }, -- 🤝 동료 친밀도 (동료 이름 → 점수)
-	fitness: { strength: number, stamina: number, agility: number, flexibility: number, balance: number }, -- 🏋️ 체력 단련실에서 키운 스탯 (효과는 다음 업데이트)
+	fitness: { strength: number, stamina: number, agility: number, flexibility: number, balance: number }, -- 🏋️ 체력 단련실에서 키운 스탯 (10점마다 Lv.1 → 효과는 SalaryConfig.FitnessEffects)
 	stats: { days: number, nearMiss: number, caught: number, fired: number, stockProfit: number },
 }
 
@@ -83,7 +89,11 @@ function Profiles.default(): Profile
 		elevatorNinja = 0,
 		planeBest = 0,
 		garden = {},
+		seeds = {},
 		harvests = 0,
+		parkBeds = {},
+		flowerSeeds = {},
+		fertilizer = 0,
 		scenes = {},
 		sunsetPhotos = 0,
 		deskUpgrades = {},
@@ -96,6 +106,8 @@ function Profiles.default(): Profile
 		outfitEquipped = {},
 		pigeonFeeds = 0,
 		pigeons = {},
+		pigeonSnacks = {},
+		pigeonTreasures = {},
 		arcadeBest = {},
 		friendship = {},
 		fitness = { strength = 0, stamina = 0, agility = 0, flexibility = 0, balance = 0 },

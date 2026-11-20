@@ -163,9 +163,14 @@ local function buildRoof(folder: Instance, companyId: string)
 	-- 🌱 텃밭 상자와 벤치, 꼬마전구
 	group(-11, -20)
 	local gardenBoxes = {}
-	for _, x in { -14, -8 } do
-		B:part(Vector3.new(5, 1.2, 2.5), at(x, 0.6, -20), { Color = Color3.fromRGB(130, 90, 60), Material = Enum.Material.WoodPlanks })
-		local soil = B:part(Vector3.new(4.6, 0.3, 2.1), at(x, 1.3, -20), { Name = "GardenSoil", Color = Color3.fromRGB(110, 80, 55), Material = Enum.Material.Ground })
+	-- 📐 텃밭을 넓혔어요: 큰 화단 3개 (화분 6칸) + 잔디 깔개 + 낮은 울타리
+	B:part(Vector3.new(21, 0.1, 6), at(-11, 0.05, -20), { Color = Color3.fromRGB(95, 160, 80), Material = Enum.Material.Grass, CanCollide = false })
+	for _, side in { -1, 1 } do
+		B:part(Vector3.new(21.4, 0.6, 0.25), at(-11, 0.3, -20 + side * 3.1), { Color = Color3.fromRGB(235, 225, 200), Material = Enum.Material.WoodPlanks, CanCollide = false })
+	end
+	for _, x in { -17, -11, -5 } do
+		B:part(Vector3.new(6, 1.2, 3), at(x, 0.6, -20), { Color = Color3.fromRGB(130, 90, 60), Material = Enum.Material.WoodPlanks })
+		local soil = B:part(Vector3.new(5.6, 0.3, 2.6), at(x, 1.3, -20), { Name = "GardenSoil", Color = Color3.fromRGB(110, 80, 55), Material = Enum.Material.Ground })
 		table.insert(gardenBoxes, soil)
 	end
 	local gardenSign = B:part(Vector3.new(3.4, 1, 0.15), at(-11, 2.3, -21.4), { Color = Color3.fromRGB(80, 60, 40) })
@@ -281,9 +286,17 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 
 	-- 🐦 비둘기 친구 (벤치 앞 공터)
 	local pigeons = RoofPigeons.start(folder, PIGEON_SPOT, remotes, {
-		charge = hooks.charge,
+		snackCount = hooks.pigeonSnackCount, -- 🍪 🎒 과자
+		useSnack = hooks.useSnack,
+		fedToday = hooks.pigeonFedToday, -- 🐦 오늘 이미 과자를 줬나 (하루 한 번)
 		fed = hooks.pigeonFed,
 		seen = hooks.pigeonSeen,
+		giftRoll = hooks.pigeonGiftRoll, -- 🎁 비둘기의 보은
+		giftMissed = hooks.pigeonGiftMissed,
+		giftPicked = hooks.pigeonGiftPicked,
+		workDay = function(): number
+			return dayCycle.day
+		end,
 		guardNear = function()
 			return roofGuard.near(PIGEON_SPOT, SalaryConfig.PIGEON_GUARD_RANGE)
 		end,
