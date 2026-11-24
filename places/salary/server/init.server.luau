@@ -44,11 +44,12 @@ Lighting.ClockTime = 13.5
 -- 🧊 질감 B안: 그림자가 지는 차분한 실내 조명 (조명 방식 Technology는 Studio의 Lighting 속성에서 Future로 바꿔요)
 Lighting.Brightness = 1.3 -- (너무 밝아서 낮췄어요)
 Lighting.Ambient = Color3.fromRGB(58, 60, 66)
-Lighting.OutdoorAmbient = Color3.fromRGB(92, 98, 106)
+Lighting.OutdoorAmbient = Color3.fromRGB(168, 174, 182) -- (바깥 그림자가 너무 짙어서 많이 올렸어요. 실내 밝기에는 거의 영향이 없어요)
 Lighting.ExposureCompensation = -0.75
-Lighting.EnvironmentDiffuseScale = 0.4
+Lighting.EnvironmentDiffuseScale = 0.55
 Lighting.EnvironmentSpecularScale = 0.3
 Lighting.GlobalShadows = true
+Lighting.ShadowSoftness = 0.6 -- 그림자 가장자리를 부드럽게
 do
 	local grade = Lighting:FindFirstChild("SalaryGrade") or Instance.new("ColorCorrectionEffect")
 	grade.Name = "SalaryGrade"

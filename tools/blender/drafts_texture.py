@@ -27,7 +27,7 @@ NOISE = {  # 종류 → (무늬 크기, 색 얼룩 세기, 요철 세기)
 }
 
 
-def tex(name, rgb, kind="plain", rough=0.6, emit=0.0):
+def tex(name, rgb, kind="plain", rough=0.6, emit=0.0, alpha=1.0):
     key = "T_" + name
     m = bpy.data.materials.get(key)
     if m:
@@ -41,6 +41,8 @@ def tex(name, rgb, kind="plain", rough=0.6, emit=0.0):
     bsdf.inputs["Roughness"].default_value = rough
     if kind == "metal":
         bsdf.inputs["Metallic"].default_value = 0.8
+    if alpha < 1.0:  # 유리 칸막이
+        bsdf.inputs["Alpha"].default_value = alpha
     if emit:
         bsdf.inputs["Emission Color"].default_value = base
         bsdf.inputs["Emission Strength"].default_value = emit

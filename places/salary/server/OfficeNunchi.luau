@@ -23,6 +23,7 @@ local Build = require(ReplicatedStorage.Shared.Build)
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local Theme = require(ReplicatedStorage.Shared.SalaryTheme)
 local Meshes = require(script.Parent.Meshes)
+local Floor = require(script.Parent.OfficeNunchiFloor)
 
 local OfficeNunchi = {}
 
@@ -70,261 +71,15 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		B:part(Vector3.new(3, 3, 3) * s, position + Vector3.new(0, 3.2 * s, 0), { Shape = Enum.PartType.Ball, Color = C.plant, Material = Enum.Material.Grass })
 	end
 
-	---------------------------------------------------------------- 바닥, 천장, 벽
-	B:part(Vector3.new(HW * 2 + 2, 1, HD * 2 + 2), Vector3.new(0, FLOOR_Y - 0.5, 0), { Color = C.floor, Material = Enum.Material.Marble })
-	B:part(Vector3.new(HW * 2 + 2, 1, HD * 2 + 2), v(0, WALL_HEIGHT + 0.5, 0), { Color = C.wall })
-	-- 업무 공간 카펫
-	B:part(Vector3.new(86, 0.1, 50), v(0, 0.05, -9), { Color = C.rug, Material = Enum.Material.Carpet, CanCollide = false })
-	B:wall("X", -HD - 0.5, -HW - 1, HW + 1, FLOOR_Y, WALL_HEIGHT, { { center = 0, width = 6, height = 9 } }, wall) -- 앞 (출입문)
-	-- 🏋️ 체력 단련실 별관 (뒷벽 너머, 안쪽 x -52~12 / z 43~91): 카페 라운지(x ≤ -44.5)·매점(x ≥ 49)·부장님 자리와 안 겹쳐요
-	local GYM_X, GYM_HX, GYM_HZ = -20, 32, 24 -- 📐 1.6배로 넓혔어요 (40×30 → 64×48)
-	local GYM_Z = HD + 1 + GYM_HZ
-	B:wall("X", HD + 0.5, -HW - 1, HW + 1, FLOOR_Y, WALL_HEIGHT, { { center = GYM_X, width = 8, height = 9 } }, wall) -- 뒤 (🏋️ 체력 단련실 문)
-	B:wall("Z", -HW - 0.5, -HD, HD, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 왼쪽
-	B:wall("Z", HW + 0.5, -HD, HD, FLOOR_Y, WALL_HEIGHT, nil, wall) -- 오른쪽
-	-- 출입문 바깥은 🌳 잔디 공원이에요 (아래에서 지어요)
-	-- 🏋️ 체력 단련실 별관: 바닥·천장·벽 3개 (사무실 뒷벽과 이어져서 밖은 막혀 있어요)
-	local gymNear, gymFar = HD + 1, GYM_Z + GYM_HZ -- z 43 ~ 91
-	B:part(Vector3.new(GYM_HX * 2 + 2, 1, gymFar + 1 - gymNear), Vector3.new(GYM_X, FLOOR_Y - 0.5, (gymNear + gymFar + 1) / 2), { Color = C.floor, Material = Enum.Material.Marble })
-	B:part(Vector3.new(GYM_HX * 2 + 2, 1, gymFar + 1 - gymNear), v(GYM_X, WALL_HEIGHT + 0.5, (gymNear + gymFar + 1) / 2), { Color = C.wall })
-	B:wall("Z", GYM_X - GYM_HX - 0.5, gymNear, gymFar + 1, FLOOR_Y, WALL_HEIGHT, nil, wall)
-	B:wall("Z", GYM_X + GYM_HX + 0.5, gymNear, gymFar + 1, FLOOR_Y, WALL_HEIGHT, nil, wall)
-	B:wall("X", gymFar + 0.5, GYM_X - GYM_HX - 1, GYM_X + GYM_HX + 1, FLOOR_Y, WALL_HEIGHT, nil, wall)
-	local gym = helpers.buildGym(B, { cx = GYM_X, cz = GYM_Z, hx = GYM_HX, hz = GYM_HZ, wallHeight = WALL_HEIGHT, accent = C.accent })
-
-	-- 통유리창 (앞 벽 안쪽)
-	for x = -66, 66, 12 do
-		if math.abs(x) > 6 then
-			B:part(Vector3.new(9, 8, 0.2), v(x, 5, -HD + 0.1), {
-				Color = Color3.fromRGB(170, 210, 240),
-				Material = Enum.Material.Glass,
-				Transparency = 0.25,
-			})
-		end
-	end
-	-- 뒷벽 원목 패널 (x -42~42, 🏋️ 체력 단련실 문(x -24~-16) 자리는 비워요)
-	for _, span in { { -42, GYM_X - 5 }, { GYM_X + 5, 42 } } do
-		B:part(Vector3.new(span[2] - span[1], WALL_HEIGHT - 2, 0.3), v((span[1] + span[2]) / 2, WALL_HEIGHT / 2, HD - 0.2), { Color = C.wood, Material = Enum.Material.WoodPlanks })
-	end
-
-	-- 사훈, 벽시계, 회사 로고 (앞 벽 창문 위)
-	local banner = B:part(Vector3.new(20, 2.5, 0.2), v(0, 11.5, -HD + 0.15), { Color = C.accent })
-	Build.surfaceText(banner, Enum.NormalId.Back, company.motto, {
-		Font = Enum.Font.GothamBlack,
-		TextColor3 = Color3.fromRGB(255, 255, 255),
-	})
-	local clockFace = B:part(Vector3.new(3, 3, 0.2), v(-22, 11.5, -HD + 0.15), { Color = C.wall })
-	local setClock = Build.clockFace(clockFace, Enum.NormalId.Back)
-	local logo = B:part(Vector3.new(8, 2, 0.2), v(24, 11.5, -HD + 0.15), { Color = Color3.fromRGB(30, 35, 45) })
-	Build.surfaceText(logo, Enum.NormalId.Back, "👁️ NUNCHI CORP.", {
-		Font = Enum.Font.GothamBlack,
-		TextColor3 = C.accent,
-	})
-
-	-- 안내 데스크 (출입문 옆)
-	if Meshes.ready("Reception") then
-		Meshes.place(B, "Reception", v(14, 0, -HD + 5.5), 0)
-		B:part(Vector3.new(5, 2.8, 5), v(14, 1.4, -HD + 5.5), { Transparency = 1 })
-	else
-		B:part(Vector3.new(8, 3, 2.5), v(14, 1.5, -HD + 5), { Color = C.white, Material = Enum.Material.Marble })
-		B:part(Vector3.new(8.2, 0.3, 2.7), v(14, 3.1, -HD + 5), { Color = C.darkWood, Material = Enum.Material.Wood })
-	end
-
-	---------------------------------------------------------------- 직원 책상 6개 (넓은 간격)
-	local desks = {}
-	local index = 0
-	-- 앞줄 z -20 (책상1~3), 뒷줄 z 2 (책상4~6): 책상 사이 통로가 15칸쯤 돼요
-	for _, z in { -20, 2 } do
-		for _, x in { -24, 0, 24 } do -- 📐 사무실이 커져서 간격도 넓혔어요
-			index += 1
-			table.insert(desks, helpers.buildDesk(B, index, x, z))
-		end
-	end
-
-	---------------------------------------------------------------- 김부장 자리 (뒤쪽 가운데, 원목 책상 z 26)
-	-- 뒷줄 의자 등받이(z 6.35)와 부장 책상 앞(z 24) 사이에 넓은 통로가 있어요
-	Meshes.over(B, "BossDesk", v(0, 0, 22), 0, { skip = { Plate = true } }, function()
-		B:part(Vector3.new(10, 2.5, 4), v(0, 1.25, 22), { Color = C.darkWood, Material = Enum.Material.Wood })
-	end)
-	local nameplate = B:part(Vector3.new(3.4, 0.8, 0.4), v(0, 2.9, 19.9), { Color = Color3.fromRGB(40, 30, 20) })
-	Build.surfaceText(nameplate, Enum.NormalId.Front, "부장 김부장", {
-		Font = Enum.Font.GothamBold,
-		TextColor3 = Color3.fromRGB(230, 190, 90),
-	})
-	B:part(Vector3.new(2.6, 1.8, 0.3), v(-1.6, 3.4, 23), { Color = Color3.fromRGB(25, 25, 30) }) -- 모니터 2대
-	B:part(Vector3.new(2.6, 1.8, 0.3), v(1.6, 3.4, 23), { Color = Color3.fromRGB(25, 25, 30) })
-	B:part(Vector3.new(3, 3.8, 3), v(8, 1.9, 27), {
-		Color = Color3.fromRGB(50, 25, 20),
-		Material = Enum.Material.Leather,
-		CanCollide = false,
-	}) -- 부장 의자 (장식)
-	plant(v(-7, 0, 27))
-
-	---------------------------------------------------------------- 📊 유리 회의실 (앞쪽 왼쪽, x -72~-52 / z -42~-24.5)
-	B:wall("Z", -52, -HD, -24.5, FLOOR_Y, 9, { { center = -32, width = 4, height = 7.5 } }, glass)
-	B:wall("X", -24.5, -HW, -52, FLOOR_Y, 9, nil, glass)
-	B:part(Vector3.new(20, 0.1, 17.5), v(-62, 0.05, -33.25), { Color = Color3.fromRGB(90, 80, 70), Material = Enum.Material.Carpet, CanCollide = false })
-	Meshes.over(B, "DiningTable", v(-62, 0, -34.5), 0, { stretch = Vector3.new(9 / 6, 0.95, 4 / 3.4) }, function()
-		B:part(Vector3.new(9, 2.5, 4), v(-62, 1.25, -34.5), { Color = C.darkWood, Material = Enum.Material.Wood }) -- 회의 탁자
-	end)
-	local board = B:part(Vector3.new(10, 4.5, 0.2), v(-62, 6, -HD + 0.4), { Color = C.white })
-	Build.surfaceText(board, Enum.NormalId.Back, "📊 4분기 전략 회의\n(조는 사람 없기!)", {
-		Font = Enum.Font.GothamBold,
-		TextColor3 = Color3.fromRGB(40, 60, 140),
-	})
-	local meetingSeats = {}
-	for _, x in { -67, -62, -57 } do
-		local seat = B:part(Vector3.new(2, 1, 2), v(x, 1, -29.5), {
-			ClassName = "Seat",
-			Name = "MeetingSeat",
-			Color = Color3.fromRGB(35, 40, 50),
-		}) :: Seat
-		Meshes.over(B, "DiningChair", v(x, 0, -29.5), 0, { scale = 1.15 }, function()
-			B:part(Vector3.new(2, 2.6, 0.3), v(x, 2.8, -28.6), { Color = Color3.fromRGB(35, 40, 50), Material = Enum.Material.Leather })
-		end)
-		if Meshes.ready("DiningChair") then
-			seat.Transparency = 1
-		end
-		table.insert(meetingSeats, seat)
-	end
-	local meetingSign = B:part(Vector3.new(0.2, 1.2, 3), v(-51.35, 8, -32), { Color = C.accent })
-	Build.surfaceText(meetingSign, Enum.NormalId.Right, "📊 회의실")
-	plant(v(-69.5, 0, -27), 0.8)
-	local meetingZone = zone(B, "MeetingZone", Vector3.new(20, 10, 17.5), v(-62, 5, -33.25))
-
-	---------------------------------------------------------------- 🚻 화장실 (앞쪽 오른쪽, x 52~72 / z -42~-22)
-	B:wall("Z", 52.5, -HD, -22, FLOOR_Y, WALL_HEIGHT, { { center = -32, width = 4, height = 8 } }, wall)
-	B:wall("X", -21.5, 52, HW, FLOOR_Y, WALL_HEIGHT, nil, wall)
-	B:part(Vector3.new(20, 0.2, 20), v(62, 0.1, -32), { Color = C.tile, Material = Enum.Material.Marble })
-	local toiletSeats = {}
-	for i, x in { 58, 62, 66 } do
-		if i < 3 then
-			B:part(Vector3.new(0.3, 7, 5), v(x + 2, 3.5, -24.5), { Color = Color3.fromRGB(70, 80, 95) }) -- 칸막이
-		end
-		Meshes.over(B, "Toilet", v(x, 0, -23.6), 180, nil, function()
-			B:part(Vector3.new(2.2, 1, 2.6), v(x, 0.5, -23.6), { Color = C.white }) -- 변기 몸통
-			B:part(Vector3.new(2.2, 2.4, 0.9), v(x, 1.8, -22.5), { Color = C.white }) -- 물탱크
-		end)
-		local seat = B:part(Vector3.new(2, 0.4, 2), v(x, 1.2, -23.8), {
-			ClassName = "Seat",
-			Name = "ToiletSeat",
-			Color = C.white,
-		}) :: Seat
-		if Meshes.ready("Toilet") then
-			seat.Transparency = 1
-		end
-		table.insert(toiletSeats, seat)
-	end
-	-- 세면대와 큰 거울 (오른쪽 벽)
-	for _, z in { -38.25, -33.25 } do
-		Meshes.over(B, "Washbasin", v(HW - 1.1, 0, z), -90, nil, function()
-			B:part(Vector3.new(2.5, 3, 2.2), v(HW - 1.25, 1.5, z), { Color = C.white, Material = Enum.Material.Marble })
-		end)
-	end
-	B:part(Vector3.new(0.2, 3, 8), v(HW - 0.1, 5.5, -35.75), { Color = C.glass, Material = Enum.Material.Glass, Reflectance = 0.3 })
-	local toiletSign = B:part(Vector3.new(0.2, 1.5, 3), v(51.85, 9, -32), { Color = Color3.fromRGB(40, 90, 160) })
-	Build.surfaceText(toiletSign, Enum.NormalId.Left, "🚻 화장실")
-	local toiletZone = zone(B, "ToiletZone", Vector3.new(20, 10, 20), v(62, 5, -32))
-
-	---------------------------------------------------------------- ☕ 카페 라운지 = 탕비실 (뒤쪽 왼쪽, x -72~-44.5 / z 11.5~42)
-	B:wall("Z", -44.5, 11.5, HD, FLOOR_Y, WALL_HEIGHT, { { center = 19.5, width = 5, height = 8 } }, wall)
-	B:wall("X", 11.5, -HW, -44, FLOOR_Y, WALL_HEIGHT, nil, wall)
-	B:part(Vector3.new(27.5, 0.2, 30.5), v(-58.25, 0.1, 26.75), { Color = Color3.fromRGB(170, 120, 80), Material = Enum.Material.WoodPlanks })
-	-- 조리대 (왼쪽 벽, z 21~33): 앞쪽 끝에 🎂 케이크 자리 → 인덕션 → 에스프레소, 그 뒤에 냉장고
-	local pantryCounter = B:part(Vector3.new(2.5, 3, 12), v(-HW + 1.25, 1.5, 27), {
-		Name = "PantryCounter",
-		Color = Color3.fromRGB(40, 40, 45),
-		Material = Enum.Material.Granite,
-	}) -- 조리대 (라면)
-	if Meshes.ready("Counter") then
-		pantryCounter.Transparency = 1
-		Meshes.place(B, "Counter", v(-HW + 1.25, 0, 27), 90, { stretch = Vector3.new(12 / 8, 1, 1) })
-	end
-	B:part(Vector3.new(1.4, 2, 1.4), v(-HW + 1.25, 4, 32), { Color = Color3.fromRGB(180, 180, 185), Material = Enum.Material.Metal }) -- 에스프레소 머신
-	B:part(Vector3.new(1.6, 0.6, 1.6), v(-HW + 1.25, 3.3, 28.5), { Color = Color3.fromRGB(60, 60, 65) }) -- 인덕션
-	Meshes.over(B, "Fridge", v(-HW + 1.4, 0, 35.5), 90, nil, function()
-		B:part(Vector3.new(2.5, 7, 2.5), v(-HW + 1.25, 3.5, 35.5), { Color = Color3.fromRGB(200, 200, 205), Material = Enum.Material.Metal }) -- 냉장고
-	end)
-	-- 간식 테이블 (가운데, 위에 과자 8개)
-	local SNACK_X, SNACK_Z = -57, 26
-	Meshes.over(B, "DiningTable", v(SNACK_X, 0, SNACK_Z), 90, { stretch = Vector3.new(7 / 6, 1.1, 5 / 3.4) }, function()
-		B:part(Vector3.new(5, 3, 7), v(SNACK_X, 1.5, SNACK_Z), { Color = C.white, Material = Enum.Material.Marble })
-	end)
-	-- 테이블 위로 못 올라가게 투명한 덮개 (간식은 [E]로 옆에서 가져가요)
-	B:part(Vector3.new(5, 8, 7), v(SNACK_X, 7, SNACK_Z), { Name = "SnackTableGuard", Transparency = 1, CanQuery = false })
-	local snackSign = B:part(Vector3.new(3, 0.9, 0.2), v(SNACK_X, 3.7, SNACK_Z - 3.6), { Color = Color3.fromRGB(255, 240, 200) })
-	Build.surfaceText(snackSign, Enum.NormalId.Front, "🍪 간식 (1인 1개)", { TextColor3 = Color3.fromRGB(80, 50, 30) })
-	local snackSpots = {}
-	for _, dz in { -2.4, -0.8, 0.8, 2.4 } do
-		for _, dx in { -0.8, 0.8 } do
-			table.insert(snackSpots, v(SNACK_X + dx, 3, SNACK_Z + dz))
-		end
-	end
-	-- 바 테이블과 스툴 (안쪽 벽 가까이)
-	B:part(Vector3.new(6, 3.5, 1.5), v(SNACK_X, 1.75, 39), { Color = C.darkWood, Material = Enum.Material.Wood })
-	for _, dx in { -2, 0, 2 } do
-		B:part(Vector3.new(2.4, 1.2, 1.2), v(SNACK_X + dx, 1.2, 37.3), { Color = Color3.fromRGB(40, 40, 45), Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90) })
-	end
-	local pantrySign = B:part(Vector3.new(0.2, 1.5, 4), v(-43.85, 9, 19.5), { Color = Color3.fromRGB(110, 70, 40) })
-	Build.surfaceText(pantrySign, Enum.NormalId.Right, "☕ 카페 라운지")
-	local pantryZone = zone(B, "PantryZone", Vector3.new(27.5, 10, 30.5), v(-58.25, 5, 26.75))
-
-	---------------------------------------------------------------- 🏪 사내 매점 (뒤쪽 오른쪽, x 49~72 / z 19~42): 문이 있는 큰 별도 공간
-	B:wall("Z", 49, 19, HD, FLOOR_Y, WALL_HEIGHT, { { center = 29.5, width = 4.5, height = 8 } }, wall)
-	B:wall("X", 19, 49, HW, FLOOR_Y, WALL_HEIGHT, nil, wall)
-	local storeSpot = helpers.buildStore(B, 61, 28, C.accent)
-	helpers.decorateStore(B, {
-		center = Vector2.new(60.5, 30.5),
-		size = Vector2.new(23, 23),
-		wallX = HW - 0.7,
-		z1 = 30,
-		z2 = 41.5,
-		fridge = Vector2.new(HW - 1, 22),
-		signPosition = v(48.35, 9, 29.5),
-		signFace = Enum.NormalId.Left,
-	})
-	plant(v(52, 0, 39.5))
-
-	-- 장식: 화분, 프린터
-	for _, position in { v(-46, 0, -39), v(28, 0, -39), v(-46, 0, 2), v(46, 0, 4), v(-36, 0, 38), v(36, 0, 38) } do
-		plant(position)
-	end
-	local printer = B:part(Vector3.new(3, 2.5, 2.5), v(-42, 1.25, -8), { Name = "Printer", Color = Color3.fromRGB(230, 230, 235) })
-	if Meshes.ready("Printer") then
-		printer.Transparency = 1
-		Meshes.place(B, "Printer", v(-42, 0, -8), 90)
-	else
-		B:part(Vector3.new(2.6, 0.6, 1.8), v(-42, 2.8, -8), { Color = Color3.fromRGB(60, 60, 65) })
-	end
-	-- 뒷벽 원목 패널 앞 아치 책장 (부장님 자리 오른쪽 뒤, 순찰 지점 (30, 30)은 비워 둬요)
-	if Meshes.ready("Bookshelf") then
-		for _, x in { 12, 18 } do
-			Meshes.place(B, "Bookshelf", v(x, 0, HD - 1.4), 180)
-			B:part(Vector3.new(5.2, 8.5, 1.6), v(x, 4.25, HD - 1.4), { Transparency = 1 })
-		end
-	end
-
-	---------------------------------------------------------------- 조명 (따뜻한 펜던트 조명)
-	local lamps = {}
-	for _, x in { -64, -48, -32, -16, 0, 16, 32, 48, 64 } do
-		for _, z in { -35, -21, -7, 7, 21, 35 } do
-			local lamp = B:part(Vector3.new(5, 0.3, 1.4), v(x, WALL_HEIGHT - 0.8, z), {
-				Color = Color3.fromRGB(255, 245, 225),
-				Material = Enum.Material.Neon,
-				CanCollide = false,
-			})
-			B:part(Vector3.new(0.1, 0.6, 0.1), v(x, WALL_HEIGHT - 0.35, z), { Color = Color3.fromRGB(40, 40, 40), CanCollide = false }) -- 매다는 줄
-			local light = Instance.new("PointLight")
-			light.Range = 22
-			light.Brightness = 0.4
-			light.Color = Color3.fromRGB(255, 240, 215)
-			light.Parent = lamp
-			table.insert(lamps, lamp)
-		end
-	end
-	for _, lamp in gym.lamps do
-		table.insert(lamps, lamp) -- 🏋️ 체력 단련실 조명도 정전 때 꺼져요
-	end
+	---------------------------------------------------------------- 🏢 건물 안: 리뉴얼 평면 (OfficeNunchiFloor.luau가 지어요)
+	--   사무실 · 유리 회의실 · 카페 라운지 · 복도 · 화장실 · 라운지 · 체력 단련실. 건물 테두리와 북쪽 출입문은 예전과 같은 자리예요.
+	local F = Floor.build(B, folder, company, helpers, C)
+	local desks, lamps, gym, printer = F.desks, F.lamps, F.gym, F.printer
+	local pantryCounter, snackSpots, pantryZone = F.pantryCounter, F.snackSpots, F.pantryZone
+	local toiletSeats, toiletZone = F.toiletSeats, F.toiletZone
+	local meetingSeats, meetingZone = F.meetingSeats, F.meetingZone
+	local setClock, storeSpot = F.setClock, F.store
+	local GYM_X, GYM_HX, GYM_HZ, GYM_Z = F.gymRect.cx, F.gymRect.hx, F.gymRect.hz, F.gymRect.cz
 
 	---------------------------------------------------------------- 🌳 1층 잔디 공원 (출입문 밖, z -43 ~ -96)
 	-- 📐 건물이 앞쪽으로 12칸 커져서 공원·스트리트도 통째로 12칸 앞(-Z)으로 옮겼어요
@@ -712,64 +467,38 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	local assemblyZone, assemblyPoint, setAssemblyVisible = helpers.makeAssembly(B, 0, -HD - 9)
 
 	shops.store = storeSpot -- 🏪 사내 매점 (뒤쪽 오른쪽 방)
-	-- 📦 택배 상자 (출입문 옆)
-	local packageBox = helpers.buildPackage(B, -10, -38)
-	-- 📦 택배 보관함 (출입문 왼쪽 앞 벽, 장식 상자(x -10) 옆)
-	local deliveryShelf = helpers.buildDeliveryShelf(B, -15.5, -HD + 1.1)
-	-- 🚪 엘리베이터 (왼쪽 벽 z -6: 회의실과 카페 라운지 사이, 앞은 넓게 비워 둬요)
-	local elevator = helpers.buildElevator(B, -HW, -6)
-	B:part(Vector3.new(4, 1, 4), v(0, -0.4, -HD + 5), {
-		ClassName = "SpawnLocation",
-		Transparency = 1,
-		CanCollide = false,
-		CanQuery = false,
-		Neutral = true,
-		Duration = 0,
-	})
+	-- 📦 택배 상자 · 택배 보관함 · 🚪 엘리베이터 · 시작 지점은 건물 안이라 OfficeNunchiFloor가 지었어요
+	local packageBox, deliveryShelf, elevator = F.packageBox, F.deliveryShelf, F.elevator
 
 	-- 부장 순찰 지점 (복도) — 책상 열 사이(x ±12), 책상 줄 사이(z -8), 바깥 통로(x ±36), 창가(z -30)
-	local waypoints = {
-		v(0, 0, 15.5), -- 부장 자리 앞
-		v(-36, 0, 10), -- 왼쪽 통로
-		v(-36, 0, -8),
-		v(-36, 0, -30),
-		v(-12, 0, -8), -- 책상 줄 사이
-		v(12, 0, -8),
-		v(-24, 0, -30), -- 창가
-		v(0, 0, -30),
-		v(24, 0, -30),
-		v(36, 0, -30), -- 오른쪽 통로
-		v(36, 0, -8),
-		v(36, 0, 10),
-		v(-24, 0, 12), -- 뒷줄 의자 뒤
-		v(24, 0, 12),
-		v(-30, 0, 30), -- 뒤쪽 구석
-		v(30, 0, 30),
-		v(-41, 0, 19.5), -- 카페 라운지 문 앞
-		v(-48.5, 0, -32), -- 회의실 문 앞
-		v(-62, 0, -6), -- 엘리베이터 앞
-		v(48.5, 0, -32), -- 화장실 문 앞
-		v(45.5, 0, 29.5), -- 매점 문 앞
-		v(-20, 0, 56), -- 🏋️ 체력 단련실 (가끔 들여다봐요)
+	local waypoints = table.clone(F.waypoints) -- 건물 안 지점 + 아래 바깥 지점
+	for _, point in {
 		v(0, 0, -56), -- 🌳 공원 (가끔 나가 봐요)
 		v(28, 0, -76), -- 흡연구역 근처
 		v(-20, 0, -112), -- 🏙️ 눈치 스트리트 (근무 중 외출 감시!)
 		v(20, 0, -112),
-	}
+	} do
+		table.insert(waypoints, point)
+	end
+	local spots = table.clone(F.spots)
+	table.insert(spots, v(-6, 0, -60)) -- 공원
+	local packageSpots = table.clone(F.packageSpots)
+	table.insert(packageSpots, v(0, 0, -62)) -- 공원
 
 	return {
 		folder = folder,
 		desks = desks,
-		bossStand = v(0, 0, 26), -- 부장 책상 뒤 (앞줄까지 보이게 조금 앞으로)
+		bossStand = F.bossStand,
+		bossScale = F.bossScale,
 		bossLook = Vector3.new(0, 0, -1),
-		entrance = v(0, 0, -HD + 2),
+		entrance = F.entrance,
 		waypoints = waypoints,
 		toiletZone = toiletZone,
 		pantryZone = pantryZone,
 		printer = printer,
 		pantryCounter = pantryCounter,
 		snackSpots = snackSpots,
-		spots = { v(-64, 0, 18), v(-37, 0, -2), v(-14, 0, -32), v(26, 0, -32), v(55, 0, 36), v(-6, 0, -60) },
+		spots = spots,
 		toiletSeats = toiletSeats,
 		meetingSeats = meetingSeats,
 		meetingZone = meetingZone,
@@ -780,7 +509,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		assemblyZone = assemblyZone,
 		assemblyPoint = assemblyPoint,
 		setAssemblyVisible = setAssemblyVisible,
-		cakeSpots = { v(-HW + 1.4, 3, 22), v(-HW + 1.4, 3, 23.5), v(-HW + 1.4, 3, 25) }, -- 조리대(z 21~33) 앞쪽 끝
+		cakeSpots = F.cakeSpots,
 		workshopStart = v(0, 0, PARK_FAR + 6), -- 🌸 공원 맨 끝에서 출발
 		-- 👮 경비원: 경비실 앞(정문 옆) + 공원·거리 순찰 지점 (나무·벤치·분수·회식 테이블·흡연구역을 피해서)
 		guardPost = v(26, 0, -87.5),
@@ -811,7 +540,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 			-- 🏋️ 체력 단련실 별관도 건물 안
 			return math.abs(position.X - GYM_X) <= GYM_HX + 1 and position.Z > HD and position.Z <= GYM_Z + GYM_HZ + 1
 		end,
-		packageSpots = { v(-10, 0, -32), v(-50, 0, 32), v(56, 0, 36), v(0, 0, -62), v(-55, 0, -39), v(40, 0, -14), v(-14, 0, 20), v(58, 0, -36) },
+		packageSpots = packageSpots,
 		clawMachines = clawMachines, -- 🧸 인형뽑기 기계
 		wheel = { disc = wheelDisc, kiosk = wheelKiosk }, -- 🎡 다 같이 돌림판
 		dart = { board = dartBoard, counter = dartCounter }, -- 🎯 풍선 다트
