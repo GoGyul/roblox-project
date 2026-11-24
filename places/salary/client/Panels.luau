@@ -5496,7 +5496,7 @@ task.spawn(function()
 	while true do
 		if not spin or not spin.Parent then
 			local office = workspace:FindFirstChild("Office")
-			local disc = office and office:FindFirstChild("WheelDisc")
+			local disc = office and office:FindFirstChild("WheelDisc", true) -- (돌림판은 Office 안의 Campus 폴더에 있어요)
 			local gui = disc and disc:FindFirstChild("WheelGui")
 			spin = gui and gui:FindFirstChild("Spin") :: Frame?
 		end

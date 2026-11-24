@@ -260,9 +260,16 @@ print("💼 월급루팡 시뮬레이터 준비 완료!")
 if RunService:IsStudio() then
 	task.delay(8, function()
 		local parts, meshes, lights, shadowLights, unanchored = 0, 0, 0, 0, 0
+		local campusParts, campusLights, shadowParts, guis = 0, 0, 0, 0
 		for _, item in workspace:GetDescendants() do
+			local inCampus = item:FindFirstAncestor("Campus") ~= nil
+			if item:IsA("SurfaceGui") or item:IsA("BillboardGui") then
+				guis += 1
+			end
 			if item:IsA("BasePart") then
 				parts += 1
+				campusParts += if inCampus then 1 else 0
+				shadowParts += if item.CastShadow and item.Transparency < 1 then 1 else 0
 				if item:IsA("MeshPart") then
 					meshes += 1
 				end
@@ -271,11 +278,13 @@ if RunService:IsStudio() then
 				end
 			elseif item:IsA("Light") then
 				lights += 1
+				campusLights += if inCampus then 1 else 0
 				if item.Shadows then
 					shadowLights += 1
 				end
 			end
 		end
 		print(`📊 [성능 집계] 파트 {parts}개 (그중 메시 {meshes}개) · 조명 {lights}개 (그림자 켠 조명 {shadowLights}개) · 고정 안 된 낱개 파트 {unanchored}개`)
+		print(`📊 [성능 집계 2] 단지 파트 {campusParts}개 · 단지 조명 {campusLights}개 · 그림자 드리우는 파트 {shadowParts}개 · 글씨판 {guis}개`)
 	end)
 end

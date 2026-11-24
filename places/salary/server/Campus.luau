@@ -96,11 +96,15 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	folder.Parent = parent
 	local B = Build.new(folder, Campus.ORIGIN)
 	local random = Random.new(7)
-	local function P(size: Vector3, position: Vector3, props: { [string]: any }?): BasePart
-		return B:part(size, position, props)
+	local function P(size: Vector3, position: Vector3?, props: { [string]: any }?): BasePart
+		local part = B:part(size, position, props)
+		if part.Transparency >= 1 then
+			part.CastShadow = false -- (보이지 않는 충돌 상자)
+		end
+		return part
 	end
 	local function deco(size: Vector3, position: Vector3, color: Color3, material: Enum.Material?, extra: { [string]: any }?): BasePart
-		local props: { [string]: any } = { Color = color, Material = material or Enum.Material.SmoothPlastic, CanCollide = false, CanQuery = false }
+		local props: { [string]: any } = { Color = color, Material = material or Enum.Material.SmoothPlastic, CanCollide = false, CanQuery = false, CastShadow = false } -- (장식은 그림자를 안 드리워요: 성능)
 		for key, value in extra or {} do
 			props[key] = value
 		end
