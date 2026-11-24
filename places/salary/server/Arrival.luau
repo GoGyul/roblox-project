@@ -17,7 +17,7 @@ local Arrival = {}
 local ELEVATOR_SECONDS = 2.5
 local STAIRS_SECONDS = 7 -- 계단은 느려요 (대신 부장님과 마주칠 일이 없어요)
 
-function Arrival.start(office, remotes)
+function Arrival.start(office, remotes, events)
 	local campus = Campus.get()
 	if not campus then
 		return -- 단지가 없는 (예전) 사무실
@@ -134,6 +134,10 @@ function Arrival.start(office, remotes)
 		return true
 	end
 	prompt(place.elevatorDoor, "타기", "엘리베이터", 0, function(player)
+		if events and events:is("blackout") then -- 💡 정전 중엔 엘리베이터도 멈춰요 (사무실·옥상 쪽과 같아요)
+			remotes.Notify:FireClient(player, "💡 정전이라 엘리베이터가 멈췄어요! 불이 들어오면 타세요." .. (if daechung then " (계단은 돼요)" else ""))
+			return
+		end
 		openMenu(player, "lobby")
 	end)
 	prompt(other.elevatorDoor, "타기", "엘리베이터", 0, function(player)
@@ -185,6 +189,17 @@ function Arrival.start(office, remotes)
 		end
 		arrived[player] = true
 		task.wait(0.6) -- 다른 모듈이 캐릭터를 자리 잡게 한 뒤에
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if humanoid and humanoid.SeatPart then
+			-- (의자에 앉은 채 옮기면 의자까지 끌려와요 → 먼저 떼어 내요)
+			for _, child in humanoid.SeatPart:GetChildren() do
+				if child:IsA("Weld") and child.Name == "SeatWeld" then
+					child:Destroy()
+				end
+			end
+			humanoid.Sit = false
+			task.wait(0.1)
+		end
 		if character.Parent then
 			character:PivotTo(Campus.SPAWN)
 			remotes.Notify:FireClient(player, if daechung then "🚏 눈치단지 도착! 공원 서쪽(오른쪽) 상가 건물 3층이 (주)대충상사예요. 로비에서 엘리베이터나 계단을 타세요." else "🚏 눈치단지 도착! 공원 동쪽(왼쪽) 유리 타워 12층이 (주)눈치물산이에요. 로비에서 엘리베이터를 타세요.")

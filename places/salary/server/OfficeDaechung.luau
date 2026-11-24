@@ -435,9 +435,6 @@ function OfficeDaechung.build(B, folder: Folder, company, helpers)
 		dart = campus.dart,
 		arcade = campus.arcade,
 		parkBeds = campus.parkBeds, -- 🌷 공원 화단
-		arcade = nil,
-		wheel = nil,
-		dart = nil,
 		dinnerSeats = campus.dinnerSeats, -- 🍻 회식은 공원 식탁에서
 		dinnerBoss = campus.dinnerBoss,
 		dinnerLook = campus.dinnerLook,

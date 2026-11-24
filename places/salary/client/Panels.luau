@@ -3431,7 +3431,7 @@ function Panels.showParkBed(index: number, station: any)
 		local bonusText = `💰 정원 수당: 활짝 {bloomedBeds}곳 x {SalaryConfig.PARK_BED_BONUS}원`
 			.. (if full then ` + 🌈 {SalaryConfig.PARK_FULL_BONUS}원` else "")
 			.. ` = {comma(pay)}원`
-		table.insert(content, line(frame, 380, 20, bonusText, { TextSize = 13, Font = Enum.Font.GothamBold, TextColor3 = if onNunchi then Color3.fromRGB(40, 140, 70) else MUTED }))
+		table.insert(content, line(frame, 380, 20, bonusText, { TextSize = 13, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(40, 140, 70) }))
 		table.insert(content, line(frame, 404, 18, `🌈 정원 완성: {SalaryConfig.PARK_BEDS}곳 활짝 + 꽃 {SalaryConfig.PARK_FULL_KINDS}종 (지금 {kinds}종) → +{SalaryConfig.PARK_FULL_BONUS}원`, { TextSize = 12, TextColor3 = MUTED }))
 		table.insert(content, line(frame, 426, 18, `🎒 🧪 거름 {fertilizer}개`, { TextSize = 12, TextColor3 = MUTED }))
 	end

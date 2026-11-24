@@ -65,14 +65,14 @@ function Campus.indoor(position: Vector3): boolean
 end
 
 -- 💰 단지 산책 수입 배율: 위험할수록 많이 벌어요
---   건물 안 0.7 (안전) · 지붕/나무 밑 1.0 · 탁 트인 곳 1.6 (👀 창가의 부장님 눈에 보여요)
+--   건물 안 0.8 (안전) · 지붕/나무 밑 1.0 · 탁 트인 곳 1.4 (👀 창가의 부장님 눈에 보여요)
 function Campus.incomeScale(position: Vector3): (number, string)
 	if Campus.indoor(position) then
-		return 0.7, "indoor"
+		return 0.8, "indoor"
 	elseif Campus.hidden(position) then
 		return 1, "shade"
 	end
-	return 1.6, "open"
+	return 1.4, "open"
 end
 
 -- 처음 출근하는 자리: 북쪽 큰길 버스 정류장 앞, 공원(남쪽)을 보고
@@ -318,7 +318,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	P(Vector3.new(0.4, 4.2, 0.4), Vector3.new(164.4, 2.1, 42.6), { Color = DARK, Material = Enum.Material.Metal })
 	local truckSign = deco(Vector3.new(4.6, 5.4, 0.3), Vector3.new(158, 3.2, 41.5), Color3.fromRGB(44, 62, 92))
 	truckSign.CFrame *= CFrame.Angles(math.rad(-12), 0, 0)
-	text(truckSign, Enum.NormalId.Front, "🚚 점심 한정\n12시~1시\n🌮 든든 타코\n🍗 닭강정 컵")
+	text(truckSign, Enum.NormalId.Front, "🚚 점심 한정\n12시~1시\n🌮 타코 800\n🍗 닭강정 800")
 	F.shops.truck = { counter = truckCounter, clerkSpot = Campus.point(156, 0, 45.5), clerkLook = Vector3.new(0, 0, -1) }
 
 	---------------------------------------------------------------- 중앙 공원
@@ -351,15 +351,15 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		P(Vector3.new(7, 0.6, 4), nil, { CFrame = CFrame.new(-60, 0.8, -62 + dz) * CFrame.Angles(math.rad(if dz < 0 then -22 else 22), 0, 0), Color = M.woodLight, Material = Enum.Material.WoodPlanks })
 	end
 	-- 잔디 광장과 야외무대 (북동)
-	P(Vector3.new(36, 1.6, 18), Vector3.new(64, 0.8, -84), { Color = M.wood, Material = Enum.Material.WoodPlanks })
+	P(Vector3.new(36, 1.6, 18), Vector3.new(64, 0.8, -78), { Color = M.wood, Material = Enum.Material.WoodPlanks })
 	for _, dx in { -17, 17 } do
 		for _, dz in { -8.5, 8.5 } do
-			P(Vector3.new(0.8, 15, 0.8), Vector3.new(64 + dx, 9, -84 + dz), { Color = STEEL, Material = Enum.Material.Metal })
+			P(Vector3.new(0.8, 15, 0.8), Vector3.new(64 + dx, 9, -78 + dz), { Color = STEEL, Material = Enum.Material.Metal })
 		end
 	end
-	P(Vector3.new(38, 0.8, 20), Vector3.new(64, 16.8, -84), { Color = STEEL, Material = Enum.Material.Metal })
-	shade(64, -84, 12)
-	P(Vector3.new(36, 5, 0.5), Vector3.new(64, 4, -92.6), { Color = M.navy })
+	P(Vector3.new(38, 0.8, 20), Vector3.new(64, 16.8, -78), { Color = STEEL, Material = Enum.Material.Metal })
+	shade(64, -78, 12)
+	P(Vector3.new(36, 5, 0.5), Vector3.new(64, 4, -86.6), { Color = M.navy })
 	for _, info in { { 48, -58, 10 }, { 76, -54, -15 }, { 92, -66, 20 } } do -- 돗자리
 		local mat = deco(Vector3.new(7, 0.1, 5), Vector3.new(info[1], 0.26, info[2]), M.coral, Enum.Material.Fabric)
 		mat.CFrame *= CFrame.Angles(0, math.rad(info[3]), 0)
@@ -381,7 +381,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	F.parkBeds = {}
 	local stoneEdge = { Color = Color3.fromRGB(170, 160, 145), Material = Enum.Material.Cobblestone }
 	for i = 0, 5 do
-		local x = -28 + i * 11.2
+		local x = (if i < 3 then -34.4 else -21.2) + i * 11.2 -- 가운데 큰길(x ±4)은 비워 둬요
 		for _, side in { -1, 1 } do
 			P(Vector3.new(8, 0.7, 0.6), Vector3.new(x, 0.45, 26 + side * 2.2), stoneEdge)
 			P(Vector3.new(0.6, 0.7, 3.8), Vector3.new(x + side * 3.7, 0.45, 26), stoneEdge)
@@ -390,8 +390,8 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		mesh("Planter", x, 38, 0, { scale = 1.3, colors = { Box = M.woodLight } })
 		P(Vector3.new(7.6, 1.6, 2.2), Vector3.new(x, 0.8, 38), { Transparency = 1 })
 	end
-	P(Vector3.new(0.3, 3, 0.3), Vector3.new(-36, 1.5, 21), { Color = M.woodDark, Material = Enum.Material.Wood })
-	local bedSign = deco(Vector3.new(4.4, 1.6, 0.25), Vector3.new(-36, 3.6, 21), Color3.fromRGB(245, 235, 210), Enum.Material.Wood)
+	P(Vector3.new(0.3, 3, 0.3), Vector3.new(-42, 1.5, 21), { Color = M.woodDark, Material = Enum.Material.Wood })
+	local bedSign = deco(Vector3.new(4.4, 1.6, 0.25), Vector3.new(-42, 3.6, 21), Color3.fromRGB(245, 235, 210), Enum.Material.Wood)
 	for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
 		text(bedSign, face, "🌷 내 공원 화단 [E]", Color3.fromRGB(200, 70, 110))
 	end
@@ -464,7 +464,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		local x, z = spot[1], spot[2]
 		local clear = math.sqrt(x * x + (z + 20) ^ 2) > 34 and math.abs(x) > 7 and math.abs(z + 20) > 7 and math.sqrt((x + 60) ^ 2 + (z + 62) ^ 2) > 30
 		clear = clear and math.abs(math.abs(x) - 100) > 6 and math.abs(z + 92) > 6 and math.abs(z - 52) > 6
-		clear = clear and not (40 < x and x < 90 and -98 < z and z < -44) and not (-36 < x and x < 40 and 18 < z and z < 46)
+		clear = clear and not (40 < x and x < 90 and -98 < z and z < -44) and not (-42 < x and x < 42 and 18 < z and z < 46)
 		clear = clear and not (40 < x and x < 110 and 20 < z and z < 42) and not (-84 < x and x < -56 and 20 < z and z < 42)
 		clear = clear and not (math.abs(x - 20) < 14 and z < -94) -- 출근 자리 앞은 틔워 둬요
 		if clear then
@@ -725,12 +725,12 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	}
 	F.guards = {
 		{ id = "park", name = "경비원 박씨", post = F.guardPost, patrol = F.guardPatrol },
-		{ -- 👮 최씨: 공원 한가운데 (큰길 · 분수 광장 · 북쪽 길 · 남쪽 텃밭 · 식탁)
-			id = "park2", name = "경비원 최씨", post = Campus.point(-12, 0, -106),
+		{ -- 👮 한씨: 공원 한가운데 (큰길 · 분수 광장 · 북쪽 길 · 남쪽 텃밭 · 식탁)
+			id = "park2", name = "경비원 한씨", post = Campus.point(-10, 0, -100),
 			patrol = {
 				Campus.point(0, 0, -92), Campus.point(0, 0, -56), Campus.point(-34, 0, -20), Campus.point(-64, 0, -20),
 				Campus.point(0, 0, 14), Campus.point(0, 0, 52), Campus.point(40, 0, 52), Campus.point(63, 0, 40),
-				Campus.point(34, 0, -20), Campus.point(64, 0, -20), Campus.point(50, 0, -92),
+				Campus.point(34, 0, -20), Campus.point(64, 0, -20), Campus.point(34, 0, -92),
 			},
 		},
 		{ -- 👮 정씨: 눈치물산 타워 앞 · 로비 · 푸드트럭 광장 · 눈치 스트리트

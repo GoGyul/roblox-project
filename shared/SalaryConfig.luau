@@ -98,7 +98,7 @@ SalaryConfig.MAX_COMBO = 5
 SalaryConfig.AWAY_SECONDS = 110 -- (단지가 넓어져서 90 → 110) 0% → 100%까지 걸리는 시간
 SalaryConfig.AWAY_SECONDS_DUMMY = 150 -- 🧸 대리 출석 인형을 앉혀 두면
 SalaryConfig.AWAY_SECONDS_DUMMY_PRO = 240 -- 👔 최고급 마네킹을 앉혀 두면
-SalaryConfig.AWAY_RECOVER = 8 -- 자리에 앉아 있으면 1초에 줄어드는 양 (%)
+SalaryConfig.AWAY_RECOVER = 6 -- (8 → 6: 잠깐 앉았다 바로 또 나가기 어렵게) 자리에 앉아 있으면 1초에 줄어드는 양 (%)
 SalaryConfig.AWAY_WARN = 70 -- 이 %가 되면 경보
 SalaryConfig.COFFEE_GRACE = 40 -- 탕비실에서 이 시간까지는 커피 타는 척 가능
 SalaryConfig.DOCS_SECONDS = 40 -- 서류 들고 바쁜 척 지속 시간
@@ -250,7 +250,7 @@ SalaryConfig.States = {
 		income = 9,
 		detect = 25,
 		payLabel = "단지 산책 수당",
-		hint = "🏙️ 회사 단지에 있으면 돼요 (엘리베이터로 1층). 건물 안 0.7배 · 지붕/나무 밑 1배 · 탁 트인 곳 1.6배! 자리를 오래 비우면 티 나요, 👮 경비원도 조심!",
+		hint = "🏙️ 회사 단지에 있으면 돼요 (엘리베이터로 1층). 건물 안 0.8배 · 지붕/나무 밑 1배 · 탁 트인 곳 1.4배! 자리를 오래 비우면 티 나요, 👮 경비원도 조심!",
 	},
 	hiding = {
 		emoji = "📦",
@@ -338,7 +338,7 @@ SalaryConfig.States = {
 	candy = {
 		emoji = "🍭",
 		name = "사탕 쉼터에서 사탕 물기",
-		income = 9,
+		income = 11,
 		detect = 25,
 		payLabel = "사탕 쉼터 수당",
 		hint = "🌳 단지 공원 남서쪽 숲속 정자 \"사탕 쉼터\"(금연! 사탕만!)에 서 있으면 돼요. 자리를 오래 비우면 티 나요.",
@@ -818,7 +818,7 @@ SalaryConfig.Items = {
 	{ id = "tumbler", emoji = "🥤", name = "고급 텀블러", price = 3000, days = 7, description = "탕비실에서 커피 타는 척 시간이 40초 → 90초." },
 	{ id = "cover", emoji = "🖥️", name = "모니터 가리개", price = 6000, days = 5, description = "화면 농땡이(웹툰, 폰, 쇼핑)가 30% 덜 들켜요." },
 	{ id = "earphones", emoji = "🎧", name = "부장 레이더 이어폰", price = 9000, days = 5, description = "발소리 감지 거리 증가 + 부장이 지금 감시 중인지 화면에 표시." },
-	{ id = "dummy", emoji = "🧸", name = "대리 출석 인형", price = 12000, days = 5, description = "자리에 인형을 앉혀 둬요. 자리 부재 게이지가 천천히 차요 (90초 → 150초)." },
+	{ id = "dummy", emoji = "🧸", name = "대리 출석 인형", price = 12000, days = 5, description = "자리에 인형을 앉혀 둬요. 자리 부재 게이지가 천천히 차요 (110초 → 150초)." },
 	{ id = "dummy_pro", emoji = "👔", name = "최고급 대리 출석 마네킹", price = 60000, requires = "dummy", days = 5, description = "정장 입고 타자까지 치는 마네킹. 부재 게이지 240초 + 감사관의 빈자리 사진도 속여요! (인형 필요)" },
 	{ id = "energy", emoji = "⚡", name = "에너지 드링크", price = 1500, consumable = true, description = "마시면 그날 하루 일하는 척 복귀 시간 절반!" },
 } :: { ItemInfo }
@@ -1187,23 +1187,23 @@ SalaryConfig.StreetShops = {
 		clerk = "푸드트럭 사장님",
 		lunchOnly = true,
 		items = {
-			{ id = "taco", emoji = "🌮", name = "든든 타코", price = 1800, description = "든든한 점심! 오늘 남은 업무 시간이 1.25배 빨리 채워져요" },
-			{ id = "gangjeong", emoji = "🍗", name = "닭강정 컵", price = 1800, description = "기분 좋은 점심! 오늘 남은 하루 의심도가 20% 더 빨리 줄어요" },
+			{ id = "taco", emoji = "🌮", name = "든든 타코", price = 800, description = "든든한 점심! 오늘 남은 하루 농땡이 수입 +25%" },
+			{ id = "gangjeong", emoji = "🍗", name = "닭강정 컵", price = 800, description = "기분 좋은 점심! 오늘 남은 하루 의심도가 40% 더 빨리 줄어요" },
 		},
 	},
 } :: { [string]: StreetShop }
 
-SalaryConfig.TACO_WORK = 1.25 -- 🌮 타코: 업무 시간 배율 (커피와 곱해져요)
-SalaryConfig.GANGJEONG_DECAY = 1.2 -- 🍗 닭강정: 의심도 줄어드는 속도 배율 (라떼·유자차와 곱해져요)
+SalaryConfig.TACO_INCOME = 1.25 -- 🌮 타코: 농땡이 수입 배율
+SalaryConfig.GANGJEONG_DECAY = 1.4 -- 🍗 닭강정: 의심도 줄어드는 속도 배율 (라떼·유자차와 곱해져요)
 
 -- 🪪 사원증 등급: 이 직급부터 쓸 수 있는 단지 시설 (Ranks 번호: 1 인턴 · 2 사원 · 3 주임 · 4 대리)
 --   공원 시설·커피·디저트·인형뽑기는 누구나. 눈치물산 타워는 대리부터 (회사 자체가 대리부터예요)
 SalaryConfig.BADGE = { dart = 2, arcade = 3, wheel = 4 }
 
 -- 🚏 출근 시간: 아침마다 단지 버스 정류장에서 시작해 내 자리까지 가요 (시각은 게임 속 분)
-SalaryConfig.COMMUTE_EARLY = 9 * 60 + 30 -- 이때까지 앉으면 칼출근 보너스
+SalaryConfig.COMMUTE_EARLY = 9 * 60 + 40 -- 이때까지 앉으면 칼출근 보너스
 SalaryConfig.COMMUTE_LATE = 9 * 60 + 50 -- 이때까지 못 앉으면 지각
-SalaryConfig.COMMUTE_BONUS = 0.15 -- 칼출근 보너스 = 기본급의 15%
+SalaryConfig.COMMUTE_BONUS = 0.25 -- 칼출근 보너스 = 기본급의 25%
 SalaryConfig.COMMUTE_EARLY_DELTA = -0.05 -- 칼출근: 오늘의 의심도 속도
 SalaryConfig.COMMUTE_LATE_DELTA = 0.15 -- 지각: 오늘의 의심도 속도
 
@@ -1216,7 +1216,8 @@ SalaryConfig.LUNCH_LATE_SUSPICION = 30 -- 점심 지각: 의심도 +
 SalaryConfig.WINDOW_GAP = { 45, 80 } -- 다음 번까지 쉬는 시간 (초)
 SalaryConfig.WINDOW_WARN = 3 -- "창가로 와요" 예고 (초)
 SalaryConfig.WINDOW_SECONDS = 7 -- 내려다보는 시간 (초)
-SalaryConfig.WINDOW_MULTIPLIER = 1.6 -- 보이는 동안 의심도 배율 (경비원이 노려볼 때와 비슷)
+SalaryConfig.WINDOW_MULTIPLIER = 1.2 -- 보이는 동안 의심도 배율 (7초 내내 서 있으면 의심도 약 +70: 한 번 놓쳐도 바로 적발은 아니에요)
+SalaryConfig.STREET_HUNCH_EXTRA = 30 -- 🏙️ 단지 산책은 "오래 농땡이 눈치"가 이만큼(초) 늦게 와요 (오가는 길이 머니까)
 
 SalaryConfig.MIXCOFFEE_WORK = 1.15 -- 믹스커피: 업무 시간 배율
 SalaryConfig.YUJA_DECAY = 1.12 -- 유자차: 의심도 줄어드는 속도 배율

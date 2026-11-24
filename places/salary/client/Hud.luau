@@ -1328,7 +1328,7 @@ RunService.RenderStepped:Connect(function()
 		table.insert(extras, `버프 {buffs}`) -- 🏙️ 카페 음료
 	end
 	-- 🎁 경비원 매수: 남은 시간
-	for _, info in { { "park", "👮박씨" }, { "park2", "👮최씨" }, { "park3", "👮정씨" }, { "roof", "👮옥상" } } do
+	for _, info in { { "park", "👮박씨" }, { "park2", "👮한씨" }, { "park3", "👮정씨" }, { "roof", "👮옥상" } } do
 		local untilTime = player:GetAttribute(`GuardBribe_{info[1]}`)
 		if typeof(untilTime) == "number" then
 			local left = math.ceil(untilTime - workspace:GetServerTimeNow())
