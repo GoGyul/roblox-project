@@ -23,6 +23,12 @@ local Build = require(ReplicatedStorage.Shared.Build)
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local Theme = require(ReplicatedStorage.Shared.SalaryTheme)
 local Meshes = require(script.Parent.Meshes)
+-- 🧊 월드 색: 차분한 색(Theme.Mesh)이 있으면 그걸, 없으면 기본 색을 써요 (질감 B안)
+local TC: any = setmetatable({}, {
+	__index = function(_, key)
+		return (Theme.Mesh :: any)[key] or (Theme.Color :: any)[key]
+	end,
+})
 local Floor = require(script.Parent.OfficeNunchiFloor)
 
 local OfficeNunchi = {}
@@ -86,7 +92,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	local PARK_FAR = -96
 	local parkCenterZ = (-HD - 1 + PARK_FAR) / 2
 	local parkDepth = -HD - 1 - PARK_FAR
-	B:part(Vector3.new(HW * 2 + 2, 1, parkDepth), Vector3.new(0, FLOOR_Y - 0.5, parkCenterZ), { Color = Theme.Color.grass, Material = Enum.Material.Grass })
+	B:part(Vector3.new(HW * 2 + 2, 1, parkDepth), Vector3.new(0, FLOOR_Y - 0.5, parkCenterZ), { Color = TC.grass, Material = Enum.Material.Grass })
 	-- 공원 울타리: 보이는 낮은 산울타리 + 못 넘어가게 투명한 높은 벽
 	for _, info in {
 		-- 맨 끝 울타리는 가운데에 정문(폭 10)을 뚫어 눈치 스트리트로 이어져요
@@ -99,22 +105,34 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		B:part(Vector3.new(info[1].X, 40, info[1].Z), info[2] + Vector3.new(0, 18.5, 0), { Transparency = 1 })
 	end
 	-- 건물 바깥 간판
-	local outsideSign = B:part(Vector3.new(18, 2.5, 0.3), v(0, 11, -HD - 1.2), { Color = Color3.fromRGB(30, 35, 45) })
+	local outsideSign = B:part(Vector3.new(22, 2.6, 0.4), v(0, 13.6, -HD - 2.2), { Color = Color3.fromRGB(30, 35, 45), CanCollide = false }) -- (통유리 벽 앞으로 뺐어요)
 	Build.surfaceText(outsideSign, Enum.NormalId.Front, "👁️ (주)눈치물산 NUNCHI CORP.", {
 		Font = Enum.Font.GothamBlack,
 		TextColor3 = C.accent,
 	})
 	-- 밝은 웹툰 오피스 외관: 입구 캐노피와 컬러 밴드로 거대한 흰 벽을 나눠요.
-	B:part(Vector3.new(22, 0.7, 6), v(0, 9.2, -HD - 3), { Color = Theme.Color.mint, Material = Enum.Material.SmoothPlastic })
-	B:part(Vector3.new(18, 0.2, 5.4), v(0, 8.8, -HD - 3), { Color = Theme.Color.skySoft, Material = Enum.Material.Glass, Transparency = 0.3, CanCollide = false })
+	B:part(Vector3.new(22, 0.7, 6), v(0, 9.2, -HD - 3), { Color = TC.mint, Material = Enum.Material.SmoothPlastic })
+	B:part(Vector3.new(18, 0.2, 5.4), v(0, 8.8, -HD - 3), { Color = TC.skySoft, Material = Enum.Material.Glass, Transparency = 0.3, CanCollide = false })
 	for _, x in { -9, 9 } do
-		B:part(Vector3.new(0.7, 8, 0.7), v(x, 4, -HD - 4.5), { Color = Theme.Color.surface, Material = Enum.Material.Metal })
-		B:part(Vector3.new(2.6, 1.2, 2.6), v(x, 0.6, -HD - 5.5), { Color = Theme.Color.wood, Material = Enum.Material.WoodPlanks })
-		B:part(Vector3.new(3.2, 2.2, 3.2), v(x, 2.2, -HD - 5.5), { Shape = Enum.PartType.Ball, Color = Theme.Color.grass, Material = Enum.Material.Grass, CanCollide = false })
+		B:part(Vector3.new(0.7, 8, 0.7), v(x, 4, -HD - 4.5), { Color = TC.surface, Material = Enum.Material.Metal })
+		B:part(Vector3.new(2.6, 1.2, 2.6), v(x, 0.6, -HD - 5.5), { Color = TC.wood, Material = Enum.Material.WoodPlanks })
+		B:part(Vector3.new(3.2, 2.2, 3.2), v(x, 2.2, -HD - 5.5), { Shape = Enum.PartType.Ball, Color = TC.grass, Material = Enum.Material.Grass, CanCollide = false })
 	end
-	for _, band in { { -48, Theme.Color.sky }, { 48, Theme.Color.coral } } do
-		B:part(Vector3.new(24, 1.1, 0.25), v(band[1], 11.8, -HD - 0.65), { Color = band[2], Material = Enum.Material.SmoothPlastic, CanCollide = false })
+	-- 🏢 신축 사옥 외관: 1층(사무실) 위로 유리 타워가 올라가요. 공원이 온통 그늘지지 않게 그림자는 꺼 둬요.
+	local TOWER_BASE, TOWER_H = 23.6, 68
+	local towerGlass = Color3.fromRGB(138, 166, 188)
+	local tower = B:part(Vector3.new(HW * 2 + 2, TOWER_H, HD * 2 + 2), v(0, TOWER_BASE + TOWER_H / 2, 0), { Color = towerGlass, Material = Enum.Material.Glass, Reflectance = 0.15, CastShadow = false })
+	local _ = tower
+	local steel = { Color = Color3.fromRGB(52, 56, 62), Material = Enum.Material.Metal, CanCollide = false, CanQuery = false, CastShadow = false }
+	for y = TOWER_BASE, TOWER_BASE + TOWER_H, 11 do -- 층 사이 띠
+		B:part(Vector3.new(HW * 2 + 2.6, 1, 0.5), v(0, y, -HD - 1.2), steel)
 	end
+	for x = -HW, HW, 12 do -- 세로 창틀
+		B:part(Vector3.new(0.5, TOWER_H, 0.4), v(x, TOWER_BASE + TOWER_H / 2, -HD - 1.2), steel)
+	end
+	B:part(Vector3.new(HW * 2 + 3, 2.4, HD * 2 + 3), v(0, TOWER_BASE + TOWER_H + 1.2, 0), { Color = Color3.fromRGB(226, 226, 222), Material = Enum.Material.Concrete, CastShadow = false }) -- 옥상 테두리
+	local towerLogo = B:part(Vector3.new(30, 5, 0.5), v(0, TOWER_BASE + TOWER_H - 6, -HD - 1.5), { Color = Color3.fromRGB(30, 35, 45), CanCollide = false, CastShadow = false })
+	Build.surfaceText(towerLogo, Enum.NormalId.Front, "NUNCHI CORP.", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.new(1, 1, 1) })
 	-- 산책길과 분수: 중앙 길에 작은 광장을 더해 넓은 잔디가 비어 보이지 않게 해요.
 	B:part(Vector3.new(8, 0.1, 28), v(0, 0.05, -57), { Color = Color3.fromRGB(236, 222, 199), Material = Enum.Material.Pavement, CanCollide = false })
 	B:part(Vector3.new(28, 0.1, 8), v(0, 0.055, -72), { Color = Color3.fromRGB(236, 222, 199), Material = Enum.Material.Pavement, CanCollide = false })
@@ -128,23 +146,23 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		Meshes.place(B, "Stall", v(-50, 0, -80), 90)
 		Meshes.place(B, "Parasol", v(50, 0, -57), 0)
 	else
-		B:part(Vector3.new(1.1, 11, 11), nil, { CFrame = CFrame.new(v(0, 0.55, -72)) * CFrame.Angles(0, 0, math.rad(90)), Shape = Enum.PartType.Cylinder, Color = Theme.Color.surface, Material = Enum.Material.Marble })
-		B:part(Vector3.new(0.25, 9.4, 9.4), nil, { CFrame = CFrame.new(v(0, 1.2, -72)) * CFrame.Angles(0, 0, math.rad(90)), Shape = Enum.PartType.Cylinder, Color = Theme.Color.sky, Material = Enum.Material.Glass, Transparency = 0.12, CanCollide = false })
-		B:part(Vector3.new(1.1, 3.6, 3.6), nil, { CFrame = CFrame.new(v(0, 1.85, -72)) * CFrame.Angles(0, 0, math.rad(90)), Shape = Enum.PartType.Cylinder, Color = Theme.Color.woodLight, Material = Enum.Material.Marble })
-		B:part(Vector3.new(2.5, 0.8, 2.5), v(0, 3.1, -72), { Color = Theme.Color.surfaceSoft, Material = Enum.Material.Marble })
-		B:part(Vector3.new(0.35, 4.6, 4.6), nil, { CFrame = CFrame.new(v(0, 3.65, -72)) * CFrame.Angles(0, 0, math.rad(90)), Shape = Enum.PartType.Cylinder, Color = Theme.Color.sky, Material = Enum.Material.Glass, Transparency = 0.15, CanCollide = false })
+		B:part(Vector3.new(1.1, 11, 11), nil, { CFrame = CFrame.new(v(0, 0.55, -72)) * CFrame.Angles(0, 0, math.rad(90)), Shape = Enum.PartType.Cylinder, Color = TC.surface, Material = Enum.Material.Marble })
+		B:part(Vector3.new(0.25, 9.4, 9.4), nil, { CFrame = CFrame.new(v(0, 1.2, -72)) * CFrame.Angles(0, 0, math.rad(90)), Shape = Enum.PartType.Cylinder, Color = TC.sky, Material = Enum.Material.Glass, Transparency = 0.12, CanCollide = false })
+		B:part(Vector3.new(1.1, 3.6, 3.6), nil, { CFrame = CFrame.new(v(0, 1.85, -72)) * CFrame.Angles(0, 0, math.rad(90)), Shape = Enum.PartType.Cylinder, Color = TC.woodLight, Material = Enum.Material.Marble })
+		B:part(Vector3.new(2.5, 0.8, 2.5), v(0, 3.1, -72), { Color = TC.surfaceSoft, Material = Enum.Material.Marble })
+		B:part(Vector3.new(0.35, 4.6, 4.6), nil, { CFrame = CFrame.new(v(0, 3.65, -72)) * CFrame.Angles(0, 0, math.rad(90)), Shape = Enum.PartType.Cylinder, Color = TC.sky, Material = Enum.Material.Glass, Transparency = 0.15, CanCollide = false })
 		for _, offset in { Vector3.new(1.45, 4.4, 0), Vector3.new(-1.45, 4.4, 0), Vector3.new(0, 4.4, 1.45), Vector3.new(0, 4.4, -1.45) } do
-			B:part(Vector3.new(0.22, 2.4, 0.22), v(offset.X, offset.Y, -72 + offset.Z), { Color = Theme.Color.sky, Material = Enum.Material.Neon, Transparency = 0.25, CanCollide = false })
+			B:part(Vector3.new(0.22, 2.4, 0.22), v(offset.X, offset.Y, -72 + offset.Z), { Color = TC.sky, Material = Enum.Material.Neon, Transparency = 0.25, CanCollide = false })
 		end
 	end
 	-- 낮은 꽃 띠와 컬러 포인트. 충돌을 끄고 주요 이동 경로는 비워 둬요.
-	for _, info in { { -20, -52, Theme.Color.coral }, { 20, -52, Theme.Color.yellow }, { -22, -88, Theme.Color.sky }, { 22, -88, Theme.Color.coral } } do
+	for _, info in { { -20, -52, TC.coral }, { 20, -52, TC.yellow }, { -22, -88, TC.sky }, { 22, -88, TC.coral } } do
 		local x, z, color = info[1], info[2], info[3]
 		if parkMesh then
 			Meshes.place(B, "FlowerBed", v(x, 0, z), 0, { scale = 1.3, colors = { Flowercoral = color } })
 			continue
 		end
-		B:part(Vector3.new(10, 0.35, 3), v(x, 0.18, z), { Color = Theme.Color.woodLight, Material = Enum.Material.WoodPlanks, CanCollide = false })
+		B:part(Vector3.new(10, 0.35, 3), v(x, 0.18, z), { Color = TC.woodLight, Material = Enum.Material.WoodPlanks, CanCollide = false })
 		for dx = -3, 3, 2 do
 			B:part(Vector3.new(1.1, 1.1, 1.1), v(x + dx, 0.8, z), { Shape = Enum.PartType.Ball, Color = color, Material = Enum.Material.Grass, CanCollide = false })
 		end
@@ -180,18 +198,18 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 			local yaw = math.rad(-side * segment * 5)
 			B:part(Vector3.new(2.2, 0.24, 1.05), nil, {
 				CFrame = CFrame.new(v(centerX + side * curve, 1.55, -62 + dz)) * CFrame.Angles(0, yaw, 0),
-				Color = Theme.Color.wood,
+				Color = TC.wood,
 				Material = Enum.Material.WoodPlanks,
 			})
 			B:part(Vector3.new(0.28, 1.05, 1.02), nil, {
 				CFrame = CFrame.new(v(centerX + side * (1.08 + curve), 2.2, -62 + dz)) * CFrame.Angles(0, yaw, math.rad(-side * 8)),
-				Color = Theme.Color.woodLight,
+				Color = TC.woodLight,
 				Material = Enum.Material.WoodPlanks,
 			})
 		end
 		for _, dz in { -2.1, 2.1 } do
-			B:part(Vector3.new(1.8, 1.4, 0.28), v(centerX, 0.72, -62 + dz), { Color = Theme.Color.navy, Material = Enum.Material.Metal })
-			B:part(Vector3.new(0.55, 0.28, 0.7), v(centerX - side * 0.55, 0.14, -62 + dz), { Color = Theme.Color.navy, Material = Enum.Material.Metal })
+			B:part(Vector3.new(1.8, 1.4, 0.28), v(centerX, 0.72, -62 + dz), { Color = TC.navy, Material = Enum.Material.Metal })
+			B:part(Vector3.new(0.55, 0.28, 0.7), v(centerX - side * 0.55, 0.14, -62 + dz), { Color = TC.navy, Material = Enum.Material.Metal })
 		end
 	end
 	-- 가로등
@@ -323,13 +341,29 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		{ Vector3.new(1, 16, streetDepth), v(HW + 0.5, 8, streetCenterZ) },
 		{ Vector3.new(HW * 2 + 2, 16, 1), v(0, 8, STREET_FAR - 0.5) },
 	} do
-		B:part(info[1], info[2], { Color = Theme.Color.cream, Material = Enum.Material.Brick })
+		B:part(info[1], info[2], { Color = TC.cream, Material = Enum.Material.Brick })
 		B:part(Vector3.new(info[1].X, 30, info[1].Z), info[2] + Vector3.new(0, 23, 0), { Transparency = 1 })
+	end
+	-- 🏬 가게 위층과 거리 양옆 건물: 낮은 담장 대신 실제 상가 거리처럼 보이게 (그림자는 꺼 둬요)
+	local facade = { Color = Color3.fromRGB(198, 190, 174), Material = Enum.Material.Concrete, CastShadow = false }
+	local window = { Color = Color3.fromRGB(120, 150, 172), Material = Enum.Material.Glass, CanCollide = false, CanQuery = false, CastShadow = false }
+	B:part(Vector3.new(HW * 2 + 2, 34, 18), v(0, 13 + 17, STREET_FAR + 9), facade) -- 가게 위층 (2~4층)
+	for floor = 0, 2 do
+		for x = -60, 60, 12 do
+			B:part(Vector3.new(8, 6, 0.3), v(x, 19 + floor * 10, STREET_FAR + 18.1), window)
+		end
+		B:part(Vector3.new(HW * 2 + 2.4, 0.8, 0.5), v(0, 14.4 + floor * 10, STREET_FAR + 18.2), { Color = Color3.fromRGB(150, 142, 128), Material = Enum.Material.Concrete, CanCollide = false, CastShadow = false })
+	end
+	for _, side in { -1, 1 } do
+		B:part(Vector3.new(20, 56, streetDepth), v(side * (HW + 11), 28, streetCenterZ), { Color = if side < 0 then Color3.fromRGB(176, 170, 160) else Color3.fromRGB(160, 168, 176), Material = Enum.Material.Concrete, CastShadow = false })
+		for y = 22, 50, 9 do
+			B:part(Vector3.new(0.3, 5, streetDepth * 0.82), v(side * (HW + 0.9), y, streetCenterZ), window)
+		end
 	end
 	-- 막힌 뒷벽을 상가 파사드처럼 보이게 하는 창과 컬러 패널
 	for x = -60, 60, 15 do
-		B:part(Vector3.new(10, 5, 0.25), v(x, 9, STREET_FAR), { Color = Theme.Color.skySoft, Material = Enum.Material.Glass, Transparency = 0.25, CanCollide = false })
-		B:part(Vector3.new(11, 0.7, 0.35), v(x, 13, STREET_FAR + 0.05), { Color = if x % 30 == 0 then Theme.Color.coral else Theme.Color.mint, CanCollide = false })
+		B:part(Vector3.new(10, 5, 0.25), v(x, 9, STREET_FAR), { Color = TC.skySoft, Material = Enum.Material.Glass, Transparency = 0.25, CanCollide = false })
+		B:part(Vector3.new(11, 0.7, 0.35), v(x, 13, STREET_FAR + 0.05), { Color = if x % 30 == 0 then TC.coral else TC.mint, CanCollide = false })
 	end
 	-- 가로등
 	for x = -60, 60, 20 do
@@ -352,6 +386,18 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 			B:part(Vector3.new(1, 12, depth), v(cx + dx, 6, cz), { Color = wallColor, Material = Enum.Material.Plaster }) -- 옆벽
 		end
 		B:part(Vector3.new(23, 1, depth + 1), v(cx, 12.5, cz), { Color = wallColor }) -- 지붕
+		-- 가게 안 천장 조명: 지붕과 위층 건물에 가려 햇빛이 안 들어서, 조명이 없으면 안이 캄캄해요
+		for _, dx in { -5.5, 5.5 } do
+			for _, dz in { -4, 4 } do
+				local lamp = B:part(Vector3.new(4, 0.25, 1.2), v(cx + dx, 11.85, cz + dz), { Color = Color3.fromRGB(240, 238, 228), Material = Enum.Material.Neon, CanCollide = false, CanQuery = false })
+				local light = Instance.new("PointLight")
+				light.Range = 22
+				light.Brightness = 1.1
+				light.Color = Color3.fromRGB(255, 246, 228)
+				light.Shadows = false
+				light.Parent = lamp
+			end
+		end
 		B:part(Vector3.new(21, 0.1, depth - 1), v(cx, 0.08, cz), { Color = Color3.fromRGB(235, 225, 210), Material = Enum.Material.WoodPlanks, CanCollide = false })
 		B:part(Vector3.new(23, 0.4, 4), v(cx, 9.4, SHOP_FRONT - 1.6), { Color = awning, Material = Enum.Material.Fabric, Orientation = Vector3.new(-15, 0, 0) }) -- 차양
 		local sign = B:part(Vector3.new(16, 2, 0.4), v(cx, 11, SHOP_FRONT + 0.3), { Color = Color3.fromRGB(35, 30, 30) })
@@ -365,7 +411,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	end
 
 	-- ☕ 눈치 커피
-	local cafeCounter = shopBuilding(-39, "☕ 눈치 커피", Theme.Color.mintSoft, Theme.Color.mint)
+	local cafeCounter = shopBuilding(-39, "☕ 눈치 커피", TC.mintSoft, TC.mint)
 	B:part(Vector3.new(1.4, 2, 1.4), v(-42, 4.5, -136), { Color = Color3.fromRGB(190, 190, 195), Material = Enum.Material.Metal }) -- 커피머신
 	B:part(Vector3.new(8, 3, 0.4), v(-39, 6.5, -143), { Color = Color3.fromRGB(30, 30, 30) }) -- 메뉴판
 	for _, dx in { -6, 6 } do -- 손님 테이블
@@ -375,7 +421,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	shops.cafe = { counter = cafeCounter, clerkSpot = v(-39, 0, -139) }
 
 	-- 🍰 달콤 디저트
-	local dessertCounter = shopBuilding(-13, "🍰 달콤 디저트", Theme.Color.coralSoft, Theme.Color.coral)
+	local dessertCounter = shopBuilding(-13, "🍰 달콤 디저트", TC.coralSoft, TC.coral)
 	B:part(Vector3.new(6, 1.6, 1.6), v(-13, 4.3, -136), { Color = Color3.fromRGB(220, 240, 250), Material = Enum.Material.Glass, Transparency = 0.4 }) -- 진열장
 	for i, color in { Color3.fromRGB(255, 170, 200), Color3.fromRGB(180, 230, 170), Color3.fromRGB(220, 160, 80), Color3.fromRGB(255, 240, 240), Color3.fromRGB(190, 170, 255) } do
 		B:part(Vector3.new(0.7, 0.5, 0.7), v(-15.6 + i * 0.9, 3.9, -136), { Color = color, CanCollide = false })
@@ -383,7 +429,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	shops.dessert = { counter = dessertCounter, clerkSpot = v(-13, 0, -139) }
 
 	-- 🧸 뽑기 가게: 인형뽑기 1대 + 🎡 다 같이 돌림판 + 🎯 풍선 다트
-	shopBuilding(13, "🧸 뽑기 천국", Theme.Color.yellowSoft, Theme.Color.yellow, true)
+	shopBuilding(13, "🧸 뽑기 천국", TC.yellowSoft, TC.yellow, true)
 	local clawMachines = {}
 	do
 		local mx, mz = 5.2, -137
