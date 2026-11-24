@@ -205,7 +205,12 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 
 	-- 동료 만들기
 	for i, desk in office.desks do
-		local name = SalaryConfig.CoworkerNames[(i - 1) % #SalaryConfig.CoworkerNames + 1]
+		-- 이름은 5개인데 책상은 6개라, 예전엔 여섯 번째 동료가 "이대리"로 한 명 더 생겼어요.
+		-- 수다 횟수·친밀도·수다 주제가 모두 이름 기준이라 둘이 한 사람처럼 취급됐어요 → 이름 수만큼만 만들어요.
+		if i > #SalaryConfig.CoworkerNames then
+			break
+		end
+		local name = SalaryConfig.CoworkerNames[i]
 		local model = Npc.create(name, randomLook(), office.folder)
 		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
 		root:SetNetworkOwner(nil)

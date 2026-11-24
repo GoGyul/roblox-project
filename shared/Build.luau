@@ -7,13 +7,15 @@ Build.__index = Build
 
 export type Door = { center: number, width: number, height: number }
 
-function Build.new(parent: Instance, offset: Vector3)
-	return setmetatable({ parent = parent, offset = offset }, Build)
+-- offset에 CFrame을 주면 돌려서도 지을 수 있어요 (월급루팡 회사 단지의 대충상사 건물이 그래요).
+function Build.new(parent: Instance, offset: Vector3 | CFrame)
+	local base = if typeof(offset) == "CFrame" then offset else CFrame.new(offset :: Vector3)
+	return setmetatable({ parent = parent, offset = base.Position, base = base }, Build)
 end
 
 -- 상대 좌표 CFrame → 실제 월드 CFrame
 function Build:cf(relative: CFrame): CFrame
-	return CFrame.new(self.offset) * relative
+	return self.base * relative
 end
 
 -- 파트 하나 만들기. props.CFrame을 주면 회전된 파트도 만들 수 있어요 (상대 좌표).
@@ -54,11 +56,13 @@ function Build:wall(
 		end
 		local length, h = b - a, yTop - yBottom
 		local mid = (a + b) / 2
+		local part
 		if axis == "Z" then
-			self:part(Vector3.new(1, h, length), Vector3.new(fixed, yBottom + h / 2, mid), props)
+			part = self:part(Vector3.new(1, h, length), Vector3.new(fixed, yBottom + h / 2, mid), props)
 		else
-			self:part(Vector3.new(length, h, 1), Vector3.new(mid, yBottom + h / 2, fixed), props)
+			part = self:part(Vector3.new(length, h, 1), Vector3.new(mid, yBottom + h / 2, fixed), props)
 		end
+		part:SetAttribute("Wall", true) -- 벽 조각 표시 (월급루팡 OfficeSkin이 메시 패널을 입혀요)
 	end
 
 	local sorted = table.clone(doors or {})

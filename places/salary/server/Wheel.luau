@@ -78,6 +78,15 @@ function Wheel.start(office, remotes, hooks)
 	local spinning: { [Player]: boolean } = {}
 	local rotation = 0 -- 뒷벽 돌림판 각도
 
+	-- 🪪 사원증 등급: 직급이 모자라면 구경만
+	local function badgeOk(player: Player): boolean
+		local need = SalaryConfig.BADGE.wheel
+		if ((player:GetAttribute("Rank") :: number?) or 1) >= need then
+			return true
+		end
+		remotes.Notify:FireClient(player, `🪪 사원증 등급이 모자라요! 🎡 돌림판은 {SalaryConfig.Ranks[need].name}부터 이용할 수 있어요.`)
+		return false
+	end
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "돌림판 하기"
 	prompt.ObjectText = "🎡 돌림판"
@@ -85,6 +94,9 @@ function Wheel.start(office, remotes, hooks)
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = wheel.kiosk
 	prompt.Triggered:Connect(function(player)
+		if not badgeOk(player) then
+			return
+		end
 		remotes.WheelOpen:FireClient(player)
 	end)
 	ReplicatedStorage:SetAttribute("WheelFrom", 0)
@@ -92,6 +104,9 @@ function Wheel.start(office, remotes, hooks)
 	ReplicatedStorage:SetAttribute("WheelSpinStart", 0)
 
 	local function near(player: Player): boolean
+		if ((player:GetAttribute("Rank") :: number?) or 1) < SalaryConfig.BADGE.wheel then
+			return false -- 🪪 사원증 등급이 모자라요 (창을 안 거치고 보낸 요청도 막아요)
+		end
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		return root ~= nil and (root.Position - wheel.kiosk.Position).Magnitude <= RANGE
 	end

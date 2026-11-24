@@ -236,6 +236,11 @@ function Arcade.start(office, remotes, hooks)
 		prompt.RequiresLineOfSight = false
 		prompt.Parent = machine
 		prompt.Triggered:Connect(function(player)
+			local need = SalaryConfig.BADGE.arcade -- 🪪 사원증 등급
+			if ((player:GetAttribute("Rank") :: number?) or 1) < need then
+				remotes.Notify:FireClient(player, `🪪 사원증 등급이 모자라요! 🕹️ 오락실은 {SalaryConfig.Ranks[need].name}부터 이용할 수 있어요.`)
+				return
+			end
 			remotes.ArcadeOpen:FireClient(player, gameId)
 		end)
 	end
@@ -250,6 +255,9 @@ function Arcade.start(office, remotes, hooks)
 	end)
 
 	local function near(player: Player): boolean
+		if ((player:GetAttribute("Rank") :: number?) or 1) < SalaryConfig.BADGE.arcade then
+			return false -- 🪪 사원증 등급이 모자라요 (창을 안 거치고 보낸 요청도 막아요)
+		end
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not root then
 			return false

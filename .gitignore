@@ -11,3 +11,13 @@ sourcemap.json
 
 # macOS
 .DS_Store
+
+# 메시 제작 중간 산출물 (스크립트로 다시 만들 수 있어요)
+/assets/salary/preview/
+/assets/salary/drafts/
+/assets/salary/catalog/
+/assets/salary/renewal/
+/assets/salary/fbx_old/
+# Studio에서 저장한 가져오기 확인용 플레이스
+/assets/model/
+__pycache__/

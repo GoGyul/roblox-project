@@ -95,10 +95,12 @@ SalaryConfig.NEAR_MISS_SAFE = 20 -- 안 걸리고 이 밑으로 내려오면 "�
 SalaryConfig.MAX_COMBO = 5
 -- 🖥️ 자리 부재 게이지: 근무 중에 내 자리를 비우면(화장실, 흡연구역, 회의실, 탕비실…) 천천히 차올라요.
 --   70%면 "컴퓨터 자동 감지 시스템" 경보, 100%면 경고 1회. 자리에 앉아 있으면 다시 줄어요.
-SalaryConfig.AWAY_SECONDS = 90 -- 0% → 100%까지 걸리는 시간
+SalaryConfig.AWAY_SECONDS = 110 -- (단지가 넓어져서 90 → 110) 0% → 100%까지 걸리는 시간
 SalaryConfig.AWAY_SECONDS_DUMMY = 150 -- 🧸 대리 출석 인형을 앉혀 두면
 SalaryConfig.AWAY_SECONDS_DUMMY_PRO = 240 -- 👔 최고급 마네킹을 앉혀 두면
-SalaryConfig.AWAY_RECOVER = 8 -- 자리에 앉아 있으면 1초에 줄어드는 양 (%)
+SalaryConfig.AWAY_RECOVER = 6 -- (8 → 6: 잠깐 앉았다 바로 또 나가기 어렵게) 자리에 앉아 있으면 1초에 줄어드는 양 (%)
+SalaryConfig.AWAY_LATE_FROM = 16 * 60 + 30 -- 🕟 이 시각부터는 다들 슬슬 풀어져서 (퇴근 전 농땡이 타임)
+SalaryConfig.AWAY_LATE_SCALE = 0.5 -- 자리 부재 게이지가 이 배율로 천천히 차요 (절반 속도)
 SalaryConfig.AWAY_WARN = 70 -- 이 %가 되면 경보
 SalaryConfig.COFFEE_GRACE = 40 -- 탕비실에서 이 시간까지는 커피 타는 척 가능
 SalaryConfig.DOCS_SECONDS = 40 -- 서류 들고 바쁜 척 지속 시간
@@ -246,11 +248,11 @@ SalaryConfig.States = {
 	},
 	street = {
 		emoji = "🛍️",
-		name = "눈치 스트리트 구경",
+		name = "단지 산책",
 		income = 9,
 		detect = 25,
-		payLabel = "거리 구경 수당",
-		hint = "🏙️ 공원 정문 밖 눈치 스트리트에 있으면 돼요 (눈치물산). 👮 경비원 주의! 자리 부재 게이지는 차요.",
+		payLabel = "단지 산책 수당",
+		hint = "🏙️ 회사 단지에 있으면 돼요 (엘리베이터로 1층). 건물 안 0.8배 · 그늘이나 우리 회사 창에서 안 보이는 곳 1배 · 창에서 보이는 탁 트인 곳 1.4배! 자리를 오래 비우면 티 나요, 👮 경비원도 조심!",
 	},
 	hiding = {
 		emoji = "📦",
@@ -337,11 +339,11 @@ SalaryConfig.States = {
 	},
 	candy = {
 		emoji = "🍭",
-		name = "흡연구역에서 사탕 물기",
-		income = 9,
+		name = "사탕 쉼터에서 사탕 물기",
+		income = 11,
 		detect = 25,
-		payLabel = "흡연구역 사탕 수당",
-		hint = "🌳 눈치물산 공원 흡연구역(금연! 사탕만!)에 서 있으면 돼요. 자리를 오래 비우면 티 나요.",
+		payLabel = "사탕 쉼터 수당",
+		hint = "🌳 단지 공원 남서쪽 숲속 정자 \"사탕 쉼터\"(금연! 사탕만!)에 서 있으면 돼요. 자리를 오래 비우면 티 나요.",
 	},
 	meeting = {
 		emoji = "📊",
@@ -543,7 +545,7 @@ function SalaryConfig.carrySpeed(player: Player, slowSpeed: number): number
 	return SalaryConfig.walkSpeed(player, 16 - slowdown)
 end
 
--- 자리에서 고를 수 있는 행동 (숫자키 1~7, 직급이 오르면 하나씩 열려요)
+-- 자리에서 고를 수 있는 행동 (숫자키 1~9, 직급이 오르면 하나씩 열려요)
 ---------------------------------------------------------------------------
 -- 📱 폰 게임: [폰 게임] 버튼 → 게임을 골라야 농땡이 시작 (창을 닫으면 일하기로 복귀)
 ---------------------------------------------------------------------------
@@ -720,6 +722,10 @@ SalaryConfig.Snacks = {
 	{ id = "macaron", emoji = "🧁", name = "마카롱", seconds = 8, bonus = 1800, count = 0, size = Vector3.new(0.7, 0.45, 0.7), color = Color3.fromRGB(255, 170, 200), street = true },
 	{ id = "croffle", emoji = "🥐", name = "크로플", seconds = 14, bonus = 4000, count = 0, size = Vector3.new(1.2, 0.35, 0.9), color = Color3.fromRGB(220, 160, 80), street = true },
 	{ id = "strawcake", emoji = "🍓", name = "딸기 생크림 케이크", seconds = 20, bonus = 7000, count = 0, size = Vector3.new(1.2, 1, 1.2), color = Color3.fromRGB(255, 240, 240), street = true },
+	-- 🍢 대충 분식에서 사는 간식 (count = 0이라 탕비실엔 안 놓여요)
+	{ id = "tteokbokki", emoji = "🍢", name = "떡볶이", seconds = 8, bonus = 1100, count = 0, size = Vector3.new(0.9, 0.5, 0.9), color = Color3.fromRGB(214, 70, 50), street = true },
+	{ id = "gimbap", emoji = "🍙", name = "김밥", seconds = 12, bonus = 1900, count = 0, size = Vector3.new(1.3, 0.4, 0.6), color = Color3.fromRGB(40, 50, 40), street = true },
+	{ id = "rabokki", emoji = "🍜", name = "라볶이 세트", seconds = 18, bonus = 3400, count = 0, size = Vector3.new(1.3, 0.6, 1.3), color = Color3.fromRGB(226, 110, 60), street = true },
 	{ id = "birthday", emoji = "🎂", name = "생일 케이크", seconds = 25, bonus = 4000, count = 0, size = Vector3.new(1.3, 1, 1.3), color = Color3.fromRGB(255, 190, 210) },
 } :: { SnackInfo }
 
@@ -814,7 +820,7 @@ SalaryConfig.Items = {
 	{ id = "tumbler", emoji = "🥤", name = "고급 텀블러", price = 3000, days = 7, description = "탕비실에서 커피 타는 척 시간이 40초 → 90초." },
 	{ id = "cover", emoji = "🖥️", name = "모니터 가리개", price = 6000, days = 5, description = "화면 농땡이(웹툰, 폰, 쇼핑)가 30% 덜 들켜요." },
 	{ id = "earphones", emoji = "🎧", name = "부장 레이더 이어폰", price = 9000, days = 5, description = "발소리 감지 거리 증가 + 부장이 지금 감시 중인지 화면에 표시." },
-	{ id = "dummy", emoji = "🧸", name = "대리 출석 인형", price = 12000, days = 5, description = "자리에 인형을 앉혀 둬요. 자리 부재 게이지가 천천히 차요 (90초 → 150초)." },
+	{ id = "dummy", emoji = "🧸", name = "대리 출석 인형", price = 12000, days = 5, description = "자리에 인형을 앉혀 둬요. 자리 부재 게이지가 천천히 차요 (110초 → 150초)." },
 	{ id = "dummy_pro", emoji = "👔", name = "최고급 대리 출석 마네킹", price = 60000, requires = "dummy", days = 5, description = "정장 입고 타자까지 치는 마네킹. 부재 게이지 240초 + 감사관의 빈자리 사진도 속여요! (인형 필요)" },
 	{ id = "energy", emoji = "⚡", name = "에너지 드링크", price = 1500, consumable = true, description = "마시면 그날 하루 일하는 척 복귀 시간 절반!" },
 } :: { ItemInfo }
@@ -1059,8 +1065,8 @@ SalaryConfig.Companies = {
 } :: { CompanyInfo }
 
 SalaryConfig.TEST_MONEY = 0 -- 🧪 스튜디오에서 통장을 최소 이만큼 채워 줘요 (가게·인형뽑기 테스트용, 실제 게임엔 영향 없음)
-SalaryConfig.TEST_RANK = 0 -- 🧪 스튜디오에서 직급을 최소 이만큼으로 (2 = 사원, 0이면 끔. 저장이 꺼져 있을 때만)
-SalaryConfig.TEST_COMPANY = "" -- 🧪 스튜디오에서 "nunchi"를 넣으면 눈치물산 사무실로 시작 (실제 게임엔 영향 없음)
+SalaryConfig.TEST_RANK = 4 -- 🧪 스튜디오에서 직급을 최소 이만큼으로 (2 = 사원, 0이면 끔. 저장이 꺼져 있을 때만)
+SalaryConfig.TEST_COMPANY = "nunchi" -- 🧪 스튜디오에서 "nunchi"를 넣으면 눈치물산 사무실로 시작 (실제 게임엔 영향 없음)
 SalaryConfig.TEST_DELIVERY = false -- 🧪 true면 스튜디오에서 들어오자마자 📦 택배 하나가 도착해 있어요 (🔔 알림 테스트, 실제 게임엔 영향 없음)
 
 function SalaryConfig.getCompany(companyId: string): CompanyInfo
@@ -1120,7 +1126,7 @@ end
 --   snack: 들고 가서 자리에서 [8] 몰래 먹기 (간식 시스템과 같아요)
 ---------------------------------------------------------------------------
 export type StreetItem = { id: string, emoji: string, name: string, price: number, description: string, snack: string?, gift: boolean? }
-export type StreetShop = { id: string, name: string, clerk: string, items: { StreetItem } }
+export type StreetShop = { id: string, name: string, clerk: string, items: { StreetItem }, lunchOnly: boolean? }
 
 SalaryConfig.StreetShops = {
 	-- 🏪 사내 매점 (두 회사 모두 사무실 안에 있어요): 부장님께 드릴 선물
@@ -1154,8 +1160,70 @@ SalaryConfig.StreetShops = {
 			{ id = "strawcake", emoji = "🍓", name = "딸기 생크림 케이크", price = 4000, snack = "strawcake", description = "자리에서 몰래 다 먹으면 +7,000원 (20초)" },
 		},
 	},
+	-- ☕ 골목 커피 (대충상사 건물 1층): 눈치 커피의 절반쯤 되는 효과를 3분의 1 값에
+	cafe1f = {
+		id = "cafe1f",
+		name = "☕ 골목 커피",
+		clerk = "커피집 사장님",
+		items = {
+			{ id = "mixcoffee", emoji = "☕", name = "믹스커피", price = 500, description = "오늘 하루 업무 시간이 1.15배 빨리 채워져요" },
+			{ id = "yuja", emoji = "🍵", name = "유자차", price = 700, description = "오늘 하루 의심도가 12% 더 빨리 줄어요" },
+			{ id = "vitamin", emoji = "🧃", name = "비타민 음료", price = 900, description = "오늘 하루 자리 부재 게이지가 15% 천천히 차요" },
+		},
+	},
+	-- 🍢 대충 분식 (대충상사 건물 1층): 탕비실 공짜 간식보다 많이 남지만, 먹는 동안 들키기 쉬워요
+	bunsik = {
+		id = "bunsik",
+		name = "🍢 대충 분식",
+		clerk = "분식집 이모",
+		items = {
+			{ id = "tteokbokki", emoji = "🍢", name = "떡볶이", price = 600, snack = "tteokbokki", description = "자리에서 몰래 다 먹으면 +1,100원 (8초)" },
+			{ id = "gimbap", emoji = "🍙", name = "김밥", price = 1000, snack = "gimbap", description = "자리에서 몰래 다 먹으면 +1,900원 (12초)" },
+			{ id = "rabokki", emoji = "🍜", name = "라볶이 세트", price = 1800, snack = "rabokki", description = "자리에서 몰래 다 먹으면 +3,400원 (18초)" },
+		},
+	},
+	-- 🚚 푸드트럭 (눈치물산 타워 앞 광장): 점심시간에만 열어요. 커피 효과와 겹쳐서 받을 수 있어요
+	truck = {
+		id = "truck",
+		name = "🚚 푸드트럭",
+		clerk = "푸드트럭 사장님",
+		lunchOnly = true,
+		items = {
+			{ id = "taco", emoji = "🌮", name = "든든 타코", price = 800, description = "든든한 점심! 오늘 남은 하루 농땡이 수입 +25%" },
+			{ id = "gangjeong", emoji = "🍗", name = "닭강정 컵", price = 800, description = "기분 좋은 점심! 오늘 남은 하루 의심도가 40% 더 빨리 줄어요" },
+		},
+	},
 } :: { [string]: StreetShop }
 
+SalaryConfig.TACO_INCOME = 1.25 -- 🌮 타코: 농땡이 수입 배율
+SalaryConfig.GANGJEONG_DECAY = 1.4 -- 🍗 닭강정: 의심도 줄어드는 속도 배율 (라떼·유자차와 곱해져요)
+
+-- 🪪 사원증 등급: 이 직급부터 쓸 수 있는 단지 시설 (Ranks 번호: 1 인턴 · 2 사원 · 3 주임 · 4 대리)
+--   공원 시설·커피·디저트·인형뽑기는 누구나. 눈치물산 타워는 대리부터 (회사 자체가 대리부터예요)
+SalaryConfig.BADGE = { dart = 2, arcade = 3, wheel = 4 }
+
+-- 🚏 출근 시간: 아침마다 단지 버스 정류장에서 시작해 내 자리까지 가요 (시각은 게임 속 분)
+SalaryConfig.COMMUTE_EARLY = 9 * 60 + 40 -- 이때까지 앉으면 칼출근 보너스
+SalaryConfig.COMMUTE_LATE = 9 * 60 + 50 -- 이때까지 못 앉으면 지각
+SalaryConfig.COMMUTE_BONUS = 0.25 -- 칼출근 보너스 = 기본급의 25%
+SalaryConfig.COMMUTE_EARLY_DELTA = -0.05 -- 칼출근: 오늘의 의심도 속도
+SalaryConfig.COMMUTE_LATE_DELTA = 0.15 -- 지각: 오늘의 의심도 속도
+
+-- 🍚 점심시간: 12:45에 "곧 1시" 알림, 13:20까지 단지에 남아 있으면 지각
+SalaryConfig.LUNCH_WARN = 12 * 60 + 45
+SalaryConfig.LUNCH_LATE = 13 * 60 + 20 -- (단지나 옥상에 남아 있으면)
+SalaryConfig.LUNCH_LATE_SUSPICION = 30 -- 점심 지각: 의심도 +
+
+-- 👀 창밖 시선: 부장님이 가끔 창가에서 단지를 내려다봐요. 지붕·나무 밑·건물 안이면 안 보여요
+SalaryConfig.WINDOW_GAP = { 45, 80 } -- 다음 번까지 쉬는 시간 (초)
+SalaryConfig.WINDOW_WARN = 3 -- "창가로 와요" 예고 (초)
+SalaryConfig.WINDOW_SECONDS = 7 -- 내려다보는 시간 (초). 이 동안 사무실 안은 안 봐요
+SalaryConfig.WINDOW_MULTIPLIER = 1.2 -- 보이는 동안 의심도 배율 (7초 내내 서 있으면 의심도 약 +70: 한 번 놓쳐도 바로 적발은 아니에요)
+SalaryConfig.STREET_HUNCH_EXTRA = 30 -- 🏙️ 단지 산책은 "오래 농땡이 눈치"가 이만큼(초) 늦게 와요 (오가는 길이 머니까)
+
+SalaryConfig.MIXCOFFEE_WORK = 1.15 -- 믹스커피: 업무 시간 배율
+SalaryConfig.YUJA_DECAY = 1.12 -- 유자차: 의심도 줄어드는 속도 배율
+SalaryConfig.VITAMIN_AWAY = 0.85 -- 비타민 음료: 자리 부재 게이지 속도 배율
 SalaryConfig.AMERICANO_WORK = 1.3 -- 아메리카노: 업무 시간 배율
 SalaryConfig.LATTE_DECAY = 1.25 -- 바닐라 라떼: 의심도 줄어드는 속도 배율
 SalaryConfig.SMOOTHIE_AWAY = 0.7 -- 에너지 스무디: 자리 부재 게이지 속도 배율
@@ -1462,6 +1530,7 @@ export type MissionStep = { kind: string, text: string, count: number?, place: s
 export type MissionInfo = { id: string, emoji: string, name: string, seconds: number, steps: { MissionStep }, company: string? }
 
 SalaryConfig.MISSION_WINDOWS = { { 10 * 60, 10 * 60 + 25 }, { 13 * 60 + 5, 15 * 60 } } -- 시작 시각 (점심과 겹치지 않게)
+SalaryConfig.MISSION_LAST_START = 15 * 60 + 10 -- 이 시각을 넘기면 오늘 프로젝트는 건너뛰어요 (퇴근 전에 끝낼 수 없어서)
 SalaryConfig.MISSION_BONUS = 3000 -- 경고가 없을 때 성공 보너스
 SalaryConfig.MEMORY_SHOW = 3 -- 주문번호를 보여 주는 시간 (초)
 SalaryConfig.MEMORY_HOLD = 12 -- 번호를 기억한 채 일하기로 버텨야 하는 시간 (초)
@@ -1786,7 +1855,19 @@ SalaryConfig.TEST_CAT = false -- 🧪 true면 스튜디오에서 9시 10분쯤 �
 ---------------------------------------------------------------------------
 SalaryConfig.ELEVATOR_RIDE = 8 -- 부장님이랑 탈 때 (초)
 SalaryConfig.ELEVATOR_RIDE_ALONE = 4 -- 혼자 탈 때
-SalaryConfig.ELEVATOR_BOSS_CHANCE = 0.35
+SalaryConfig.ELEVATOR_BOSS_CHANCE = 0.2
+
+-- 🔊 공간 소리 ID (Ambience 모듈이 써요). ""로 비워 두면 그 소리는 안 나요.
+--   크리에이터 스토어(오디오)에서 골라 "rbxassetid://숫자" 형태로 넣으세요.
+SalaryConfig.Sounds = {
+	office = "", -- 사무실 배경: 에어컨 웅웅 + 키보드 소리 (반복)
+	corridor = "", -- 복도 배경: 조용한 형광등 소리 (반복)
+	pantry = "", -- 탕비실: 냉장고·정수기 소리 (반복)
+	lobby = "", -- 1층 로비 배경 (반복)
+	street = "", -- 건물 앞 거리: 차 소리·사람 소리 (반복)
+	elevatorDing = "rbxasset://sounds/electronicpingshort.wav", -- 엘리베이터 도착 "띵" (로블록스 기본 소리)
+}
+SalaryConfig.SoundVolume = { office = 0.3, corridor = 0.2, pantry = 0.25, lobby = 0.25, street = 0.4 }
 SalaryConfig.ELEVATOR_EVENTS = { 1, 1 } -- 부장님이 쳐다보거나 말 거는 횟수 (최소, 최대) → 딱 한 번만
 SalaryConfig.ELEVATOR_WARN = 3 -- ⚠️ 예고 후 실제로 쳐다보거나 말 걸기까지 (초): 고를 시간 3초
 SalaryConfig.ELEVATOR_GRACE = 0.2 -- 인터넷 지연 봐주기 (초)

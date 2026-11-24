@@ -10,6 +10,13 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local SalaryConfig = require(Shared:WaitForChild("SalaryConfig"))
 local Ui = require(Shared:WaitForChild("Ui"))
 local Sounds = require(Shared:WaitForChild("Sounds"))
+local Theme = require(Shared:WaitForChild("SalaryTheme"))
+
+Ui.setTheme(Theme.UI, {
+	corner = Theme.corner,
+	buttonCorner = 14,
+	stroke = Theme.Color.navy,
+})
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -21,12 +28,12 @@ local Ranks = SalaryConfig.Ranks
 local Hud = {}
 
 Hud.COLORS = {
-	panel = Color3.fromRGB(25, 30, 40),
-	good = Color3.fromRGB(90, 200, 120),
-	warn = Color3.fromRGB(240, 190, 60),
-	bad = Color3.fromRGB(230, 70, 60),
-	locked = Color3.fromRGB(45, 45, 50),
-	idle = Color3.fromRGB(70, 75, 90),
+	panel = Theme.Color.surface,
+	good = Theme.Color.mint,
+	warn = Theme.Color.yellow,
+	bad = Theme.Color.coral,
+	locked = Color3.fromRGB(214, 222, 228),
+	idle = Theme.Color.skySoft,
 }
 local COLORS = Hud.COLORS
 
@@ -43,9 +50,9 @@ Ui.setToastStyle(460, 15, 8) -- 📢 아래쪽 알림을 작게 (예전 620폭·
 
 local function panel(props: { [string]: any }): Frame
 	props.BackgroundColor3 = props.BackgroundColor3 or COLORS.panel
-	props.BackgroundTransparency = props.BackgroundTransparency or 0.15
+	props.BackgroundTransparency = props.BackgroundTransparency or 0.04
 	props.Parent = props.Parent or gui
-	return Ui.make("Frame", props, { Ui.corner(10), Ui.padding(10), Ui.stroke(C.brass) })
+	return Ui.make("Frame", props, { Ui.corner(18), Ui.padding(12), Ui.stroke(Theme.Color.navy, 2) })
 end
 
 function Hud.text(props: { [string]: any }): TextLabel
@@ -68,7 +75,7 @@ local function bar(parent: Instance, y: number, title: string): (TextLabel, Fram
 	local back = Ui.make("Frame", {
 		Position = UDim2.fromOffset(0, y + 22),
 		Size = UDim2.new(1, 0, 0, 12),
-		BackgroundColor3 = Color3.fromRGB(60, 60, 70),
+		BackgroundColor3 = Color3.fromRGB(223, 230, 234),
 		Parent = parent,
 	}, { Ui.corner(6) })
 	local fill = Ui.make("Frame", {
@@ -93,10 +100,20 @@ local moodText = text({
 	Position = UDim2.fromOffset(0, 26),
 	Size = UDim2.new(1, 0, 0, 18),
 	TextSize = 14,
-	TextColor3 = Color3.fromRGB(200, 200, 210),
+	TextColor3 = Theme.Color.muted,
 	TextXAlignment = Enum.TextXAlignment.Center,
 	Parent = clockPanel,
 })
+
+-- 화면 가운데에 배경 없이 뜨는 글씨는 벽·바닥 색에 묻히지 않게 짙은 남색 테두리를 둘러요
+local function outline(label: TextLabel)
+	local edge = Instance.new("UIStroke")
+	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual -- 상자가 아니라 글씨에 테두리
+	edge.Color = Theme.Color.navy
+	edge.Thickness = 2.5
+	edge.LineJoinMode = Enum.LineJoinMode.Round
+	edge.Parent = label
+end
 
 local footstepText = text({
 	AnchorPoint = Vector2.new(0.5, 0),
@@ -104,10 +121,11 @@ local footstepText = text({
 	Size = UDim2.fromOffset(420, 30),
 	TextSize = 22,
 	TextXAlignment = Enum.TextXAlignment.Center,
-	TextStrokeTransparency = 0.3,
+	TextStrokeTransparency = 1, -- (테두리는 outline()이 그려요)
 	Visible = false,
 	Parent = gui,
 })
+outline(footstepText)
 
 -- 🎲 돌발 이벤트 안내 (발소리 표시 아래)
 local eventText = text({
@@ -116,10 +134,11 @@ local eventText = text({
 	Size = UDim2.fromOffset(560, 30),
 	TextSize = 21,
 	TextXAlignment = Enum.TextXAlignment.Center,
-	TextStrokeTransparency = 0.3,
+	TextStrokeTransparency = 1, -- (테두리는 outline()이 그려요)
 	Visible = false,
 	Parent = gui,
 })
+outline(eventText)
 
 -- 👀 이과장이 내 농땡이를 보고 있을 때 경고 (게이지가 다 차면 고자질!)
 local leeText = text({
@@ -129,22 +148,23 @@ local leeText = text({
 	TextSize = 22,
 	TextColor3 = Color3.fromRGB(255, 120, 120),
 	TextXAlignment = Enum.TextXAlignment.Center,
-	TextStrokeTransparency = 0.2,
+	TextStrokeTransparency = 1, -- (테두리는 outline()이 그려요)
 	Visible = false,
 	Parent = gui,
 })
+outline(leeText)
 
 -- 🏢 출근하기 (하루가 시작되기 전, 이 버튼을 눌러야 9시가 돼요)
 local clockIn = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.58),
-	Size = UDim2.fromOffset(380, 170),
-	BackgroundColor3 = Color3.fromRGB(28, 22, 16),
-	BackgroundTransparency = 0.1,
+	Size = UDim2.fromOffset(420, 196),
+	BackgroundColor3 = Theme.Color.surface,
+	BackgroundTransparency = 0.02,
 	Visible = false,
 	ZIndex = 20,
 	Parent = gui,
-}, { Ui.corner(14), Ui.stroke(C.brass, 2) })
+}, { Ui.corner(22), Ui.stroke(Theme.Color.navy, 3) })
 local clockInTitle = text({
 	Position = UDim2.fromOffset(0, 12),
 	Size = UDim2.new(1, 0, 0, 30),
@@ -157,26 +177,54 @@ local clockInInfo = text({
 	Position = UDim2.fromOffset(0, 44),
 	Size = UDim2.new(1, 0, 0, 22),
 	TextSize = 15,
-	TextColor3 = Color3.fromRGB(200, 200, 210),
+	TextColor3 = Theme.Color.muted,
 	TextXAlignment = Enum.TextXAlignment.Center,
 	ZIndex = 21,
 	Parent = clockIn,
 })
-local clockInButton = Ui.button({
-	AnchorPoint = Vector2.new(0.5, 1),
-	Position = UDim2.new(0.5, 0, 1, -14),
-	Size = UDim2.fromOffset(260, 64),
-	Text = "🏢 출근하기!",
-	TextSize = 26,
+-- 출근 방식 두 가지: 🚏 걸어서(단지 버스 정류장에서 시작, 칼출근 보너스) / 🪑 바로 자리로(보너스 없음)
+local clockInHint = text({
+	Position = UDim2.fromOffset(0, 68),
+	Size = UDim2.new(1, 0, 0, 20),
+	TextSize = 13,
+	TextColor3 = Theme.Color.muted,
+	TextXAlignment = Enum.TextXAlignment.Center,
+	Text = "걸어서 출근하면 9시 40분까지 앉을 때 칼출근 보너스! (9시 50분 넘으면 지각)",
 	ZIndex = 21,
 	Parent = clockIn,
 })
-clockInButton.Activated:Connect(function()
+local clockInButton = Ui.button({
+	AnchorPoint = Vector2.new(0, 1),
+	Position = UDim2.new(0, 14, 1, -14),
+	Size = UDim2.fromOffset(192, 78),
+	Text = "🚏 걸어서 출근\n(보너스)",
+	TextSize = 20,
+	ZIndex = 21,
+	Parent = clockIn,
+})
+local clockInDeskButton = Ui.button({
+	AnchorPoint = Vector2.new(1, 1),
+	Position = UDim2.new(1, -14, 1, -14),
+	Size = UDim2.fromOffset(192, 78),
+	BackgroundColor3 = Theme.Color.skySoft,
+	TextColor3 = Theme.Color.navy,
+	Text = "🪑 바로 자리로\n(보너스 없음)",
+	TextSize = 20,
+	ZIndex = 21,
+	Parent = clockIn,
+})
+local function sendClockIn(mode: string)
 	if player:GetAttribute("ClockedIn") then
 		return
 	end
 	Sounds.play("click", 0.6)
-	Remotes.ClockIn:FireServer()
+	Remotes.ClockIn:FireServer(mode)
+end
+clockInButton.Activated:Connect(function()
+	sendClockIn("walk")
+end)
+clockInDeskButton.Activated:Connect(function()
+	sendClockIn("desk")
 end)
 
 local function updateClockIn()
@@ -192,12 +240,17 @@ local function updateClockIn()
 	local left = ReplicatedStorage:GetAttribute("ClockInLeft") or -1
 	local done = player:GetAttribute("ClockedIn") == true
 	if done then
-		clockInButton.Text = "✅ 출근 완료!"
+		local walk = player:GetAttribute("ClockInWalk") == true
+		clockInButton.Text = if walk then "✅ 걸어서 출근" else "🚏 걸어서 출근\n(보너스)"
+		clockInDeskButton.Text = if walk then "🪑 바로 자리로\n(보너스 없음)" else "✅ 바로 자리로"
 		clockInButton.BackgroundColor3 = Color3.fromRGB(110, 110, 120)
+		clockInDeskButton.BackgroundColor3 = Color3.fromRGB(110, 110, 120)
 		clockInInfo.Text = if left >= 0 then `동료 기다리는 중 ({count}) · {left}초 뒤 자동 출근` else `동료 기다리는 중 ({count})`
 	else
-		clockInButton.Text = "🏢 출근하기!"
+		clockInButton.Text = "🚏 걸어서 출근\n(보너스)"
+		clockInDeskButton.Text = "🪑 바로 자리로\n(보너스 없음)"
 		clockInButton.BackgroundColor3 = C.brass
+		clockInDeskButton.BackgroundColor3 = Theme.Color.skySoft
 		clockInInfo.Text = if left >= 0 then `준비 {count} · {left}초 뒤 출근해요!` else `부장님 기분: {nextWeekday.mood}`
 	end
 end
@@ -252,12 +305,12 @@ local bellButton = Ui.button({
 	TextSize = 24,
 	Parent = gui,
 })
-Ui.stroke(C.brass).Parent = bellButton
+Ui.stroke(Theme.Color.navy, 2).Parent = bellButton
 local bellBadge = Ui.make("TextLabel", {
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.new(1, -4, 0, 4),
 	Size = UDim2.fromOffset(22, 22),
-	BackgroundColor3 = Color3.fromRGB(230, 50, 50),
+	BackgroundColor3 = Theme.Color.coral,
 	TextColor3 = Color3.new(1, 1, 1),
 	Font = Enum.Font.GothamBlack,
 	TextSize = 13,
@@ -327,8 +380,8 @@ local function renderNotices()
 		local row = Ui.make("Frame", {
 			Size = UDim2.new(1, -8, 0, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundColor3 = if notice.read then Color3.fromRGB(45, 50, 62) else Color3.fromRGB(70, 62, 40),
-			BackgroundTransparency = 0.2,
+			BackgroundColor3 = if notice.read then Theme.Color.surfaceSoft else Theme.Color.yellowSoft,
+			BackgroundTransparency = 0,
 			LayoutOrder = shown,
 			ZIndex = 27,
 			Parent = noticeList,
@@ -347,7 +400,7 @@ local function renderNotices()
 			LayoutOrder = 2,
 			Size = UDim2.new(1, 0, 0, 13),
 			TextSize = 11,
-			TextColor3 = Color3.fromRGB(170, 170, 180),
+			TextColor3 = Theme.Color.muted,
 			TextXAlignment = Enum.TextXAlignment.Right,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			Text = stamp,
@@ -356,7 +409,7 @@ local function renderNotices()
 		})
 	end
 	if shown == 0 then
-		text({ Size = UDim2.new(1, 0, 0, 40), TextSize = 15, TextColor3 = Color3.fromRGB(170, 170, 180), Text = "아직 알림이 없어요", ZIndex = 27, Parent = noticeList })
+		text({ Size = UDim2.new(1, 0, 0, 40), TextSize = 15, TextColor3 = Theme.Color.muted, Text = "아직 알림이 없어요", ZIndex = 27, Parent = noticeList })
 	end
 end
 
@@ -665,11 +718,15 @@ local standHint = text({
 	Size = UDim2.fromOffset(520, 28),
 	TextSize = 17,
 	TextXAlignment = Enum.TextXAlignment.Center,
-	TextStrokeTransparency = 0.3,
+	BackgroundColor3 = Theme.Color.surface,
+	BackgroundTransparency = 0.06,
+	TextStrokeTransparency = 1,
 	Text = "🪑 ⭐ 내 자리에 앉으면 농땡이 메뉴가 나와요",
 	Visible = false,
 	Parent = gui,
 })
+Ui.corner(14).Parent = standHint
+Ui.stroke(Theme.Color.navy, 2).Parent = standHint
 
 
 local hintText = text({
@@ -678,9 +735,13 @@ local hintText = text({
 	Size = UDim2.new(1, 0, 0, 22),
 	TextSize = 16,
 	TextXAlignment = Enum.TextXAlignment.Center,
-	TextStrokeTransparency = 0.4,
+	BackgroundColor3 = Theme.Color.surface,
+	BackgroundTransparency = 0.06,
+	TextStrokeTransparency = 1,
 	Parent = actionPanel,
 })
+Ui.corner(11).Parent = hintText
+Ui.stroke(Theme.Color.navy, 1.5).Parent = hintText
 local buttonRow = Ui.make("Frame", {
 	Position = UDim2.fromOffset(0, 28),
 	Size = UDim2.new(1, 0, 0, 88),
@@ -861,10 +922,11 @@ for _, frame in { clockPanel, moneyPanel, statusPanel, Hud.toolbar, actionPanel,
 end
 
 -- 작은 화면인가? (패널을 줄여요)
+Hud.smallMode = false -- 🗕 [H]로 켜는 "작은 화면 표시": 큰 화면에서도 창들을 70% 크기로 줄여 게임 화면을 넓게 봐요
 function Hud.isCompact(): boolean
 	local camera = workspace.CurrentCamera
 	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
-	return Hud.isPhone() or viewport.X < 1000 or viewport.Y < 560
+	return Hud.smallMode or Hud.isPhone() or viewport.X < 1000 or viewport.Y < 560
 end
 
 -- 폰처럼 터치만 되는 기기인가? (행동 버튼을 2줄 큰 버튼으로)
@@ -879,16 +941,21 @@ local function applyLayout()
 	local grid = buttonRow:FindFirstChild("Grid") :: UIGridLayout
 	local small = if compact then 0.7 else 1
 
-	scales[clockPanel].Scale = small
-	clockPanel.Position = UDim2.new(0.5, 0, 0, if compact then 4 else 8)
-	footstepText.Position = UDim2.new(0.5, 0, 0, if compact then 50 else 78)
+	local top = if compact then 0.7 else 0.88 -- (시계·직급 창은 큰 화면에서도 조금 작게)
+	scales[clockPanel].Scale = top
+	-- 🎲 돌발 이벤트 안내 줄은 화면 맨 위(시계 창 위)에 띄워요: 화면 가운데를 가리지 않게.
+	--    안내 줄이 떠 있는 동안만 시계 창과 그 아래 글씨들이 한 줄만큼 내려가요.
+	local banner = if eventText.Visible then (if compact then 22 else 28) else 0
+	eventText.Position = UDim2.new(0.5, 0, 0, if compact then 2 else 4)
+	eventText.TextSize = if compact then 15 else 19
+	clockPanel.Position = UDim2.new(0.5, 0, 0, (if compact then 4 else 8) + banner)
+	local below = (if compact then 4 else 8) + banner + math.floor(clockPanel.AbsoluteSize.Y) + 6 -- 시계 창 바로 아래
+	footstepText.Position = UDim2.new(0.5, 0, 0, below)
 	footstepText.TextSize = if compact then 17 else 22
-	eventText.Position = UDim2.new(0.5, 0, 0, if compact then 74 else 110)
-	eventText.TextSize = if compact then 16 else 21
-	leeText.Position = UDim2.new(0.5, 0, 0, if compact then 96 else 142)
+	leeText.Position = UDim2.new(0.5, 0, 0, below + (if compact then 22 else 30))
 	leeText.TextSize = if compact then 17 else 22
 
-	scales[moneyPanel].Scale = small
+	scales[moneyPanel].Scale = top
 	moneyPanel.Position = UDim2.new(1, if compact then -6 else -12, 0, if compact then 4 else 8)
 	-- 🔔 알림 종은 직급 창 바로 왼쪽, 알림 창은 직급 창 아래
 	scales[bellButton].Scale = small
@@ -951,9 +1018,67 @@ local function applyLayout()
 	Ui.setToastPosition(UDim2.new(0.5, 0, 1, -(bottomGap + barHeight + 10)))
 end
 
+---------------------------------------------------------------------------
+-- 🗕 시계 창 · 직급 창 접기: 오른쪽 위 [–]를 누르면 첫 줄만 남기고 접어요 ([+]로 다시 펴기)
+--   접으면 시계 창은 "시각 · 요일"만, 직급 창은 "직급 이름"만 보여요. 접은 상태는 나갈 때까지 유지돼요.
+---------------------------------------------------------------------------
+local function foldable(frame: Frame, keep: GuiObject, fullSize: UDim2, foldedSize: UDim2)
+	local folded = false
+	local toggle = Ui.button({
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 8, 0, -8),
+		Size = UDim2.fromOffset(24, 24),
+		BackgroundColor3 = Theme.Color.surfaceSoft,
+		TextColor3 = Theme.Color.navy,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 18,
+		Text = "–",
+		ZIndex = 5,
+		Parent = frame,
+	})
+	local hiddenByFold: { [GuiObject]: boolean } = {}
+	toggle.Activated:Connect(function()
+		folded = not folded
+		Sounds.play("click", 0.4)
+		toggle.Text = if folded then "+" else "–"
+		frame.Size = if folded then foldedSize else fullSize
+		frame:SetAttribute("Folded", folded) -- (다른 모듈이 이 창에 붙인 버튼도 접힌 동안은 숨기게)
+		for _, child in frame:GetChildren() do
+			-- 첫 줄(keep)·접기 버튼·창 밖에 붙은 버튼(이과장·감사관 소개 등)은 그대로 둬요
+			if child:IsA("GuiObject") and child ~= keep and child ~= toggle and child.Position.X.Scale < 1 then
+				if folded then
+					if child.Visible then
+						hiddenByFold[child] = true
+						child.Visible = false
+					end
+				elseif hiddenByFold[child] then
+					hiddenByFold[child] = nil
+					child.Visible = true
+				end
+			end
+		end
+		task.defer(applyLayout) -- (알림 종·프로젝트 카드가 직급 창 크기에 맞춰 따라와요)
+	end)
+end
+foldable(clockPanel, clockText, UDim2.fromOffset(300, 62), UDim2.fromOffset(300, 48))
+foldable(moneyPanel, rankText, UDim2.fromOffset(250, 136), UDim2.fromOffset(250, 46))
+foldable(missionPanel, missionTitle, UDim2.fromOffset(290, 196), UDim2.fromOffset(290, 48)) -- 📋 긴급 프로젝트 카드도 접을 수 있어요
+
+Hud.relayout = function()
+	task.defer(applyLayout)
+end
 applyLayout()
 if workspace.CurrentCamera then
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyLayout)
+	-- 🗕 [H] 화면 표시 크게/작게 (글자를 치는 중에는 동작하지 않아요)
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed or input.KeyCode ~= Enum.KeyCode.H then
+			return
+		end
+		Hud.smallMode = not Hud.smallMode
+		applyLayout()
+		Hud.popup(if Hud.smallMode then "🗕 화면 표시를 작게 했어요 · [H]로 되돌리기" else "🗖 화면 표시를 원래 크기로 · [H]로 작게", COLORS.good, 2)
+	end)
 end
 -- 막 들어왔을 땐 화면 크기가 정확하지 않을 수 있어서, 잠시 뒤 한 번 더 맞춰요
 for _, delay in { 0.5, 1.5, 3 } do
@@ -1095,7 +1220,10 @@ local function updateEvent()
 			Hud.popup("🌸 워크숍 레크리에이션!", Color3.fromRGB(255, 180, 210), 3)
 		end
 	end
-	eventText.Visible = message ~= nil
+	if eventText.Visible ~= (message ~= nil) then
+		eventText.Visible = message ~= nil
+		Hud.relayout() -- (안내 줄이 생기거나 사라지면 시계 창 자리를 다시 맞춰요)
+	end
 	if message then
 		eventText.Text = message
 		eventText.TextColor3 = color
@@ -1290,7 +1418,7 @@ RunService.RenderStepped:Connect(function()
 		table.insert(extras, `버프 {buffs}`) -- 🏙️ 카페 음료
 	end
 	-- 🎁 경비원 매수: 남은 시간
-	for _, info in { { "park", "👮" }, { "roof", "👮옥상" } } do
+	for _, info in { { "park", "👮박씨" }, { "park2", "👮한씨" }, { "park3", "👮정씨" }, { "roof", "👮옥상" } } do
 		local untilTime = player:GetAttribute(`GuardBribe_{info[1]}`)
 		if typeof(untilTime) == "number" then
 			local left = math.ceil(untilTime - workspace:GetServerTimeNow())
@@ -1328,7 +1456,7 @@ RunService.RenderStepped:Connect(function()
 		end
 		button.Text = buttonText(i, actionId, unlocked)
 		button.BackgroundColor3 = if not unlocked then COLORS.locked elseif selected then C.brass else COLORS.idle
-		button.BackgroundTransparency = if selected then 0.05 else 0.3 -- 살짝 비쳐서 게임 화면을 덜 가려요
+		button.BackgroundTransparency = if selected then 0 else 0.08
 		button.TextColor3 = if selected then C.ink else C.text
 	end
 	if hoveredPhoneGame then
@@ -1413,11 +1541,12 @@ function Hud.popup(message: string, color: Color3, seconds: number)
 		Text = message,
 		TextSize = 21, -- (예전 30: 너무 커서 줄였어요)
 		TextColor3 = color,
-		TextStrokeTransparency = 0.2,
+		TextStrokeTransparency = 1,
 		TextXAlignment = Enum.TextXAlignment.Center,
 		ZIndex = 45,
 		Parent = gui,
 	})
+	outline(label)
 	table.insert(popupStack, 1, label)
 	-- 너무 많이 쌓이면 가장 오래된 것부터 정리
 	while #popupStack > 5 do
@@ -1432,6 +1561,10 @@ function Hud.popup(message: string, color: Color3, seconds: number)
 	task.delay(hold, function()
 		if label.Parent then
 			TweenService:Create(label, TweenInfo.new(0.6), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+			local edge = label:FindFirstChildOfClass("UIStroke")
+			if edge then
+				TweenService:Create(edge, TweenInfo.new(0.6), { Transparency = 1 }):Play()
+			end
 		end
 	end)
 	task.delay(hold + 0.6, function()
@@ -1606,14 +1739,14 @@ local CHAT_LOG_LINES = 3
 local chatReactBar = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0),
 	Position = UDim2.new(0.5, 0, 0, 150),
-	Size = UDim2.fromOffset(560, 116),
-	BackgroundColor3 = Color3.fromRGB(36, 30, 26),
-	BackgroundTransparency = 0.05,
+	Size = UDim2.fromOffset(560, 134),
+	BackgroundColor3 = Theme.Color.surface,
+	BackgroundTransparency = 0.02,
 	Visible = false,
 	ZIndex = 40,
 	Parent = gui,
-}, { Ui.corner(12), Ui.stroke(Color3.fromRGB(255, 190, 90), 2), Ui.padding(8) })
-local chatReactTitle = text({ Size = UDim2.new(1, 0, 0, 20), TextSize = 15, TextColor3 = Color3.fromRGB(255, 210, 130), ZIndex = 41, Parent = chatReactBar })
+}, { Ui.corner(20), Ui.stroke(Theme.Color.navy, 3), Ui.padding(12) })
+local chatReactTitle = text({ Size = UDim2.new(1, 0, 0, 20), TextSize = 15, TextColor3 = Theme.Color.navy, ZIndex = 41, Parent = chatReactBar })
 -- 대사 기록 (위가 오래된 것, 아래가 방금 한 말)
 local chatLogLabels: { TextLabel } = {}
 local chatLog: { string } = {}
@@ -1637,10 +1770,11 @@ local function renderChatLog()
 	end
 end
 local REACT_TOP = 24 + CHAT_LOG_LINES * 25 + 4
+local CHAT_PAD = 12 * 2 + 6 -- 창 안쪽 여백(위아래 12씩) + 맨 아랫줄이 테두리에 잘리지 않게 여유
 local chatReactTimer = Ui.make("Frame", {
 	Position = UDim2.fromOffset(0, REACT_TOP),
 	Size = UDim2.new(1, 0, 0, 5),
-	BackgroundColor3 = Color3.fromRGB(255, 190, 90),
+	BackgroundColor3 = Theme.Color.mint,
 	BorderSizePixel = 0,
 	ZIndex = 41,
 	Parent = chatReactBar,
@@ -1657,7 +1791,7 @@ local chatCloseButton = Ui.make("TextButton", {
 	AnchorPoint = Vector2.new(1, 0),
 	Position = UDim2.new(1, 0, 0, -2),
 	Size = UDim2.fromOffset(26, 24),
-	BackgroundColor3 = Color3.fromRGB(80, 70, 60),
+	BackgroundColor3 = Theme.Color.coral,
 	Text = "X",
 	TextColor3 = Color3.new(1, 1, 1),
 	Font = Enum.Font.GothamBlack,
@@ -1679,7 +1813,7 @@ local function setReactVisible(on: boolean)
 	for _, b in chatReactButtons do
 		b.Visible = on
 	end
-	chatReactBar.Size = UDim2.fromOffset(560, if on then REACT_TOP + 70 else REACT_TOP)
+	chatReactBar.Size = UDim2.fromOffset(560, (if on then REACT_TOP + 70 else REACT_TOP) + CHAT_PAD)
 	chatReactTitle.Text = if on then `💬 {chatName}와(과) 수다 · 🗣️ 맞장구! [1]·[2]·[3]` elseif chatEnded then `💬 {chatName}와(과) 오늘 대화 끝 👋` else `💬 {chatName}와(과) 수다 중`
 end
 local function closeChatReact()
@@ -1758,10 +1892,10 @@ Remotes:WaitForChild("ChatLine").OnClientEvent:Connect(function(kind: string, na
 	end
 	chatName = name
 	local entry = if kind == "me"
-		then `<font color="#8FD3FF"><b>나:</b></font> {line}`
-		elseif kind == "sys" then `<font color="#7CE08A">{line}</font>`
-		elseif kind == "end" then `<font color="#FFB36B"><b>{line}</b></font>`
-		else `<font color="#FFD27A"><b>{name}:</b></font> {line}`
+		then `<font color="#287EAF"><b>나:</b></font> {line}`
+		elseif kind == "sys" then `<font color="#237F70"><b>{line}</b></font>`
+		elseif kind == "end" then `<font color="#C64E50"><b>{line}</b></font>`
+		else `<font color="#A85B16"><b>{name}:</b></font> {line}`
 	if kind == "end" then
 		-- 👋 오늘 대화 끝: 창은 그대로 두고 ✕ / 바깥 클릭 / 8초 뒤에 닫혀요
 		chatEnded = true
@@ -1887,13 +2021,13 @@ local elevatorGui = Ui.make("Frame", {
 -- 이동 안내는 시계 바로 아래 작은 알약 모양으로 (다른 UI를 가리지 않게)
 local elevatorPill = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0),
-	Position = UDim2.new(0.5, 0, 0, 76),
-	Size = UDim2.fromOffset(280, 30),
-	BackgroundColor3 = Color3.fromRGB(20, 22, 30),
-	BackgroundTransparency = 0.15,
+	Position = UDim2.new(0.5, 0, 0, 152), -- (가운데 이벤트 문구(74~130)와 겹치지 않게 그 아래로)
+	Size = UDim2.fromOffset(300, 32),
+	BackgroundColor3 = Theme.Color.surface,
+	BackgroundTransparency = 0.04,
 	ZIndex = 45,
 	Parent = elevatorGui,
-}, { Ui.corner(15), Ui.stroke(Color3.fromRGB(255, 200, 80), 1.5) })
+}, { Ui.corner(16), Ui.stroke(Theme.Color.navy, 2) })
 local elevatorTitle = text({
 	Size = UDim2.fromScale(1, 1),
 	TextSize = 16,
@@ -2028,7 +2162,7 @@ Remotes:WaitForChild("ElevatorRide").OnClientEvent:Connect(function(info)
 		while elevatorRide == info do
 			local elapsed = workspace:GetServerTimeNow() - info.start
 			local left = math.max(0, math.ceil(info.duration - math.max(0, elapsed)))
-			elevatorTitle.Text = (if info.toRoof then "🚪 ▲ 옥상으로 올라가는 중" else "🚪 ▼ 사무실로 내려가는 중") .. ` ({left}초)`
+			elevatorTitle.Text = (if info.toRoof then "🚪 ▲ 옥상으로 올라가는 중" elseif info.fromLobby then "🚪 ▲ 사무실로 올라가는 중" else "🚪 ▼ 사무실로 내려가는 중") .. ` ({left}초)`
 			if info.withBoss then
 				if elapsed < 0 then
 					bossState.Text = `😐 준비… {math.ceil(-elapsed)}`

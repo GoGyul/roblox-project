@@ -325,9 +325,11 @@ end
 -- 하루 일정
 ---------------------------------------------------------------------------
 function Boss:applyMood(weekday)
-	self.humanoid.WalkSpeed = weekday.walkSpeed
+	-- 🏢 좁은 사무실(리뉴얼 대충상사)은 시야 거리와 걸음을 줄여 긴장감을 예전과 비슷하게 맞춰요 (office.bossScale)
+	local scale = (self.office :: any).bossScale
+	self.humanoid.WalkSpeed = weekday.walkSpeed * (if scale then scale.walkSpeed else 1)
 	self.fovCos = math.cos(math.rad(weekday.fov))
-	self.range = weekday.range
+	self.range = weekday.range * (if scale then scale.range else 1)
 end
 
 function Boss:appearAt(position: Vector3)

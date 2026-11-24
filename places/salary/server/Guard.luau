@@ -442,23 +442,43 @@ end
 -- 🌳 공원·눈치 스트리트 경비원 (눈치물산만, 밖 공간이 있는 회사)
 function Guard.start(office, dayCycle, events, remotes, useGift)
 	if not office.guardPatrol or not office.guardPost then
-		return nil -- 밖 공간이 없는 회사(대충상사)에는 공원 경비원이 없어요
+		return nil -- 밖 공간이 없는 회사에는 경비원이 없어요 (대충상사는 1층 거리, 눈치물산은 공원·거리)
 	end
-	return Guard.new({
-		folder = office.folder,
-		post = office.guardPost,
-		patrol = office.guardPatrol,
-		area = function(position: Vector3): boolean
-			-- 건물 안도, 하늘 위 옥상도 아닌 땅 위 (공원·거리)
-			return not office.insideOffice(position) and math.abs(position.Y - office.entrance.Y) < 20
+	local list = office.guards or { { id = "park", name = "경비원 박씨", post = office.guardPost, patrol = office.guardPatrol } }
+	local apis = {}
+	for _, info in list do
+		table.insert(apis, Guard.new({
+			folder = office.folder,
+			post = info.post,
+			patrol = info.patrol,
+			area = function(position: Vector3): boolean
+				-- 건물 안도, 하늘 위 옥상도 아닌 땅 위 (단지)
+				return not office.insideOffice(position) and math.abs(position.Y - office.entrance.Y) < 20
+			end,
+			dayCycle = dayCycle,
+			events = events,
+			remotes = remotes,
+			name = info.name,
+			id = info.id,
+			useGift = useGift,
+		}))
+	end
+	-- 여러 명 중 나를 보고 있는 경비원 (노려보는 사람이 먼저)
+	return {
+		sees = function(character: Model): (boolean, number, boolean, number)
+			local best: { any }? = nil
+			for _, api in apis do
+				local seen, distance, staring, range = api.sees(character)
+				if seen and (not best or (staring and not best[3]) or (staring == best[3] and distance < best[2])) then
+					best = { seen, distance, staring, range }
+				end
+			end
+			if best then
+				return best[1], best[2], best[3], best[4]
+			end
+			return false, math.huge, false, SalaryConfig.GUARD_RANGE
 		end,
-		dayCycle = dayCycle,
-		events = events,
-		remotes = remotes,
-		name = "경비원 박씨",
-		id = "park",
-		useGift = useGift,
-	})
+	}
 end
 
 return Guard

@@ -17,6 +17,9 @@
         "Client": {
           "$path": "places/salary/client"
         }
+      },
+      "$properties": {
+        "EnableMouseLockOption": false
       }
     },
     "Workspace": {
@@ -56,7 +59,7 @@
         "Brightness": 2,
         "GlobalShadows": true,
         "Outlines": false,
-        "Technology": "Voxel"
+        "Technology": "Future"
       }
     },
     "SoundService": {

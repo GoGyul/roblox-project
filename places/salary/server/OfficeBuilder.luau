@@ -15,7 +15,16 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Build = require(ReplicatedStorage.Shared.Build)
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
+local Theme = require(ReplicatedStorage.Shared.SalaryTheme)
+-- 🧊 월드 색: 차분한 색(Theme.Mesh)이 있으면 그걸, 없으면 기본 색을 써요 (질감 B안)
+local TC: any = setmetatable({}, {
+	__index = function(_, key)
+		return (Theme.Mesh :: any)[key] or (Theme.Color :: any)[key]
+	end,
+})
 local OfficeNunchi = require(script.Parent.OfficeNunchi)
+local OfficeDaechung = require(script.Parent.OfficeDaechung)
+local Meshes = require(script.Parent.Meshes)
 
 local OfficeBuilder = {}
 
@@ -38,20 +47,40 @@ local COLORS = {
 
 -- 🏢 회사마다 다른 인테리어 (여기 없는 색은 위 기본색을 써요)
 --   partitionHeight: 책상 칸막이 높이. 낮을수록 부장님 눈에 잘 띄어요!
+local M = Theme.Mesh -- 🧊 질감 B안: 채도를 낮춘 월드 색
 local THEMES = {
-	daechung = { partitionHeight = 4.5, colors = {} },
+	daechung = {
+		partitionHeight = 3.4,
+		colors = {
+			floor = M.carpet,
+			wall = M.wall,
+			desk = M.woodLight,
+			partition = M.sage,
+			chair = M.seat,
+			monitor = M.navy,
+			screen = M.screen,
+			tile = M.surfaceSoft,
+			accent = M.coral,
+		},
+	},
 	nunchi = {
 		partitionHeight = 2.6, -- 요즘 회사는 칸막이가 낮아요 (= 숨기 어려움)
 		colors = {
-			floor = Color3.fromRGB(75, 85, 100),
-			wall = Color3.fromRGB(245, 246, 248),
-			desk = Color3.fromRGB(235, 235, 232),
-			partition = Color3.fromRGB(80, 165, 165),
-			accent = Color3.fromRGB(40, 160, 170),
+			floor = M.carpet,
+			wall = M.wall,
+			desk = M.woodLight,
+			partition = Color3.fromRGB(124, 138, 152),
+			chair = Color3.fromRGB(66, 70, 78),
+			monitor = M.navy,
+			screen = M.screen,
+			accent = M.mintDark,
 		},
 	},
 }
 local partitionHeight = 4.5
+
+-- 🏢 대충상사 리뉴얼 평면(OfficeDaechung.luau)을 쓸지. false면 아래 예전 큰 홀 맵으로 지어요 (되돌리기용).
+local USE_RENEWAL_DAECHUNG = true
 
 export type Desk = {
 	index: number,
@@ -123,41 +152,86 @@ end
 -- 의자가 책상 가운데에서 뒤로 얼마나 떨어져 있나 (Employees의 책상 위 소품 위치도 이 값을 써요)
 local DESK_SEAT_OFFSET = SalaryConfig.DESK_SEAT_OFFSET
 
-local function buildDesk(B, index: number, x: number, z: number): Desk
+-- 예전 파트 책상. 메시를 못 불러왔을 때만 써요.
+local function buildPartDesk(B, index: number, x: number, z: number): Desk
 	local model = Instance.new("Model")
 	model.Name = `Desk{index}`
 	model.Parent = B.parent
-	local function p(size: Vector3, position: Vector3, props: { [string]: any })
+	local function p(size: Vector3, position: Vector3?, props: { [string]: any })
 		local options = table.clone(props)
 		options.Parent = model
 		return B:part(size, position, options)
 	end
 
-	-- 📐 책상을 넓혔어요 (예전 6×3 → 8.4×4): 꾸미기·소품·인형을 올릴 자리가 넉넉해요
-	local top = p(Vector3.new(8.4, 2.5, 4), v(x, 1.25, z), { Name = "DeskTop", Color = COLORS.desk, Material = Enum.Material.Wood })
-	-- 모니터
-	local monitor = p(Vector3.new(2.6, 1.8, 0.3), v(x, 3.6, z - 1.2), { Name = "Monitor", Color = COLORS.monitor })
-	local screen = p(Vector3.new(2.3, 1.5, 0.05), v(x, 3.6, z - 1.02), {
+	-- 3번 콘셉트 워크스테이션: 얇은 주 상판과 비스듬한 보조 날개로 실루엣부터 바꿔요.
+	local top = p(Vector3.new(7.2, 0.42, 3.8), v(x - 0.45, 2.35, z), {
+		Name = "DeskTop",
+		Color = COLORS.desk,
+		Material = Enum.Material.WoodPlanks,
+	})
+	p(Vector3.new(3.6, 0.42, 2.7), nil, {
+		CFrame = CFrame.new(v(x + 3.2, 2.35, z + 0.75)) * CFrame.Angles(0, math.rad(-28), 0),
+		Color = COLORS.desk,
+		Material = Enum.Material.WoodPlanks,
+	})
+	-- 둥근 상판 끝과 테두리. 원통 캡이 멀리서도 부드러운 가구로 읽혀요.
+	for _, dx in { -4.05, 3.15 } do
+		p(Vector3.new(0.44, 3.75, 3.75), nil, {
+			CFrame = CFrame.new(v(x + dx, 2.35, z)) * CFrame.Angles(0, 0, math.rad(90)),
+			Shape = Enum.PartType.Cylinder,
+			Color = COLORS.desk,
+			Material = Enum.Material.WoodPlanks,
+		})
+	end
+	-- 한쪽은 원통 다리, 다른 쪽은 바퀴 달린 서랍장으로 비대칭을 줘요.
+	p(Vector3.new(0.9, 2.2, 0.9), v(x - 3.45, 1.12, z), { Shape = Enum.PartType.Cylinder, Color = TC.surface, Material = Enum.Material.Metal })
+	p(Vector3.new(1.9, 2, 2.6), v(x + 2.45, 1.02, z + 0.25), { Color = TC.surface, Material = Enum.Material.SmoothPlastic })
+	for drawer = 0, 2 do
+		p(Vector3.new(1.7, 0.09, 2.25), v(x + 2.45, 0.45 + drawer * 0.55, z + 0.46), { Color = TC.line, CanCollide = false })
+		p(Vector3.new(0.12, 0.12, 0.65), v(x + 3.42, 0.62 + drawer * 0.55, z + 0.46), { Color = TC.yellow, Material = Enum.Material.Metal, CanCollide = false })
+	end
+	for _, dz in { -0.7, 0.85 } do
+		p(Vector3.new(0.35, 0.35, 0.35), v(x + 2.45, 0.18, z + dz), { Shape = Enum.PartType.Ball, Color = TC.navy, CanCollide = false })
+	end
+	-- 관절형 모니터 암과 떠 있는 화면
+	p(Vector3.new(0.3, 1.3, 0.3), v(x - 0.4, 3.1, z - 1.25), { Color = TC.navy, Material = Enum.Material.Metal })
+	p(Vector3.new(1.4, 0.22, 0.22), nil, { CFrame = CFrame.new(v(x + 0.15, 3.55, z - 1.25)) * CFrame.Angles(0, 0, math.rad(-24)), Color = TC.navy, Material = Enum.Material.Metal })
+	local monitor = p(Vector3.new(3, 1.9, 0.28), v(x + 0.75, 4.15, z - 1.25), { Name = "Monitor", Color = COLORS.monitor })
+	local screen = p(Vector3.new(2.65, 1.55, 0.05), v(x + 0.75, 4.15, z - 1.08), {
 		Color = COLORS.screen,
 		Material = Enum.Material.Neon,
 		Transparency = 0.2,
 	})
 	screen.Name = "Screen"
-	p(Vector3.new(1.6, 0.1, 0.6), v(x, 2.55, z + 0.5), { Color = Color3.fromRGB(60, 60, 60) }) -- 키보드
-	p(Vector3.new(0.4, 0.08, 0.6), v(x + 1.3, 2.54, z + 0.5), { Color = Color3.fromRGB(70, 70, 75) }) -- 마우스
-	-- 파티션 (앞, 양옆)
+	p(Vector3.new(1.9, 0.1, 0.65), v(x - 0.45, 2.61, z + 0.5), { Color = TC.navy }) -- 키보드
+	p(Vector3.new(0.5, 0.08, 0.65), v(x + 1.05, 2.6, z + 0.55), { Color = TC.navySoft }) -- 마우스
+	-- 파티션: 세 면을 둘러싼 상자 대신 가운데와 꺾인 날개만 남겨 개방감을 만들어요.
 	local h = partitionHeight
-	p(Vector3.new(8.8, h, 0.3), v(x, h / 2, z - 2.2), { Color = COLORS.partition, Material = Enum.Material.Fabric })
-	p(Vector3.new(0.3, h, 4.6), v(x - 4.4, h / 2, z), { Color = COLORS.partition, Material = Enum.Material.Fabric })
-	p(Vector3.new(0.3, h, 4.6), v(x + 4.4, h / 2, z), { Color = COLORS.partition, Material = Enum.Material.Fabric })
+	p(Vector3.new(7.7, h, 0.28), v(x - 0.2, h / 2, z - 2.15), { Color = COLORS.partition, Material = Enum.Material.Fabric })
+	for _, side in { -1, 1 } do
+		p(Vector3.new(0.28, h, 2.8), nil, {
+			CFrame = CFrame.new(v(x + side * 3.8, h / 2, z - 0.95)) * CFrame.Angles(0, math.rad(side * 18), 0),
+			Color = COLORS.partition,
+			Material = Enum.Material.Fabric,
+		})
+		p(Vector3.new(0.42, h + 0.3, 0.42), v(x + side * 3.85, (h + 0.3) / 2, z - 2.12), { Shape = Enum.PartType.Cylinder, Color = TC.surface, Material = Enum.Material.Metal })
+	end
 
-	-- 의자 (Seat: 닿으면 앉아요. 앞쪽(-Z)을 보고 앉음)
-	local seat = p(Vector3.new(2, 1, 2), v(x, 1, z + DESK_SEAT_OFFSET), {
+	-- 헤드레스트가 있는 회전 의자. Seat와 판정 위치는 기존과 같아요.
+	local seat = p(Vector3.new(2.05, 0.55, 2), v(x, 1.55, z + DESK_SEAT_OFFSET), {
 		ClassName = "Seat",
 		Name = "Seat",
 		Color = COLORS.chair,
+		Material = Enum.Material.Fabric,
 	}) :: Seat
-	local chairBack = p(Vector3.new(2, 2.4, 0.3), v(x, 2.7, z + DESK_SEAT_OFFSET + 0.9), { Name = "ChairBack", Color = COLORS.chair })
+	local chairBack = p(Vector3.new(2.05, 2.5, 0.38), nil, { Name = "ChairBack", CFrame = CFrame.new(v(x, 2.85, z + DESK_SEAT_OFFSET + 0.92)) * CFrame.Angles(math.rad(-8), 0, 0), Color = COLORS.chair, Material = Enum.Material.Fabric })
+	p(Vector3.new(1.35, 0.65, 0.45), v(x, 4.28, z + DESK_SEAT_OFFSET + 1.12), { Color = COLORS.chair, Material = Enum.Material.Fabric })
+	for _, side in { -1, 1 } do
+		p(Vector3.new(0.25, 0.25, 1.5), v(x + side * 1.25, 2.1, z + DESK_SEAT_OFFSET + 0.1), { Color = TC.navy, Material = Enum.Material.Metal })
+		p(Vector3.new(1.9, 0.18, 0.28), nil, { CFrame = CFrame.new(v(x + side * 0.8, 0.45, z + DESK_SEAT_OFFSET)) * CFrame.Angles(0, math.rad(side * 34), 0), Color = TC.navy, Material = Enum.Material.Metal })
+		p(Vector3.new(0.35, 0.35, 0.35), v(x + side * 1.5, 0.25, z + DESK_SEAT_OFFSET + 0.95), { Shape = Enum.PartType.Ball, Color = TC.navy, CanCollide = false })
+	end
+	p(Vector3.new(0.35, 1.05, 0.35), v(x, 0.85, z + DESK_SEAT_OFFSET), { Shape = Enum.PartType.Cylinder, Color = TC.navy, Material = Enum.Material.Metal })
 
 	-- seatHome: 의자 원래 자리 (혹시 밀려나면 되돌려요)
 	-- top/monitor/chairBack + 기본 색: 🪑 내 자리 꾸미기가 바꿨다가 되돌릴 때 써요
@@ -176,6 +250,95 @@ local function buildDesk(B, index: number, x: number, z: number): Desk
 			chairColor = seat.Color,
 		},
 	}
+end
+
+-- 🧊 메시 책상 세트 (tools/blender/office_desk_set.py).
+-- 보이는 건 전부 메시고, 예전과 같은 자리·크기의 보이지 않는 파트가 충돌·좌석·판정을 맡아요.
+-- 그래서 Decor·Events·Delivery처럼 desk.top / desk.seat / desk.chairBack / desk.monitor 를 쓰는 코드는 그대로예요.
+local DESK_MESH_KINDS = { "Desk", "Monitor", "Chair", "Drawer", "Lamp" }
+
+local function buildMeshDesk(B, index: number, x: number, z: number): Desk
+	local model = Instance.new("Model")
+	model.Name = `Desk{index}`
+	model.Parent = B.parent
+	local function hidden(size: Vector3, position: Vector3?, props: { [string]: any }?)
+		local options = table.clone(props or {})
+		options.Parent = model
+		options.Transparency = 1
+		return B:part(size, position, options)
+	end
+
+	local h = partitionHeight
+	local origin = B:cf(CFrame.new(v(x, 0, z)))
+	-- 🧊 현실 비율 세트(RDesk…)가 있으면 그걸 쓰고, 없으면 예전 둥근 세트로 지어요
+	local real = Meshes.ready("RDesk", "RMonitor", "RChair", "RDrawer")
+	local stretchY = Vector3.new(1, h / 3, 1) -- 메시 파티션은 높이 3으로 만들었어요
+	local deskParts = Meshes.spawn(if real then "RDesk" else "Desk", model, origin, {
+		colors = { Top = if real then M.laminate else COLORS.desk, Partition = COLORS.partition },
+		scales = { Partition = stretchY, Trim = stretchY },
+		skip = { Cup = true, Paper = true }, -- 책상 위 소품은 Employees가 따로 놓아요
+	})
+	local monitorParts = Meshes.spawn(if real then "RMonitor" else "Monitor", model, origin, { colors = { Frame = COLORS.monitor, Screen = COLORS.screen } })
+	monitorParts.Screen.Name = "Screen" -- 정전 이벤트가 이 이름으로 찾아요
+	if real then
+		Meshes.spawn("RDrawer", model, B:cf(CFrame.new(v(x + 2.5, 0, z + 0.3))))
+	else
+		Meshes.spawn("Drawer", model, B:cf(CFrame.new(v(x + 2.6, 0, z + 0.3))))
+		Meshes.spawn("Lamp", model, B:cf(CFrame.new(v(x - 3.1, 2.56, z - 1))))
+	end
+	local chairParts = Meshes.spawn(if real then "RChair" else "Chair", model, B:cf(CFrame.new(v(x, 0, z + DESK_SEAT_OFFSET))), {
+		colors = { Seat = COLORS.chair, Back = COLORS.chair },
+	})
+
+	-- 상판·모니터 (판정용)
+	local top = hidden(Vector3.new(7.2, 0.42, 3.8), v(x - 0.45, 2.35, z), { Name = "DeskTop", Color = if real then M.laminate else COLORS.desk })
+	Meshes.mirror(top, deskParts.Top)
+	local monitor = hidden(Vector3.new(3, 1.9, 0.28), v(x + 0.75, 4.15, z - 1.25), { Name = "Monitor", CanCollide = false, CanQuery = false })
+	-- 다리·서랍장 충돌
+	hidden(Vector3.new(0.75, 2.1, 3), v(x - 3.35, 1.07, z))
+	hidden(Vector3.new(1.9, 2, 2.6), v(x + 2.6, 1.02, z + 0.3))
+	-- 파티션 충돌 (부장님 시야를 가리는 것도 이 파트예요)
+	hidden(Vector3.new(8.4, h, 0.3), v(x - 0.2, h / 2, z - 2.2))
+	for _, dx in { -4.4, 4 } do
+		hidden(Vector3.new(0.3, h, 3.1), v(x + dx, h / 2, z - 0.75))
+	end
+
+	-- 의자: Seat와 등받이 판정 위치는 예전과 같아요.
+	local seat = hidden(Vector3.new(2.05, 0.55, 2), v(x, 1.55, z + DESK_SEAT_OFFSET), {
+		ClassName = "Seat",
+		Name = "Seat",
+		Color = COLORS.chair,
+	}) :: Seat
+	Meshes.mirror(seat, chairParts.Seat)
+	local chairBack = hidden(Vector3.new(2.05, 2.5, 0.38), nil, {
+		Name = "ChairBack",
+		CFrame = CFrame.new(v(x, 2.85, z + DESK_SEAT_OFFSET + 0.92)) * CFrame.Angles(math.rad(-8), 0, 0),
+		Color = COLORS.chair,
+	})
+	Meshes.mirror(chairBack, chairParts.Back)
+
+	return {
+		index = index,
+		model = model,
+		seat = seat,
+		seatHome = seat.CFrame,
+		behind = v(x, 0, z + DESK_SEAT_OFFSET + 3.9),
+		top = top,
+		monitor = monitor,
+		chairBack = chairBack,
+		base = {
+			deskColor = top.Color,
+			deskMaterial = top.Material,
+			chairColor = seat.Color,
+		},
+	}
+end
+
+local function buildDesk(B, index: number, x: number, z: number): Desk
+	if Meshes.ready(table.unpack(DESK_MESH_KINDS)) then
+		return buildMeshDesk(B, index, x, z)
+	end
+	return buildPartDesk(B, index, x, z)
 end
 
 -- 🚒 소방 훈련 집결지 (훈련 때만 초록색으로 보여요). 회사마다 위치만 달라요.
@@ -217,13 +380,19 @@ end
 local function buildStore(B, x: number, z: number, accent: Color3): { counter: BasePart, clerkSpot: Vector3 }
 	local counter = B:part(Vector3.new(6, 3.5, 2), v(x, 1.75, z), { Name = "StoreCounter", Color = Color3.fromRGB(240, 235, 225) })
 	B:part(Vector3.new(6.2, 0.3, 2.2), v(x, 3.6, z), { Color = accent })
+	if Meshes.ready("StoreCounter") then
+		counter.Transparency = 1
+		Meshes.place(B, "StoreCounter", v(x, 0, z), 0, { stretch = Vector3.new(1, 3.5 / 3.225, 1) })
+	end
 	local sign = B:part(Vector3.new(6, 1.2, 0.3), v(x, 6.5, z - 2.8), { Color = Color3.fromRGB(30, 35, 45) })
 	Build.surfaceText(sign, Enum.NormalId.Back, "🏪 사내 매점", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 230, 120) })
 	-- 뒤쪽 진열대와 선물 상자들
-	B:part(Vector3.new(6, 4, 1), v(x, 2, z - 3.6), { Color = Color3.fromRGB(150, 110, 80), Material = Enum.Material.Wood })
-	for i, color in { Color3.fromRGB(200, 40, 50), Color3.fromRGB(255, 150, 190), Color3.fromRGB(110, 70, 40), Color3.fromRGB(240, 200, 60) } do
-		B:part(Vector3.new(1, 0.9, 0.8), v(x - 3 + i * 1.2, 4.45, z - 3.6), { Color = color })
-	end
+	Meshes.over(B, "StoreShelf", v(x, 0, z - 3.6), 0, nil, function()
+		B:part(Vector3.new(6, 4, 1), v(x, 2, z - 3.6), { Color = Color3.fromRGB(150, 110, 80), Material = Enum.Material.Wood })
+		for i, color in { Color3.fromRGB(200, 40, 50), Color3.fromRGB(255, 150, 190), Color3.fromRGB(110, 70, 40), Color3.fromRGB(240, 200, 60) } do
+			B:part(Vector3.new(1, 0.9, 0.8), v(x - 3 + i * 1.2, 4.45, z - 3.6), { Color = color })
+		end
+	end)
 	return { counter = counter, clerkSpot = v(x, 0, z - 2.2) }
 end
 
@@ -237,20 +406,26 @@ local function decorateStore(B, info)
 	})
 	local length = math.abs(info.z2 - info.z1)
 	local midZ = (info.z1 + info.z2) / 2
-	B:part(Vector3.new(1.3, 5, length), v(info.wallX, 2.5, midZ), { Color = Color3.fromRGB(150, 110, 80), Material = Enum.Material.Wood })
+	Meshes.over(B, "StoreShelf", v(info.wallX, 0, midZ), if info.wallX < 0 then 90 else -90, { stretch = Vector3.new(length / 6, 1, 1) }, function()
+		B:part(Vector3.new(1.3, 5, length), v(info.wallX, 2.5, midZ), { Color = Color3.fromRGB(150, 110, 80), Material = Enum.Material.Wood })
+	end)
 	local colors = { Color3.fromRGB(220, 60, 60), Color3.fromRGB(250, 200, 60), Color3.fromRGB(90, 170, 240), Color3.fromRGB(120, 210, 120), Color3.fromRGB(240, 150, 200) }
 	local inward = if info.wallX < 0 then 1 else -1 -- 진열대 앞쪽(방 안쪽) 방향
-	for shelf = 0, 2 do
-		for i = 0, math.floor(length / 1.3) - 1 do
-			B:part(Vector3.new(0.6, 0.8, 0.9), v(info.wallX + inward * 0.5, 1.2 + shelf * 1.5, math.min(info.z1, info.z2) + 0.8 + i * 1.3), {
-				Color = colors[(i + shelf) % #colors + 1],
-				CanCollide = false,
-			})
+	if not Meshes.ready("StoreShelf") then
+		for shelf = 0, 2 do
+			for i = 0, math.floor(length / 1.3) - 1 do
+				B:part(Vector3.new(0.6, 0.8, 0.9), v(info.wallX + inward * 0.5, 1.2 + shelf * 1.5, math.min(info.z1, info.z2) + 0.8 + i * 1.3), {
+					Color = colors[(i + shelf) % #colors + 1],
+					CanCollide = false,
+				})
+			end
 		end
 	end
 	-- 음료 냉장고 (유리문)
-	B:part(Vector3.new(2.4, 7, 2.4), v(info.fridge.X, 3.5, info.fridge.Y), { Color = Color3.fromRGB(230, 235, 240), Material = Enum.Material.Metal })
-	B:part(Vector3.new(0.15, 6, 2), v(info.fridge.X + inward * 1.25, 3.6, info.fridge.Y), { Color = Color3.fromRGB(170, 220, 255), Material = Enum.Material.Glass, Transparency = 0.3 })
+	Meshes.over(B, "Fridge", v(info.fridge.X, 0, info.fridge.Y), if info.wallX < 0 then 90 else -90, { scale = 0.86 }, function()
+		B:part(Vector3.new(2.4, 7, 2.4), v(info.fridge.X, 3.5, info.fridge.Y), { Color = Color3.fromRGB(230, 235, 240), Material = Enum.Material.Metal })
+		B:part(Vector3.new(0.15, 6, 2), v(info.fridge.X + inward * 1.25, 3.6, info.fridge.Y), { Color = Color3.fromRGB(170, 220, 255), Material = Enum.Material.Glass, Transparency = 0.3 })
+	end)
 	-- 문 밖 간판
 	local sign = B:part(Vector3.new(0.2, 1.5, 4), info.signPosition, { Color = Color3.fromRGB(230, 120, 60) })
 	Build.surfaceText(sign, info.signFace, "🏪 사내 매점")
@@ -258,14 +433,21 @@ end
 
 -- 🚪 엘리베이터 문 (왼쪽 벽에 붙어요, 사무실 쪽 +X를 봐요) → Rooftop 모듈이 [E]를 붙여요
 local function buildElevator(B, wallX: number, z: number): { door: BasePart, exit: Vector3 }
-	local metal = { Color = Color3.fromRGB(170, 175, 185), Material = Enum.Material.Metal }
-	B:part(Vector3.new(0.5, 9, 6.4), v(wallX + 0.25, 4.5, z), { Color = Color3.fromRGB(110, 115, 125), Material = Enum.Material.Metal }) -- 틀
-	local door = B:part(Vector3.new(0.3, 8, 5), v(wallX + 0.55, 4, z), { Name = "ElevatorDoor", Color = metal.Color, Material = metal.Material, Reflectance = 0.15 })
-	B:part(Vector3.new(0.32, 8, 0.08), v(wallX + 0.56, 4, z), { Color = Color3.fromRGB(80, 85, 95) }) -- 가운데 틈
-	local panel = B:part(Vector3.new(0.2, 1.2, 0.6), v(wallX + 0.4, 4.2, z + 3.6), { Color = Color3.fromRGB(40, 40, 45) }) -- 호출 버튼
+	local metal = { Color = Color3.fromRGB(198, 205, 207), Material = Enum.Material.Metal }
+	-- 아치형 포털: 문짝보다 밝은 두 기둥과 원형 상부 캡으로 입구 실루엣을 만들어요.
+	Meshes.over(B, "ElevatorDoor", v(wallX + 0.45, 0, z), 90, { skip = { Leaves = true, Sign = true, Lamp = true } }, function()
+		for _, dz in { -3.25, 3.25 } do
+			B:part(Vector3.new(0.8, 9, 0.85), v(wallX + 0.28, 4.5, z + dz), { Color = TC.surface, Material = Enum.Material.SmoothPlastic })
+			B:part(Vector3.new(0.95, 0.95, 0.95), v(wallX + 0.29, 9.05, z + dz), { Shape = Enum.PartType.Ball, Color = TC.surface, Material = Enum.Material.SmoothPlastic })
+		end
+		B:part(Vector3.new(0.75, 1.2, 6.5), v(wallX + 0.28, 9, z), { Color = TC.surface, Material = Enum.Material.SmoothPlastic })
+	end)
+	local door = B:part(Vector3.new(0.3, 8, 5), v(wallX + 0.62, 4, z), { Name = "ElevatorDoor", Color = metal.Color, Material = metal.Material, Reflectance = 0.08 })
+	B:part(Vector3.new(0.32, 8, 0.08), v(wallX + 0.64, 4, z), { Color = TC.navy }) -- 가운데 틈
+	local panel = B:part(Vector3.new(0.22, 1.5, 0.8), v(wallX + 0.5, 4.2, z + 3.8), { Color = TC.navy }) -- 호출 버튼
 	B:part(Vector3.new(0.22, 0.35, 0.35), v(wallX + 0.45, 4.4, z + 3.6), { Color = Color3.fromRGB(255, 200, 80), Material = Enum.Material.Neon, Shape = Enum.PartType.Ball })
-	local sign = B:part(Vector3.new(0.2, 1.2, 5), v(wallX + 0.45, 9.6, z), { Color = Color3.fromRGB(30, 35, 45) })
-	Build.surfaceText(sign, Enum.NormalId.Right, "🚪 엘리베이터 · 옥상 ▲", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 220, 120) })
+	local sign = B:part(Vector3.new(0.2, 1.1, 4.2), v(wallX + 0.7, 10.2, z), { Color = TC.yellow })
+	Build.surfaceText(sign, Enum.NormalId.Right, "옥상  ▲", { Font = Enum.Font.GothamBlack, TextColor3 = TC.navy })
 	local _ = panel
 	return { door = door, exit = v(wallX + 4, 0, z) }
 end
@@ -315,8 +497,8 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 	local function turned(x: number, y: number, z: number, rx: number, ry: number, rz: number): CFrame
 		return CFrame.new(at(x, y, z)) * CFrame.Angles(rx, ry, rz)
 	end
-	local black = Color3.fromRGB(35, 35, 40)
-	local silver = Color3.fromRGB(180, 185, 195)
+	local black = TC.navy
+	local silver = Color3.fromRGB(177, 194, 203)
 	local function metal(size: Vector3, position: Vector3, props: { [string]: any }?): BasePart
 		local options = { Color = silver, Material = Enum.Material.Metal }
 		for key, value in props or {} do
@@ -345,9 +527,10 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 		return seat
 	end
 
-	-- 바닥: 고무 매트 + 가운데 노란 안전선
-	B:part(Vector3.new(hx * 2, 0.12, hz * 2), at(0, 0.06, 0), { Color = Color3.fromRGB(55, 58, 64), Material = Enum.Material.Rubber, CanCollide = false })
-	B:part(Vector3.new(hx * 2 - 4, 0.14, 0.4), at(0, 0.07, -5), { Color = Color3.fromRGB(240, 200, 60), CanCollide = false })
+	-- 바닥: 밝은 스포츠 스튜디오 + 민트 러닝 존
+	B:part(Vector3.new(hx * 2, 0.12, hz * 2), at(0, 0.06, 0), { Color = Color3.fromRGB(218, 228, 231), Material = Enum.Material.Rubber, CanCollide = false })
+	B:part(Vector3.new(hx * 2 - 4, 0.14, 0.4), at(0, 0.07, -5), { Color = TC.mint, CanCollide = false })
+	B:part(Vector3.new(hx * 2 - 6, 0.13, 9), at(0, 0.065, 1), { Color = Color3.fromRGB(234, 241, 240), Material = Enum.Material.Rubber, CanCollide = false })
 
 	-- 거울 벽 (+Z) + 위에 표어
 	B:part(Vector3.new(hx * 2 - 6, 7, 0.2), at(0, 4.6, hz - 0.15), {
@@ -356,8 +539,8 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 		Reflectance = 0.45,
 		CanQuery = false,
 	})
-	local motto = B:part(Vector3.new(20, 2.2, 0.2), at(0, wallHeight - 2, hz - 0.2), { Color = Color3.fromRGB(190, 35, 45) })
-	Build.surfaceText(motto, Enum.NormalId.Front, "💪 체력은 국력! 칼퇴도 체력에서 나온다", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 230, 120) })
+	local motto = B:part(Vector3.new(20, 2.2, 0.2), at(0, wallHeight - 2, hz - 0.2), { Color = TC.coral })
+	Build.surfaceText(motto, Enum.NormalId.Front, "💪 오늘도 가볍게, 칼퇴는 빠르게!", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.new(1, 1, 1) })
 	-- 옆벽 포스터 2장
 	local posterL = B:part(Vector3.new(0.2, 3, 6), at(-hx + 0.15, 6.5, -4), { Color = Color3.fromRGB(30, 35, 45) })
 	Build.surfaceText(posterL, Enum.NormalId.Right, "🏃 땀은 배신하지 않는다\n(월급은 배신해도)", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 255, 255) })
@@ -377,22 +560,44 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 		Transparency = 0.3,
 	}) -- 물통
 	B:part(Vector3.new(0.3, 0.3, 0.3), at(-hx + 1.95, 2.6, -hz + 2.5), { Color = Color3.fromRGB(60, 140, 230) }) -- 꼭지
-	-- 🧺 수건 선반 (문 옆 오른쪽 구석)
-	B:part(Vector3.new(1.4, 3, 4), at(hx - 0.7, 1.5, -hz + 3), { Color = Color3.fromRGB(150, 110, 80), Material = Enum.Material.Wood })
-	for i, color in { Color3.fromRGB(250, 250, 250), Color3.fromRGB(120, 190, 240), Color3.fromRGB(250, 170, 190) } do
-		for layer = 0, 1 do
-			B:part(Vector3.new(1.1, 0.35, 1.1), at(hx - 0.7, 3.18 + layer * 0.36, -hz + 1.8 + (i - 1) * 1.2), { Color = color, Material = Enum.Material.Fabric, CanCollide = false })
+	-- 컬러 사물함: 통짜 수건 선반 대신 각각 문·손잡이·환기구가 있는 모델 세트.
+	Meshes.over(B, "Locker", at(hx - 0.9, 0, -hz + 1.75), -90, { stretch = Vector3.new(2.05 / 1.6, 1, 1), colors = { Body = TC.yellow } }, function()
+		B:part(Vector3.new(1.5, 5.8, 6.2), at(hx - 0.75, 2.9, -hz + 3.8), { Color = TC.surface, Material = Enum.Material.Metal })
+		for i, color in { TC.yellow, TC.coralSoft, TC.sky } do
+			local lockerZ = -hz + 1.75 + (i - 1) * 2.05
+			B:part(Vector3.new(0.18, 5.25, 1.78), at(hx - 1.53, 3, lockerZ), { Color = color, Material = Enum.Material.Metal })
+			B:part(Vector3.new(0.12, 0.65, 0.12), at(hx - 1.65, 3.1, lockerZ + 0.58), { Color = TC.navy, Material = Enum.Material.Metal, CanCollide = false })
+			for vent = -1, 1 do
+				B:part(Vector3.new(0.12, 0.08, 0.75), at(hx - 1.65, 4.9 + vent * 0.18, lockerZ), { Color = TC.navySoft, CanCollide = false })
+			end
 		end
+	end)
+	if Meshes.ready("Locker") then
+		Meshes.place(B, "Locker", at(hx - 0.9, 0, -hz + 3.8), -90, { stretch = Vector3.new(2.05 / 1.6, 1, 1), colors = { Body = TC.coralSoft } })
+		Meshes.place(B, "Locker", at(hx - 0.9, 0, -hz + 5.85), -90, { stretch = Vector3.new(2.05 / 1.6, 1, 1), colors = { Body = TC.sky } })
 	end
+	-- 입구 옆 미니 리셉션은 세 조각을 꺾어 배치해 둥근 카운터처럼 보여요.
+	local receptionX, receptionZ = -hx + 5.2, -hz + 3.1
+	for _, segment in { { -1.5, 18 }, { 0, 0 }, { 1.5, -18 } } do
+		B:part(Vector3.new(3.2, 2.8, 1.35), nil, {
+			CFrame = CFrame.new(at(receptionX + segment[1], 1.4, receptionZ)) * CFrame.Angles(0, math.rad(segment[2]), 0),
+			Color = TC.woodLight,
+			Material = Enum.Material.WoodPlanks,
+		})
+	end
+	B:part(Vector3.new(5.8, 0.18, 1.7), at(receptionX, 2.9, receptionZ), { Color = TC.surface, Material = Enum.Material.SmoothPlastic })
+	Build.surfaceText(B:part(Vector3.new(1.5, 1, 0.12), at(receptionX, 1.45, receptionZ - 0.82), { Color = TC.yellow }), Enum.NormalId.Front, "GYM", { Font = Enum.Font.GothamBlack, TextColor3 = TC.navy })
 	-- 덤벨 거치대 (오른쪽 벽 안쪽, 장식)
-	B:part(Vector3.new(1.6, 2.4, 6), at(hx - 0.8, 1.2, hz - 5), { Color = black, Material = Enum.Material.Metal })
-	for i = 0, 4 do
-		local z = hz - 7.4 + i * 1.2
-		metal(Vector3.new(1.2, 0.25, 0.25), at(hx - 0.8, 2.75, z), { Shape = Enum.PartType.Cylinder, CanCollide = false })
-		for _, dx in { -0.5, 0.5 } do
-			B:part(Vector3.new(0.3, 0.5 + i * 0.08, 0.5 + i * 0.08), at(hx - 0.8 + dx, 2.75, z), { Shape = Enum.PartType.Cylinder, Color = black, CanCollide = false })
+	Meshes.over(B, "DumbbellRack", at(hx - 1, 0, hz - 5), -90, { stretch = Vector3.new(6 / 5, 1, 1) }, function()
+		B:part(Vector3.new(1.6, 2.4, 6), at(hx - 0.8, 1.2, hz - 5), { Color = black, Material = Enum.Material.Metal })
+		for i = 0, 4 do
+			local z = hz - 7.4 + i * 1.2
+			metal(Vector3.new(1.2, 0.25, 0.25), at(hx - 0.8, 2.75, z), { Shape = Enum.PartType.Cylinder, CanCollide = false })
+			for _, dx in { -0.5, 0.5 } do
+				B:part(Vector3.new(0.3, 0.5 + i * 0.08, 0.5 + i * 0.08), at(hx - 0.8 + dx, 2.75, z), { Shape = Enum.PartType.Cylinder, Color = black, CanCollide = false })
+			end
 		end
-	end
+	end)
 	-- 짐볼 (왼쪽 뒤 구석)
 	B:part(Vector3.new(2.6, 2.6, 2.6), at(-hx + 1.6, 1.3, hz - 1.6), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(80, 150, 230) })
 
@@ -419,7 +624,7 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 	do
 		local mx = slots[2]
 		local seatCFrame = CFrame.new(at(mx, 1.6, -0.3)) * FACE * CFrame.Angles(math.rad(30), 0, 0)
-		local red = Color3.fromRGB(170, 40, 45)
+		local red = TC.coral
 		gymSeat("bench", seatCFrame, Vector3.new(1.8, 0.5, 2.2), { Color = red })
 		B:part(Vector3.new(1.8, 3.4, 0.4), nil, { CFrame = seatCFrame * CFrame.new(0, 1.6, 1.15), Color = red, Material = Enum.Material.Leather }) -- 등받이
 		metal(Vector3.new(0.5, 0.2, 4.6), at(mx, 0.1, -1.2), { Color = black })
@@ -472,7 +677,7 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 	-- 🥊 샌드백 (천장에 매달린 빨간 샌드백 앞에 서서 펀치!)
 	do
 		local mx = slots[5]
-		B:part(Vector3.new(4, 0.14, 5), at(mx, 0.13, 0), { Color = Color3.fromRGB(50, 90, 160), Material = Enum.Material.Rubber, CanCollide = false })
+		B:part(Vector3.new(4, 0.14, 5), at(mx, 0.13, 0), { Color = TC.sky, Material = Enum.Material.Rubber, CanCollide = false })
 		metal(Vector3.new(2, 0.3, 2), at(mx, wallHeight - 0.15, 1.6), { Color = black })
 		local chain = wallHeight - 6.3
 		metal(Vector3.new(0.2, chain, 0.2), at(mx, 6 + chain / 2, 1.6), { CanCollide = false })
@@ -480,7 +685,7 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 			Name = "Sandbag",
 			Shape = Enum.PartType.Cylinder,
 			CFrame = turned(mx, 4, 1.6, 0, 0, math.rad(90)),
-			Color = Color3.fromRGB(190, 40, 40),
+			Color = TC.coral,
 			Material = Enum.Material.Leather,
 		})
 		gymSeat("sandbag", CFrame.new(at(mx, STAND_SEAT_HEIGHT - 0.1, -0.4)) * FACE, Vector3.new(1.6, 0.2, 1.6), { Transparency = 1, CanCollide = false })
@@ -490,7 +695,7 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 	--   (가운데 입구 길은 비워 둬요)
 	do
 		local mx, mz = -0.62 * hx, -hz + 8
-		B:part(Vector3.new(3, 0.12, 6.5), at(mx, 0.16, mz), { Color = Color3.fromRGB(150, 90, 200), Material = Enum.Material.Rubber, CanCollide = false }) -- 요가 매트
+		B:part(Vector3.new(3, 0.12, 6.5), at(mx, 0.16, mz), { Color = TC.sky, Material = Enum.Material.Rubber, CanCollide = false }) -- 요가 매트
 		B:part(Vector3.new(3, 0.5, 0.5), at(mx, 0.35, mz + 3.4), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 90, 0), Color = Color3.fromRGB(120, 70, 170), Material = Enum.Material.Rubber, CanCollide = false }) -- 말아 둔 매트 끝
 		gymSeat("stretch", CFrame.new(at(mx, 0.45, mz + 1.2)) * FACE, Vector3.new(2, 0.3, 2), { Transparency = 1, CanCollide = false })
 		local signPart = B:part(Vector3.new(2.6, 0.9, 0.1), at(mx, 0.6, mz - 3.4), { Color = Color3.fromRGB(250, 245, 255), CanCollide = false })
@@ -498,7 +703,7 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 	end
 	do
 		local mx, mz = 0.62 * hx, -hz + 8
-		B:part(Vector3.new(3.2, 3.2, 3.2), at(mx, 1.6, mz), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(240, 120, 60), Material = Enum.Material.Rubber })
+		B:part(Vector3.new(3.2, 3.2, 3.2), at(mx, 1.6, mz), { Shape = Enum.PartType.Ball, Color = TC.yellow, Material = Enum.Material.Rubber })
 		B:part(Vector3.new(3.6, 0.1, 3.6), at(mx, 0.12, mz), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(70, 70, 80), CanCollide = false }) -- 받침 매트
 		gymSeat("balance", CFrame.new(at(mx, 3.3, mz)) * FACE, Vector3.new(1.6, 0.2, 1.6), { Transparency = 1, CanCollide = false })
 	end
@@ -532,9 +737,16 @@ function OfficeBuilder.build(companyId: string?): Office
 		COLORS[key] = color
 	end
 	partitionHeight = theme.partitionHeight
+	Meshes.preload(Meshes.ALL) -- 🧊 메시 가구를 미리 불러와요 (실패하면 파트 가구로 지어요)
 	local old = workspace:FindFirstChild("Office")
 	if old then
 		old:Destroy()
+	end
+	-- Studio로 가져온 메시 원본(office_desk_set 등)이 Workspace에 남아 있으면 바닥에 굴러다녀요 → 치워요
+	for _, child in workspace:GetChildren() do
+		if child:IsA("Model") and child.Name:match("_set$") then
+			child:Destroy()
+		end
 	end
 	for _, descendant in workspace:GetDescendants() do
 		if descendant:IsA("SpawnLocation") then
@@ -552,6 +764,22 @@ function OfficeBuilder.build(companyId: string?): Office
 		return OfficeNunchi.build(B, folder, company, {
 			v = v,
 			zone = zone,
+			buildDesk = buildDesk,
+			makeAssembly = makeAssembly,
+			buildStore = buildStore,
+			decorateStore = decorateStore,
+			buildElevator = buildElevator,
+			buildPackage = buildPackage,
+			buildDeliveryShelf = buildDeliveryShelf,
+			buildGym = buildGym,
+			FLOOR_Y = FLOOR_Y,
+		})
+	end
+	if company.id == "daechung" and USE_RENEWAL_DAECHUNG then
+		return OfficeDaechung.build(B, folder, company, {
+			v = v,
+			zone = zone,
+			colors = COLORS,
 			buildDesk = buildDesk,
 			makeAssembly = makeAssembly,
 			buildStore = buildStore,
@@ -617,13 +845,31 @@ function OfficeBuilder.build(companyId: string?): Office
 	for _, z in { -14, 5 } do
 		for _, x in { -20, 0, 20 } do
 			index += 1
+			local zoneColor = M.carpetDark -- 자리 표시 깔개 (예전 파스텔 3색 → 카펫보다 한 톤 어둡게)
+			B:part(Vector3.new(11, 0.08, 9), v(x, 0.045, z + 0.5), { Color = zoneColor, Material = Enum.Material.Fabric, CanCollide = false, CanQuery = false })
 			table.insert(desks, buildDesk(B, index, x, z))
+		end
+	end
+	-- 벽 그래픽과 낮은 식물 선반이 빈 외곽을 채우되 순찰 동선은 막지 않아요.
+	for _, info in { { -34, TC.mint, "FOCUS" }, { 34, TC.coral, "BREAK" } } do
+		local art = B:part(Vector3.new(12, 4, 0.18), v(info[1], 7, frontInner + 0.18), { Color = info[2], CanCollide = false })
+		Build.surfaceText(art, Enum.NormalId.Back, info[3], { Font = Enum.Font.GothamBlack, TextColor3 = Color3.new(1, 1, 1) })
+	end
+	for _, x in { -30, 30 } do
+		B:part(Vector3.new(10, 1.2, 2.2), v(x, 0.6, 24), { Color = TC.wood, Material = Enum.Material.WoodPlanks })
+		for _, dx in { -3.2, 0, 3.2 } do
+			B:part(Vector3.new(2, 2, 2), v(x + dx, 1.8, 24), { Shape = Enum.PartType.Ball, Color = TC.grass, Material = Enum.Material.Grass, CanCollide = false })
 		end
 	end
 
 	-- 김부장 자리 (직원들 등 뒤, z 19 — 뒷줄 의자 등받이(z 9.35)와 8칸 띄웠어요)
 	local BOSS_Z = 19
-	B:part(Vector3.new(8, 2.5, 3.5), v(0, 1.25, BOSS_Z), { Color = Color3.fromRGB(110, 70, 40), Material = Enum.Material.Wood })
+	Meshes.over(B, "BossDesk", v(0, 0, BOSS_Z), 0, { skip = { Plate = true } }, function()
+		B:part(Vector3.new(10, 0.6, 4), v(0, 2.4, BOSS_Z), { Color = TC.wood, Material = Enum.Material.Wood })
+		for _, x in { -4.2, 4.2 } do
+			B:part(Vector3.new(0.5, 2.2, 3.2), v(x, 1.1, BOSS_Z), { Color = TC.navy, Material = Enum.Material.Metal })
+		end
+	end)
 	local nameplate = B:part(Vector3.new(3, 0.8, 0.4), v(0, 2.9, BOSS_Z - 1.6), { Color = Color3.fromRGB(40, 30, 20) })
 	Build.surfaceText(nameplate, Enum.NormalId.Front, "부장 김부장", {
 		Font = Enum.Font.GothamBold,
@@ -646,19 +892,26 @@ function OfficeBuilder.build(companyId: string?): Office
 		if i < 3 then
 			B:part(Vector3.new(0.3, 7, 5), v(x + 2.5, 3.5, 28.5), { Color = Color3.fromRGB(150, 190, 200) })
 		end
-		B:part(Vector3.new(2.2, 1, 2.6), v(x, 0.5, 29.4), { Color = Color3.fromRGB(245, 245, 245) }) -- 변기 몸통
-		B:part(Vector3.new(2.2, 2.4, 0.9), v(x, 1.8, 30.5), { Color = Color3.fromRGB(240, 240, 240) }) -- 물탱크
+		Meshes.over(B, "Toilet", v(x, 0, 29.5), 180, nil, function()
+			B:part(Vector3.new(2.2, 1, 2.6), v(x, 0.5, 29.4), { Color = Color3.fromRGB(245, 245, 245) }) -- 변기 몸통
+			B:part(Vector3.new(2.2, 2.4, 0.9), v(x, 1.8, 30.5), { Color = Color3.fromRGB(240, 240, 240) }) -- 물탱크
+		end)
 		local seat = B:part(Vector3.new(2, 0.4, 2), v(x, 1.2, 29.2), {
 			ClassName = "Seat",
 			Name = "ToiletSeat",
 			Color = Color3.fromRGB(250, 250, 250),
 		}) :: Seat
+		if Meshes.ready("Toilet") then
+			seat.Transparency = 1
+		end
 		table.insert(toiletSeats, seat)
 	end
 	-- 세면대 (바깥 벽에 붙은 거울)
 	for _, z in { 15, 19 } do
-		B:part(Vector3.new(2, 3, 2.5), v(-63, 1.5, z), { Color = Color3.fromRGB(235, 235, 240) })
-		B:part(Vector3.new(0.2, 2.5, 2.2), v(-63.9, 5, z), { Color = Color3.fromRGB(190, 220, 235), Material = Enum.Material.Glass }) -- 거울
+		Meshes.over(B, "Washbasin", v(-62.9, 0, z), 90, nil, function()
+			B:part(Vector3.new(2, 3, 2.5), v(-63, 1.5, z), { Color = Color3.fromRGB(235, 235, 240) })
+			B:part(Vector3.new(0.2, 2.5, 2.2), v(-63.9, 5, z), { Color = Color3.fromRGB(190, 220, 235), Material = Enum.Material.Glass }) -- 거울
+		end)
 	end
 	local toiletSign = B:part(Vector3.new(0.2, 1.5, 3), v(-45.85, 9, 16.5), { Color = Color3.fromRGB(40, 90, 160) })
 	Build.surfaceText(toiletSign, Enum.NormalId.Right, "🚻 화장실")
@@ -672,21 +925,38 @@ function OfficeBuilder.build(companyId: string?): Office
 		Name = "PantryCounter",
 		Color = Color3.fromRGB(230, 230, 230),
 	}) -- 조리대 (라면) z 12.75~25.25
+	if Meshes.ready("Counter") then
+		pantryCounter.Transparency = 1
+		Meshes.place(B, "Counter", v(62.75, 0, 19), -90, { stretch = Vector3.new(12.5 / 8, 1, 1) })
+	end
 	B:part(Vector3.new(1.4, 2, 1.4), v(62.75, 4, 14.25), { Color = Color3.fromRGB(30, 30, 30) }) -- 커피머신
 	B:part(Vector3.new(1.6, 0.6, 1.6), v(62.75, 3.3, 22.75), { Color = Color3.fromRGB(60, 60, 65) }) -- 전기레인지
-	B:part(Vector3.new(2.5, 7, 2.5), v(62.75, 3.5, 29.5), { Color = Color3.fromRGB(200, 200, 205), Material = Enum.Material.Metal }) -- 냉장고
-	B:part(Vector3.new(1.2, 4, 1.2), v(43.5, 2, 30), { Color = Color3.fromRGB(240, 240, 250) }) -- 정수기
+	Meshes.over(B, "Fridge", v(62.6, 0, 29.5), -90, nil, function()
+		B:part(Vector3.new(2.5, 7, 2.5), v(62.75, 3.5, 29.5), { Color = Color3.fromRGB(200, 200, 205), Material = Enum.Material.Metal }) -- 냉장고
+	end)
+	Meshes.over(B, "WaterCooler", v(43.5, 0, 30.2), 180, nil, function()
+		B:part(Vector3.new(1.2, 4, 1.2), v(43.5, 2, 30), { Color = Color3.fromRGB(240, 240, 250) }) -- 정수기
+	end)
 	-- 식탁과 의자
-	B:part(Vector3.new(5, 2.5, 3), v(50, 1.25, 28), { Color = Color3.fromRGB(200, 170, 130), Material = Enum.Material.Wood })
-	for _, x in { 48.5, 51.5 } do
-		B:part(Vector3.new(1.5, 1.5, 1.5), v(x, 0.75, 25.7), { Color = Color3.fromRGB(120, 90, 60) })
+	Meshes.over(B, "DiningTable", v(50, 0, 28), 0, { scale = 0.85 }, function()
+		B:part(Vector3.new(5, 2.5, 3), v(50, 1.25, 28), { Color = Color3.fromRGB(200, 170, 130), Material = Enum.Material.Wood })
+		for _, x in { 48.5, 51.5 } do
+			B:part(Vector3.new(1.5, 1.5, 1.5), v(x, 0.75, 25.7), { Color = Color3.fromRGB(120, 90, 60) })
+		end
+	end)
+	if Meshes.ready("DiningChair") then
+		for _, x in { 48.5, 51.5 } do
+			Meshes.place(B, "DiningChair", v(x, 0, 25.4), 180)
+		end
 	end
 	local pantrySign = B:part(Vector3.new(0.2, 1.5, 3), v(40.85, 9, 13), { Color = COLORS.accent })
 	Build.surfaceText(pantrySign, Enum.NormalId.Left, "☕ 탕비실")
 	local pantryZone = zone(B, "PantryZone", Vector3.new(22, 10, 25.5), v(53, 5, 18.25))
 
 	-- 간식 테이블 (탕비실 가운데, 위에 과자 8개)
-	B:part(Vector3.new(5, 3, 7), v(51.5, 1.5, 15), { Color = Color3.fromRGB(170, 120, 80), Material = Enum.Material.Wood })
+	Meshes.over(B, "DiningTable", v(51.5, 0, 15), 90, { stretch = Vector3.new(7 / 6, 1.1, 5 / 3.4) }, function()
+		B:part(Vector3.new(5, 3, 7), v(51.5, 1.5, 15), { Color = Color3.fromRGB(170, 120, 80), Material = Enum.Material.Wood })
+	end)
 	-- 테이블 위로 못 올라가게 투명한 덮개 (간식은 [E]로 옆에서 가져가요)
 	B:part(Vector3.new(5, 8, 7), v(51.5, 7, 15), { Name = "SnackTableGuard", Transparency = 1, CanQuery = false })
 	local snackSign = B:part(Vector3.new(3, 0.9, 0.2), v(51.5, 3.7, 11.4), { Color = Color3.fromRGB(255, 240, 200) })
@@ -700,15 +970,45 @@ function OfficeBuilder.build(companyId: string?): Office
 
 	-- 장식: 화분 (구석마다), 프린터 (왼쪽 통로)
 	for _, position in { v(-42, 0, -29), v(62, 0, -29), v(-62, 0, 7), v(62, 0, 2) } do
-		B:part(Vector3.new(1.6, 1.6, 1.6), position + Vector3.new(0, 0.8, 0), { Color = Color3.fromRGB(150, 90, 60) })
-		B:part(Vector3.new(2.4, 2.4, 2.4), position + Vector3.new(0, 2.6, 0), {
-			Shape = Enum.PartType.Ball,
-			Color = Color3.fromRGB(70, 140, 70),
-			Material = Enum.Material.Grass,
-		})
+		if Meshes.ready("Plant") then
+			Meshes.place(B, "Plant", position, 0, { scale = 1.5 })
+			B:part(Vector3.new(1.8, 1.8, 1.8), position + Vector3.new(0, 0.9, 0), { Transparency = 1 })
+		else
+			B:part(Vector3.new(1.6, 1.6, 1.6), position + Vector3.new(0, 0.8, 0), { Color = Color3.fromRGB(150, 90, 60) })
+			B:part(Vector3.new(2.4, 2.4, 2.4), position + Vector3.new(0, 2.6, 0), {
+				Shape = Enum.PartType.Ball,
+				Color = Color3.fromRGB(70, 140, 70),
+				Material = Enum.Material.Grass,
+			})
+		end
 	end
 	local printer = B:part(Vector3.new(3, 2.5, 2.5), v(-38, 1.25, -3), { Name = "Printer", Color = Color3.fromRGB(220, 220, 225) }) -- 프린터 (서류)
-	B:part(Vector3.new(2.6, 0.6, 1.8), v(-38, 2.8, -3), { Color = Color3.fromRGB(60, 60, 65) })
+	if Meshes.ready("Printer") then
+		printer.Transparency = 1
+		Meshes.place(B, "Printer", v(-38, 0, -3), 90)
+	else
+		B:part(Vector3.new(2.6, 0.6, 1.8), v(-38, 2.8, -3), { Color = Color3.fromRGB(60, 60, 65) })
+	end
+
+	-- 🛋️ 민트 가든 라운지 (오른쪽 앞 구석): 원목 슬랫 벽 + 아치 책장 + 소파. 순찰 지점(54, -6)은 비워 둬요.
+	if Meshes.ready("Sofa", "RoundTable", "Bookshelf", "Vending") then
+		local hidden = { Transparency = 1 }
+		B:part(Vector3.new(0.3, WALL_HEIGHT, 33), v(63.3, WALL_HEIGHT / 2, -14), { Color = M.woodLight, Material = Enum.Material.Wood, CanCollide = false })
+		for z = -30, 2, 1.1 do
+			B:part(Vector3.new(0.3, WALL_HEIGHT, 0.4), v(63.05, WALL_HEIGHT / 2, z), { Color = M.wood, Material = Enum.Material.Wood, CanCollide = false })
+		end
+		B:part(Vector3.new(0.12, 13, 13), nil, { CFrame = CFrame.new(v(55, 0.07, -19)) * CFrame.Angles(0, 0, math.rad(90)), Shape = Enum.PartType.Cylinder, Color = M.mintSoft, Material = Enum.Material.Carpet, CanCollide = false, CanQuery = false })
+		Meshes.place(B, "Sofa", v(60.6, 0, -19), -90)
+		B:part(Vector3.new(2.6, 2.2, 6), v(60.6, 1.1, -19), hidden)
+		Meshes.place(B, "RoundTable", v(55.5, 0, -19), 0)
+		B:part(Vector3.new(2.6, 1.4, 2.6), v(55.5, 0.7, -19), hidden)
+		for _, z in { -11, -5.5 } do
+			Meshes.place(B, "Bookshelf", v(62.1, 0, z), -90)
+			B:part(Vector3.new(1.6, 8.5, 5.2), v(62.1, 4.25, z), hidden)
+		end
+		Meshes.place(B, "Vending", v(61.7, 0, -25.5), -90)
+		B:part(Vector3.new(2.4, 6.2, 3), v(61.7, 3.1, -25.5), hidden)
+	end
 
 	-- 형광등 (넓어진 만큼 7×4줄)
 	local lamps = {}

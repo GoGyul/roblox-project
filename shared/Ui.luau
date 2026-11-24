@@ -4,6 +4,12 @@ local Players = game:GetService("Players")
 
 local Ui = {}
 
+Ui.STYLE = {
+	corner = 10,
+	buttonCorner = 8,
+	stroke = Color3.fromRGB(205, 165, 75),
+}
+
 Ui.COLORS = {
 	panel = Color3.fromRGB(28, 22, 16),
 	paper = Color3.fromRGB(240, 228, 200),
@@ -32,7 +38,7 @@ function Ui.make(className: string, props: { [string]: any }?, children: { Insta
 end
 
 function Ui.corner(radius: number?)
-	return Ui.make("UICorner", { CornerRadius = UDim.new(0, radius or 10) })
+	return Ui.make("UICorner", { CornerRadius = UDim.new(0, radius or Ui.STYLE.corner) })
 end
 
 function Ui.padding(px: number)
@@ -59,7 +65,10 @@ function Ui.button(props: { [string]: any }): TextButton
 	for key, value in props do
 		defaults[key] = value
 	end
-	return Ui.make("TextButton", defaults, { Ui.corner(8) })
+	return Ui.make("TextButton", defaults, {
+		Ui.corner(Ui.STYLE.buttonCorner),
+		Ui.stroke(Ui.STYLE.stroke, 1.5),
+	})
 end
 
 Ui.gui = Ui.make("ScreenGui", {
@@ -88,6 +97,22 @@ local toastLabel = Ui.make("TextLabel", {
 	Parent = Ui.gui,
 }, { Ui.corner(10), Ui.padding(12) })
 local toastToken = 0
+
+-- 게임별 디자인 테마를 적용해요. ScreenGui는 공유하지만 색은 각 Place가 시작할 때 정해요.
+function Ui.setTheme(colors: { [string]: Color3 }, style: { [string]: any }?)
+	for key, value in colors do
+		Ui.COLORS[key] = value
+	end
+	for key, value in style or {} do
+		Ui.STYLE[key] = value
+	end
+	toastLabel.BackgroundColor3 = Ui.COLORS.panel
+	toastLabel.TextColor3 = Ui.COLORS.text
+	local stroke = toastLabel:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = Ui.STYLE.stroke
+	end
+end
 
 -- 안내 문구 크기 바꾸기 (게임마다 원하는 크기로)
 function Ui.setToastStyle(width: number, textSize: number, padding: number?)

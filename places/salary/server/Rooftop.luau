@@ -3,7 +3,7 @@
 --   😱 근무 중엔 가끔 부장님과 같이 타요: 부장님이 이쪽을 볼 때(👀 예고) 시선을 피해야 해요 → 못 피하면 의심도 +
 --   🌬️ 옥상: 바람 쐬기 / 🏖️ 선베드 일광욕 / 🔭 망원경(부장님 위치 보기) / 물탱크·실외기 뒤에 숨기
 --   👮 옥상 경비원이 근무 시간 내내 순찰해요 (부장님은 사무실에만). 💤 가끔 경비실에서 쉬는 틈을 노려요
---   📐 옥상은 예전보다 가로·세로 1.4배 넓어요 (ROOF_SCALE)
+--   📐 옥상 크기: 대충상사 98×70칸 / 눈치물산 140×85칸 (12층 전체와 같은 넓이)
 --
 -- 옥상과 엘리베이터 칸은 사무실 훨씬 위 하늘에 지어요 (사무실 천장에 가려서 안 보여요).
 
@@ -22,15 +22,35 @@ local RoofPlane = require(script.Parent.RoofPlane)
 local RoofGarden = require(script.Parent.RoofGarden)
 local RoofScope = require(script.Parent.RoofScope)
 local RoofHoop = require(script.Parent.RoofHoop)
+local Theme = require(ReplicatedStorage.Shared.SalaryTheme)
+-- 🧊 월드 색: 차분한 색(Theme.Mesh)이 있으면 그걸, 없으면 기본 색을 써요 (질감 B안)
+local TC: any = setmetatable({}, {
+	__index = function(_, key)
+		return (Theme.Mesh :: any)[key] or (Theme.Color :: any)[key]
+	end,
+})
+local Meshes = require(script.Parent.Meshes)
 
 local Rooftop = {}
+Rooftop.onElevator = nil :: ((Player, string) -> boolean)? -- 엘리베이터 [E]를 가로채는 훅 (true면 여기서 안 태워요)
+Rooftop.ride = nil :: ((Player, boolean, boolean?) -> ())? -- (플레이어, 옥상행인가, 1층 로비에서 타나)
 
 local ROOF = Vector3.new(0, 300, 0) -- 옥상 바닥 윗면 가운데
-local ROOF_SCALE = 1.4 -- 📐 옥상을 넓혔어요 (가로·세로 1.4배 = 넓이 약 2배). 물건 묶음들도 이만큼 바깥쪽으로 퍼져요
-local ROOF_W, ROOF_D = 70 * ROOF_SCALE, 50 * ROOF_SCALE
+-- 📐 옥상 크기 배율 (기준 70×50칸). 물건 묶음들도 이만큼 바깥쪽으로 퍼져요.
+--   대충상사: 가로·세로 1.4배 (98×70) / 눈치물산: 12층 전체와 같은 넓이 (140×85 = 가로 2배 · 세로 1.7배)
+local SX, SZ = 1.4, 1.4
+local ROOF_W, ROOF_D = 70 * SX, 50 * SZ
+local function setRoofScale(companyId: string)
+	if companyId == "nunchi" then
+		SX, SZ = 2, 1.7
+	else
+		SX, SZ = 1.4, 1.4
+	end
+	ROOF_W, ROOF_D = 70 * SX, 50 * SZ
+end
 -- 예전 좌표(x, z)를 넓어진 옥상 좌표로
 local function spread(x: number, y: number, z: number): Vector3
-	return ROOF + Vector3.new(x * ROOF_SCALE, y, z * ROOF_SCALE)
+	return ROOF + Vector3.new(x * SX, y, z * SZ)
 end
 local CABIN_BASE = Vector3.new(260, 300, 0) -- 엘리베이터 칸들 (한 사람당 하나씩)
 local BOSS_LOOK = { skin = Color3.fromRGB(225, 190, 160), shirt = Color3.fromRGB(70, 70, 85), pants = Color3.fromRGB(40, 40, 50) }
@@ -44,37 +64,69 @@ end
 -- 옥상 짓기
 ---------------------------------------------------------------------------
 local function buildRoof(folder: Instance, companyId: string)
+	setRoofScale(companyId) -- (맨 먼저: 아래 모든 좌표가 이 배율을 써요)
 	local B = Build.new(folder, Vector3.zero)
 	-- 📐 물건 묶음 단위로 옮겨요: group(묶음 중심)을 부르면 그 묶음은 통째로 넓어진 자리로 (모양은 그대로)
 	local shift = Vector3.zero
 	local function group(cx: number, cz: number)
-		shift = Vector3.new(cx * (ROOF_SCALE - 1), 0, cz * (ROOF_SCALE - 1))
+		shift = Vector3.new(cx * (SX - 1), 0, cz * (SZ - 1))
 	end
 	local function at(x: number, y: number, z: number): Vector3
 		return ROOF + Vector3.new(x, y, z) + shift
 	end
 	local fancy = companyId == "nunchi"
+	-- 🧊 힐링 가든(옥상 B안) 메시 소품. 못 불러왔으면 예전 파트로 지어요.
+	Meshes.preload(Meshes.ALL)
+	local useMesh = Meshes.ready("Planter", "Tree", "Sunbed", "PodChair", "Bench", "Fountain", "FlowerBed", "Stone", "LampPost")
+	local hidden = { Transparency = 1 }
 	-- 바닥과 난간
-	B:part(Vector3.new(ROOF_W, 2, ROOF_D), at(0, -1, 0), { Color = if fancy then Color3.fromRGB(150, 140, 125) else Color3.fromRGB(120, 125, 120), Material = if fancy then Enum.Material.WoodPlanks else Enum.Material.Concrete })
+	B:part(Vector3.new(ROOF_W, 2, ROOF_D), at(0, -1, 0), { Color = if fancy then TC.woodLight else Color3.fromRGB(78, 128, 104), Material = if fancy then Enum.Material.WoodPlanks else Enum.Material.Concrete }) -- (대충상사: 초록 방수 페인트 바닥)
+	-- 중앙 라운지 데크와 산책 띠가 흩어진 옥상 콘텐츠를 하나의 공간으로 묶어요.
+	B:part(Vector3.new(36, 0.14, 16), at(0, 0.08, 0), { Color = Color3.fromRGB(160, 216, 150), Material = Enum.Material.Grass, CanCollide = false }) -- 가운데 잔디
+	B:part(Vector3.new(ROOF_W - 8, 0.15, 3), at(0, 0.09, 10), { Color = TC.mintSoft, Material = Enum.Material.Grass, CanCollide = false })
+	for _, x in { -22, -11, 0, 11, 22 } do
+		if useMesh then
+			Meshes.place(B, "Planter", at(x, 0, 10), 0, { scale = 0.85, colors = { Box = TC.woodLight } })
+			B:part(Vector3.new(5, 1.2, 1.6), at(x, 0.6, 10), hidden)
+			continue
+		end
+		B:part(Vector3.new(5, 1.2, 2.4), at(x, 0.6, 10), { Color = TC.wood, Material = Enum.Material.WoodPlanks })
+		for _, dx in { -1.4, 0, 1.4 } do
+			B:part(Vector3.new(1.1, 1.1, 1.1), at(x + dx, 1.45, 10), { Shape = Enum.PartType.Ball, Color = if x % 2 == 0 then TC.coral else TC.yellow, Material = Enum.Material.Grass, CanCollide = false })
+		end
+	end
 	for _, info in {
 		{ Vector3.new(ROOF_W, 3.5, 0.6), at(0, 1.75, -ROOF_D / 2) },
 		{ Vector3.new(ROOF_W, 3.5, 0.6), at(0, 1.75, ROOF_D / 2) },
 		{ Vector3.new(0.6, 3.5, ROOF_D), at(-ROOF_W / 2, 1.75, 0) },
 		{ Vector3.new(0.6, 3.5, ROOF_D), at(ROOF_W / 2, 1.75, 0) },
 	} do
-		B:part(info[1], info[2], { Color = Color3.fromRGB(200, 205, 210), Material = Enum.Material.Metal })
+		B:part(info[1], info[2], { Color = if fancy then Color3.fromRGB(200, 205, 210) else Color3.fromRGB(196, 190, 178), Material = if fancy then Enum.Material.Metal else Enum.Material.Concrete })
+		if not fancy then -- 난간벽 위 철제 손잡이
+			B:part(Vector3.new(math.max(info[1].X, 0.25), 0.25, math.max(info[1].Z, 0.25)), info[2] + Vector3.new(0, 2.6, 0), { Color = Color3.fromRGB(70, 76, 84), Material = Enum.Material.Metal, CanCollide = false })
+		end
 		B:part(Vector3.new(info[1].X, 30, info[1].Z), info[2] + Vector3.new(0, 15, 0), { Transparency = 1 }) -- 못 넘어가게
 	end
 	-- 🚪 엘리베이터 탑 (왼쪽)
 	group(-30, 0)
 	B:part(Vector3.new(8, 10, 9), at(-30, 5, 0), { Color = Color3.fromRGB(190, 190, 195), Material = Enum.Material.Concrete })
 	local door = B:part(Vector3.new(0.3, 8, 5), at(-25.85, 4, 0), { Name = "RoofElevatorDoor", Color = Color3.fromRGB(170, 175, 185), Material = Enum.Material.Metal, Reflectance = 0.15 })
+	if not fancy then
+		-- 옥탑 위: TV 안테나와 위성 접시 (장식)
+		local steel = { Color = Color3.fromRGB(150, 154, 160), Material = Enum.Material.Metal, CanCollide = false }
+		B:part(Vector3.new(0.2, 7, 0.2), at(-31.5, 13.5, -2), steel)
+		for k = 0, 3 do
+			B:part(Vector3.new(0.12, 0.12, 3 - k * 0.5), at(-31.5, 14 + k * 0.8, -2), steel)
+		end
+		B:part(Vector3.new(0.3, 2.6, 2.6), nil, { CFrame = CFrame.new(at(-28, 11.4, 2.5)) * CFrame.Angles(0, math.rad(35), math.rad(60)), Shape = Enum.PartType.Cylinder, Color = Color3.fromRGB(226, 226, 222), Material = Enum.Material.Metal, CanCollide = false })
+		B:part(Vector3.new(0.2, 1.4, 0.2), at(-28, 10.7, 2.5), steel)
+	end
 	local sign = B:part(Vector3.new(0.2, 1.2, 5), at(-25.8, 9, 0), { Color = Color3.fromRGB(30, 35, 45) })
 	Build.surfaceText(sign, Enum.NormalId.Right, "🚪 사무실로 ▼", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 220, 120) })
 	-- 🛢️ 물탱크 (숨기 좋아요) + 실외기들
 	group(16, -12)
-	B:part(Vector3.new(7, 7, 7), at(16, 3.5, -12), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(80, 150, 200), Material = Enum.Material.Metal })
-	local tankLabel = B:part(Vector3.new(0.2, 1.4, 3.5), at(12.4, 4, -12), { Color = Color3.fromRGB(80, 150, 200) })
+	B:part(Vector3.new(7, 7, 7), at(16, 3.5, -12), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = (if fancy then Color3.fromRGB(80, 150, 200) else Color3.fromRGB(220, 178, 70)), Material = Enum.Material.Metal })
+	local tankLabel = B:part(Vector3.new(0.2, 1.4, 3.5), at(12.4, 4, -12), { Color = (if fancy then Color3.fromRGB(80, 150, 200) else Color3.fromRGB(196, 150, 50)) })
 	Build.surfaceText(tankLabel, Enum.NormalId.Left, "💧 물탱크", { TextColor3 = Color3.new(1, 1, 1) })
 	for _, xz in { { 0, -20 }, { -12, 18 }, { 28, 10 }, { -30, -16 }, { -2, 2 } } do
 		group(xz[1], xz[2])
@@ -107,6 +159,11 @@ local function buildRoof(folder: Instance, companyId: string)
 	for _, info in { { -18, -10 }, { 30, 18 } } do
 		local tx, tz = info[1], info[2]
 		group(tx, tz)
+		if useMesh then
+			Meshes.place(B, "Tree", at(tx, 0, tz), tx * 20, { scale = 1.3 })
+			B:part(Vector3.new(2.2, 4.4, 2.2), at(tx, 2.2, tz), hidden)
+			continue
+		end
 		B:part(Vector3.new(2.2, 2.6, 2.6), at(tx, 1.1, tz), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(170, 100, 70), Material = Enum.Material.Brick })
 		B:part(Vector3.new(0.7, 4, 0.7), at(tx, 4, tz), { Color = Color3.fromRGB(110, 80, 50), Material = Enum.Material.Wood })
 		B:part(Vector3.new(6, 5, 6), at(tx, 7.4, tz), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(70, 150, 70), Material = Enum.Material.Grass })
@@ -150,15 +207,70 @@ local function buildRoof(folder: Instance, companyId: string)
 			ClassName = "Seat",
 			Name = "Lounger",
 			CFrame = CFrame.new(at(x, 0.9, 16)),
-			Color = if i % 2 == 0 then Color3.fromRGB(80, 170, 220) else Color3.fromRGB(240, 240, 240),
+			Color = if i % 2 == 0 then TC.sky else TC.surface,
 			Material = Enum.Material.Fabric,
 		})
-		B:part(Vector3.new(2, 0.4, 1.8), nil, { CFrame = CFrame.new(at(x, 1.6, 18.6)) * CFrame.Angles(math.rad(-50), 0, 0), Color = Color3.fromRGB(80, 170, 220), Material = Enum.Material.Fabric })
+		if useMesh then
+			seat.Transparency = 1
+			Meshes.place(B, "Sunbed", at(x, 0, 17), 180, { colors = { Pillow = if i % 2 == 0 then TC.sky else TC.coral } })
+		else
+			B:part(Vector3.new(2, 0.4, 1.8), nil, { CFrame = CFrame.new(at(x, 1.6, 18.6)) * CFrame.Angles(math.rad(-50), 0, 0), Color = if i % 2 == 0 then TC.sky else TC.coralSoft, Material = Enum.Material.Fabric })
+			-- 선베드 아래 프레임과 짧은 다리까지 보여 가구처럼 읽히게 해요.
+			B:part(Vector3.new(2.25, 0.18, 4.8), at(x, 0.6, 16), { Color = TC.navy, Material = Enum.Material.Metal })
+			for _, dz in { -1.7, 1.7 } do
+				for _, dx in { -0.85, 0.85 } do
+					B:part(Vector3.new(0.22, 0.65, 0.22), at(x + dx, 0.32, 16 + dz), { Color = TC.navy, Material = Enum.Material.Metal })
+				end
+			end
+		end
 		table.insert(loungerSeats, seat)
 	end
 	for _, x in { 5, 17 } do
 		B:part(Vector3.new(0.3, 6, 0.3), at(x, 3, 18), { Color = Color3.fromRGB(200, 200, 200) })
 		B:part(Vector3.new(0.6, 6, 6), at(x, 6.2, 18), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(250, 120, 90), Material = Enum.Material.Fabric })
+	end
+	-- 라운지 전체를 묶는 가벼운 퍼걸러. 기둥은 선베드 바깥에 둬 이동을 방해하지 않아요.
+	for _, x in { 0, 22 } do
+		for _, z in { 13, 21 } do
+			B:part(Vector3.new(0.45, 7, 0.45), at(x, 3.5, z), { Color = TC.surface, Material = Enum.Material.Metal })
+		end
+	end
+	for _, z in { 13, 21 } do
+		B:part(Vector3.new(22.5, 0.4, 0.5), at(11, 7, z), { Color = TC.mintDark, Material = Enum.Material.Metal })
+	end
+	for x = 1, 21, 4 do
+		B:part(Vector3.new(0.35, 0.35, 8), at(x, 7, 17), { Color = TC.woodLight, Material = Enum.Material.WoodPlanks, CanCollide = false })
+	end
+	-- 천막 천과 꼬마전구를 더해 구조물이 실제 휴게 공간으로 보이게 해요.
+	for x = 3, 19, 4 do
+		B:part(Vector3.new(3.4, 0.12, 7.4), nil, {
+			CFrame = CFrame.new(at(x, 6.82 + (x % 8) * 0.025, 17)) * CFrame.Angles(0, 0, math.rad(if x % 8 < 4 then 4 else -4)),
+			Color = if x % 8 < 4 then TC.surface else TC.yellowSoft,
+			Material = Enum.Material.Fabric,
+			CanCollide = false,
+		})
+	end
+	for x = 1, 21, 2 do
+		local bulb = B:part(Vector3.new(0.32, 0.32, 0.32), at(x, 6.35, 13.15), { Shape = Enum.PartType.Ball, Color = TC.yellow, Material = Enum.Material.Neon, CanCollide = false })
+		local light = Instance.new("PointLight")
+		light.Range = 6
+		light.Brightness = 0.3
+		light.Color = TC.yellowSoft
+		light.Parent = bulb
+	end
+	-- 독립 라운지 포드: 등판·옆판·차양을 꺾어 만든 반개방 캡슐 좌석.
+	local podX, podZ = -7, 17
+	if useMesh then
+		Meshes.place(B, "PodChair", at(podX, 0, podZ), 180, { scale = 1.15 })
+	else
+		B:part(Vector3.new(5.2, 0.55, 4.4), at(podX, 0.6, podZ), { Color = TC.surface, Material = Enum.Material.SmoothPlastic })
+		B:part(Vector3.new(5.2, 4.8, 0.45), nil, { CFrame = CFrame.new(at(podX, 3, podZ + 2)) * CFrame.Angles(math.rad(-8), 0, 0), Color = TC.surface, Material = Enum.Material.SmoothPlastic })
+		for _, side in { -1, 1 } do
+			B:part(Vector3.new(0.42, 4.2, 4.2), nil, { CFrame = CFrame.new(at(podX + side * 2.45, 2.4, podZ + 0.2)) * CFrame.Angles(0, 0, math.rad(side * 8)), Color = TC.surface, Material = Enum.Material.SmoothPlastic })
+		end
+		B:part(Vector3.new(5, 0.42, 4.2), nil, { CFrame = CFrame.new(at(podX, 5.05, podZ + 0.2)) * CFrame.Angles(math.rad(7), 0, 0), Color = TC.surface, Material = Enum.Material.SmoothPlastic })
+		B:part(Vector3.new(4.1, 0.7, 2.4), at(podX, 1.05, podZ), { Color = TC.yellow, Material = Enum.Material.Fabric })
+		B:part(Vector3.new(4.1, 2, 0.6), nil, { CFrame = CFrame.new(at(podX, 2.15, podZ + 1.25)) * CFrame.Angles(math.rad(-10), 0, 0), Color = TC.coralSoft, Material = Enum.Material.Fabric })
 	end
 	-- 🌱 텃밭 상자와 벤치, 꼬마전구
 	group(-11, -20)
@@ -176,7 +288,31 @@ local function buildRoof(folder: Instance, companyId: string)
 	local gardenSign = B:part(Vector3.new(3.4, 1, 0.15), at(-11, 2.3, -21.4), { Color = Color3.fromRGB(80, 60, 40) })
 	Build.surfaceText(gardenSign, Enum.NormalId.Back, "🌱 직장인 텃밭", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(200, 255, 170) })
 	group(-6, 20)
-	B:part(Vector3.new(6, 0.5, 1.8), at(-6, 1.3, 20), { Color = Color3.fromRGB(150, 110, 75), Material = Enum.Material.WoodPlanks }) -- 벤치
+	local roofBench = B:part(Vector3.new(6, 0.5, 1.8), at(-6, 1.3, 20), { Color = Color3.fromRGB(150, 110, 75), Material = Enum.Material.WoodPlanks }) -- 벤치
+	if useMesh then
+		roofBench.Transparency = 1
+		Meshes.place(B, "Bench", at(-6, 0, 20), 180, { scale = 1.4 })
+	end
+	-- ⛲ 분수와 화단, 디딤돌, 가로등 (지나다닐 수 있어요: 경비원 순찰 길을 막지 않게 가운데 기둥만 막아요)
+	if useMesh then
+		group(-12, -9)
+		Meshes.place(B, "Fountain", at(-12, 0, -9), 0)
+		B:part(Vector3.new(1.2, 3.2, 1.2), at(-12, 1.6, -9), hidden)
+		Meshes.place(B, "FlowerBed", at(-12, 0, -15.5), 0)
+		Meshes.place(B, "FlowerBed", at(-4.5, 0, -6), 60, { colors = { Flowercoral = TC.sky } })
+		for i, offset in { Vector3.new(4, 0, 3), Vector3.new(6, 0, 5.5), Vector3.new(8.5, 0, 7.5), Vector3.new(11, 0, 10) } do
+			Meshes.place(B, "Stone", at(-12, 0, -9) + offset, i * 40)
+		end
+		for _, xz in { { 14, -22 }, { -22, 8 } } do
+			group(xz[1], xz[2])
+			local post = Meshes.place(B, "LampPost", at(xz[1], 0, xz[2]), 0, { scale = 1.2 })
+			local glow = Instance.new("PointLight")
+			glow.Range = 14
+			glow.Brightness = 0.5
+			glow.Color = TC.yellowSoft
+			glow.Parent = post.Bulb
+		end
+	end
 	group(0, 22)
 	for i = 0, 12 do
 		local bulb = B:part(Vector3.new(0.4, 0.4, 0.4), at(-30 + i * 5, 7, 22), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(255, 220, 140), Material = Enum.Material.Neon, CanCollide = false })
@@ -191,10 +327,86 @@ local function buildRoof(folder: Instance, companyId: string)
 		Color = Color3.fromRGB(230, 200, 80),
 		Material = Enum.Material.Metal,
 	})
+	if not fancy then
+		-- 초록 방수 바닥의 이음선과 물 빠지는 배수구 (장식)
+		group(0, 0)
+		for x = -42, 42, 14 do
+			B:part(Vector3.new(0.15, 0.04, ROOF_D - 2), at(x, 0.03, 0), { Color = Color3.fromRGB(62, 104, 84), CanCollide = false, CanQuery = false })
+		end
+		for _, xz in { { -44, -30 }, { 44, 30 }, { 44, -30 } } do
+			B:part(Vector3.new(1.6, 0.06, 1.6), at(xz[1], 0.04, xz[2]), { Color = Color3.fromRGB(60, 62, 66), Material = Enum.Material.DiamondPlate, CanCollide = false, CanQuery = false })
+		end
+		-- 장독대 (물탱크 옆, 장식)
+		group(16, -12)
+		for i, info in { { 21.6, -8.6, 2.2 }, { 23.4, -9.6, 1.7 }, { 21.9, -10.6, 1.4 } } do
+			local jar = B:part(Vector3.new(info[3], info[3] * 0.9, info[3] * 0.9), at(info[1], info[3] * 0.45, info[2]), { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(96, 62, 44), CanCollide = false })
+			B:part(Vector3.new(0.18, info[3] * 0.62, info[3] * 0.62), nil, { CFrame = CFrame.new(at(info[1], info[3] * 0.88, info[2])) * CFrame.Angles(0, 0, math.rad(90)), Shape = Enum.PartType.Cylinder, Color = Color3.fromRGB(70, 46, 34), CanCollide = false })
+			local _ = jar, i
+		end
+		group(0, 0)
+	end
+	if fancy then
+		-- 🌿 눈치물산 옥상 정원: 12층 넓이로 커진 만큼 빈 자리에 쉼터와 화단을 더하고, 가장자리를 나무로 둘러요
+		--   (기존 시설 사이 빈 곳만 골랐어요. 좌표는 옥상 가운데 기준 실제 칸)
+		group(0, 0)
+		local function spot(x: number, z: number): Vector3
+			return ROOF + Vector3.new(x, 0, z)
+		end
+		local function put(kind: string, x: number, z: number, yaw: number, options: any?, box: Vector3?)
+			if not Meshes.ready(kind) then
+				return
+			end
+			Meshes.place(B, kind, spot(x, z), yaw, options)
+			if box then
+				B:part(box, spot(x, z) + Vector3.new(0, box.Y / 2, 0), hidden)
+			end
+		end
+		-- 쉼터 (소파 + 탁자 + 가로등)
+		for _, xz in { { -48, -12 }, { 24, -1 }, { 48, -12 } } do
+			local x, z = xz[1], xz[2]
+			B:part(Vector3.new(13, 0.12, 10), spot(x, z) + Vector3.new(0, 0.07, 0), { Color = TC.sage, Material = Enum.Material.Fabric, CanCollide = false, CanQuery = false })
+			put("Sofa", x, z - 3, 0, nil, Vector3.new(6, 2.6, 2.6))
+			put("RoundTable", x, z + 1.5, 0, nil, Vector3.new(2.4, 1.4, 2.4))
+			put("PodChair", x + 4.5, z + 2, -60, nil, Vector3.new(2.4, 3, 2.4))
+			put("Plant", x - 5, z - 3, 0, { scale = 1.5 })
+			local post = if Meshes.ready("LampPost") then Meshes.place(B, "LampPost", spot(x - 5.5, z + 3.5), 0, { scale = 1.4 }) else nil
+			if post then
+				local glow = Instance.new("PointLight")
+				glow.Range = 18
+				glow.Brightness = 0.5
+				glow.Color = TC.yellowSoft
+				glow.Parent = post.Bulb
+			end
+		end
+		-- 화단 (꽃밭 + 덤불 + 디딤돌)
+		for _, xz in { { -60, 21 }, { -12, -23 }, { 0, -12 }, { 36, 21 } } do
+			local x, z = xz[1], xz[2]
+			put("FlowerBed", x, z, 0, { scale = 1.5 })
+			put("Bush", x - 5, z + 1.5, 40, { scale = 1.4 })
+			put("Bush", x + 5, z - 1.5, 200, { scale = 1.2 })
+			put("Stone", x + 2, z + 4, 0, nil)
+			put("Bench", x, z + 5.5, 180, { scale = 1.2 }, Vector3.new(5, 1.8, 1.8))
+		end
+		-- 가장자리 나무 화분 (동쪽 · 서쪽 · 남쪽 난간 앞)
+		local edge: { { number } } = {}
+		for z = -30, 30, 15 do
+			table.insert(edge, { ROOF_W / 2 - 4, z })
+			if math.abs(z) > 10 then
+				table.insert(edge, { -ROOF_W / 2 + 4, z }) -- (서쪽 가운데는 엘리베이터 탑)
+			end
+		end
+		for x = -32, 64, 16 do
+			table.insert(edge, { x, ROOF_D / 2 - 3.5 })
+		end
+		for i, xz in edge do
+			put("Planter", xz[1], xz[2], if math.abs(xz[2]) < ROOF_D / 2 - 5 then 90 else 0, { scale = 0.9, colors = { Box = TC.woodLight }, skip = { Flowercoral = true, Floweryellow = true } })
+			put("Tree", xz[1], xz[2], i * 47, { scale = 1.1 + (i % 3) * 0.12 }, Vector3.new(1.6, 6, 1.6))
+		end
+	end
 	-- 🏙️ 주변 빌딩 숲 (아래로 보이는 도시)
 	for i = 1, 26 do
 		local angle = (i / 26) * math.pi * 2
-		local distance = math.random(80, 160) -- (옥상이 넓어져서 더 멀리)
+		local distance = math.max(ROOF_W, ROOF_D) / 2 + math.random(34, 110) -- (옥상 크기에 맞춰 바깥으로)
 		local height = math.random(30, 110)
 		local width = math.random(10, 22)
 		local base = ROOF + Vector3.new(math.cos(angle) * distance, -height / 2 - 6, math.sin(angle) * distance)
@@ -212,7 +424,7 @@ local function buildRoof(folder: Instance, companyId: string)
 		telescope = telescope,
 		loungers = loungerSeats,
 		gardenBoxes = gardenBoxes,
-		guardPost = ROOF + Vector3.new(44, 0, -26), -- 오른쪽 앞 구석 (경비실은 그 뒤 난간 쪽)
+		guardPost = ROOF + Vector3.new(ROOF_W / 2 - 5, 0, -ROOF_D / 2 + 9), -- 오른쪽 앞 구석 (경비실은 그 뒤 난간 쪽)
 		-- 👮 경비원 순찰 지점 (숨을 곳 뒤까지 둘러봐요)
 		patrol = {
 			spread(-10, 0, 0), spread(10, 0, 0), spread(22, 0, -18), spread(22, 0, 8), spread(5, 0, -18), spread(-18, 0, 15),
@@ -222,7 +434,7 @@ local function buildRoof(folder: Instance, companyId: string)
 end
 
 -- 엘리베이터 칸 하나 짓기 (탈 때마다 하나씩)
-local function buildCabin(folder: Instance, center: Vector3, toRoof: boolean): Model
+local function buildCabin(folder: Instance, center: Vector3, toRoof: boolean, fromLobby: boolean?): Model
 	local model = Instance.new("Model")
 	model.Name = "ElevatorCabin"
 	model.Parent = folder
@@ -235,7 +447,7 @@ local function buildCabin(folder: Instance, center: Vector3, toRoof: boolean): M
 	B:part(Vector3.new(8, 10, 1), center + Vector3.new(0, 5, 4.5), { Color = Color3.fromRGB(180, 210, 230), Material = Enum.Material.Glass, Reflectance = 0.4 }) -- 뒤쪽 거울
 	B:part(Vector3.new(8, 10, 1), center + Vector3.new(0, 5, -4.5), { Color = Color3.fromRGB(170, 175, 185), Material = Enum.Material.Metal }) -- 문
 	local display = B:part(Vector3.new(2, 0.8, 0.1), center + Vector3.new(0, 8.6, -3.95), { Color = Color3.fromRGB(20, 20, 25) })
-	Build.surfaceText(display, Enum.NormalId.Back, if toRoof then "▲ 옥상" else "▼ 사무실", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 120, 60) })
+	Build.surfaceText(display, Enum.NormalId.Back, if toRoof then "▲ 옥상" elseif fromLobby then "▲ 사무실" else "▼ 사무실", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 120, 60) })
 	local lamp = B:part(Vector3.new(3, 0.2, 3), center + Vector3.new(0, 9.9, 0), { Color = Color3.fromRGB(255, 245, 220), Material = Enum.Material.Neon })
 	local light = Instance.new("PointLight")
 	light.Range = 14
@@ -404,7 +616,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 	-- 🔭 건너편 빌딩 관찰 일지 (오른쪽 난간)
 	RoofScope.start(folder, spread(32, 0, -6), dayCycle, remotes, { found = hooks.sceneFound })
 
-	-- 🌱 텃밭 (내 화분 4칸)
+	-- 🌱 텃밭 (내 화분 6칸)
 	RoofGarden.start(roof.gardenBoxes, remotes, { action = hooks.gardenAction })
 
 	-- ✈️ 종이비행기 (앞 난간, 도시 쪽으로)
@@ -445,7 +657,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		return phone
 	end
 
-	local function ride(player: Player, toRoof: boolean)
+	local function ride(player: Player, toRoof: boolean, fromLobby: boolean?)
 		if riding[player] then
 			return
 		end
@@ -466,7 +678,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		end
 		cabinSlot = (cabinSlot % 8) + 1
 		local center = CABIN_BASE + Vector3.new(0, 0, cabinSlot * 20)
-		local cabin = buildCabin(folder, center, toRoof)
+		local cabin = buildCabin(folder, center, toRoof, fromLobby)
 		local testing = RunService:IsStudio() and SalaryConfig.TEST_ELEVATOR
 		local withBoss = dayCycle.phase == "work" and boss.active and (testing or math.random() < SalaryConfig.ELEVATOR_BOSS_CHANCE)
 		local duration = if withBoss then SalaryConfig.ELEVATOR_RIDE else SalaryConfig.ELEVATOR_RIDE_ALONE
@@ -502,6 +714,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 			start = session.start,
 			duration = duration,
 			toRoof = toRoof,
+			fromLobby = fromLobby == true, -- 1층 로비에서 올라가는 중 (안내 문구용)
 			withBoss = withBoss,
 			events = session.events,
 			warn = SalaryConfig.ELEVATOR_WARN,
@@ -582,6 +795,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		table.insert(session.toggles, { t = t, phone = phone })
 	end)
 
+	Rooftop.ride = ride -- 🚪 다른 모듈(Arrival의 층 선택)이 엘리베이터를 태울 때 써요
 	local function elevatorPrompt(part: BasePart, toRoof: boolean)
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.ActionText = if toRoof then "옥상 가기" else "사무실로"
@@ -593,6 +807,10 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 			-- 💡 정전 중엔 엘리베이터도 멈춰요
 			if events and events:is("blackout") then
 				remotes.Notify:FireClient(player, "💡 정전이라 엘리베이터가 멈췄어요! 불이 들어오면 타세요.")
+				return
+			end
+			-- 🚪 층 선택 창이 있으면(리뉴얼 대충상사) 그쪽에서 목적지를 고르게 해요
+			if Rooftop.onElevator and Rooftop.onElevator(player, if toRoof then "office" else "roof") then
 				return
 			end
 			task.spawn(ride, player, toRoof)
@@ -621,7 +839,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		if office.meetingZone then
 			table.insert(spots, { office.meetingZone.Position, "회의실 근처" })
 		end
-		if office.shops and office.shops.store then
+		if office.shops and office.shops.store and office.insideOffice(office.shops.store.counter.Position) then -- (매점이 건물 1층으로 나간 대충상사에선 빼요)
 			table.insert(spots, { office.shops.store.counter.Position, "매점 근처" })
 		end
 		local best, bestDistance = "직원 책상 사이", 18 -- (사무실이 넓어져서 14 → 18)

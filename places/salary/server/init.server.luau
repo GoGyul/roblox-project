@@ -40,11 +40,47 @@ local Teleport = require(ReplicatedStorage.Shared.Teleport)
 local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 
 -- 사무실 조명 (너무 밝으면 캐릭터가 하얗게 빛나 보여요)
-Lighting.ClockTime = 13
-Lighting.Brightness = 1.5
-Lighting.Ambient = Color3.fromRGB(115, 115, 120)
-Lighting.OutdoorAmbient = Color3.fromRGB(120, 120, 125)
-Lighting.ExposureCompensation = -0.25
+Lighting.ClockTime = 13.5
+-- 🧊 질감 B안: 그림자가 지는 차분한 실내 조명 (조명 방식 Technology는 Studio의 Lighting 속성에서 Future로 바꿔요)
+Lighting.Brightness = 1.3 -- (너무 밝아서 낮췄어요)
+Lighting.Ambient = Color3.fromRGB(58, 60, 66)
+Lighting.OutdoorAmbient = Color3.fromRGB(168, 174, 182) -- (바깥 그림자가 너무 짙어서 많이 올렸어요. 실내 밝기에는 거의 영향이 없어요)
+Lighting.ExposureCompensation = -0.75
+Lighting.EnvironmentDiffuseScale = 0.55
+Lighting.EnvironmentSpecularScale = 0.3
+Lighting.GlobalShadows = true
+Lighting.ShadowSoftness = 0.6 -- 그림자 가장자리를 부드럽게
+do
+	local grade = Lighting:FindFirstChild("SalaryGrade") or Instance.new("ColorCorrectionEffect")
+	grade.Name = "SalaryGrade"
+	grade.Saturation = -0.12
+	grade.Contrast = 0.06
+	grade.TintColor = Color3.fromRGB(255, 250, 244)
+	grade.Parent = Lighting
+end
+
+local colorGrade = Lighting:FindFirstChild("SalaryColorGrade") :: ColorCorrectionEffect?
+if not colorGrade then
+	colorGrade = Instance.new("ColorCorrectionEffect")
+	colorGrade.Name = "SalaryColorGrade"
+	colorGrade.Parent = Lighting
+end
+colorGrade.Brightness = 0.015
+colorGrade.Contrast = 0.14
+colorGrade.Saturation = 0.12
+colorGrade.TintColor = Color3.fromRGB(255, 250, 242)
+
+local atmosphere = Lighting:FindFirstChild("SalaryAtmosphere") :: Atmosphere?
+if not atmosphere then
+	atmosphere = Instance.new("Atmosphere")
+	atmosphere.Name = "SalaryAtmosphere"
+	atmosphere.Parent = Lighting
+end
+atmosphere.Color = Color3.fromRGB(205, 232, 244)
+atmosphere.Decay = Color3.fromRGB(126, 164, 180)
+atmosphere.Density = 0.16
+atmosphere.Haze = 0.7
+atmosphere.Glare = 0.05
 -- 템플릿에 들어 있는 빛 번짐(Bloom) 효과를 약하게
 for _, effect in Lighting:GetDescendants() do
 	if effect:IsA("BloomEffect") then
@@ -64,6 +100,7 @@ ReplicatedStorage:SetAttribute("SalaryCompany", company.id)
 print(`🏢 오늘의 사무실: {company.name}`)
 
 local office = OfficeBuilder.build(company.id)
+require(script.OfficeSkin).apply(office) -- 🧊 벽·바닥·천장에 메시 키트를 입혀요
 local boss = Boss.new(office)
 local dayCycle = DayCycle.new()
 
@@ -88,6 +125,7 @@ end
 local cat = Cat.start(office, boss, dayCycle, Remotes, Employees.catHooks) -- 🐱 사무실 고양이 월급냥
 Employees.hooks.catOn = cat.sittingOn
 local rooftop = Rooftop.start(office, boss, dayCycle, Remotes, Employees.roofHooks, events) -- 🏢 옥상 + 🚪 엘리베이터
+require(script.Arrival).start(office, Remotes, events) -- 🚏 건물 앞 거리 + 1층 로비 + 계단 (리뉴얼 대충상사)
 require(script.ParkGarden).start(office.parkBeds, Remotes, { action = Employees.parkAction }) -- 🌷 내 공원 화단 (눈치물산만)
 -- 🪑 부장님·동료가 책상·탁자 위로 올라가지 않게 (사무실 바닥 높이 1, 옥상 300)
 require(script.Npc).guardFurniture(office.folder, { 1, 300 })
@@ -102,6 +140,11 @@ PhoneGames.start(Remotes, { -- 📱 폰 게임 (💣 지뢰 피하기)
 	baseballPrize = Employees.payBaseball,
 })
 Employees.hooks.onRoof = rooftop.onRoof
+local windowWatch = require(script.WindowWatch).start(office, boss, dayCycle, events, Remotes) -- 👀 부장님이 창가에서 단지를 내려다봐요
+if windowWatch then
+	Employees.hooks.windowSees = windowWatch.sees
+	Employees.hooks.windowBusy = windowWatch.busy
+end
 local parkGuard = require(script.Guard).start(office, dayCycle, events, Remotes, Employees.useGuardGift) -- 👮 공원·거리 경비원 (눈치물산만)
 -- 👮 사무실 밖 경비원들 (옥상 + 공원): 보이나, 거리, 노려보는 중인가
 Employees.hooks.guardSees = function(character: Model): (boolean, number, boolean, number)
@@ -113,6 +156,10 @@ Employees.hooks.guardSees = function(character: Model): (boolean, number, boolea
 		return parkGuard.sees(character)
 	end
 	return false, math.huge, false, SalaryConfig.GUARD_RANGE
+end
+-- ⏸️ 다 같이 하는 이벤트 중인가 (긴급 프로젝트가 이때는 시작하지 않고 시계를 멈춰요)
+Employees.hooks.eventBusy = function(): boolean
+	return events:is("drill") or events:is("workshop") or events:is("blackout")
 end
 Missions.start(office, boss, dayCycle, Remotes, Employees.missionApi, Employees.hooks, coworkers) -- 📋 긴급 프로젝트 + 🎁 선물
 Wheel.start(office, Remotes, { charge = Employees.chargeClaw, payout = Employees.payWheel }) -- 🎡 돌림판
@@ -213,3 +260,36 @@ Remotes.ReturnToLobby.OnServerEvent:Connect(function(player)
 end)
 
 print("💼 월급루팡 시뮬레이터 준비 완료!")
+
+-- 📊 성능 점검용 집계 (Studio에서만): 맵을 다 지은 뒤 파트·메시·조명 개수를 Output에 찍어요
+if RunService:IsStudio() then
+	task.delay(8, function()
+		local parts, meshes, lights, shadowLights, unanchored = 0, 0, 0, 0, 0
+		local campusParts, campusLights, shadowParts, guis = 0, 0, 0, 0
+		for _, item in workspace:GetDescendants() do
+			local inCampus = item:FindFirstAncestor("Campus") ~= nil
+			if item:IsA("SurfaceGui") or item:IsA("BillboardGui") then
+				guis += 1
+			end
+			if item:IsA("BasePart") then
+				parts += 1
+				campusParts += if inCampus then 1 else 0
+				shadowParts += if item.CastShadow and item.Transparency < 1 then 1 else 0
+				if item:IsA("MeshPart") then
+					meshes += 1
+				end
+				if not item.Anchored and not item:FindFirstAncestorWhichIsA("Model") then
+					unanchored += 1
+				end
+			elseif item:IsA("Light") then
+				lights += 1
+				campusLights += if inCampus then 1 else 0
+				if item.Shadows then
+					shadowLights += 1
+				end
+			end
+		end
+		print(`📊 [성능 집계] 파트 {parts}개 (그중 메시 {meshes}개) · 조명 {lights}개 (그림자 켠 조명 {shadowLights}개) · 고정 안 된 낱개 파트 {unanchored}개`)
+		print(`📊 [성능 집계 2] 단지 파트 {campusParts}개 · 단지 조명 {campusLights}개 · 그림자 드리우는 파트 {shadowParts}개 · 글씨판 {guis}개`)
+	end)
+end

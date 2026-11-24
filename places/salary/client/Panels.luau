@@ -12,6 +12,7 @@ local ChatTopics = require(Shared:WaitForChild("ChatTopics"))
 local Ui = require(Shared:WaitForChild("Ui"))
 local Hud = require(script.Parent.Hud)
 local Sounds = require(Shared:WaitForChild("Sounds"))
+local Theme = require(Shared:WaitForChild("SalaryTheme"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -20,9 +21,9 @@ local comma = Hud.comma
 local States = SalaryConfig.States
 local Ranks = SalaryConfig.Ranks
 
-local INK = Color3.fromRGB(30, 30, 40)
-local MUTED = Color3.fromRGB(110, 110, 120)
-local RED = Color3.fromRGB(200, 50, 40)
+local INK = Theme.Color.navy
+local MUTED = Theme.Color.muted
+local RED = Theme.Color.coral
 
 local Panels = {}
 local current: Frame? = nil
@@ -51,12 +52,12 @@ local function sheet(width: number, height: number, keepClear: boolean?): Frame
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = if keepClear then UDim2.new(0.5, 0, 0.5, -56) else UDim2.fromScale(0.5, 0.5), -- (위 8·아래 120 사이 가운데)
 		Size = UDim2.fromOffset(width, height),
-		BackgroundColor3 = Color3.fromRGB(250, 250, 245),
+		BackgroundColor3 = Theme.Color.surface,
 		ZIndex = 30,
 		Parent = gui,
 	}, {
-		Ui.corner(12),
-		Ui.stroke(Color3.fromRGB(60, 60, 70), 3),
+		Ui.corner(22),
+		Ui.stroke(Theme.Color.navy, 3),
 		Ui.padding(20),
 		Ui.make("UIScale", { Scale = fitScale(width, height, keepClear) }),
 	})
@@ -76,9 +77,9 @@ local function sheet(width: number, height: number, keepClear: boolean?): Frame
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 10, 0, -10),
 		Size = UDim2.fromOffset(36, 36),
-		BackgroundColor3 = Color3.fromRGB(225, 225, 228),
+		BackgroundColor3 = Theme.Color.coralSoft,
 		Text = "X", -- ✕ 기호는 로블록스 글꼴에 없어서 네모로 보여요
-		TextColor3 = Color3.fromRGB(60, 60, 70),
+		TextColor3 = Theme.Color.navy,
 		Font = Enum.Font.GothamBlack,
 		TextSize = 18,
 		ZIndex = 33,
@@ -186,9 +187,9 @@ local function helpButton(parent: GuiObject, position: UDim2, title: string, bod
 	local popup: GuiObject? = nil
 	local b = Ui.button({
 		Position = position,
-		Size = UDim2.fromOffset(28, 28),
+		Size = UDim2.fromOffset(34, 34),
 		Text = "❓",
-		TextSize = 15,
+		TextSize = 18,
 		BackgroundColor3 = Color3.fromRGB(225, 232, 248),
 		ZIndex = 34,
 		Parent = parent,
@@ -212,24 +213,24 @@ local function helpButton(parent: GuiObject, position: UDim2, title: string, bod
 		local box = Ui.make("TextButton", {
 			Name = "HelpPopup",
 			AnchorPoint = Vector2.new(0.5, 0),
-			Position = UDim2.new(0.5, 0, 0, 38),
-			Size = UDim2.new(1, -16, 0, 0),
+			Position = UDim2.new(0.5, 0, 0, 30),
+			Size = UDim2.new(1, 0, 0, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundColor3 = Color3.fromRGB(255, 252, 238),
 			AutoButtonColor = false,
 			Text = "",
 			ZIndex = 60,
 			Parent = host,
-		}, { Ui.corner(10), Ui.stroke(Color3.fromRGB(150, 130, 80), 2), Ui.padding(14) })
+		}, { Ui.corner(14), Ui.stroke(Color3.fromRGB(150, 130, 80), 2.5), Ui.padding(22) })
 		popup = box
 		box.Activated:Connect(hide)
 		Ui.make("TextLabel", {
-			Size = UDim2.new(1, -34, 0, 24),
+			Size = UDim2.new(1, -44, 0, 32),
 			BackgroundTransparency = 1,
 			Text = "❓ " .. title,
 			TextColor3 = INK,
 			Font = Enum.Font.GothamBlack,
-			TextSize = 18,
+			TextSize = 25,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			ZIndex = 61,
 			Parent = box,
@@ -237,9 +238,9 @@ local function helpButton(parent: GuiObject, position: UDim2, title: string, bod
 		local x = Ui.button({
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, 4, 0, -4),
-			Size = UDim2.fromOffset(28, 28),
+			Size = UDim2.fromOffset(38, 38),
 			Text = "X",
-			TextSize = 15,
+			TextSize = 19,
 			Font = Enum.Font.GothamBlack,
 			BackgroundColor3 = Color3.fromRGB(225, 225, 228),
 			ZIndex = 62,
@@ -247,7 +248,7 @@ local function helpButton(parent: GuiObject, position: UDim2, title: string, bod
 		})
 		x.Activated:Connect(hide)
 		Ui.make("TextLabel", {
-			Position = UDim2.fromOffset(0, 30),
+			Position = UDim2.fromOffset(0, 44),
 			Size = UDim2.new(1, 0, 0, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
@@ -255,8 +256,8 @@ local function helpButton(parent: GuiObject, position: UDim2, title: string, bod
 			RichText = true,
 			TextColor3 = INK,
 			Font = Enum.Font.GothamMedium,
-			TextSize = 16,
-			LineHeight = 1.15,
+			TextSize = 21, -- (설명서 글씨를 크게: 16 → 21)
+			LineHeight = 1.3,
 			TextWrapped = true,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
@@ -531,16 +532,28 @@ function Panels.showShop(startTab: string?)
 		tabButtons[info[1]] = b
 	end
 
-	local function row(parent: Frame, i: number, title: string, description: string): TextButton
-		local y = (i - 1) * 84
-		line(parent, y, 28, title, { Font = Enum.Font.GothamBold, TextSize = 20, Size = UDim2.new(1, -175, 0, 28) })
-		line(parent, y + 30, 46, description, { TextSize = 16, TextColor3 = MUTED, Size = UDim2.new(1, -175, 0, 46) })
+	-- 한 줄 = 카드 하나 (씨앗 칸처럼 옅은 바탕으로 묶어요). 줄 간격 86 → 창에 딱 5줄이 보여요
+	local ROW = 86
+	local function card(parent: Frame, i: number, color: Color3)
+		Ui.make("Frame", {
+			Position = UDim2.fromOffset(0, (i - 1) * ROW),
+			Size = UDim2.new(1, -14, 0, ROW - 6), -- (스크롤 막대 자리는 비워 둬요)
+			BackgroundColor3 = color,
+			ZIndex = 31,
+			Parent = parent,
+		}, { Ui.corner(8) })
+	end
+	local function row(parent: Frame, i: number, title: string, description: string, color: Color3): TextButton
+		local y = (i - 1) * ROW
+		card(parent, i, color)
+		line(parent, y, 26, title, { Font = Enum.Font.GothamBold, TextSize = 19, Position = UDim2.fromOffset(12, y + 8), Size = UDim2.new(1, -200, 0, 26), ZIndex = 32 })
+		line(parent, y, 40, description, { TextSize = 15, TextColor3 = MUTED, Position = UDim2.fromOffset(12, y + 36), Size = UDim2.new(1, -200, 0, 40), ZIndex = 32 })
 		return Ui.button({
 			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -14, 0, y + 14), -- (스크롤 막대 자리는 비워 둬요)
+			Position = UDim2.new(1, -24, 0, y + 16),
 			Size = UDim2.fromOffset(150, 48),
 			TextSize = 18,
-			ZIndex = 32,
+			ZIndex = 33,
 			Parent = parent,
 		})
 	end
@@ -549,7 +562,7 @@ function Panels.showShop(startTab: string?)
 	local goods = page("goods")
 	local rows = {}
 	for i, item in items do
-		local buy = row(goods, i, `{item.emoji} {item.name} · {comma(item.price)}원` .. (if item.days then ` · ⏳{item.days}일` else ""), item.description)
+		local buy = row(goods, i, `{item.emoji} {item.name} · {comma(item.price)}원` .. (if item.days then ` · ⏳{item.days}일` else ""), item.description, Color3.fromRGB(236, 240, 246))
 		buy.Activated:Connect(function()
 			local ok, result = Remotes.BuyItem:InvokeServer(item.id)
 			message.Text = result
@@ -561,7 +574,7 @@ function Panels.showShop(startTab: string?)
 	-- 🎁 부장님 선물
 	local giftPage = page("gifts")
 	for i, item in gifts do
-		local buy = row(giftPage, i, `{item.emoji} {item.name} · {comma(item.price)}원`, item.description)
+		local buy = row(giftPage, i, `{item.emoji} {item.name} · {comma(item.price)}원`, item.description, Color3.fromRGB(250, 236, 236))
 		buy.Text = "사기"
 		buy.Activated:Connect(function()
 			local ok, result = Remotes.BuyStreet:InvokeServer("store", item.id)
@@ -575,7 +588,7 @@ function Panels.showShop(startTab: string?)
 	-- 🎟️ 특수 쿠폰 (사자마자 바로 써요)
 	local couponPage = page("coupons")
 	for i, coupon in coupons do
-		local buy = row(couponPage, i, `{coupon.emoji} {coupon.name} · {comma(coupon.price)}원`, coupon.description)
+		local buy = row(couponPage, i, `{coupon.emoji} {coupon.name} · {comma(coupon.price)}원`, coupon.description, Color3.fromRGB(250, 244, 226))
 		buy.Text = "사서 쓰기"
 		buy.Activated:Connect(function()
 			local result = Remotes.BuyCoupon:InvokeServer(coupon.id)
@@ -587,7 +600,7 @@ function Panels.showShop(startTab: string?)
 	-- 👮 경비원 선물 (사서 🎒에 보관 → 경비원 앞에서 [E]로 드려요)
 	local guardPage = page("guard")
 	for i, gift in guardGifts do
-		local buy = row(guardPage, i, `{gift.emoji} {gift.name} · {comma(gift.price)}원`, `🙈 {SalaryConfig.gameDurationText(gift.minutes)} 동안 못 본 척`)
+		local buy = row(guardPage, i, `{gift.emoji} {gift.name} · {comma(gift.price)}원`, `🙈 {SalaryConfig.gameDurationText(gift.minutes)} 동안 못 본 척`, Color3.fromRGB(232, 240, 250))
 		buy.Text = "사기"
 		buy.Activated:Connect(function()
 			local ok, result = Remotes.BuyGuardGift:InvokeServer(gift.id)
@@ -612,7 +625,7 @@ function Panels.showShop(startTab: string?)
 	end
 	for k, info in { { "veg", "🥬 채소 씨앗 (옥상)" }, { "flower", "🌷 꽃씨·거름 (공원)" } } do
 		seedPanes[info[1]] = Ui.make("Frame", {
-			Position = UDim2.fromOffset(0, 42),
+			Position = UDim2.fromOffset(0, 52),
 			Size = UDim2.new(1, -14, 0, 0),
 			AutomaticSize = Enum.AutomaticSize.Y, -- (스크롤 길이가 칸 수만큼 늘어나게)
 			BackgroundTransparency = 1,
@@ -620,8 +633,8 @@ function Panels.showShop(startTab: string?)
 			Parent = seedPage,
 		})
 		local b = Ui.button({
-			Position = UDim2.fromOffset((k - 1) * 230, 0),
-			Size = UDim2.fromOffset(222, 36),
+			Position = UDim2.fromOffset(2 + (k - 1) * 232, 6), -- (위 탭 줄과 붙지 않게, 테두리가 잘리지 않게 조금 내려요)
+			Size = UDim2.fromOffset(224, 38),
 			Text = info[2],
 			TextSize = 16,
 			ZIndex = 33,
@@ -637,8 +650,8 @@ function Panels.showShop(startTab: string?)
 	local function seedCell(parent: Frame, i: number, color: Color3, description: string, onBuy: (number) -> ()): (TextLabel, TextButton, TextButton)
 		local col, rowIndex = (i - 1) % 2, math.floor((i - 1) / 2)
 		local cell = Ui.make("Frame", {
-			Position = UDim2.fromOffset(col * 330, rowIndex * 86),
-			Size = UDim2.fromOffset(320, 80),
+			Position = UDim2.fromOffset(col * 330, rowIndex * 94),
+			Size = UDim2.fromOffset(320, 88),
 			BackgroundColor3 = color,
 			ZIndex = 32,
 			Parent = parent,
@@ -693,8 +706,8 @@ function Panels.showShop(startTab: string?)
 	for i, seed in SalaryConfig.GardenSeeds do
 		local col, rowIndex = (i - 1) % 2, math.floor((i - 1) / 2)
 		local cell = Ui.make("Frame", {
-			Position = UDim2.fromOffset(col * 330, rowIndex * 86),
-			Size = UDim2.fromOffset(320, 80),
+			Position = UDim2.fromOffset(col * 330, rowIndex * 94),
+			Size = UDim2.fromOffset(320, 88),
 			BackgroundColor3 = Color3.fromRGB(238, 245, 232),
 			ZIndex = 32,
 			Parent = seedPanes.veg,
@@ -734,17 +747,18 @@ function Panels.showShop(startTab: string?)
 	local pigeonPage = page("pigeon")
 	local snackTitles: { [string]: TextLabel } = {}
 	for i, snack in SalaryConfig.PigeonSnacks do
-		local y = (i - 1) * 84
-		snackTitles[snack.id] = line(pigeonPage, y, 28, "", { Font = Enum.Font.GothamBold, TextSize = 20, Size = UDim2.new(1, -200, 0, 28) })
-		line(pigeonPage, y + 30, 46, `💕 친밀도 +{snack.friend} · 🐦 +{snack.flock}마리 · 🎁 선물 +{math.floor(snack.gift * 100)}%`, { TextSize = 15, TextColor3 = MUTED, Size = UDim2.new(1, -200, 0, 46) })
+		local y = (i - 1) * ROW
+		card(pigeonPage, i, Color3.fromRGB(240, 236, 248))
+		snackTitles[snack.id] = line(pigeonPage, y, 26, "", { Font = Enum.Font.GothamBold, TextSize = 19, Position = UDim2.fromOffset(12, y + 8), Size = UDim2.new(1, -220, 0, 26), ZIndex = 32 })
+		line(pigeonPage, y + 36, 40, `💕 친밀도 +{snack.friend} · 🐦 +{snack.flock}마리 · 🎁 선물 +{math.floor(snack.gift * 100)}%`, { TextSize = 15, TextColor3 = MUTED, Position = UDim2.fromOffset(12, y + 36), ZIndex = 32, Size = UDim2.new(1, -220, 0, 40) })
 		for k, amount in { 1, 5 } do
 			local b = Ui.button({
 				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, if k == 1 then -100 else -14, 0, y + 14), -- (스크롤 막대 자리는 비워 둬요)
+				Position = UDim2.new(1, if k == 1 then -110 else -24, 0, y + 16),
 				Size = UDim2.fromOffset(80, 48),
 				Text = if amount == 1 then "사기" else "5개",
 				TextSize = 18,
-				ZIndex = 32,
+				ZIndex = 33,
 				Parent = pigeonPage,
 			})
 			b.Activated:Connect(function()
@@ -759,7 +773,7 @@ function Panels.showShop(startTab: string?)
 	local certPage = page("certs")
 	local certButtons = {}
 	for i, cert in certs do
-		local buy = row(certPage, i, `{cert.emoji} {cert.name} · 응시료 {comma(cert.price)}원`, `🎖️ 경험치 +{comma(cert.xp)} · {cert.perk} · {Ranks[cert.rank].name}부터`)
+		local buy = row(certPage, i, `{cert.emoji} {cert.name} · 응시료 {comma(cert.price)}원`, `🎖️ 경험치 +{comma(cert.xp)} · {cert.perk} · {Ranks[cert.rank].name}부터`, Color3.fromRGB(236, 244, 238))
 		buy.Activated:Connect(function()
 			Panels.showExam(cert.id)
 		end)
@@ -1179,7 +1193,7 @@ function Panels.showFitness(backTo: (() -> ())?)
 			Parent = row,
 		}, { Ui.corner(7) })
 		local fill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.fromRGB(110, 200, 120), ZIndex = 34, Parent = track }, { Ui.corner(7) })
-		helpButton(row, UDim2.new(1, -28, 0, 0), `{stat.emoji} {stat.name}`, function()
+		helpButton(row, UDim2.new(1, -34, 0, 0), `{stat.emoji} {stat.name}`, function()
 			return detailText(stat)
 		end, frame)
 		local now = line(row, 34, 26, "", { TextSize = 18, ZIndex = 33, TextColor3 = INK })
@@ -1216,7 +1230,7 @@ function Panels.showFitness(backTo: (() -> ())?)
 end
 
 ---------------------------------------------------------------------------
--- 🪑 내 자리 꾸미기 + 🏆 칭호 (온라인 주문 → 바로 배송)
+-- 🪑 내 자리 꾸미기 + 🏆 칭호 (온라인 주문 → 다음 근무일 택배)
 ---------------------------------------------------------------------------
 local function decodeAttr(name: string, fallback: any): any
 	local ok, value = pcall(function()
@@ -1247,7 +1261,7 @@ function Panels.showDecor(startTab: string?)
 	})
 	-- 🚚 주문 → 다음 날 📦 택배 보관함 → 내 자리에서 뜯기 (자세한 건 ❓)
 	local orderText = line(frame, 34, 22, "", { TextSize = 15, TextXAlignment = Enum.TextXAlignment.Right, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(60, 110, 190), Size = UDim2.new(1, -44, 0, 22) })
-	helpButton(frame, UDim2.new(1, -28, 1, -80), "🚚 택배 주문", table.concat({
+	helpButton(frame, UDim2.new(1, -36, 1, -38), "🚚 택배 주문", table.concat({
 		"🛒 주문하면 돈은 바로 나가고, 물건은 다음 근무일에 회사로 와요.",
 		"📦 출입문 옆 [택배 보관함]에서 [E] 받기 → 들고 내 자리로 → 앉으면 뜯어요!",
 		`🚚 주문은 하루 {SalaryConfig.SHOP_DAILY_ORDERS}번까지 · 상자를 들면 조금 느려져요 (💪 근력이 도와줘요)`,
@@ -1586,13 +1600,13 @@ function Panels.showCollection()
 	local total = #actions + #SalaryConfig.Achievements
 	local found = 0
 	-- 가로로 넓게: 왼쪽 = 농땡이 칸, 오른쪽 = 업적 목록
-	local frame = sheet(900, 430)
+	local frame = sheet(900, 520) -- (칸이 20개라 아래 수다 주제·닫기 버튼과 겹치지 않게 키웠어요)
 	closeOnOutside(frame)
 	local title = line(frame, 0, 30, "📖 농땡이 도감", { Font = Enum.Font.GothamBlack, TextSize = 24 })
 
 	local left = Ui.make("Frame", {
 		Position = UDim2.fromOffset(0, 40),
-		Size = UDim2.new(0.5, -10, 0, 300),
+		Size = UDim2.new(0.5, -10, 0, 372),
 		BackgroundTransparency = 1,
 		ZIndex = 31,
 		Parent = frame,
@@ -1600,12 +1614,12 @@ function Panels.showCollection()
 	line(left, 0, 20, "😴 농땡이 행동", { Font = Enum.Font.GothamBold, TextSize = 16 })
 	local grid = Ui.make("Frame", {
 		Position = UDim2.fromOffset(0, 26),
-		Size = UDim2.new(1, 0, 1, -26),
+		Size = UDim2.new(1, 0, 0, 250), -- 5칸 × 4줄
 		BackgroundTransparency = 1,
 		ZIndex = 31,
 		Parent = left,
 	}, {
-		Ui.make("UIGridLayout", { CellSize = UDim2.fromOffset(98, 60), CellPadding = UDim2.fromOffset(6, 6) }),
+		Ui.make("UIGridLayout", { CellSize = UDim2.fromOffset(78, 56), CellPadding = UDim2.fromOffset(6, 6), FillDirectionMaxCells = 5 }),
 	})
 	for _, stateId in actions do
 		local info = States[stateId]
@@ -1618,7 +1632,7 @@ function Panels.showCollection()
 			Text = if has then `{info.emoji}\n{info.name}` else "❓\n???",
 			TextColor3 = if has then INK else MUTED,
 			Font = Enum.Font.GothamBold,
-			TextSize = 14,
+			TextSize = 12,
 			TextWrapped = true,
 			ZIndex = 32,
 			Parent = grid,
@@ -1628,7 +1642,7 @@ function Panels.showCollection()
 	local right = Ui.make("Frame", {
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 40),
-		Size = UDim2.new(0.5, -10, 0, 300),
+		Size = UDim2.new(0.5, -10, 0, 372),
 		BackgroundTransparency = 1,
 		ZIndex = 31,
 		Parent = frame,
@@ -1670,7 +1684,7 @@ function Panels.showCollection()
 	end
 	found += heardTopics
 	total += #ChatTopics.Topics
-	line(left, 226, 22, `💬 수다 주제 {heardTopics}/{#ChatTopics.Topics}`, { Font = Enum.Font.GothamBold, TextSize = 16 })
+	line(left, 286, 22, `💬 수다 주제 {heardTopics}/{#ChatTopics.Topics}`, { Font = Enum.Font.GothamBold, TextSize = 16 })
 	-- 🤝 친한 동료 (❤️ 개수)
 	local friendship = {}
 	pcall(function()
@@ -1683,7 +1697,7 @@ function Panels.showCollection()
 			table.insert(friends, `{name} {string.rep("❤️", level)}`)
 		end
 	end
-	line(left, 250, 40, if #friends > 0
+	line(left, 312, 44, if #friends > 0
 		then "🤝 " .. table.concat(friends, " · ")
 		else "🤝 수다를 끝까지 하고 맞장구를 잘 치면 동료와 친해져요 (❤️ 4개까지)", { TextSize = 13, TextColor3 = MUTED })
 
@@ -1742,6 +1756,10 @@ local function toolButton(label: string, width: number, onClick: () -> (), tip: 
 		TextSize = 15,
 		Parent = Hud.toolbar,
 	})
+	local colors = { Theme.Color.yellow, Theme.Color.mint, Theme.Color.coralSoft, Theme.Color.skySoft, Theme.Color.mintSoft, Theme.Color.coral }
+	local index = #Hud.toolbar:GetChildren()
+	b.BackgroundColor3 = colors[(index - 1) % #colors + 1]
+	b.TextColor3 = Theme.Color.navy
 	b.Activated:Connect(function()
 		hideToolTip(b)
 		onClick()
@@ -3426,7 +3444,7 @@ function Panels.showParkBed(index: number, station: any)
 		local bonusText = `💰 정원 수당: 활짝 {bloomedBeds}곳 x {SalaryConfig.PARK_BED_BONUS}원`
 			.. (if full then ` + 🌈 {SalaryConfig.PARK_FULL_BONUS}원` else "")
 			.. ` = {comma(pay)}원`
-		table.insert(content, line(frame, 380, 20, bonusText, { TextSize = 13, Font = Enum.Font.GothamBold, TextColor3 = if onNunchi then Color3.fromRGB(40, 140, 70) else MUTED }))
+		table.insert(content, line(frame, 380, 20, bonusText, { TextSize = 13, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(40, 140, 70) }))
 		table.insert(content, line(frame, 404, 18, `🌈 정원 완성: {SalaryConfig.PARK_BEDS}곳 활짝 + 꽃 {SalaryConfig.PARK_FULL_KINDS}종 (지금 {kinds}종) → +{SalaryConfig.PARK_FULL_BONUS}원`, { TextSize = 12, TextColor3 = MUTED }))
 		table.insert(content, line(frame, 426, 18, `🎒 🧪 거름 {fertilizer}개`, { TextSize = 12, TextColor3 = MUTED }))
 	end
@@ -5491,7 +5509,7 @@ task.spawn(function()
 	while true do
 		if not spin or not spin.Parent then
 			local office = workspace:FindFirstChild("Office")
-			local disc = office and office:FindFirstChild("WheelDisc")
+			local disc = office and office:FindFirstChild("WheelDisc", true) -- (돌림판은 Office 안의 Campus 폴더에 있어요)
 			local gui = disc and disc:FindFirstChild("WheelGui")
 			spin = gui and gui:FindFirstChild("Spin") :: Frame?
 		end
@@ -7606,14 +7624,44 @@ end
 
 -- 📋 프로젝트 카드의 "🧩 풀기" 버튼 (퍼즐 단계일 때만)
 local puzzleButton = Ui.button({
-	AnchorPoint = Vector2.new(0.5, 1),
-	Position = UDim2.new(0.5, 0, 1, 4),
-	Size = UDim2.fromOffset(150, 36),
+	AnchorPoint = Vector2.new(1, 1),
+	Position = UDim2.new(0.5, -4, 1, 4),
+	Size = UDim2.fromOffset(104, 30),
 	Text = "🧩 풀기",
-	TextSize = 18,
+	TextSize = 15,
 	Visible = false,
 	Parent = Hud.missionPanel,
 })
+-- 🏳️ 포기 버튼 (풀기 옆): 한 번 누르면 "정말 포기?"로 바뀌고, 3초 안에 다시 눌러야 포기해요 (실수 방지)
+local giveUpButton = Ui.button({
+	AnchorPoint = Vector2.new(0, 1),
+	Position = UDim2.new(0.5, 4, 1, 4),
+	Size = UDim2.fromOffset(104, 30), -- (풀기와 같은 크기)
+	BackgroundColor3 = Color3.fromRGB(225, 225, 228),
+	Text = "🏳️ 포기",
+	TextSize = 15,
+	Visible = false,
+	Parent = Hud.missionPanel,
+})
+local giveUpArmedAt = 0
+giveUpButton.Activated:Connect(function()
+	if os.clock() - giveUpArmedAt <= 3 then
+		giveUpArmedAt = 0
+		giveUpButton.Text = "🏳️ 포기"
+		if current then
+			close()
+		end
+		Remotes.MissionPuzzle:InvokeServer("giveup")
+		return
+	end
+	giveUpArmedAt = os.clock()
+	giveUpButton.Text = "정말 포기?"
+	task.delay(3, function()
+		if giveUpArmedAt ~= 0 and os.clock() - giveUpArmedAt >= 3 then
+			giveUpButton.Text = "🏳️ 포기"
+		end
+	end)
+end)
 puzzleButton.Activated:Connect(function()
 	if current then
 		close()
@@ -7623,7 +7671,9 @@ end)
 task.spawn(function()
 	while true do
 		local step = currentMissionStep()
-		puzzleButton.Visible = step ~= nil and PUZZLE_KINDS[step.kind] == true
+		local folded = Hud.missionPanel:GetAttribute("Folded") == true
+		puzzleButton.Visible = not folded and step ~= nil and PUZZLE_KINDS[step.kind] == true
+		giveUpButton.Visible = not folded and player:GetAttribute("MissionStatus") == "active"
 		task.wait(0.3)
 	end
 end)

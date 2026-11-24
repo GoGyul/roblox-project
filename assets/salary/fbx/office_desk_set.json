@@ -1,0 +1,414 @@
+{
+ "Desk": [
+  {
+   "name": "Desk_Top",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    7.6,
+    0.42,
+    4.9
+   ],
+   "center": [
+    -0.2,
+    2.35,
+    0.55
+   ],
+   "triangles": 1010
+  },
+  {
+   "name": "Desk_Legs",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    6.125,
+    2.14,
+    3.16
+   ],
+   "center": [
+    -0.663,
+    1.07,
+    -0.08
+   ],
+   "triangles": 760
+  },
+  {
+   "name": "Desk_Partition",
+   "color": "sage",
+   "material": "Fabric",
+   "size": [
+    8.7,
+    3.0,
+    3.167
+   ],
+   "center": [
+    -0.2,
+    1.5,
+    -0.766
+   ],
+   "triangles": 796
+  },
+  {
+   "name": "Desk_Keyboard",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    2.66,
+    0.2,
+    0.675
+   ],
+   "center": [
+    -0.07,
+    2.62,
+    0.512
+   ],
+   "triangles": 716
+  },
+  {
+   "name": "Desk_Cup",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    0.4,
+    0.5,
+    0.4
+   ],
+   "center": [
+    -2.6,
+    2.81,
+    -1.2
+   ],
+   "triangles": 444
+  }
+ ],
+ "Monitor": [
+  {
+   "name": "Monitor_Frame",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    3.0,
+    1.9,
+    0.3
+   ],
+   "center": [
+    0.75,
+    4.15,
+    -1.25
+   ],
+   "triangles": 572
+  },
+  {
+   "name": "Monitor_Screen",
+   "color": "sky",
+   "material": "Neon",
+   "size": [
+    2.62,
+    1.52,
+    0.06
+   ],
+   "center": [
+    0.75,
+    4.15,
+    -1.09
+   ],
+   "triangles": 140
+  },
+  {
+   "name": "Monitor_Arm",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    1.9,
+    1.79,
+    1.1
+   ],
+   "center": [
+    -0.0,
+    3.455,
+    -1.35
+   ],
+   "triangles": 1560
+  }
+ ],
+ "Chair": [
+  {
+   "name": "Chair_Seat",
+   "color": "coral",
+   "material": "Fabric",
+   "size": [
+    2.1,
+    0.55,
+    2.0
+   ],
+   "center": [
+    0.0,
+    1.55,
+    -0.0
+   ],
+   "triangles": 572
+  },
+  {
+   "name": "Chair_Back",
+   "color": "coral",
+   "material": "Fabric",
+   "size": [
+    1.9,
+    2.96,
+    0.808
+   ],
+   "center": [
+    0.0,
+    3.335,
+    1.026
+   ],
+   "triangles": 1144
+  },
+  {
+   "name": "Chair_Frame",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    2.6,
+    4.208,
+    2.57
+   ],
+   "center": [
+    0.0,
+    2.295,
+    0.165
+   ],
+   "triangles": 4872
+  },
+  {
+   "name": "Chair_Arms",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    2.72,
+    0.2,
+    1.4
+   ],
+   "center": [
+    0.0,
+    2.22,
+    0.15
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "Chair_Wheels",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    2.738,
+    0.36,
+    2.621
+   ],
+   "center": [
+    0.0,
+    0.18,
+    0.119
+   ],
+   "triangles": 2640
+  }
+ ],
+ "Drawer": [
+  {
+   "name": "Drawer_Body",
+   "color": "cream",
+   "material": "SmoothPlastic",
+   "size": [
+    1.9,
+    1.62,
+    2.5
+   ],
+   "center": [
+    0.0,
+    1.11,
+    -0.0
+   ],
+   "triangles": 572
+  },
+  {
+   "name": "Drawer_Top",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    2.0,
+    0.16,
+    2.6
+   ],
+   "center": [
+    0.0,
+    2.0,
+    -0.0
+   ],
+   "triangles": 572
+  },
+  {
+   "name": "Drawer_Fronts",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    1.5,
+    1.32,
+    0.12
+   ],
+   "center": [
+    0.0,
+    1.11,
+    1.28
+   ],
+   "triangles": 1144
+  },
+  {
+   "name": "Drawer_Handles",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    0.7,
+    0.82,
+    0.12
+   ],
+   "center": [
+    0.0,
+    1.11,
+    1.38
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "Drawer_Wheels",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    1.62,
+    0.32,
+    2.22
+   ],
+   "center": [
+    0.0,
+    0.16,
+    -0.0
+   ],
+   "triangles": 2112
+  }
+ ],
+ "Lamp": [
+  {
+   "name": "Lamp_Body",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    1.497,
+    1.92,
+    1.24
+   ],
+   "center": [
+    0.249,
+    0.96,
+    -0.0
+   ],
+   "triangles": 1084
+  },
+  {
+   "name": "Lamp_Stem",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    0.73,
+    1.54,
+    0.22
+   ],
+   "center": [
+    0.005,
+    0.8,
+    -0.0
+   ],
+   "triangles": 1488
+  },
+  {
+   "name": "Lamp_Bulb",
+   "color": "yellowSoft",
+   "material": "Neon",
+   "size": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "center": [
+    0.5,
+    1.27,
+    -0.0
+   ],
+   "triangles": 528
+  }
+ ],
+ "Plant": [
+  {
+   "name": "Plant_Pot",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    1.62,
+    1.23,
+    1.62
+   ],
+   "center": [
+    0.0,
+    0.615,
+    -0.0
+   ],
+   "triangles": 960
+  },
+  {
+   "name": "Plant_Soil",
+   "color": "woodDark",
+   "material": "SmoothPlastic",
+   "size": [
+    1.24,
+    0.06,
+    1.24
+   ],
+   "center": [
+    0.0,
+    1.12,
+    -0.0
+   ],
+   "triangles": 108
+  },
+  {
+   "name": "Plant_Leaves",
+   "color": "grass",
+   "material": "SmoothPlastic",
+   "size": [
+    2.441,
+    1.497,
+    2.386
+   ],
+   "center": [
+    -0.072,
+    1.849,
+    -0.023
+   ],
+   "triangles": 3696
+  },
+  {
+   "name": "Plant_LeavesLight",
+   "color": "grassLight",
+   "material": "SmoothPlastic",
+   "size": [
+    1.461,
+    2.232,
+    1.121
+   ],
+   "center": [
+    0.023,
+    2.216,
+    -0.004
+   ],
+   "triangles": 2640
+  }
+ ]
+}
