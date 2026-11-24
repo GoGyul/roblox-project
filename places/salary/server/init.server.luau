@@ -81,6 +81,7 @@ Employees.start(office, boss, dayCycle, Remotes, coworkers, events, lee)
 Street.start(office, Remotes, Employees.buyStreet) -- 🏙️ 눈치 스트리트 가게 (눈치물산만)
 Claw.start(office, Remotes, { charge = Employees.chargeClaw, give = Employees.givePlush }) -- 🧸 인형뽑기
 Decor.start(Remotes, Employees.decorApi) -- 🪑 내 자리 꾸미기 + 🏆 칭호
+require(script.Delivery).start(office, dayCycle, Remotes, Employees.deliveryApi) -- 📦 택배 보관함 (쇼핑몰 주문이 다음 날 도착)
 if SalaryConfig.OUTFIT_ENABLED then
 	Outfit.start(Remotes, Employees.decorApi) -- 👔 출근룩 (Decor 다음에: 들어올 때 훅을 이어 붙여요)
 end

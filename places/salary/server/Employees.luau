@@ -436,6 +436,50 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		player:SetAttribute("GymSets", daily(d).gymSets or 0) -- 📅 오늘 스탯이 오른 운동 횟수
 	end
 
+	---------------------------------------------------------------- 🔔 알림함 (어디서든 Employees.pushNotice로 한 줄 알림을 남겨요)
+	--   profile.notices에 저장 (최근 30개) → "Notices" 속성(JSON)으로 화면에 보내요. 오른쪽 위 🔔 종에 빨간 숫자가 떠요.
+	local function publishNotices(player: Player, d: EmployeeData)
+		player:SetAttribute("Notices", HttpService:JSONEncode(d.profile.notices))
+	end
+	-- emoji: 앞에 붙는 그림 / text: 짧은 한 줄 / kind: 종류 (예: "delivery", 나중에 걸러 볼 때)
+	local function pushNotice(player: Player, emoji: string, text: string, kind: string?)
+		local d = data[player]
+		if not d then
+			return
+		end
+		local notices = d.profile.notices
+		table.insert(notices, {
+			e = emoji,
+			t = text,
+			k = kind or "",
+			day = math.max(1, dayCycle.day), -- 📅 몇 일차 (화면 시계와 같은 날짜)
+			min = math.floor(dayCycle.minute), -- 🕘 게임 속 시각 (분)
+			read = false,
+		})
+		while #notices > SalaryConfig.NOTICE_MAX do
+			table.remove(notices, 1) -- 오래된 것부터 지워요
+		end
+		publishNotices(player, d)
+	end
+	Employees.pushNotice = pushNotice
+	-- 🔔 알림 창을 열면 모두 읽음
+	remotes.NoticeRead.OnServerEvent:Connect(function(player: Player)
+		local d = data[player]
+		if not d then
+			return
+		end
+		local changed = false
+		for _, notice in d.profile.notices do
+			if notice.read ~= true then
+				notice.read = true
+				changed = true
+			end
+		end
+		if changed then
+			publishNotices(player, d)
+		end
+	end)
+
 	-- ⚡ 오늘의 의심도 속도 바꾸기 (합연산: delta > 0 이면 빨라지고, < 0 이면 느려져요)
 	--   quiet: 화면 팝업 없이 (아침 출근 때 한꺼번에 적용할 때)
 	local function adjustSpeed(player: Player, d: EmployeeData, key: string, quiet: boolean?, overrideDelta: number?, overrideLabel: string?)
@@ -682,6 +726,72 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		pendingSaves -= 1
 	end
 
+	---------------------------------------------------------------- 🚚 쇼핑몰 주문 → 다음 근무일 📦 택배 보관함 도착
+	--   profile.orders = { { id, kind = "decor"|"upgrade", itemId, day, arrived? } }
+	--   주문한 날(day)보다 근무일이 지나면(출근·입장 때) arrived = true → Delivery 모듈이 보관함에 상자를 놓아요
+	local function publishOrders(player: Player, d: EmployeeData)
+		player:SetAttribute("Orders", HttpService:JSONEncode(d.profile.orders))
+		player:SetAttribute("OrdersToday", daily(d).orders or 0)
+	end
+	-- 이 물건(장비)이 주문해 둔(배송 중·도착한) 개수
+	local function orderCount(d: EmployeeData, kind: string, itemId: string): number
+		local count = 0
+		for _, order in d.profile.orders do
+			if order.kind == kind and order.itemId == itemId then
+				count += 1
+			end
+		end
+		return count
+	end
+	-- 돈은 바로 내고, 물건은 다음 근무일에 와요. label: 화면에 보여 줄 물건 이름
+	local function placeOrder(player: Player, d: EmployeeData, kind: string, itemId: string, price: number, label: string): (boolean, string)
+		if d.fired then
+			return false, "지금은 주문할 수 없어요."
+		end
+		if d.state ~= "shopping" then
+			return false, "🛒 [온라인 쇼핑] 중에만 주문돼요"
+		end
+		local today = daily(d)
+		if (today.orders or 0) >= SalaryConfig.SHOP_DAILY_ORDERS then
+			return false, `🚚 오늘 주문은 {SalaryConfig.SHOP_DAILY_ORDERS}번까지! 내일 또 와요`
+		end
+		if d.profile.money < price then
+			return false, `통장 잔고가 부족해요. 😢 ({price}원 필요)`
+		end
+		d.profile.money -= price
+		today.orders = (today.orders or 0) + 1
+		d.profile.orderSeq += 1
+		table.insert(d.profile.orders, { id = d.profile.orderSeq, kind = kind, itemId = itemId, day = d.profile.stats.days })
+		publish(player, d)
+		publishOrders(player, d)
+		task.spawn(save, player, d)
+		return true, `🚚 {label} 주문 완료! 내일 회사로 와요 ({today.orders}/{SalaryConfig.SHOP_DAILY_ORDERS})`
+	end
+
+	-- 📦 근무일이 지난 주문은 도착! (출근할 때 · 들어올 때) → 🔔 알림 + 보관함에 상자
+	local function arriveOrders(player: Player, d: EmployeeData)
+		local count = 0
+		for _, order in d.profile.orders do
+			if order.arrived ~= true and order.day < d.profile.stats.days then
+				order.arrived = true
+				count += 1
+			end
+		end
+		publishOrders(player, d)
+		if count > 0 then
+			local text = if count > 1 then `택배 {count}개 도착! 📦 택배 보관함에서 받아 가요` else "택배 도착! 📦 택배 보관함에서 받아 가요"
+			pushNotice(player, "🚚", text, "delivery")
+			task.delay(5, function()
+				if player.Parent then
+					remotes.Notify:FireClient(player, `🚚 {text}`)
+				end
+			end)
+		end
+		if Employees.hooks.ordersChanged then
+			Employees.hooks.ordersChanged(player, d) -- 📦 Delivery: 보관함 상자 다시 놓기
+		end
+	end
+
 	local function seatPlayer(player: Player, d: EmployeeData)
 		local character = player.Character
 		local humanoid = getHumanoid(player)
@@ -834,6 +944,27 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if Employees.hooks.joined then
 			Employees.hooks.joined(player, d) -- 🪑 내 자리 꾸미기 + 🏆 칭호
 		end
+		publishNotices(player, d) -- 🔔 알림함
+		-- 🧪 스튜디오 택배 테스트: 저장이 꺼져 있을 때만, 어제 주문한 꾸미기 택배 하나를 넣어 둬요
+		if RunService:IsStudio() and not canSave and SalaryConfig.TEST_DELIVERY then
+			local testItem: string? = nil
+			for _, slot in SalaryConfig.DecorSlots do
+				for _, option in slot.options do
+					if option.price > 0 and not profile.decorOwned[option.id] then
+						testItem = option.id
+						break
+					end
+				end
+				if testItem then
+					break
+				end
+			end
+			if testItem then
+				profile.orderSeq += 1
+				table.insert(profile.orders, { id = profile.orderSeq, kind = "decor", itemId = testItem, day = profile.stats.days - 1 })
+			end
+		end
+		arriveOrders(player, d) -- 🚚 쉬는 동안 도착한 택배
 
 		-- 🏢 회사 확인: 이 서버 사무실과 내 직급의 회사가 다르면 알려 줘요
 		local here = SalaryConfig.getCompany(office.companyId)
@@ -1784,32 +1915,15 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		return { ok = true, message = message }
 	end
 
-	---------------------------------------------------------------- 🖥️ 책상 장비 업그레이드
-	remotes.DeskUpgrade.OnServerInvoke = function(player: Player, upgradeId: any)
-		local d = data[player]
-		if not allowBuy(player) then
-			return { ok = false, message = "천천히!" }
+	---------------------------------------------------------------- 🖥️ 책상 장비 업그레이드 (🛒 쇼핑몰에서 주문 → 다음 날 📦 택배로 와요)
+	-- 📦 택배를 뜯으면 한 단계 올라가요 → 화면에 보여 줄 이름
+	local function grantUpgrade(player: Player, d: EmployeeData, upgradeId: string): string?
+		local upgrade = SalaryConfig.getDeskUpgrade(upgradeId)
+		if not upgrade then
+			return nil
 		end
-		local upgrade = d and SalaryConfig.getDeskUpgrade(if typeof(upgradeId) == "string" then upgradeId else "")
-		if not d or not upgrade then
-			return { ok = false, message = "없는 장비예요." }
-		end
-		if d.fired then
-			return { ok = false, message = "지금은 살 수 없어요." }
-		end
-		if d.state ~= "shopping" then
-			return { ok = false, message = "🛒 [온라인 쇼핑] 중에만 주문돼요" } -- 🛒 장비도 쇼핑몰에서
-		end
-		local level = d.profile.deskUpgrades[upgrade.id] or 0
-		local nextLevel = upgrade.levels[level + 1]
-		if not nextLevel then
-			return { ok = false, message = "이미 최고 단계예요! 🏆" }
-		end
-		if d.profile.money < nextLevel.price then
-			return { ok = false, message = `통장 잔고가 부족해요. 😢 ({nextLevel.price}원 필요)` }
-		end
-		d.profile.money -= nextLevel.price
-		d.profile.deskUpgrades[upgrade.id] = level + 1
+		local level = math.min(#upgrade.levels, (d.profile.deskUpgrades[upgrade.id] or 0) + 1)
+		d.profile.deskUpgrades[upgrade.id] = level
 		unlockAchievement(player, d, "upgrade_first")
 		local maxed = true
 		for _, u in SalaryConfig.DeskUpgrades do
@@ -1822,8 +1936,27 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 		publishCollection(player, d)
 		publish(player, d)
-		task.spawn(save, player, d)
-		return { ok = true, message = `⚙️ {upgrade.emoji} {upgrade.name} {level + 1}단계! {nextLevel.text}` }
+		return `⚙️ {upgrade.emoji} {upgrade.name} {level}단계`
+	end
+
+	remotes.DeskUpgrade.OnServerInvoke = function(player: Player, upgradeId: any)
+		local d = data[player]
+		if not allowBuy(player) then
+			return { ok = false, message = "천천히!" }
+		end
+		local upgrade = d and SalaryConfig.getDeskUpgrade(if typeof(upgradeId) == "string" then upgradeId else "")
+		if not d or not upgrade then
+			return { ok = false, message = "없는 장비예요." }
+		end
+		-- 🚚 배송 중인 단계까지 쳐서 다음 단계를 정해요
+		local pending = orderCount(d, "upgrade", upgrade.id)
+		local level = (d.profile.deskUpgrades[upgrade.id] or 0) + pending
+		local nextLevel = upgrade.levels[level + 1]
+		if not nextLevel then
+			return { ok = false, message = if pending > 0 then "🚚 마지막 단계가 배송 중이에요!" else "이미 최고 단계예요! 🏆" }
+		end
+		local ok, message = placeOrder(player, d, "upgrade", upgrade.id, nextLevel.price, `{upgrade.emoji} {upgrade.name} {level + 1}단계`)
+		return { ok = ok, message = message }
 	end
 
 	---------------------------------------------------------------- 🕶️ [R] "감사팀이죠?"
@@ -3353,10 +3486,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 
 	-- 퇴근할 때 자라요: 오늘 물을 줬으면 +1일, 안 줬으면 시들고(1) → 이틀 연속이면 말라 죽어요(2)
 	--   🌵 noWater: 물 없이도 +1일 / 💦 thirsty: 하루만 걸러도 💀 (SalaryConfig.gardenState)
-	local function growGarden(d: EmployeeData)
+	-- → 오늘 다 익은 화분 수 (🔔 알림용)
+	local function growGarden(d: EmployeeData): number
 		local profile = d.profile
 		ensureGarden(profile)
 		local today = profile.stats.days
+		local ripened = 0
 		for _, slot in profile.garden do
 			local seed = SalaryConfig.getSeed(slot.seed)
 			if seed and slot.growth < seed.days then
@@ -3367,11 +3502,15 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				if seed.noWater or slot.watered == today then
 					slot.growth += 1
 					slot.missed = 0
+					if slot.growth >= seed.days then
+						ripened += 1
+					end
 				else
 					slot.missed += 1
 				end
 			end
 		end
+		return ripened
 	end
 
 	---------------------------------------------------------------- 🌷 내 공원 화단 (ParkGarden 모듈이 불러요)
@@ -3470,13 +3609,20 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local profile = d.profile
 		ensurePark(profile)
 		local today = profile.stats.days
+		local bloomedNow = 0
 		for _, bed in profile.parkBeds do
 			local flower = SalaryConfig.getFlower(bed.flower)
 			if flower and bed.growth < flower.days and bed.watered == today then
 				if not SalaryConfig.parkNeedsFeed(flower, bed.growth) or bed.fedStage == bed.growth then
 					bed.growth += 1
+					if bed.growth >= flower.days then
+						bloomedNow += 1
+					end
 				end
 			end
+		end
+		if bloomedNow > 0 then
+			pushNotice(player, "🌷", `공원 화단에 꽃이 활짝 폈어요! ({bloomedNow}곳)`, "park")
 		end
 		local _, bloomed, kinds = SalaryConfig.parkBonus(profile.parkBeds)
 		if bloomed >= SalaryConfig.PARK_BEDS then
@@ -3669,6 +3815,10 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			today.pigeonGifts = math.max(0, (today.pigeonGifts or 0) - 1)
 		end,
 		-- 🎁 비둘기가 물어 온 선물을 주웠어요 → 메시지 (돈은 통장으로 바로, 승진 경험치는 아니에요)
+		-- 🐦 비둘기가 선물을 떨어뜨렸어요 → 🔔 알림
+		pigeonGiftDropped = function(player: Player, _treasureId: string)
+			pushNotice(player, "🐦", "비둘기가 선물을 물어 왔어요! 옥상에서 주워요", "pigeon")
+		end,
 		pigeonGiftPicked = function(player: Player, treasureId: string): string
 			local d = data[player]
 			local treasure = SalaryConfig.getPigeonTreasure(treasureId)
@@ -3793,6 +3943,14 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	---------------------------------------------------------------- 🪑 내 자리 꾸미기 (Decor 모듈이 불러요)
 	Employees.decorApi = {
 		hooks = Employees.hooks,
+		-- 🚚 쇼핑몰 주문 (돈은 지금, 물건은 다음 근무일 📦 택배 보관함으로)
+		placeOrder = function(player: Player, d: EmployeeData, kind: string, itemId: string, price: number, label: string): (boolean, string)
+			return placeOrder(player, d, kind, itemId, price, label)
+		end,
+		ordered = function(d: EmployeeData, kind: string, itemId: string): boolean
+			return orderCount(d, kind, itemId) > 0
+		end,
+		grantDecor = nil :: ((Player, EmployeeData, string) -> string?)?, -- 📦 택배 뜯을 때 (Decor 모듈이 채워요)
 		get = function(player: Player): EmployeeData?
 			return data[player]
 		end,
@@ -3808,6 +3966,46 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end,
 		save = function(player: Player, d: EmployeeData)
 			task.spawn(save, player, d)
+		end,
+	}
+
+	---------------------------------------------------------------- 📦 택배 보관함 → 들고 가서 내 자리에서 뜯기 (Delivery 모듈이 불러요)
+	Employees.deliveryApi = {
+		hooks = Employees.hooks,
+		get = function(player: Player): EmployeeData?
+			return data[player]
+		end,
+		list = function()
+			return data
+		end,
+		isSeated = function(player: Player): boolean
+			local d = data[player]
+			return d ~= nil and isSeated(player, d)
+		end,
+		-- 📦 택배 뜯기: 도착한 주문을 지우고 물건을 줘요 → 화면에 보여 줄 이름 (없는 주문이면 nil)
+		unbox = function(player: Player, d: EmployeeData, orderId: number): string?
+			local index = nil
+			for i, order in d.profile.orders do
+				if order.id == orderId and order.arrived == true then
+					index = i
+				end
+			end
+			if not index then
+				return nil
+			end
+			local order = table.remove(d.profile.orders, index)
+			local label = nil
+			if order.kind == "decor" and Employees.decorApi.grantDecor then
+				label = Employees.decorApi.grantDecor(player, d, order.itemId)
+			elseif order.kind == "upgrade" then
+				label = grantUpgrade(player, d, order.itemId)
+			end
+			publishOrders(player, d)
+			task.spawn(save, player, d)
+			return label or "📦 물건"
+		end,
+		notify = function(player: Player, text: string)
+			remotes.Notify:FireClient(player, text)
 		end,
 	}
 
@@ -4064,6 +4262,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			updateBubble(player, "work")
 			task.spawn(seatPlayer, player, d)
 			remotes.Notify:FireClient(player, `🏢 {weekday.name} 출근! 오늘 부장님은 "{weekday.mood}"`)
+			arriveOrders(player, d) -- 🚚 어제 주문한 택배 도착
 
 		end
 	end)
@@ -4158,11 +4357,25 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			profile.money = math.max(0, profile.money + dayTotal)
 			profile.xp += math.max(0, dayTotal)
 			d.today.settled = true
-			growGarden(d) -- 🌱 오늘 물 준 화분이 자라요
+			local ripened = growGarden(d) -- 🌱 오늘 물 준 화분이 자라요
+			if ripened > 0 then
+				pushNotice(player, "🌱", `옥상 텃밭 {ripened}개가 다 익었어요! 수확해요`, "garden")
+			end
 			profile.stats.days += 1
 			player:SetAttribute("GymSets", 0) -- 📅 내일은 다시 운동 0/3부터
 			-- ⏳ 기한이 끝난 사무용품은 오늘로 끝 (내일 출근 때부터 효과 없음)
 			local ended = expireItems(d)
+			do
+				local lastDay = {} -- ⏳ 내일이 마지막 날인 물건 → 🔔 알림
+				for _, item in SalaryConfig.Items do
+					if not item.consumable and itemDaysLeft(d, item.id) == 1 then
+						table.insert(lastDay, `{item.emoji} {item.name}`)
+					end
+				end
+				if #lastDay > 0 then
+					pushNotice(player, "⏳", `내일이 마지막 날: {table.concat(lastDay, ", ")}`, "item")
+				end
+			end
 			if #ended > 0 then
 				buildDeskItems(d)
 				task.delay(6, function()
@@ -4195,6 +4408,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				end
 				if promotedTo then
 					profile.warnings = 0 -- 승진하면 경고도 깨끗하게
+					pushNotice(player, "🎉", `{promotedTo}(으)로 승진했어요!`, "promotion")
 					if profile.rank >= 4 then
 						unlockAchievement(player, d, "rank_daeri")
 					end

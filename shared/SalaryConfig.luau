@@ -1061,6 +1061,7 @@ SalaryConfig.Companies = {
 SalaryConfig.TEST_MONEY = 0 -- 🧪 스튜디오에서 통장을 최소 이만큼 채워 줘요 (가게·인형뽑기 테스트용, 실제 게임엔 영향 없음)
 SalaryConfig.TEST_RANK = 0 -- 🧪 스튜디오에서 직급을 최소 이만큼으로 (2 = 사원, 0이면 끔. 저장이 꺼져 있을 때만)
 SalaryConfig.TEST_COMPANY = "" -- 🧪 스튜디오에서 "nunchi"를 넣으면 눈치물산 사무실로 시작 (실제 게임엔 영향 없음)
+SalaryConfig.TEST_DELIVERY = false -- 🧪 true면 스튜디오에서 들어오자마자 📦 택배 하나가 도착해 있어요 (🔔 알림 테스트, 실제 게임엔 영향 없음)
 
 function SalaryConfig.getCompany(companyId: string): CompanyInfo
 	for _, company in SalaryConfig.Companies do
@@ -1465,6 +1466,8 @@ SalaryConfig.MISSION_BONUS = 3000 -- 경고가 없을 때 성공 보너스
 SalaryConfig.MEMORY_SHOW = 3 -- 주문번호를 보여 주는 시간 (초)
 SalaryConfig.MEMORY_HOLD = 12 -- 번호를 기억한 채 일하기로 버텨야 하는 시간 (초)
 SalaryConfig.BOX_SPEEDS = { 12, 9, 7 } -- 택배를 하나씩 들 때마다 느려져요 (평소 16)
+SalaryConfig.SHOP_DAILY_ORDERS = 2 -- 🚚 쇼핑몰 주문은 하루(근무일) 2번까지 → 다음 근무일에 📦 택배 보관함으로 와요
+SalaryConfig.NOTICE_MAX = 30 -- 🔔 알림은 최근 30개까지 저장 (창에는 20개)
 
 SalaryConfig.TypingPhrases = {
 	"3분기 매출 보고",
@@ -1612,7 +1615,7 @@ SalaryConfig.FLOWER_DETECT = 0.85 -- 꽃다발: 오늘 의심도 배율
 SalaryConfig.CHOCO_SUSPICION = 25 -- 초콜릿: 의심도 감소량
 
 ---------------------------------------------------------------------------
--- 🪑 내 자리 꾸미기 (어디서든 [🪑] 버튼 → 온라인 주문 → 택배로 바로 배송!)
+-- 🪑 내 자리 꾸미기 (🛒 온라인 쇼핑 중 주문 → 다음 근무일 📦 택배 보관함 → 내 자리에서 뜯기)
 --   칸(slot)마다 하나씩 장착. 모두 다른 사람 눈에도 보여요.
 --   인테리어 점수 = 장착한 물건 가격 합 ÷ 1,000 (책상 명패에 자랑)
 ---------------------------------------------------------------------------

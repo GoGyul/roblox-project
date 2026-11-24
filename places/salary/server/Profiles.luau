@@ -59,6 +59,9 @@ export type Profile = {
 	arcadeBest: { [string]: number }, -- 🕹️ 게임별 내 최고 점수
 	friendship: { [string]: number }, -- 🤝 동료 친밀도 (동료 이름 → 점수)
 	fitness: { strength: number, stamina: number, agility: number, flexibility: number, balance: number }, -- 🏋️ 체력 단련실에서 키운 스탯 (10점마다 Lv.1 → 효과는 SalaryConfig.FitnessEffects)
+	orders: { { id: number, kind: string, itemId: string, day: number, arrived: boolean? } }, -- 🚚 쇼핑몰 주문 (다음 근무일에 📦 택배 보관함으로 와요)
+	orderSeq: number, -- 🚚 주문 번호 (하나씩 늘어나요)
+	notices: { { e: string, t: string, k: string?, day: number, min: number, read: boolean? } }, -- 🔔 알림 (최근 30개)
 	stats: { days: number, nearMiss: number, caught: number, fired: number, stockProfit: number },
 }
 
@@ -111,6 +114,9 @@ function Profiles.default(): Profile
 		arcadeBest = {},
 		friendship = {},
 		fitness = { strength = 0, stamina = 0, agility = 0, flexibility = 0, balance = 0 },
+		orders = {},
+		orderSeq = 0,
+		notices = {},
 		stats = { days = 0, nearMiss = 0, caught = 0, fired = 0, stockProfit = 0 },
 	}
 end

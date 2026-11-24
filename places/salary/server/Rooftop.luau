@@ -294,6 +294,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		giftRoll = hooks.pigeonGiftRoll, -- 🎁 비둘기의 보은
 		giftMissed = hooks.pigeonGiftMissed,
 		giftPicked = hooks.pigeonGiftPicked,
+		giftDropped = hooks.pigeonGiftDropped, -- 🔔 알림
 		workDay = function(): number
 			return dayCycle.day
 		end,

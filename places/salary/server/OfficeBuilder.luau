@@ -91,6 +91,7 @@ export type Office = {
 	candyZone: BasePart?, -- 🍭 흡연구역(사탕) — 눈치물산 공원에만
 	shops: { [string]: { counter: BasePart, clerkSpot: Vector3 } }, -- 🏙️ 눈치 스트리트 가게 + 🏪 사내 매점
 	packageBox: BasePart, -- 📦 (장식) 출입문 옆 택배 상자
+	deliveryShelf: { spots: { Vector3 }, front: Vector3 }, -- 📦 택배 보관함 (쇼핑몰 주문이 다음 날 도착)
 	elevator: { door: BasePart, exit: Vector3 }, -- 🚪 옥상 가는 엘리베이터
 	insideOffice: (Vector3) -> boolean, -- 사무실 건물 안인가? (옥상·공원·거리는 밖)
 	packageSpots: { Vector3 }, -- 📦 긴급 프로젝트 "택배 대란" 상자가 놓일 수 있는 곳 (바닥)
@@ -274,6 +275,28 @@ local function buildPackage(B, x: number, z: number): BasePart
 	local box = B:part(Vector3.new(2.2, 2, 2.2), v(x, 1, z), { Name = "PackageBox", Color = Color3.fromRGB(190, 140, 90), Material = Enum.Material.Cardboard })
 	B:part(Vector3.new(2.25, 0.3, 2.25), v(x, 1.6, z), { Color = Color3.fromRGB(220, 200, 150), CanCollide = false }) -- 테이프
 	return box
+end
+
+-- 📦 택배 보관함 (출입문 근처 벽에 붙은 선반): 🛒 쇼핑몰에서 주문한 물건이 다음 근무일에 여기로 와요
+--   x, z: 선반 가운데 (벽 쪽이 -Z, 앞이 +Z) → 상자 놓을 자리 6곳(아래 3 + 위 3)을 돌려줘요
+local function buildDeliveryShelf(B, x: number, z: number): { spots: { Vector3 }, front: Vector3 }
+	local wood = { Color = Color3.fromRGB(150, 110, 70), Material = Enum.Material.Wood }
+	B:part(Vector3.new(6, 2.4, 1.6), v(x, 1.2, z), { Name = "DeliveryShelf", Color = wood.Color, Material = wood.Material }) -- 아래 칸 (받침대)
+	for _, dx in { -3.05, 3.05 } do
+		B:part(Vector3.new(0.3, 5.2, 1.6), v(x + dx, 2.6, z), wood) -- 옆판
+	end
+	B:part(Vector3.new(6.4, 0.25, 1.6), v(x, 4.6, z), wood) -- 위 칸 선반
+	B:part(Vector3.new(6.4, 0.25, 1.6), v(x, 5.3, z), wood) -- 지붕
+	B:part(Vector3.new(6, 2.9, 0.15), v(x, 3.85, z - 0.75), { Color = Color3.fromRGB(120, 85, 55), Material = Enum.Material.Wood }) -- 뒤판
+	local sign = B:part(Vector3.new(5.6, 1.2, 0.2), v(x, 6.3, z - 0.6), { Color = Color3.fromRGB(40, 90, 160) })
+	Build.surfaceText(sign, Enum.NormalId.Back, "📦 택배 보관함", { Font = Enum.Font.GothamBlack, TextColor3 = Color3.new(1, 1, 1) })
+	local spots = {}
+	for _, y in { 2.4, 4.725 } do
+		for _, dx in { -1.9, 0, 1.9 } do
+			table.insert(spots, v(x + dx, y + 0.6, z + 0.1)) -- 상자 가운데 (상자 높이 1.2)
+		end
+	end
+	return { spots = spots, front = v(x, 0, z + 3) }
 end
 
 -- 🏋️ 체력 단련실 안쪽 꾸미기 (방 벽·문은 회사마다 따로 짓고, 안은 여기서 똑같이 채워요)
@@ -535,6 +558,7 @@ function OfficeBuilder.build(companyId: string?): Office
 			decorateStore = decorateStore,
 			buildElevator = buildElevator,
 			buildPackage = buildPackage,
+			buildDeliveryShelf = buildDeliveryShelf,
 			buildGym = buildGym,
 			FLOOR_Y = FLOOR_Y,
 		})
@@ -726,6 +750,8 @@ function OfficeBuilder.build(companyId: string?): Office
 	})
 	-- 📦 택배 상자 (출입문 옆)
 	local packageBox = buildPackage(B, 7, -28.5)
+	-- 📦 택배 보관함 (출입문 오른쪽 앞 벽, 창문(x 18.5~)과 장식 상자(x 8) 사이)
+	local deliveryShelf = buildDeliveryShelf(B, 13.5, -HALF_DEPTH + 1.3)
 	-- 🚪 엘리베이터 (왼쪽 벽 가운데: 매점 방(z -12.5)과 화장실(z 11.5) 사이)
 	local elevator = buildElevator(B, -HALF_WIDTH, -1)
 
@@ -797,6 +823,7 @@ function OfficeBuilder.build(companyId: string?): Office
 		candyZone = nil,
 		shops = { store = store }, -- 🏪 사내 매점
 		packageBox = packageBox,
+		deliveryShelf = deliveryShelf,
 		elevator = elevator,
 		insideOffice = function(position: Vector3): boolean
 			if position.Y >= FLOOR_Y + 20 then

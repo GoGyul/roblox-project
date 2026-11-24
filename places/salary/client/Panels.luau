@@ -1238,12 +1238,37 @@ function Panels.showDecor(startTab: string?)
 	local titleText = line(frame, 0, 32, "🪑 내 자리 꾸미기", { Font = Enum.Font.GothamBlack, TextSize = 26 })
 	local balance = line(frame, 0, 32, "", { TextXAlignment = Enum.TextXAlignment.Right, Font = Enum.Font.GothamBold, Size = UDim2.new(1, -44, 0, 32) })
 	local scoreText = line(frame, 34, 22, "", { TextSize = 15, TextColor3 = MUTED })
-	local message = line(frame, 0, 22, if isShopping() then "온라인 주문하면 택배로 바로 와요 📦 부장님 오면 [1] 일하기로 복귀!" else "🛒 새 물건은 내 자리에서 [온라인 쇼핑] 농땡이를 켜야 주문돼요!", {
+	local message = line(frame, 0, 22, if isShopping() then `🚚 주문하면 내일 회사로 와요 · 하루 {SalaryConfig.SHOP_DAILY_ORDERS}번` else "🛒 새 물건은 내 자리에서 [온라인 쇼핑] 농땡이를 켜야 주문돼요!", {
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 0, 1, -56),
+		Size = UDim2.new(1, -36, 0, 22),
 		TextSize = 14,
 		TextColor3 = MUTED,
 	})
+	-- 🚚 주문 → 다음 날 📦 택배 보관함 → 내 자리에서 뜯기 (자세한 건 ❓)
+	local orderText = line(frame, 34, 22, "", { TextSize = 15, TextXAlignment = Enum.TextXAlignment.Right, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(60, 110, 190), Size = UDim2.new(1, -44, 0, 22) })
+	helpButton(frame, UDim2.new(1, -28, 1, -80), "🚚 택배 주문", table.concat({
+		"🛒 주문하면 돈은 바로 나가고, 물건은 다음 근무일에 회사로 와요.",
+		"📦 출입문 옆 [택배 보관함]에서 [E] 받기 → 들고 내 자리로 → 앉으면 뜯어요!",
+		`🚚 주문은 하루 {SalaryConfig.SHOP_DAILY_ORDERS}번까지 · 상자를 들면 조금 느려져요 (💪 근력이 도와줘요)`,
+		"🎁 꾸미기 물건은 뜯자마자 장착돼요. 들고 있다가 퇴근해도 보관함으로 돌아가요.",
+	}, "\n"), frame)
+	-- 🚚 주문해 둔 것 (배송 중 / 보관함에 도착): { [kind:itemId] = "shipping" | "arrived" } + 장비별 개수
+	local function orderInfo(): ({ [string]: string }, { [string]: number })
+		local status, upgrades = {}, {}
+		for _, order in decodeAttr("Orders", {}) do
+			if typeof(order) == "table" and order.kind and order.itemId then
+				local key = `{order.kind}:{order.itemId}`
+				if status[key] ~= "arrived" then
+					status[key] = if order.arrived then "arrived" else "shipping"
+				end
+				if order.kind == "upgrade" then
+					upgrades[order.itemId] = (upgrades[order.itemId] or 0) + 1
+				end
+			end
+		end
+		return status, upgrades
+	end
 
 	-- 탭: 칸 5개 + 칭호
 	local tabs = {}
@@ -1311,11 +1336,13 @@ function Panels.showDecor(startTab: string?)
 		end
 		if selected == "gear" then
 			local levels = decodeAttr("DeskUpgrades", {})
+			local _, pendingUpgrades = orderInfo()
 			for i, upgrade in SalaryConfig.DeskUpgrades do
 				local level = levels[upgrade.id] or 0
+				local pending = math.min(pendingUpgrades[upgrade.id] or 0, #upgrade.levels - level) -- 🚚 배송 중인 단계
 				local now = upgrade.levels[level]
-				local nextLevel = upgrade.levels[level + 1]
-				local stars = string.rep("⭐", level) .. string.rep("⚪", #upgrade.levels - level)
+				local nextLevel = upgrade.levels[level + pending + 1]
+				local stars = string.rep("⭐", level) .. string.rep("📦", pending) .. string.rep("⚪", #upgrade.levels - level - pending)
 				local description = (if now then `지금: {now.text}` else "지금: 기본") .. (if nextLevel then ` → 다음: {nextLevel.text}` else " · 🏆 최고 단계")
 				rowButtons[upgrade.id] = row(i, `{upgrade.emoji} {upgrade.name} {stars}`, description, function()
 					local result = Remotes.DeskUpgrade:InvokeServer(upgrade.id)
@@ -1386,14 +1413,20 @@ function Panels.showDecor(startTab: string?)
 			local owned = decodeAttr("DecorOwned", {})
 			local equipped = decodeAttr("DecorEquipped", {})
 			local collection = decodeAttr("Collection", {})
+			local orderStatus, pendingUpgrades = orderInfo()
+			local ordersToday = player:GetAttribute("OrdersToday") or 0
+			orderText.Text = if shopping then `🚚 오늘 주문 {ordersToday}/{SalaryConfig.SHOP_DAILY_ORDERS}` else ""
+			orderText.TextColor3 = if ordersToday >= SalaryConfig.SHOP_DAILY_ORDERS then RED else Color3.fromRGB(60, 110, 190)
+			local SHIPPING = Color3.fromRGB(190, 215, 240)
 			if selected == "gear" then
 				local levels = decodeAttr("DeskUpgrades", {})
 				for _, upgrade in SalaryConfig.DeskUpgrades do
 					local b = rowButtons[upgrade.id]
 					if b then
-						local nextLevel = upgrade.levels[(levels[upgrade.id] or 0) + 1]
-						b.Text = if not nextLevel then "🏆 최고" elseif shopping then `⬆️ {comma(nextLevel.price)}원` else "🛒 쇼핑 중에만"
-						b.BackgroundColor3 = if not nextLevel then Color3.fromRGB(150, 220, 150) elseif shopping then Ui.COLORS.brass else Color3.fromRGB(200, 200, 200)
+						local pending = pendingUpgrades[upgrade.id] or 0
+						local nextLevel = upgrade.levels[(levels[upgrade.id] or 0) + pending + 1]
+						b.Text = if not nextLevel then (if pending > 0 then "🚚 배송 중" else "🏆 최고") elseif shopping then `⬆️ {comma(nextLevel.price)}원` else "🛒 쇼핑 중에만"
+						b.BackgroundColor3 = if not nextLevel then (if pending > 0 then SHIPPING else Color3.fromRGB(150, 220, 150)) elseif shopping then Ui.COLORS.brass else Color3.fromRGB(200, 200, 200)
 					end
 				end
 			elseif selected == "title" then
@@ -1416,8 +1449,17 @@ function Panels.showDecor(startTab: string?)
 						local b = rowButtons[option.id]
 						if b then
 							local has = option.price == 0 or owned[option.id] == true
-							b.Text = if option.id == wearing then "장착 중 ✅" elseif has then "장착" elseif shopping then `주문 {comma(option.price)}원` else "🛒 쇼핑 중에만"
-							b.BackgroundColor3 = if option.id == wearing then Color3.fromRGB(150, 220, 150) elseif has or shopping then Ui.COLORS.brass else Color3.fromRGB(200, 200, 200)
+							local ordered = orderStatus[`decor:{option.id}`] -- 🚚 배송 중 / 📦 보관함에 도착
+							b.Text = if option.id == wearing then "장착 중 ✅"
+								elseif has then "장착"
+								elseif ordered == "arrived" then "📦 보관함에"
+								elseif ordered then "🚚 배송 중"
+								elseif shopping then `주문 {comma(option.price)}원`
+								else "🛒 쇼핑 중에만"
+							b.BackgroundColor3 = if option.id == wearing then Color3.fromRGB(150, 220, 150)
+								elseif ordered and not has then SHIPPING
+								elseif has or shopping then Ui.COLORS.brass
+								else Color3.fromRGB(200, 200, 200)
 						end
 					end
 				end
@@ -1655,7 +1697,7 @@ end
 -- 💬 툴바 버튼에 마우스를 올리면 무슨 버튼인지 말풍선으로 알려 줘요
 local TOOL_TIPS = {
 	["📖 도감"] = "📖 도감 · 농땡이 기록, 업적, 수다 주제, 친한 동료",
-	["🪑"] = "🪑 내 자리 꾸미기 · 산 물건 장착, 칭호 (새 물건은 🛒 온라인 쇼핑 중에)",
+	["🪑"] = "🪑 내 자리 꾸미기 · 산 물건 장착, 칭호 (새 물건은 🛒 온라인 쇼핑 중에 주문 → 다음 날 📦)",
 	["🎒"] = "🎒 내 소지품 · 사무용품, 경비원 선물, 간식, 체력 스탯",
 	["🧸"] = "🧸 내 인형 · 눌러서 책상에 진열 (최대 3개)",
 	["💪"] = "💪 체력 스탯 · 레벨과 효과, 오늘 운동 횟수",

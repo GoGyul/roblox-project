@@ -28,6 +28,11 @@ end
 local function makeCustom(instance: Instance)
 	if instance:IsA("ProximityPrompt") then
 		instance.Style = Enum.ProximityPromptStyle.Custom
+		-- 🔒 OnlyFor 속성이 있으면 그 사람 화면에만 [E]가 떠요 (📦 택배 상자처럼 내 것만)
+		local onlyFor = instance:GetAttribute("OnlyFor")
+		if onlyFor ~= nil and onlyFor ~= player.UserId then
+			instance.Enabled = false
+		end
 	end
 end
 
