@@ -412,6 +412,8 @@ function OfficeDaechung.build(B, folder: Folder, company, helpers)
 		storeName = "1층 편의점", -- 구매 안내 문구에 쓰여요
 		-- 👮 단지 경비원 · 🛍️ 단지에 있나 (옥상처럼 농땡이 수입이 쌓여요: "street" 상태, 초당 9원)
 		guardPost = campus.guardPost,
+		guards = campus.guards, -- 👮 구역별 경비원 세 명
+		streetScale = Campus.incomeScale, -- 💰 단지 산책 수입 배율 (건물 안 < 그늘 < 탁 트인 곳)
 		commuteSpawn = campus.commuteSpawn, -- 🚏 아침 출근길 시작 자리 (단지 버스 정류장)
 		guardPatrol = campus.guardPatrol,
 		inStreet = campus.contains,

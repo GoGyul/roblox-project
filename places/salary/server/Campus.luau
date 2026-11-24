@@ -58,6 +58,23 @@ function Campus.hidden(position: Vector3): boolean
 	return false
 end
 
+-- 건물 안인가 (상가 1층·타워 로비·눈치 스트리트 가게)
+function Campus.indoor(position: Vector3): boolean
+	local offset = position - Campus.ORIGIN
+	return offset.Z >= 108.5 or ((offset.X <= -152 or offset.X >= 152) and offset.Z >= -111 and offset.Z <= 11)
+end
+
+-- 💰 단지 산책 수입 배율: 위험할수록 많이 벌어요
+--   건물 안 0.7 (안전) · 지붕/나무 밑 1.0 · 탁 트인 곳 1.6 (👀 창가의 부장님 눈에 보여요)
+function Campus.incomeScale(position: Vector3): (number, string)
+	if Campus.indoor(position) then
+		return 0.7, "indoor"
+	elseif Campus.hidden(position) then
+		return 1, "shade"
+	end
+	return 1.6, "open"
+end
+
 -- 처음 출근하는 자리: 북쪽 큰길 버스 정류장 앞, 공원(남쪽)을 보고
 Campus.SPAWN = CFrame.lookAt(Campus.point(20, 3, -112), Campus.point(0, 3, -20))
 
@@ -695,14 +712,31 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 
 	---------------------------------------------------------------- 👮 단지 경비원 (Guard 모듈이 만들어요): 대충상사 입구 옆 초소 + 순찰 지점
 	--   두 건물 앞 → 공원 큰길 → 분수 광장 → 순환로 → 눈치 스트리트를 돌아요. 근무 시간에 단지에서 놀다 눈에 띄면 의심도가 올라요.
+	--   넓은 단지를 세 구역으로 나눠 한 명씩 맡아요. 구역 사이로 빠져나갈 틈이 있어요.
 	F.guardPost = world(-70, 0, 6)
-	F.guardPatrol = {
-		world(-40, 0, 8), world(-10, 0, 8), world(20, 0, 6), world(52, 0, 8), -- 대충상사 건물 앞
-		world(-45, 0, -6), world(-12, 0, -5), world(14, 0, -5), world(42, 0, -5), -- 로비 · 편의점 · 커피 · 분식
-		Campus.point(-100, 0, -20), Campus.point(-34, 0, -20), Campus.point(0, 0, -56), Campus.point(0, 0, -92), -- 공원 큰길 → 분수 광장 → 북쪽 길
-		Campus.point(100, 0, -92), Campus.point(100, 0, -20), Campus.point(140, 0, -50), Campus.point(164, 0, -50), -- 눈치물산 타워 앞 · 로비
-		Campus.point(100, 0, 52), Campus.point(63, 0, 40), Campus.point(0, 0, 52), Campus.point(-100, 0, 52), -- 남쪽 순환로 (식탁 · 텃밭)
-		Campus.point(-104, 0, 102), Campus.point(-52, 0, 102), Campus.point(0, 0, 102), Campus.point(52, 0, 102), -- 눈치 스트리트 가게 앞
+	F.guardPatrol = { -- 👮 박씨: 대충상사 건물 앞 · 로비 · 가게 · 공원 서쪽
+		world(-40, 0, 8), world(-10, 0, 8), world(20, 0, 6), world(52, 0, 8),
+		world(-45, 0, -6), world(-12, 0, -5), world(14, 0, -5), world(42, 0, -5),
+		Campus.point(-100, 0, -92), Campus.point(-100, 0, -20), Campus.point(-100, 0, 52), Campus.point(-134, 0, 40),
+	}
+	F.guards = {
+		{ id = "park", name = "경비원 박씨", post = F.guardPost, patrol = F.guardPatrol },
+		{ -- 👮 최씨: 공원 한가운데 (큰길 · 분수 광장 · 북쪽 길 · 남쪽 텃밭 · 식탁)
+			id = "park2", name = "경비원 최씨", post = Campus.point(-12, 0, -106),
+			patrol = {
+				Campus.point(0, 0, -92), Campus.point(0, 0, -56), Campus.point(-34, 0, -20), Campus.point(-64, 0, -20),
+				Campus.point(0, 0, 14), Campus.point(0, 0, 52), Campus.point(40, 0, 52), Campus.point(63, 0, 40),
+				Campus.point(34, 0, -20), Campus.point(64, 0, -20), Campus.point(50, 0, -92),
+			},
+		},
+		{ -- 👮 정씨: 눈치물산 타워 앞 · 로비 · 푸드트럭 광장 · 눈치 스트리트
+			id = "park3", name = "경비원 정씨", post = Campus.point(140, 0, 16),
+			patrol = {
+				Campus.point(140, 0, -50), Campus.point(164, 0, -50), Campus.point(140, 0, -90), Campus.point(100, 0, -92),
+				Campus.point(100, 0, -20), Campus.point(100, 0, 52), Campus.point(150, 0, 34),
+				Campus.point(104, 0, 102), Campus.point(52, 0, 102), Campus.point(0, 0, 102), Campus.point(-52, 0, 102), Campus.point(-104, 0, 102),
+			},
+		},
 	}
 	F.contains = Campus.contains
 	F.commuteSpawn = Campus.SPAWN

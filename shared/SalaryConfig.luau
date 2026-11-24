@@ -95,7 +95,7 @@ SalaryConfig.NEAR_MISS_SAFE = 20 -- 안 걸리고 이 밑으로 내려오면 "�
 SalaryConfig.MAX_COMBO = 5
 -- 🖥️ 자리 부재 게이지: 근무 중에 내 자리를 비우면(화장실, 흡연구역, 회의실, 탕비실…) 천천히 차올라요.
 --   70%면 "컴퓨터 자동 감지 시스템" 경보, 100%면 경고 1회. 자리에 앉아 있으면 다시 줄어요.
-SalaryConfig.AWAY_SECONDS = 90 -- 0% → 100%까지 걸리는 시간
+SalaryConfig.AWAY_SECONDS = 110 -- (단지가 넓어져서 90 → 110) 0% → 100%까지 걸리는 시간
 SalaryConfig.AWAY_SECONDS_DUMMY = 150 -- 🧸 대리 출석 인형을 앉혀 두면
 SalaryConfig.AWAY_SECONDS_DUMMY_PRO = 240 -- 👔 최고급 마네킹을 앉혀 두면
 SalaryConfig.AWAY_RECOVER = 8 -- 자리에 앉아 있으면 1초에 줄어드는 양 (%)
@@ -250,7 +250,7 @@ SalaryConfig.States = {
 		income = 9,
 		detect = 25,
 		payLabel = "단지 산책 수당",
-		hint = "🏙️ 회사 단지(공원·눈치 스트리트·1층 로비·가게)에 있으면 돼요. 엘리베이터로 1층에 내려가세요. 자리를 오래 비우면 티 나요, 👮 경비원도 조심!",
+		hint = "🏙️ 회사 단지에 있으면 돼요 (엘리베이터로 1층). 건물 안 0.7배 · 지붕/나무 밑 1배 · 탁 트인 곳 1.6배! 자리를 오래 비우면 티 나요, 👮 경비원도 조심!",
 	},
 	hiding = {
 		emoji = "📦",

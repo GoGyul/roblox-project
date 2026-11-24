@@ -80,6 +80,7 @@ type EmployeeData = {
 	returnUntil: number?, -- 복귀 중이면 끝나는 시각
 	state: string,
 	suspicion: number,
+	openTipped: boolean?, -- ☀️ 탁 트인 곳 안내를 봤나 (접속당 한 번)
 	commute: boolean?, -- 🚏 출근길 (아직 자리에 안 앉았어요)
 	lunchWarned: boolean?,
 	lunchDue: number?, -- 🍚 이 시각까지 단지에 있으면 점심 지각
@@ -2398,6 +2399,15 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			multiplier = 0 -- 💡 정전: 컴퓨터가 꺼져서 일도, 화면 농땡이도 돈이 안 나와요
 		end
 		local baseIncome = info.income + (if d.state == "work" and hasCert(d, "computer") then 1 else 0) -- 💻 컴활: 일하기 +1
+		if d.state == "street" and office.streetScale then
+			-- 💰 단지 산책: 건물 안 < 그늘 < 탁 트인 곳 (위험할수록 많이 벌어요)
+			local scale, zone = office.streetScale(root.Position)
+			baseIncome *= scale
+			if zone == "open" and not d.openTipped then
+				d.openTipped = true
+				remotes.Notify:FireClient(player, "☀️ 탁 트인 곳! 단지 산책 수당 1.6배. 대신 👀 부장님이 창가에 서면 그대로 보여요. (그늘 1배 · 건물 안 0.7배)")
+			end
+		end
 		d.incomeRate = baseIncome * multiplier -- 화면에 "+N원/초"로 보여 줘요
 		local income = baseIncome * multiplier * dt
 		d.today.earned[d.state] = (d.today.earned[d.state] or 0) + income
