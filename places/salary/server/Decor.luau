@@ -312,6 +312,26 @@ function Decor.start(remotes, api)
 		onJoin(player, d) -- 이미 들어와 있던 사람
 	end
 
+	-- 📦 택배를 뜯으면: 내 물건이 되고 바로 장착해요 → 화면에 보여 줄 이름
+	api.grantDecor = function(player: Player, d, id: string): string?
+		local option, slot = SalaryConfig.getDecor(id)
+		if not option or not slot then
+			return nil
+		end
+		local profile = d.profile
+		profile.decorOwned[id] = true
+		profile.decorEquipped[slot.id] = id
+		api.unlock(player, d, "interior_first")
+		if id == "chair_throne" then
+			api.unlock(player, d, "throne")
+		end
+		if decorScore(profile) >= SalaryConfig.INTERIOR_MASTER_SCORE then
+			api.unlock(player, d, "interior_master")
+		end
+		refresh(player, d)
+		return `{option.emoji} {option.name}`
+	end
+
 	remotes.Decor.OnServerInvoke = function(player: Player, action: any, id: any)
 		if not allowAction(player) then
 			return { ok = false, message = "천천히 눌러 주세요." }
@@ -328,20 +348,15 @@ function Decor.start(remotes, api)
 			end
 			local owned = option.price == 0 or profile.decorOwned[id] == true
 			if action == "buy" and not owned then
-				-- 🛒 꾸미기 물건은 인터넷 쇼핑(농땡이) 중에만 주문할 수 있어요
+				-- 🛒 꾸미기 물건은 인터넷 쇼핑(농땡이) 중에만 주문 → 🚚 다음 근무일에 📦 택배 보관함으로 와요
+				if api.ordered(d, "decor", id) then
+					return { ok = false, message = "🚚 이미 주문했어요! (📦 택배 보관함을 확인해요)" }
+				end
 				if d.state ~= "shopping" then
 					return { ok = false, message = "🛒 [온라인 쇼핑] 농땡이 중에만 주문할 수 있어요! 내 자리에서 쇼핑을 켜 봐요" }
 				end
-				local ok, message = api.charge(player, option.price)
-				if not ok then
-					return { ok = false, message = message }
-				end
-				profile.decorOwned[id] = true
-				owned = true
-				api.unlock(player, d, "interior_first")
-				if id == "chair_throne" then
-					api.unlock(player, d, "throne")
-				end
+				local ok, message = api.placeOrder(player, d, "decor", id, option.price, `{option.emoji} {option.name}`)
+				return { ok = ok, message = message }
 			end
 			if not owned then
 				return { ok = false, message = "먼저 사야 해요." }
@@ -352,9 +367,6 @@ function Decor.start(remotes, api)
 			end
 			refresh(player, d)
 			api.save(player, d)
-			if action == "buy" then
-				return { ok = true, message = `📦 택배 도착! {option.emoji} {option.name}을(를) 내 자리에 놓았어요` }
-			end
 			return { ok = true, message = `{option.emoji} {option.name} 장착!` }
 		elseif action == "title" then
 			local title = SalaryConfig.getTitle(id)

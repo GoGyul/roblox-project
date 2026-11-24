@@ -238,6 +238,170 @@ local todayText = text({ Position = UDim2.fromOffset(0, 64), Size = UDim2.new(1,
 local totalText = text({ Position = UDim2.fromOffset(0, 88), Size = UDim2.new(1, 0, 0, 18), TextSize = 15, Parent = moneyPanel })
 
 ---------------------------------------------------------------------------
+-- 🔔 알림 종 (직급 창 왼쪽): 서버가 Employees.pushNotice로 남긴 한 줄 알림 → "Notices" 속성(JSON)
+--   안 읽은 게 있으면 빨간 숫자. 누르면 알림 목록(최신 20개)이 열리고 모두 읽음이 돼요.
+---------------------------------------------------------------------------
+local NOTICE_SHOWN = 20
+local bellButton = Ui.button({
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -12 - 250 - 6, 0, 8),
+	Size = UDim2.fromOffset(44, 44),
+	BackgroundColor3 = COLORS.panel,
+	BackgroundTransparency = 0.15,
+	Text = "🔔",
+	TextSize = 24,
+	Parent = gui,
+})
+Ui.stroke(C.brass).Parent = bellButton
+local bellBadge = Ui.make("TextLabel", {
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.new(1, -4, 0, 4),
+	Size = UDim2.fromOffset(22, 22),
+	BackgroundColor3 = Color3.fromRGB(230, 50, 50),
+	TextColor3 = Color3.new(1, 1, 1),
+	Font = Enum.Font.GothamBlack,
+	TextSize = 13,
+	Text = "!",
+	Visible = false,
+	ZIndex = 3,
+	Parent = bellButton,
+}, { Ui.corner(11) })
+local noticeWindow = panel({
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -12, 0, 150),
+	Size = UDim2.fromOffset(320, 330),
+	Visible = false,
+	ZIndex = 25,
+})
+text({ Size = UDim2.new(1, -30, 0, 24), TextSize = 19, TextColor3 = C.brass, Text = "🔔 알림", ZIndex = 26, Parent = noticeWindow })
+local noticeClose = Ui.make("TextButton", {
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, 4, 0, -4),
+	Size = UDim2.fromOffset(28, 28),
+	BackgroundTransparency = 1,
+	Text = "X", -- (✕ 기호는 로블록스 글꼴에 없어요)
+	TextColor3 = C.text,
+	Font = Enum.Font.GothamBold,
+	TextSize = 18,
+	ZIndex = 27,
+	Parent = noticeWindow,
+})
+local noticeList = Ui.make("ScrollingFrame", {
+	Position = UDim2.fromOffset(0, 30),
+	Size = UDim2.new(1, 0, 1, -30),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ScrollBarThickness = 6,
+	AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	CanvasSize = UDim2.new(),
+	ZIndex = 26,
+	Parent = noticeWindow,
+}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+
+local function readNotices(): { any }
+	local ok, list = pcall(function()
+		return game:GetService("HttpService"):JSONDecode(player:GetAttribute("Notices") or "[]")
+	end)
+	return if ok and typeof(list) == "table" then list else {}
+end
+
+local function renderNotices()
+	for _, child in noticeList:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	local list = readNotices()
+	local shown = 0
+	for i = #list, 1, -1 do -- 최신 것부터
+		local notice = list[i]
+		if typeof(notice) ~= "table" then
+			continue
+		end
+		shown += 1
+		if shown > NOTICE_SHOWN then
+			break
+		end
+		local minute = tonumber(notice.min) or 0
+		local stamp = `{notice.day or 1}일차 {string.format("%02d:%02d", math.floor(minute / 60), math.floor(minute % 60))}`
+		local row = Ui.make("Frame", {
+			Size = UDim2.new(1, -8, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundColor3 = if notice.read then Color3.fromRGB(45, 50, 62) else Color3.fromRGB(70, 62, 40),
+			BackgroundTransparency = 0.2,
+			LayoutOrder = shown,
+			ZIndex = 27,
+			Parent = noticeList,
+		}, { Ui.corner(6), Ui.padding(6), Ui.make("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }) })
+		text({
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			TextSize = 15,
+			TextWrapped = true,
+			Text = `{notice.e or "🔔"} {notice.t or ""}`,
+			LayoutOrder = 1,
+			ZIndex = 28,
+			Parent = row,
+		})
+		text({
+			LayoutOrder = 2,
+			Size = UDim2.new(1, 0, 0, 13),
+			TextSize = 11,
+			TextColor3 = Color3.fromRGB(170, 170, 180),
+			TextXAlignment = Enum.TextXAlignment.Right,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			Text = stamp,
+			ZIndex = 28,
+			Parent = row,
+		})
+	end
+	if shown == 0 then
+		text({ Size = UDim2.new(1, 0, 0, 40), TextSize = 15, TextColor3 = Color3.fromRGB(170, 170, 180), Text = "아직 알림이 없어요", ZIndex = 27, Parent = noticeList })
+	end
+end
+
+local function refreshBell()
+	local unread = 0
+	for _, notice in readNotices() do
+		if typeof(notice) == "table" and notice.read ~= true then
+			unread += 1
+		end
+	end
+	bellBadge.Visible = unread > 0
+	bellBadge.Text = if unread > 9 then "9+" else tostring(unread)
+	if noticeWindow.Visible then
+		renderNotices()
+		if unread > 0 then
+			Remotes:WaitForChild("NoticeRead"):FireServer() -- 열어 둔 채 새 알림이 와도 읽음
+		end
+	end
+end
+
+local function toggleNotices(open: boolean?)
+	local show = if open == nil then not noticeWindow.Visible else open
+	noticeWindow.Visible = show
+	if show then
+		renderNotices()
+		Remotes:WaitForChild("NoticeRead"):FireServer()
+		Sounds.play("click", 0.4)
+	end
+end
+bellButton.Activated:Connect(function()
+	toggleNotices()
+end)
+noticeClose.Activated:Connect(function()
+	toggleNotices(false)
+end)
+player:GetAttributeChangedSignal("Notices"):Connect(function()
+	local before = bellBadge.Visible and bellBadge.Text or ""
+	refreshBell()
+	if bellBadge.Visible and bellBadge.Text ~= before and not noticeWindow.Visible then
+		Sounds.play("ping", 0.4, 1.4) -- 🔔 새 알림
+	end
+end)
+refreshBell()
+
+---------------------------------------------------------------------------
 -- 왼쪽: 내 상태, 의심도, 업무, 경고
 ---------------------------------------------------------------------------
 local STATUS_HEIGHT = 284 -- (아래에 🎒 들고 있는 것·버프 줄)
@@ -692,7 +856,7 @@ end)
 --   작은 화면(폰·작은 창): 패널을 줄이고, 행동 버튼은 2줄로 위쪽에, 서로 겹치지 않게
 ---------------------------------------------------------------------------
 local scales = {}
-for _, frame in { clockPanel, moneyPanel, statusPanel, Hud.toolbar, actionPanel, missionPanel } do
+for _, frame in { clockPanel, moneyPanel, statusPanel, Hud.toolbar, actionPanel, missionPanel, bellButton, noticeWindow } do
 	scales[frame] = Ui.make("UIScale", { Parent = frame })
 end
 
@@ -726,6 +890,11 @@ local function applyLayout()
 
 	scales[moneyPanel].Scale = small
 	moneyPanel.Position = UDim2.new(1, if compact then -6 else -12, 0, if compact then 4 else 8)
+	-- 🔔 알림 종은 직급 창 바로 왼쪽, 알림 창은 직급 창 아래
+	scales[bellButton].Scale = small
+	bellButton.Position = UDim2.new(1, (if compact then -6 else -12) - math.floor(moneyPanel.AbsoluteSize.X) - 6, 0, if compact then 4 else 8)
+	scales[noticeWindow].Scale = small
+	noticeWindow.Position = UDim2.new(1, if compact then -6 else -12, 0, (if compact then 4 else 8) + math.floor(moneyPanel.AbsoluteSize.Y) + 8)
 	-- 📋 프로젝트 카드는 돈 창 바로 아래
 	scales[missionPanel].Scale = small
 	missionPanel.Position = UDim2.new(1, if compact then -6 else -12, 0, (if compact then 4 else 8) + math.floor(moneyPanel.AbsoluteSize.Y) + 8)
@@ -1934,6 +2103,14 @@ Remotes:WaitForChild("Unlocked").OnClientEvent:Connect(function(emoji: string, n
 end)
 
 Remotes:WaitForChild("Notify").OnClientEvent:Connect(Ui.toast)
+-- 📦 택배 뜯기 성공! → 축하 팝업 + 소리
+Remotes:WaitForChild("Unboxed").OnClientEvent:Connect(function(label: string)
+	Hud.popup(`🎉 📦 택배 개봉! {label}`, Color3.fromRGB(255, 215, 90), 3)
+	Sounds.play("swoosh", 0.5)
+	task.delay(0.15, function()
+		Sounds.play("ping", 0.7, 1.3)
+	end)
+end)
 
 ---------------------------------------------------------------------------
 -- 🔊 상황별 소리

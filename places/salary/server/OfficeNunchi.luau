@@ -578,6 +578,8 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	shops.store = storeSpot -- 🏪 사내 매점 (뒤쪽 오른쪽 방)
 	-- 📦 택배 상자 (출입문 옆)
 	local packageBox = helpers.buildPackage(B, -10, -38)
+	-- 📦 택배 보관함 (출입문 왼쪽 앞 벽, 장식 상자(x -10) 옆)
+	local deliveryShelf = helpers.buildDeliveryShelf(B, -15.5, -HD + 1.1)
 	-- 🚪 엘리베이터 (왼쪽 벽 z -6: 회의실과 카페 라운지 사이, 앞은 넓게 비워 둬요)
 	local elevator = helpers.buildElevator(B, -HW, -6)
 	B:part(Vector3.new(4, 1, 4), v(0, -0.4, -HD + 5), {
@@ -660,6 +662,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		candyZone = candyZone,
 		shops = shops, -- 🏙️ 눈치 스트리트 가게들 + 🏪 사내 매점 (계산대, 사장님 자리)
 		packageBox = packageBox,
+		deliveryShelf = deliveryShelf,
 		elevator = elevator,
 		insideOffice = function(position: Vector3): boolean
 			-- 건물 안만 (출입문 밖 공원·눈치 스트리트, 하늘 위 옥상은 밖)

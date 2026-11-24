@@ -444,6 +444,9 @@ function RoofPigeons.start(folder: Instance, spot: Vector3, remotes, hooks)
 		local hover = at + Vector3.new(0, 6, 0)
 		local carrier = makePigeon(pigeonFolder, kind, CFrame.lookAt(from, hover))
 		remotes.Notify:FireClient(owner, "🐦 구구구! 비둘기가 선물을 물어 왔어요!")
+		if hooks.giftDropped then
+			hooks.giftDropped(owner, treasureId) -- 🔔 알림함에도 남겨요
+		end
 		local tween = TweenService:Create(carrier.root, TweenInfo.new(2.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			CFrame = CFrame.lookAt(hover, hover + (at - from) * Vector3.new(1, 0, 1)),
 		})
