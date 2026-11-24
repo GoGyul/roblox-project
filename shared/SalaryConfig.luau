@@ -1124,7 +1124,7 @@ end
 --   snack: 들고 가서 자리에서 [8] 몰래 먹기 (간식 시스템과 같아요)
 ---------------------------------------------------------------------------
 export type StreetItem = { id: string, emoji: string, name: string, price: number, description: string, snack: string?, gift: boolean? }
-export type StreetShop = { id: string, name: string, clerk: string, items: { StreetItem } }
+export type StreetShop = { id: string, name: string, clerk: string, items: { StreetItem }, lunchOnly: boolean? }
 
 SalaryConfig.StreetShops = {
 	-- 🏪 사내 매점 (두 회사 모두 사무실 안에 있어요): 부장님께 드릴 선물
@@ -1180,7 +1180,43 @@ SalaryConfig.StreetShops = {
 			{ id = "rabokki", emoji = "🍜", name = "라볶이 세트", price = 1800, snack = "rabokki", description = "자리에서 몰래 다 먹으면 +3,400원 (18초)" },
 		},
 	},
+	-- 🚚 푸드트럭 (눈치물산 타워 앞 광장): 점심시간에만 열어요. 커피 효과와 겹쳐서 받을 수 있어요
+	truck = {
+		id = "truck",
+		name = "🚚 푸드트럭",
+		clerk = "푸드트럭 사장님",
+		lunchOnly = true,
+		items = {
+			{ id = "taco", emoji = "🌮", name = "든든 타코", price = 1800, description = "든든한 점심! 오늘 남은 업무 시간이 1.25배 빨리 채워져요" },
+			{ id = "gangjeong", emoji = "🍗", name = "닭강정 컵", price = 1800, description = "기분 좋은 점심! 오늘 남은 하루 의심도가 20% 더 빨리 줄어요" },
+		},
+	},
 } :: { [string]: StreetShop }
+
+SalaryConfig.TACO_WORK = 1.25 -- 🌮 타코: 업무 시간 배율 (커피와 곱해져요)
+SalaryConfig.GANGJEONG_DECAY = 1.2 -- 🍗 닭강정: 의심도 줄어드는 속도 배율 (라떼·유자차와 곱해져요)
+
+-- 🪪 사원증 등급: 이 직급부터 쓸 수 있는 단지 시설 (Ranks 번호: 1 인턴 · 2 사원 · 3 주임 · 4 대리)
+--   공원 시설·커피·디저트·인형뽑기는 누구나. 눈치물산 타워는 대리부터 (회사 자체가 대리부터예요)
+SalaryConfig.BADGE = { dart = 2, arcade = 3, wheel = 4 }
+
+-- 🚏 출근 시간: 아침마다 단지 버스 정류장에서 시작해 내 자리까지 가요 (시각은 게임 속 분)
+SalaryConfig.COMMUTE_EARLY = 9 * 60 + 30 -- 이때까지 앉으면 칼출근 보너스
+SalaryConfig.COMMUTE_LATE = 9 * 60 + 50 -- 이때까지 못 앉으면 지각
+SalaryConfig.COMMUTE_BONUS = 0.15 -- 칼출근 보너스 = 기본급의 15%
+SalaryConfig.COMMUTE_EARLY_DELTA = -0.05 -- 칼출근: 오늘의 의심도 속도
+SalaryConfig.COMMUTE_LATE_DELTA = 0.15 -- 지각: 오늘의 의심도 속도
+
+-- 🍚 점심시간: 12:45에 "곧 1시" 알림, 13:20까지 단지에 남아 있으면 지각
+SalaryConfig.LUNCH_WARN = 12 * 60 + 45
+SalaryConfig.LUNCH_LATE = 13 * 60 + 20
+SalaryConfig.LUNCH_LATE_SUSPICION = 30 -- 점심 지각: 의심도 +
+
+-- 👀 창밖 시선: 부장님이 가끔 창가에서 단지를 내려다봐요. 지붕·나무 밑·건물 안이면 안 보여요
+SalaryConfig.WINDOW_GAP = { 45, 80 } -- 다음 번까지 쉬는 시간 (초)
+SalaryConfig.WINDOW_WARN = 3 -- "창가로 와요" 예고 (초)
+SalaryConfig.WINDOW_SECONDS = 7 -- 내려다보는 시간 (초)
+SalaryConfig.WINDOW_MULTIPLIER = 1.6 -- 보이는 동안 의심도 배율 (경비원이 노려볼 때와 비슷)
 
 SalaryConfig.MIXCOFFEE_WORK = 1.15 -- 믹스커피: 업무 시간 배율
 SalaryConfig.YUJA_DECAY = 1.12 -- 유자차: 의심도 줄어드는 속도 배율

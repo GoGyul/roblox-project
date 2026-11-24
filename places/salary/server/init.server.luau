@@ -140,6 +140,10 @@ PhoneGames.start(Remotes, { -- 📱 폰 게임 (💣 지뢰 피하기)
 	baseballPrize = Employees.payBaseball,
 })
 Employees.hooks.onRoof = rooftop.onRoof
+local windowWatch = require(script.WindowWatch).start(office, boss, dayCycle, events, Remotes) -- 👀 부장님이 창가에서 단지를 내려다봐요
+if windowWatch then
+	Employees.hooks.windowSees = windowWatch.sees
+end
 local parkGuard = require(script.Guard).start(office, dayCycle, events, Remotes, Employees.useGuardGift) -- 👮 공원·거리 경비원 (눈치물산만)
 -- 👮 사무실 밖 경비원들 (옥상 + 공원): 보이나, 거리, 노려보는 중인가
 Employees.hooks.guardSees = function(character: Model): (boolean, number, boolean, number)

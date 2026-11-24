@@ -133,6 +133,7 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		workshopStart = v(10, 0, 7.5), -- 🌸 복도 문 앞에서 출발 → 창가 결승선
 		-- 👮 경비원: 경비실 앞(정문 옆) + 공원·거리 순찰 지점 (나무·벤치·분수·회식 테이블·흡연구역을 피해서)
 		guardPost = campus.guardPost,
+		commuteSpawn = campus.commuteSpawn, -- 🚏 아침 출근길 시작 자리 (단지 버스 정류장)
 		-- 🛍️ 눈치 스트리트 위에 있나 (공원 정문 밖 거리, 가게 안 포함)
 		inStreet = campus.contains, -- 🛍️ 단지(공원·눈치 스트리트·로비)에 있나
 		guardPatrol = campus.guardPatrol,

@@ -41,6 +41,23 @@ function Campus.contains(position: Vector3): boolean
 	return math.abs(offset.X) <= HALF_X + 2 and offset.Z >= NORTH - 2 and offset.Z <= SOUTH + 2 and offset.Y > -20 and offset.Y < 120
 end
 
+-- 👀 창밖 시선을 피할 수 있는 곳인가: 건물 안(상가 1층·타워 로비·눈치 스트리트 가게) 또는 지붕·나무 밑
+local cover: { { number } } = {} -- { x, z, 반지름 } (단지 좌표, build가 채워요)
+function Campus.hidden(position: Vector3): boolean
+	local offset = position - Campus.ORIGIN
+	local x, z = offset.X, offset.Z
+	if z >= 108.5 or ((x <= -152 or x >= 152) and z >= -111 and z <= 11) then
+		return true -- 건물 안
+	end
+	for _, spot in cover do
+		local dx, dz = x - spot[1], z - spot[2]
+		if dx * dx + dz * dz <= spot[3] * spot[3] then
+			return true
+		end
+	end
+	return false
+end
+
 -- 처음 출근하는 자리: 북쪽 큰길 버스 정류장 앞, 공원(남쪽)을 보고
 Campus.SPAWN = CFrame.lookAt(Campus.point(20, 3, -112), Campus.point(0, 3, -20))
 
@@ -80,6 +97,9 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 			return Meshes.place(B, kind, Vector3.new(x, y or 0, z), yaw or 0, options)
 		end
 		return nil
+	end
+	local function shade(x: number, z: number, radius: number)
+		table.insert(cover, { x, z, radius })
 	end
 	local function lampPost(x: number, z: number)
 		local post = mesh("LampPost", x, z, 0, { scale = 2 })
@@ -148,6 +168,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		local sign = deco(Vector3.new(2.6, 2.6, 0.3), Vector3.new(cx + 9.4, 9, -117), Color3.fromRGB(60, 110, 190))
 		text(sign, Enum.NormalId.Back, "버스")
 		P(Vector3.new(0.3, 8, 0.3), Vector3.new(cx + 9.4, 4, -117), { Color = Color3.fromRGB(60, 110, 190), Material = Enum.Material.Metal })
+		shade(cx, -118, 8.5) -- 정류장 지붕
 		mesh("Bench", cx, -117.6, 180, { scale = 1.3 })
 		P(Vector3.new(5.4, 1.8, 1.6), Vector3.new(cx, 0.9, -117.6), { Transparency = 1 })
 	end
@@ -179,6 +200,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	end
 	P(Vector3.new(11, 4, 0.6), Vector3.new(96, 2, -121.7), { Color = DARK, Material = Enum.Material.Metal })
 	deco(Vector3.new(10.4, 0.2, 18), Vector3.new(96, 0.4, -112.4), Color3.fromRGB(40, 42, 46))
+	shade(96, -112, 10)
 	local subway = deco(Vector3.new(9, 2.4, 0.4), Vector3.new(96, 10.6, -102.4), Color3.fromRGB(60, 110, 190))
 	text(subway, Enum.NormalId.Back, "지하철 눈치단지역")
 
@@ -268,7 +290,15 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	end
 	for _, x in { 176, 196, 216 } do
 		mesh("Parasol", x, 32, x, { scale = 1.5 })
+		shade(x, 32, 5.5)
 	end
+	-- 🚚 타코 트럭 창구: 점심시간에만 팔아요 (Street 모듈이 사장님과 [E] 주문을 붙여요)
+	local truckCounter = P(Vector3.new(10, 0.5, 1.6), Vector3.new(169, 4.4, 43), { Name = "ShopCounter", Color = Color3.fromRGB(250, 246, 236) })
+	P(Vector3.new(0.4, 4.2, 0.4), Vector3.new(164.4, 2.1, 42.6), { Color = DARK, Material = Enum.Material.Metal })
+	local truckSign = deco(Vector3.new(4.6, 5.4, 0.3), Vector3.new(158, 3.2, 41.5), Color3.fromRGB(44, 62, 92))
+	truckSign.CFrame *= CFrame.Angles(math.rad(-12), 0, 0)
+	text(truckSign, Enum.NormalId.Front, "🚚 점심 한정\n12시~1시\n🌮 든든 타코\n🍗 닭강정 컵")
+	F.shops.truck = { counter = truckCounter, clerkSpot = Campus.point(156, 0, 45.5), clerkLook = Vector3.new(0, 0, -1) }
 
 	---------------------------------------------------------------- 중앙 공원
 	-- ⛲ 분수 광장 (한가운데)
@@ -307,6 +337,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		end
 	end
 	P(Vector3.new(38, 0.8, 20), Vector3.new(64, 16.8, -84), { Color = STEEL, Material = Enum.Material.Metal })
+	shade(64, -84, 12)
 	P(Vector3.new(36, 5, 0.5), Vector3.new(64, 4, -92.6), { Color = M.navy })
 	for _, info in { { 48, -58, 10 }, { 76, -54, -15 }, { 92, -66, 20 } } do -- 돗자리
 		local mat = deco(Vector3.new(7, 0.1, 5), Vector3.new(info[1], 0.26, info[2]), M.coral, Enum.Material.Fabric)
@@ -316,6 +347,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	mesh("Pergola", -70, 30, 0, { scale = 1.7 })
 	mesh("Bench", -70, 33.5, 180, { scale = 1.3 })
 	P(Vector3.new(16, 0.7, 13), Vector3.new(-70, 0.35, 30), { Transparency = 1 })
+	shade(-70, 30, 9)
 	local candySign = deco(Vector3.new(8, 1.6, 0.2), Vector3.new(-70, 9.6, 23.4), Color3.fromRGB(255, 240, 245))
 	text(candySign, Enum.NormalId.Front, "🍭 사탕 쉼터 (금연! 사탕만 허용)", Color3.fromRGB(200, 60, 120))
 	P(Vector3.new(0.4, 3, 0.4), Vector3.new(-70, 2.2, 29), { Color = Color3.fromRGB(180, 180, 185), Material = Enum.Material.Metal })
@@ -347,6 +379,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	for i = 0, 2 do
 		local x = 52 + i * 22
 		mesh("Pergola", x, 30, 0, { scale = 1.45, colors = { Canopy = M.coralSoft } })
+		shade(x, 30, 7.5)
 		P(Vector3.new(12, 0.4, 4), Vector3.new(x, 3.2, 30), { Color = M.woodLight, Material = Enum.Material.WoodPlanks })
 		for _, dx in { -5, 5 } do
 			P(Vector3.new(0.6, 2.4, 3.4), Vector3.new(x + dx, 1.8, 30), { Color = M.woodDark, Material = Enum.Material.Wood })
@@ -425,6 +458,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 			table.insert(kept, spot)
 			local scale = random:NextNumber(1.5, 2.3)
 			mesh("Tree", x, z, random:NextNumber(0, 360), { scale = scale })
+			shade(x, z, 2.6 * scale) -- 나무 그늘
 			P(Vector3.new(1.6, 6 * scale, 1.6), Vector3.new(x, 3 * scale, z), { Transparency = 1 })
 		end
 	end
@@ -438,6 +472,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	---------------------------------------------------------------- 골목 상가 (대충상사 남쪽): 포장마차 세 칸
 	for i, x in { -222, -196, -170 } do
 		mesh("Stall", x, 40, 0, { scale = 1.9, colors = { Awning = ({ M.coral, M.yellow, M.mint })[i] } })
+		shade(x, 39, 6)
 		P(Vector3.new(12, 4.6, 3.6), Vector3.new(x, 2.3, 40), { Transparency = 1 })
 	end
 
@@ -670,6 +705,16 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		Campus.point(-104, 0, 102), Campus.point(-52, 0, 102), Campus.point(0, 0, 102), Campus.point(52, 0, 102), -- 눈치 스트리트 가게 앞
 	}
 	F.contains = Campus.contains
+	F.commuteSpawn = Campus.SPAWN
+
+	---------------------------------------------------------------- 👀 창밖 시선: 부장님이 내려다보는 창 (WindowWatch 모듈이 켜고 꺼요)
+	--   대충상사는 상가 3층 창, 눈치물산은 타워 12층 창. 평소엔 안 보여요.
+	local daechungWindow = DB:part(Vector3.new(22, 10, 0.5), Vector3.new(0, 51, 0.6), { Material = Enum.Material.Neon, Transparency = 1, CanCollide = false, CanQuery = false, CastShadow = false })
+	local nunchiWindow = P(Vector3.new(0.5, 10, 36), Vector3.new(150.8, 138, -50), { Material = Enum.Material.Neon, Transparency = 1, CanCollide = false, CanQuery = false, CastShadow = false })
+	F.windows = {
+		daechung = { part = daechungWindow, position = daechungWindow.Position },
+		nunchi = { part = nunchiWindow, position = nunchiWindow.Position },
+	}
 
 	return F
 end

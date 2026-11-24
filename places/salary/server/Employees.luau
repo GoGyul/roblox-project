@@ -80,6 +80,9 @@ type EmployeeData = {
 	returnUntil: number?, -- 복귀 중이면 끝나는 시각
 	state: string,
 	suspicion: number,
+	commute: boolean?, -- 🚏 출근길 (아직 자리에 안 앉았어요)
+	lunchWarned: boolean?,
+	lunchDue: number?, -- 🍚 이 시각까지 단지에 있으면 점심 지각
 	workSeconds: number,
 	combo: number,
 	lastReturnEnd: number?,
@@ -390,7 +393,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		player:SetAttribute("AwayGauge", math.floor(d.away))
 		player:SetAttribute("GymMachine", if d.state == "gym" then d.gymMachine or "" else "") -- 🏋️ 운동 자세 (Poses)
 		local buffText = ""
-		for _, shopId in { "cafe", "cafe1f" } do -- ☕ 눈치 커피 · 골목 커피
+		for _, shopId in { "cafe", "cafe1f", "truck" } do -- ☕ 눈치 커피 · 골목 커피 · 🚚 푸드트럭
 			for _, item in SalaryConfig.StreetShops[shopId].items do
 				if d.buffs[item.id] then
 					buffText ..= item.emoji
@@ -2402,7 +2405,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local catOnKeyboard = Employees.hooks.catOn ~= nil and Employees.hooks.catOn(d.desk) -- 🐾 월급냥이 키보드 위에!
 		-- 📄 오늘 업무: 내 자리에 앉아만 있으면 쌓여요 (일하기든, 앉아서 하는 농땡이든) → 자연스럽게 자리로 돌아오게
 		if isSeated(player, d) and not catOnKeyboard then
-			d.workSeconds += dt * (if d.buffs.americano then SalaryConfig.AMERICANO_WORK elseif d.buffs.mixcoffee then SalaryConfig.MIXCOFFEE_WORK else 1) -- ☕ 아메리카노 / 믹스커피
+			d.workSeconds += dt * (if d.buffs.americano then SalaryConfig.AMERICANO_WORK elseif d.buffs.mixcoffee then SalaryConfig.MIXCOFFEE_WORK else 1) * (if d.buffs.taco then SalaryConfig.TACO_WORK else 1) -- ☕ 아메리카노 / 믹스커피 · 🌮 타코
 		end
 		if d.state == "snack" then
 			local held = d.heldSnack
@@ -2502,7 +2505,44 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		--   근무 중 자리를 비우면 차오르고, 앉아 있으면 줄어요.
 		--   소방 훈련·워크숍(나가야 하니까)·점심시간엔 멈춰요.
 		--   💡 정전 때는 내 컴퓨터가 꺼져서 기록이 날아가요 → 0%로 초기화
-		local gaugeOn = dayCycle.phase == "work" and not events:is("drill") and not events:is("workshop") and not blackout and not onHalfDay
+		-- 🚏 출근길: 자리에 앉으면 끝. 일찍 앉으면 보너스, 너무 늦으면 지각 (그동안은 게이지·경비원 모두 봐줘요)
+		if d.commute then
+			if dayCycle.phase == "offwork" or onHalfDay then
+				d.commute = nil
+			elseif isSeated(player, d) then
+				d.commute = nil
+				if dayCycle.minute <= SalaryConfig.COMMUTE_EARLY then
+					local bonus = math.floor(rankOf(d).basePay * SalaryConfig.COMMUTE_BONUS)
+					d.profile.money += bonus
+					adjustSpeed(player, d, "punctual", true, SalaryConfig.COMMUTE_EARLY_DELTA, "🌅 칼출근")
+					publish(player, d)
+					remotes.Notify:FireClient(player, `🌅 칼출근! 부장님이 흐뭇해해요. 보너스 +{bonus}원 · 오늘의 의심도 속도 {SalaryConfig.COMMUTE_EARLY_DELTA}`)
+				else
+					remotes.Notify:FireClient(player, "🏢 출근 완료! 오늘도 눈치껏 버텨 봐요.")
+				end
+			elseif dayCycle.minute > SalaryConfig.COMMUTE_LATE then
+				d.commute = nil
+				adjustSpeed(player, d, "late", true, SalaryConfig.COMMUTE_LATE_DELTA, "⏰ 지각")
+				remotes.Notify:FireClient(player, `⏰ 지각! 부장님이 벼르고 있어요. 오늘의 의심도 속도 +{SalaryConfig.COMMUTE_LATE_DELTA} (이제 자리 부재 게이지도 차요)`)
+			end
+		end
+		local commuting = d.commute == true
+		-- 🍚 점심시간: 곧 1시 알림 → 1시 20분까지 단지에 남아 있으면 지각
+		local onCampus = office.inStreet ~= nil and office.inStreet(root.Position)
+		if dayCycle.phase == "lunch" and not d.lunchWarned and dayCycle.minute >= SalaryConfig.LUNCH_WARN then
+			d.lunchWarned = true
+			if onCampus then
+				remotes.Notify:FireClient(player, "🍚 곧 1시예요! 슬슬 사무실로 돌아가요. (1시 20분까지 단지에 있으면 지각)")
+			end
+		end
+		if d.lunchDue and dayCycle.phase == "work" and dayCycle.minute >= d.lunchDue then
+			d.lunchDue = nil
+			if onCampus and not onHalfDay then
+				d.suspicion = math.min(99, d.suspicion + SalaryConfig.LUNCH_LATE_SUSPICION)
+				remotes.Notify:FireClient(player, `⏰ 점심 지각! 부장님이 빈자리를 봤어요. 의심도 +{SalaryConfig.LUNCH_LATE_SUSPICION}`)
+			end
+		end
+		local gaugeOn = dayCycle.phase == "work" and not events:is("drill") and not events:is("workshop") and not blackout and not onHalfDay and not commuting
 		if blackout then
 			d.away, d.awayWarned = 0, false -- 컴퓨터 꺼짐: 기록 초기화
 		elseif gaugeOn and not isSeated(player, d) then
@@ -2531,6 +2571,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local decay = SalaryConfig.SUSPICION_DECAY * (if hasItem(d, "plant") then 1.25 else 1)
 			* (if ReplicatedStorage:GetAttribute("Sunset") == true and Employees.hooks.onRoof and Employees.hooks.onRoof(root.Position) then SalaryConfig.SUNSET_DECAY else 1) -- 🌅 노을 보며 힐링
 			* (if d.buffs.latte then SalaryConfig.LATTE_DECAY elseif d.buffs.yuja then SalaryConfig.YUJA_DECAY else 1) -- 🥛 바닐라 라떼 / 🍵 유자차
+			* (if d.buffs.gangjeong then SalaryConfig.GANGJEONG_DECAY else 1) -- 🍗 닭강정
 		if dayCycle.phase == "work" and boss.active then
 			local rate = info.detect
 			local coffeeGrace = if hasItem(d, "tumbler") then 90 else SalaryConfig.COFFEE_GRACE
@@ -2552,8 +2593,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			if d.state == "phone" then
 				rate *= SalaryConfig.PHONE_GAME_SUSPICION -- 📱 폰 게임은 느긋하게 (10배 느리게)
 			end
-			if onHalfDay then
-				rate = 0 -- 🏖️ 반차 중엔 아무도 뭐라 안 해요
+			if onHalfDay or commuting then
+				rate = 0 -- 🏖️ 반차 중엔 아무도 뭐라 안 해요 (🚏 출근길도요)
 			end
 			rate *= d.speed -- ⚡ 오늘의 의심도 속도 (회식·꽃다발·적발·감사관 의심… 다 여기에 들어 있어요)
 			local raised = false
@@ -2585,6 +2626,10 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				if seen then
 					local closeness = math.clamp(1.5 - distance / (sightRange or boss.range), 0.5, 1.5)
 					d.suspicion += rate * closeness * roofMultiplier * SalaryConfig.SUSPICION_SPEED * dt
+					raised = true
+				elseif Employees.hooks.windowSees and Employees.hooks.windowSees(root.Position) then
+					-- 👀 부장님이 창가에서 단지를 내려다보는 중: 지붕·나무 밑이 아니면 보여요
+					d.suspicion += rate * SalaryConfig.WINDOW_MULTIPLIER * SalaryConfig.SUSPICION_SPEED * dt
 					raised = true
 				end
 			end
@@ -2785,7 +2830,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			if d.suspicion >= 100 then
 				guardOrBossCatch(player, d, root)
 			end
-		elseif dayCycle.phase == "work" and not onHalfDay and not blackout and Employees.hooks.guardSees and not office.insideOffice(root.Position) then
+		elseif dayCycle.phase == "work" and not onHalfDay and not commuting and not blackout and Employees.hooks.guardSees and not office.insideOffice(root.Position) then
 			-- 🎟️ 부장님이 출장 중이어도 경비원은 그대로 근무해요 (사무실 밖만)
 			local rate = (info.detect or 0) * d.speed * (if d.state == "phone" then SalaryConfig.PHONE_GAME_SUSPICION else 1)
 			local seen, distance, guardStaring, sightRange = false, math.huge, false, SalaryConfig.GUARD_RANGE
@@ -3000,6 +3045,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local item = SalaryConfig.getStreetItem(shopId, itemId)
 		if not d or d.fired or not item then
 			return false, "지금은 살 수 없어요."
+		end
+		if SalaryConfig.StreetShops[shopId].lunchOnly and dayCycle.phase ~= "lunch" then
+			return false, "🚚 점심시간(12시~1시)에만 팔아요!"
 		end
 		if d.profile.money < item.price then
 			return false, `통장 잔고가 부족해요. 😢 ({item.price}원 필요)`
@@ -4201,6 +4249,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	end
 
 	---------------------------------------------------------------- 하루 일정
+	local commuteCount = 0
 	dayCycle:on("dayStart", function(weekday)
 		boss:startDay(weekday)
 		snacks.restock()
@@ -4262,8 +4311,33 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				remotes.Notify:FireClient(player, `⚡ 오늘의 의심도 속도 x{string.format("%.2f", d.speed)} ({table.concat(reasons, ", ")})`)
 			end
 			updateBubble(player, "work")
-			task.spawn(seatPlayer, player, d)
-			remotes.Notify:FireClient(player, `🏢 {weekday.name} 출근! 오늘 부장님은 "{weekday.mood}"`)
+			d.lunchWarned, d.lunchDue = false, nil
+			if office.commuteSpawn and player.Character then
+				-- 🚏 출근길: 단지 버스 정류장에서 내 자리까지 (칼출근 보너스 / 지각)
+				d.commute = true
+				commuteCount += 1
+				local slot = commuteCount % 6
+				task.spawn(function()
+					local humanoid = getHumanoid(player)
+					if humanoid and humanoid.SeatPart then
+						for _, child in humanoid.SeatPart:GetChildren() do
+							if child:IsA("Weld") and child.Name == "SeatWeld" then
+								child:Destroy() -- (의자에 붙은 채 옮기면 의자까지 끌려와요)
+							end
+						end
+						humanoid.Sit = false
+						task.wait(0.1)
+					end
+					if player.Character then
+						player.Character:PivotTo(office.commuteSpawn * CFrame.new((slot - 2.5) * 4, 0, 0))
+					end
+				end)
+				remotes.Notify:FireClient(player, `🚏 {weekday.name} 출근길! 9시 30분까지 자리에 앉으면 칼출근 보너스, 9시 50분을 넘기면 지각! (부장님은 "{weekday.mood}")`)
+			else
+				d.commute = nil
+				task.spawn(seatPlayer, player, d)
+				remotes.Notify:FireClient(player, `🏢 {weekday.name} 출근! 오늘 부장님은 "{weekday.mood}"`)
+			end
 			arriveOrders(player, d) -- 🚚 어제 주문한 택배 도착
 
 		end
@@ -4278,8 +4352,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 
 	dayCycle:on("lunchEnd", function()
 		boss:backFromLunch()
-		for player in data do
+		for player, d in data do
 			remotes.Notify:FireClient(player, "⚠️ 1시! 부장님이 돌아왔어요!")
+			d.lunchDue = SalaryConfig.LUNCH_LATE -- 🍚 이때까지 단지에 남아 있으면 점심 지각
 		end
 	end)
 

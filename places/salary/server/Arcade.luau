@@ -236,6 +236,11 @@ function Arcade.start(office, remotes, hooks)
 		prompt.RequiresLineOfSight = false
 		prompt.Parent = machine
 		prompt.Triggered:Connect(function(player)
+			local need = SalaryConfig.BADGE.arcade -- 🪪 사원증 등급
+			if ((player:GetAttribute("Rank") :: number?) or 1) < need then
+				remotes.Notify:FireClient(player, `🪪 사원증 등급이 모자라요! 🕹️ 오락실은 {SalaryConfig.Ranks[need].name}부터 이용할 수 있어요.`)
+				return
+			end
 			remotes.ArcadeOpen:FireClient(player, gameId)
 		end)
 	end
