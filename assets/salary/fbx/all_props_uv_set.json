@@ -1,0 +1,2522 @@
+{
+ "Bookshelf": [
+  {
+   "name": "Bookshelf_Body",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    5.2,
+    8.5,
+    1.6
+   ],
+   "center": [
+    0.0,
+    4.25,
+    -0.0
+   ],
+   "triangles": 340
+  },
+  {
+   "name": "Bookshelf_Niche",
+   "color": "cream",
+   "material": "SmoothPlastic",
+   "size": [
+    4.2,
+    4.6,
+    0.2
+   ],
+   "center": [
+    0.0,
+    5.6,
+    0.75
+   ],
+   "triangles": 140
+  },
+  {
+   "name": "Bookshelf_Shelf",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    4.2,
+    2.1,
+    0.9
+   ],
+   "center": [
+    0.0,
+    4.25,
+    0.6
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "Bookshelf_Bookcoral",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    0.38,
+    1.5,
+    0.7
+   ],
+   "center": [
+    -1.4,
+    6.05,
+    0.7
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "Bookshelf_Booksky",
+   "color": "sky",
+   "material": "SmoothPlastic",
+   "size": [
+    0.38,
+    1.8,
+    0.7
+   ],
+   "center": [
+    -0.95,
+    6.2,
+    0.7
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "Bookshelf_Bookyellow",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    0.38,
+    1.4,
+    0.7
+   ],
+   "center": [
+    -0.5,
+    6.0,
+    0.7
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "Bookshelf_Bookmint",
+   "color": "mint",
+   "material": "SmoothPlastic",
+   "size": [
+    0.38,
+    1.7,
+    0.7
+   ],
+   "center": [
+    -0.05,
+    6.15,
+    0.7
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "Bookshelf_Box",
+   "color": "coralSoft",
+   "material": "SmoothPlastic",
+   "size": [
+    1.3,
+    0.9,
+    0.8
+   ],
+   "center": [
+    1.1,
+    5.75,
+    0.7
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "Bookshelf_Doors",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    4.05,
+    2.7,
+    0.16
+   ],
+   "center": [
+    0.0,
+    1.6,
+    0.82
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "Bookshelf_Handles",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    0.74,
+    0.8,
+    0.14
+   ],
+   "center": [
+    0.0,
+    1.7,
+    0.95
+   ],
+   "triangles": 376
+  }
+ ],
+ "Sofa": [
+  {
+   "name": "Sofa_Base",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    6.0,
+    1.0,
+    2.6
+   ],
+   "center": [
+    0.0,
+    0.75,
+    -0.0
+   ],
+   "triangles": 572
+  },
+  {
+   "name": "Sofa_Cushion",
+   "color": "mint",
+   "material": "Fabric",
+   "size": [
+    6.0,
+    1.9,
+    2.6
+   ],
+   "center": [
+    0.0,
+    2.1,
+    -0.1
+   ],
+   "triangles": 1144
+  },
+  {
+   "name": "Sofa_Pillow",
+   "color": "yellow",
+   "material": "Fabric",
+   "size": [
+    1.1,
+    0.982,
+    0.628
+   ],
+   "center": [
+    1.8,
+    2.3,
+    -0.3
+   ],
+   "triangles": 188
+  }
+ ],
+ "RoundTable": [
+  {
+   "name": "RoundTable_Top",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    3.0,
+    0.22,
+    3.0
+   ],
+   "center": [
+    0.0,
+    1.3,
+    -0.0
+   ],
+   "triangles": 444
+  },
+  {
+   "name": "RoundTable_Leg",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    1.6,
+    1.2,
+    1.6
+   ],
+   "center": [
+    0.0,
+    0.6,
+    -0.0
+   ],
+   "triangles": 552
+  }
+ ],
+ "Vending": [
+  {
+   "name": "Vending_Body",
+   "color": "mint",
+   "material": "SmoothPlastic",
+   "size": [
+    3.0,
+    6.2,
+    2.4
+   ],
+   "center": [
+    0.0,
+    3.1,
+    -0.0
+   ],
+   "triangles": 572
+  },
+  {
+   "name": "Vending_Window",
+   "color": "surfaceSoft",
+   "material": "SmoothPlastic",
+   "size": [
+    1.9,
+    3.6,
+    0.12
+   ],
+   "center": [
+    -0.3,
+    3.9,
+    1.2
+   ],
+   "triangles": 140
+  },
+  {
+   "name": "Vending_Itemscoral",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    1.6,
+    2.6,
+    0.12
+   ],
+   "center": [
+    -0.3,
+    4.0,
+    1.26
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "Vending_Itemsyellow",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    1.6,
+    2.6,
+    0.12
+   ],
+   "center": [
+    -0.3,
+    4.0,
+    1.26
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "Vending_Itemssky",
+   "color": "sky",
+   "material": "SmoothPlastic",
+   "size": [
+    1.6,
+    2.6,
+    0.12
+   ],
+   "center": [
+    -0.3,
+    4.0,
+    1.26
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "Vending_Panel",
+   "color": "mintDark",
+   "material": "SmoothPlastic",
+   "size": [
+    2.65,
+    4.6,
+    0.12
+   ],
+   "center": [
+    0.025,
+    3.0,
+    1.22
+   ],
+   "triangles": 376
+  }
+ ],
+ "Printer": [
+  {
+   "name": "Printer_Body",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    3.1,
+    3.25,
+    2.5
+   ],
+   "center": [
+    0.0,
+    1.925,
+    -0.0
+   ],
+   "triangles": 1144
+  },
+  {
+   "name": "Printer_Tray",
+   "color": "line",
+   "material": "SmoothPlastic",
+   "size": [
+    2.4,
+    1.875,
+    1.2
+   ],
+   "center": [
+    0.0,
+    1.888,
+    1.4
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "Printer_Eyes",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    1.28,
+    0.28,
+    0.28
+   ],
+   "center": [
+    0.0,
+    1.9,
+    1.2
+   ],
+   "triangles": 1056
+  },
+  {
+   "name": "Printer_Wheels",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    2.6,
+    0.4,
+    2.2
+   ],
+   "center": [
+    0.0,
+    0.2,
+    -0.0
+   ],
+   "triangles": 2112
+  }
+ ],
+ "Reception": [
+  {
+   "name": "Reception_Body",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    6.4,
+    2.5,
+    6.4
+   ],
+   "center": [
+    0.0,
+    1.35,
+    -0.0
+   ],
+   "triangles": 156
+  },
+  {
+   "name": "Reception_Top",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    6.8,
+    0.25,
+    6.8
+   ],
+   "center": [
+    0.0,
+    2.72,
+    -0.0
+   ],
+   "triangles": 636
+  },
+  {
+   "name": "Reception_Glow",
+   "color": "yellowSoft",
+   "material": "Neon",
+   "size": [
+    6.5,
+    0.2,
+    6.5
+   ],
+   "center": [
+    0.0,
+    0.1,
+    -0.0
+   ],
+   "triangles": 156
+  }
+ ],
+ "Planter": [
+  {
+   "name": "Planter_Box",
+   "color": "stone",
+   "material": "SmoothPlastic",
+   "size": [
+    6.0,
+    1.3,
+    1.8
+   ],
+   "center": [
+    0.0,
+    0.65,
+    -0.0
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "Planter_Leaves",
+   "color": "grass",
+   "material": "SmoothPlastic",
+   "size": [
+    5.666,
+    1.2,
+    1.331
+   ],
+   "center": [
+    0.0,
+    1.5,
+    0.0
+   ],
+   "triangles": 400
+  },
+  {
+   "name": "Planter_Flowercoral",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    4.78,
+    0.42,
+    0.399
+   ],
+   "center": [
+    -0.3,
+    2.1,
+    -0.2
+   ],
+   "triangles": 400
+  },
+  {
+   "name": "Planter_Floweryellow",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    4.78,
+    0.42,
+    0.399
+   ],
+   "center": [
+    0.3,
+    2.1,
+    0.3
+   ],
+   "triangles": 400
+  }
+ ],
+ "Tree": [
+  {
+   "name": "Tree_Trunk",
+   "color": "woodDark",
+   "material": "SmoothPlastic",
+   "size": [
+    0.951,
+    3.4,
+    1.0
+   ],
+   "center": [
+    0.0,
+    1.7,
+    -0.0
+   ],
+   "triangles": 36
+  },
+  {
+   "name": "Tree_Canopy",
+   "color": "grass",
+   "material": "SmoothPlastic",
+   "size": [
+    5.78,
+    5.3,
+    4.945
+   ],
+   "center": [
+    -0.538,
+    5.35,
+    -0.0
+   ],
+   "triangles": 160
+  },
+  {
+   "name": "Tree_CanopyLight",
+   "color": "grassLight",
+   "material": "SmoothPlastic",
+   "size": [
+    4.421,
+    5.75,
+    4.181
+   ],
+   "center": [
+    1.018,
+    5.775,
+    -0.121
+   ],
+   "triangles": 160
+  }
+ ],
+ "Bush": [
+  {
+   "name": "Bush_Leaves",
+   "color": "grass",
+   "material": "SmoothPlastic",
+   "size": [
+    2.909,
+    1.8,
+    2.107
+   ],
+   "center": [
+    0.369,
+    0.8,
+    0.007
+   ],
+   "triangles": 160
+  }
+ ],
+ "Bench": [
+  {
+   "name": "Bench_Seat",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    4.2,
+    0.22,
+    1.6
+   ],
+   "center": [
+    0.0,
+    1.35,
+    0.05
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "Bench_Back",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    4.2,
+    1.05,
+    0.247
+   ],
+   "center": [
+    0.0,
+    2.2,
+    -0.85
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "Bench_Legs",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    3.7,
+    1.3,
+    1.8
+   ],
+   "center": [
+    0.0,
+    0.65,
+    -0.0
+   ],
+   "triangles": 376
+  }
+ ],
+ "Fountain": [
+  {
+   "name": "Fountain_Stone",
+   "color": "stone",
+   "material": "SmoothPlastic",
+   "size": [
+    7.6,
+    3.2,
+    7.6
+   ],
+   "center": [
+    0.0,
+    1.6,
+    -0.0
+   ],
+   "triangles": 780
+  },
+  {
+   "name": "Fountain_Water",
+   "color": "water",
+   "material": "SmoothPlastic",
+   "size": [
+    6.3,
+    2.5,
+    6.3
+   ],
+   "center": [
+    0.0,
+    1.95,
+    -0.0
+   ],
+   "triangles": 280
+  },
+  {
+   "name": "Fountain_Jets",
+   "color": "skySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    4.916,
+    3.558,
+    4.297
+   ],
+   "center": [
+    0.0,
+    2.921,
+    -0.0
+   ],
+   "triangles": 3408
+  }
+ ],
+ "Stall": [
+  {
+   "name": "Stall_Counter",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    6.0,
+    2.4,
+    1.8
+   ],
+   "center": [
+    0.0,
+    1.2,
+    -0.0
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "Stall_Top",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    6.4,
+    0.25,
+    2.2
+   ],
+   "center": [
+    0.0,
+    2.5,
+    -0.0
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "Stall_Posts",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    6.1,
+    6.0,
+    2.0
+   ],
+   "center": [
+    0.0,
+    3.0,
+    -0.0
+   ],
+   "triangles": 752
+  },
+  {
+   "name": "Stall_Awning",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    6.65,
+    1.494,
+    3.409
+   ],
+   "center": [
+    0.0,
+    5.847,
+    0.345
+   ],
+   "triangles": 1504
+  },
+  {
+   "name": "Stall_AwningWhite",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    4.75,
+    1.494,
+    3.409
+   ],
+   "center": [
+    0.0,
+    5.847,
+    0.345
+   ],
+   "triangles": 1128
+  },
+  {
+   "name": "Stall_Goods",
+   "color": "mint",
+   "material": "SmoothPlastic",
+   "size": [
+    1.4,
+    0.7,
+    0.6
+   ],
+   "center": [
+    -1.4,
+    3.0,
+    0.2
+   ],
+   "triangles": 888
+  },
+  {
+   "name": "Stall_Machine",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    1.4,
+    1.2,
+    1.1
+   ],
+   "center": [
+    1.5,
+    3.2,
+    -0.0
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "Stall_Stools",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    4.7,
+    0.3,
+    1.1
+   ],
+   "center": [
+    0.0,
+    1.5,
+    1.9
+   ],
+   "triangles": 1332
+  },
+  {
+   "name": "Stall_StoolLegs",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    3.84,
+    1.4,
+    0.24
+   ],
+   "center": [
+    0.0,
+    0.7,
+    1.9
+   ],
+   "triangles": 324
+  }
+ ],
+ "Pergola": [
+  {
+   "name": "Pergola_Deck",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    9.6,
+    0.4,
+    7.6
+   ],
+   "center": [
+    0.0,
+    0.2,
+    -0.0
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "Pergola_Frame",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    9.6,
+    7.2,
+    7.6
+   ],
+   "center": [
+    0.0,
+    3.9,
+    -0.0
+   ],
+   "triangles": 1504
+  },
+  {
+   "name": "Pergola_Canopy",
+   "color": "cream",
+   "material": "SmoothPlastic",
+   "size": [
+    8.8,
+    0.4,
+    6.4
+   ],
+   "center": [
+    0.0,
+    7.325,
+    -0.0
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "Pergola_Lights",
+   "color": "yellowSoft",
+   "material": "Neon",
+   "size": [
+    8.15,
+    0.85,
+    0.35
+   ],
+   "center": [
+    0.0,
+    6.5,
+    3.4
+   ],
+   "triangles": 3696
+  }
+ ],
+ "PodChair": [
+  {
+   "name": "PodChair_Shell",
+   "color": "cream",
+   "material": "SmoothPlastic",
+   "size": [
+    4.2,
+    4.2,
+    3.566
+   ],
+   "center": [
+    0.0,
+    2.3,
+    -0.317
+   ],
+   "triangles": 1512
+  },
+  {
+   "name": "PodChair_Cushion",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    2.9,
+    2.3,
+    2.8
+   ],
+   "center": [
+    0.0,
+    1.9,
+    0.1
+   ],
+   "triangles": 1056
+  }
+ ],
+ "LampPost": [
+  {
+   "name": "LampPost_Pole",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    1.0,
+    5.4,
+    1.0
+   ],
+   "center": [
+    0.0,
+    2.7,
+    -0.0
+   ],
+   "triangles": 552
+  },
+  {
+   "name": "LampPost_Bulb",
+   "color": "yellowSoft",
+   "material": "Neon",
+   "size": [
+    1.1,
+    1.1,
+    1.1
+   ],
+   "center": [
+    0.0,
+    5.8,
+    -0.0
+   ],
+   "triangles": 528
+  }
+ ],
+ "Parasol": [
+  {
+   "name": "Parasol_Table",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    3.0,
+    0.2,
+    3.0
+   ],
+   "center": [
+    0.0,
+    2.2,
+    -0.0
+   ],
+   "triangles": 444
+  },
+  {
+   "name": "Parasol_Pole",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    1.4,
+    6.6,
+    1.4
+   ],
+   "center": [
+    0.0,
+    3.3,
+    -0.0
+   ],
+   "triangles": 552
+  },
+  {
+   "name": "Parasol_Shade",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    6.6,
+    1.3,
+    6.6
+   ],
+   "center": [
+    0.0,
+    6.35,
+    -0.0
+   ],
+   "triangles": 32
+  },
+  {
+   "name": "Parasol_Stools",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    5.178,
+    1.3,
+    4.784
+   ],
+   "center": [
+    -0.091,
+    0.65,
+    -0.493
+   ],
+   "triangles": 1332
+  }
+ ],
+ "FlowerBed": [
+  {
+   "name": "FlowerBed_Soil",
+   "color": "woodDark",
+   "material": "SmoothPlastic",
+   "size": [
+    7.0,
+    0.7,
+    4.5
+   ],
+   "center": [
+    0.0,
+    0.05,
+    -0.0
+   ],
+   "triangles": 528
+  },
+  {
+   "name": "FlowerBed_Leaves",
+   "color": "grass",
+   "material": "SmoothPlastic",
+   "size": [
+    5.636,
+    0.9,
+    3.945
+   ],
+   "center": [
+    0.0,
+    0.6,
+    -0.0
+   ],
+   "triangles": 768
+  },
+  {
+   "name": "FlowerBed_Flowercoral",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    5.152,
+    0.5,
+    2.688
+   ],
+   "center": [
+    -0.042,
+    1.1,
+    0.374
+   ],
+   "triangles": 288
+  },
+  {
+   "name": "FlowerBed_Floweryellow",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    2.537,
+    0.5,
+    3.491
+   ],
+   "center": [
+    -0.101,
+    1.1,
+    0.027
+   ],
+   "triangles": 240
+  },
+  {
+   "name": "FlowerBed_Flowersurface",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    5.152,
+    0.5,
+    2.742
+   ],
+   "center": [
+    0.042,
+    1.1,
+    -0.401
+   ],
+   "triangles": 240
+  }
+ ],
+ "Sunbed": [
+  {
+   "name": "Sunbed_Frame",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    2.6,
+    1.05,
+    6.4
+   ],
+   "center": [
+    0.0,
+    0.525,
+    -0.0
+   ],
+   "triangles": 940
+  },
+  {
+   "name": "Sunbed_Mattress",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    2.3,
+    1.423,
+    6.202
+   ],
+   "center": [
+    0.0,
+    1.737,
+    -0.001
+   ],
+   "triangles": 760
+  },
+  {
+   "name": "Sunbed_Pillow",
+   "color": "sky",
+   "material": "SmoothPlastic",
+   "size": [
+    1.5,
+    0.602,
+    0.767
+   ],
+   "center": [
+    0.0,
+    2.45,
+    -2.75
+   ],
+   "triangles": 188
+  }
+ ],
+ "Stone": [
+  {
+   "name": "Stone_Stone",
+   "color": "stone",
+   "material": "SmoothPlastic",
+   "size": [
+    1.9,
+    0.3,
+    1.5
+   ],
+   "center": [
+    0.0,
+    0.08,
+    -0.0
+   ],
+   "triangles": 120
+  }
+ ],
+ "WallPanel": [
+  {
+   "name": "WallPanel_Wall",
+   "color": "wall",
+   "material": "SmoothPlastic",
+   "size": [
+    8.0,
+    12.0,
+    0.5
+   ],
+   "center": [
+    0.0,
+    6.0,
+    -0.0
+   ],
+   "triangles": 12
+  },
+  {
+   "name": "WallPanel_Base",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    8.0,
+    0.7,
+    0.64
+   ],
+   "center": [
+    0.0,
+    0.35,
+    -0.0
+   ],
+   "triangles": 12
+  },
+  {
+   "name": "WallPanel_Rail",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    8.0,
+    8.6,
+    0.6
+   ],
+   "center": [
+    0.0,
+    7.7,
+    -0.0
+   ],
+   "triangles": 24
+  }
+ ],
+ "WindowPanel": [
+  {
+   "name": "WindowPanel_Wall",
+   "color": "wall",
+   "material": "SmoothPlastic",
+   "size": [
+    8.0,
+    12.0,
+    0.5
+   ],
+   "center": [
+    0.0,
+    6.0,
+    -0.0
+   ],
+   "triangles": 48
+  },
+  {
+   "name": "WindowPanel_Base",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    8.0,
+    0.7,
+    0.64
+   ],
+   "center": [
+    0.0,
+    0.35,
+    -0.0
+   ],
+   "triangles": 12
+  },
+  {
+   "name": "WindowPanel_Frame",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    7.0,
+    7.0,
+    0.3
+   ],
+   "center": [
+    0.0,
+    6.5,
+    -0.0
+   ],
+   "triangles": 60
+  },
+  {
+   "name": "WindowPanel_Glass",
+   "color": "skySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    6.8,
+    6.8,
+    0.08
+   ],
+   "center": [
+    0.0,
+    6.5,
+    -0.05
+   ],
+   "triangles": 12
+  },
+  {
+   "name": "WindowPanel_Blinds",
+   "color": "cream",
+   "material": "SmoothPlastic",
+   "size": [
+    6.6,
+    2.173,
+    0.285
+   ],
+   "center": [
+    0.0,
+    8.71,
+    0.22
+   ],
+   "triangles": 84
+  },
+  {
+   "name": "WindowPanel_Sill",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    7.4,
+    0.16,
+    0.9
+   ],
+   "center": [
+    0.0,
+    3.02,
+    0.25
+   ],
+   "triangles": 44
+  }
+ ],
+ "Pillar": [
+  {
+   "name": "Pillar_Wall",
+   "color": "wall",
+   "material": "SmoothPlastic",
+   "size": [
+    1.4,
+    12.0,
+    1.0
+   ],
+   "center": [
+    0.0,
+    6.0,
+    -0.0
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "Pillar_Base",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    1.52,
+    0.7,
+    1.12
+   ],
+   "center": [
+    0.0,
+    0.35,
+    -0.0
+   ],
+   "triangles": 12
+  }
+ ],
+ "FloorTile": [
+  {
+   "name": "FloorTile_TileA",
+   "color": "carpet",
+   "material": "Carpet",
+   "size": [
+    7.96,
+    0.1,
+    7.96
+   ],
+   "center": [
+    0.0,
+    0.0,
+    -0.0
+   ],
+   "triangles": 88
+  },
+  {
+   "name": "FloorTile_TileB",
+   "color": "carpetDark",
+   "material": "Carpet",
+   "size": [
+    7.96,
+    0.1,
+    7.96
+   ],
+   "center": [
+    0.0,
+    0.0,
+    -0.0
+   ],
+   "triangles": 88
+  }
+ ],
+ "CeilingTile": [
+  {
+   "name": "CeilingTile_Tile",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    7.9,
+    0.16,
+    7.9
+   ],
+   "center": [
+    0.0,
+    -0.1,
+    -0.0
+   ],
+   "triangles": 176
+  },
+  {
+   "name": "CeilingTile_Grid",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    8.07,
+    0.08,
+    8.07
+   ],
+   "center": [
+    -0.035,
+    -0.2,
+    -0.035
+   ],
+   "triangles": 48
+  }
+ ],
+ "CeilingLight": [
+  {
+   "name": "CeilingLight_Tile",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    7.9,
+    0.16,
+    7.9
+   ],
+   "center": [
+    0.0,
+    -0.1,
+    -0.0
+   ],
+   "triangles": 176
+  },
+  {
+   "name": "CeilingLight_Grid",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    8.07,
+    0.08,
+    8.07
+   ],
+   "center": [
+    -0.035,
+    -0.2,
+    -0.035
+   ],
+   "triangles": 48
+  },
+  {
+   "name": "CeilingLight_Panel",
+   "color": "yellowSoft",
+   "material": "Neon",
+   "size": [
+    1.6,
+    0.08,
+    5.6
+   ],
+   "center": [
+    0.0,
+    -0.24,
+    -0.0
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "CeilingLight_Housing",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    2.0,
+    0.12,
+    6.0
+   ],
+   "center": [
+    0.0,
+    -0.2,
+    -0.0
+   ],
+   "triangles": 44
+  }
+ ],
+ "DoorFrame": [
+  {
+   "name": "DoorFrame_Frame",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    7.0,
+    9.5,
+    0.9
+   ],
+   "center": [
+    0.0,
+    4.75,
+    -0.0
+   ],
+   "triangles": 132
+  }
+ ],
+ "BossDesk": [
+  {
+   "name": "BossDesk_Top",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    10.0,
+    0.3,
+    4.6
+   ],
+   "center": [
+    0.0,
+    2.75,
+    -0.0
+   ],
+   "triangles": 236
+  },
+  {
+   "name": "BossDesk_Body",
+   "color": "woodDark",
+   "material": "SmoothPlastic",
+   "size": [
+    9.6,
+    2.6,
+    4.0
+   ],
+   "center": [
+    0.0,
+    1.3,
+    -0.0
+   ],
+   "triangles": 260
+  },
+  {
+   "name": "BossDesk_Handles",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    7.9,
+    1.5,
+    0.12
+   ],
+   "center": [
+    0.0,
+    1.5,
+    2.03
+   ],
+   "triangles": 264
+  },
+  {
+   "name": "BossDesk_Mat",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    3.2,
+    0.05,
+    2.0
+   ],
+   "center": [
+    0.0,
+    2.92,
+    0.6
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "BossDesk_Plate",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    1.8,
+    0.4,
+    0.3
+   ],
+   "center": [
+    0.0,
+    3.1,
+    -1.7
+   ],
+   "triangles": 44
+  }
+ ],
+ "Counter": [
+  {
+   "name": "Counter_Body",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    8.0,
+    2.8,
+    2.4
+   ],
+   "center": [
+    0.0,
+    1.4,
+    -0.0
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "Counter_Top",
+   "color": "stone",
+   "material": "SmoothPlastic",
+   "size": [
+    8.2,
+    0.25,
+    2.7
+   ],
+   "center": [
+    0.0,
+    2.95,
+    -0.0
+   ],
+   "triangles": 108
+  },
+  {
+   "name": "Counter_Doors",
+   "color": "cream",
+   "material": "SmoothPlastic",
+   "size": [
+    7.8,
+    2.2,
+    0.08
+   ],
+   "center": [
+    0.0,
+    1.45,
+    1.22
+   ],
+   "triangles": 176
+  },
+  {
+   "name": "Counter_Metal",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    6.1,
+    2.38,
+    2.34
+   ],
+   "center": [
+    0.7,
+    2.79,
+    0.19
+   ],
+   "triangles": 1148
+  }
+ ],
+ "Fridge": [
+  {
+   "name": "Fridge_Body",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    3.0,
+    7.0,
+    2.8
+   ],
+   "center": [
+    0.0,
+    3.5,
+    -0.0
+   ],
+   "triangles": 236
+  },
+  {
+   "name": "Fridge_Line",
+   "color": "line",
+   "material": "SmoothPlastic",
+   "size": [
+    2.9,
+    0.06,
+    0.05
+   ],
+   "center": [
+    0.0,
+    4.5,
+    1.41
+   ],
+   "triangles": 12
+  },
+  {
+   "name": "Fridge_Handles",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    0.14,
+    3.8,
+    0.16
+   ],
+   "center": [
+    1.1,
+    4.4,
+    1.46
+   ],
+   "triangles": 88
+  }
+ ],
+ "DiningTable": [
+  {
+   "name": "DiningTable_Top",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    6.0,
+    0.25,
+    3.4
+   ],
+   "center": [
+    0.0,
+    2.6,
+    -0.0
+   ],
+   "triangles": 284
+  },
+  {
+   "name": "DiningTable_Legs",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    5.2,
+    2.6,
+    2.8
+   ],
+   "center": [
+    0.0,
+    1.3,
+    -0.0
+   ],
+   "triangles": 448
+  }
+ ],
+ "DiningChair": [
+  {
+   "name": "DiningChair_Seat",
+   "color": "seat",
+   "material": "Fabric",
+   "size": [
+    1.7,
+    2.241,
+    1.832
+   ],
+   "center": [
+    0.0,
+    2.581,
+    0.066
+   ],
+   "triangles": 472
+  },
+  {
+   "name": "DiningChair_Legs",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    1.54,
+    2.489,
+    1.689
+   ],
+   "center": [
+    0.0,
+    1.225,
+    0.075
+   ],
+   "triangles": 672
+  }
+ ],
+ "Toilet": [
+  {
+   "name": "Toilet_Bowl",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    2.2,
+    3.4,
+    2.8
+   ],
+   "center": [
+    0.0,
+    1.7,
+    0.0
+   ],
+   "triangles": 268
+  },
+  {
+   "name": "Toilet_Lid",
+   "color": "surfaceSoft",
+   "material": "SmoothPlastic",
+   "size": [
+    2.24,
+    1.91,
+    2.57
+   ],
+   "center": [
+    0.0,
+    2.555,
+    0.135
+   ],
+   "triangles": 360
+  }
+ ],
+ "Washbasin": [
+  {
+   "name": "Washbasin_Cabinet",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    3.8,
+    2.7,
+    1.8
+   ],
+   "center": [
+    0.0,
+    1.35,
+    -0.0
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "Washbasin_Top",
+   "color": "stone",
+   "material": "SmoothPlastic",
+   "size": [
+    4.0,
+    0.3,
+    2.0
+   ],
+   "center": [
+    0.0,
+    2.85,
+    -0.0
+   ],
+   "triangles": 108
+  },
+  {
+   "name": "Washbasin_Basin",
+   "color": "surfaceSoft",
+   "material": "SmoothPlastic",
+   "size": [
+    1.7,
+    0.5,
+    1.2
+   ],
+   "center": [
+    0.0,
+    3.0,
+    0.15
+   ],
+   "triangles": 224
+  },
+  {
+   "name": "Washbasin_Metal",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    3.8,
+    4.98,
+    0.909
+   ],
+   "center": [
+    0.0,
+    5.41,
+    -0.526
+   ],
+   "triangles": 268
+  },
+  {
+   "name": "Washbasin_Mirror",
+   "color": "skySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    3.5,
+    3.1,
+    0.06
+   ],
+   "center": [
+    0.0,
+    6.2,
+    -0.85
+   ],
+   "triangles": 12
+  }
+ ],
+ "StoreShelf": [
+  {
+   "name": "StoreShelf_Frame",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    6.0,
+    6.0,
+    1.6
+   ],
+   "center": [
+    0.0,
+    3.0,
+    -0.0
+   ],
+   "triangles": 320
+  },
+  {
+   "name": "StoreShelf_Goodscoral",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    5.4,
+    5.2,
+    0.7
+   ],
+   "center": [
+    0.0,
+    2.99,
+    0.2
+   ],
+   "triangles": 308
+  },
+  {
+   "name": "StoreShelf_Goodsyellow",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    5.4,
+    5.45,
+    0.7
+   ],
+   "center": [
+    0.0,
+    3.115,
+    0.2
+   ],
+   "triangles": 308
+  },
+  {
+   "name": "StoreShelf_Goodssky",
+   "color": "sky",
+   "material": "SmoothPlastic",
+   "size": [
+    5.4,
+    5.2,
+    0.7
+   ],
+   "center": [
+    0.0,
+    2.99,
+    0.2
+   ],
+   "triangles": 308
+  },
+  {
+   "name": "StoreShelf_Goodsmint",
+   "color": "mint",
+   "material": "SmoothPlastic",
+   "size": [
+    5.4,
+    5.45,
+    0.7
+   ],
+   "center": [
+    0.0,
+    3.115,
+    0.2
+   ],
+   "triangles": 308
+  }
+ ],
+ "StoreCounter": [
+  {
+   "name": "StoreCounter_Body",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    6.0,
+    3.0,
+    2.0
+   ],
+   "center": [
+    0.0,
+    1.5,
+    -0.0
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "StoreCounter_Top",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    6.3,
+    0.25,
+    2.3
+   ],
+   "center": [
+    0.0,
+    3.1,
+    -0.0
+   ],
+   "triangles": 108
+  },
+  {
+   "name": "StoreCounter_Register",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    1.5,
+    1.74,
+    1.2
+   ],
+   "center": [
+    1.5,
+    4.07,
+    -0.0
+   ],
+   "triangles": 152
+  },
+  {
+   "name": "StoreCounter_Screen",
+   "color": "screen",
+   "material": "Neon",
+   "size": [
+    1.0,
+    0.687,
+    0.22
+   ],
+   "center": [
+    1.5,
+    4.5,
+    -0.22
+   ],
+   "triangles": 12
+  }
+ ],
+ "Locker": [
+  {
+   "name": "Locker_Body",
+   "color": "sage",
+   "material": "SmoothPlastic",
+   "size": [
+    1.6,
+    6.0,
+    1.6
+   ],
+   "center": [
+    0.0,
+    3.0,
+    -0.0
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "Locker_Detail",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    1.01,
+    2.15,
+    0.12
+   ],
+   "center": [
+    0.105,
+    3.975,
+    0.84
+   ],
+   "triangles": 80
+  }
+ ],
+ "WaterCooler": [
+  {
+   "name": "WaterCooler_Body",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    1.4,
+    3.6,
+    1.4
+   ],
+   "center": [
+    0.0,
+    1.8,
+    -0.0
+   ],
+   "triangles": 108
+  },
+  {
+   "name": "WaterCooler_Bottle",
+   "color": "sky",
+   "material": "SmoothPlastic",
+   "size": [
+    1.24,
+    1.9,
+    1.221
+   ],
+   "center": [
+    0.0,
+    4.55,
+    -0.0
+   ],
+   "triangles": 180
+  },
+  {
+   "name": "WaterCooler_Taps",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    0.25,
+    0.3,
+    0.25
+   ],
+   "center": [
+    -0.3,
+    2.6,
+    0.78
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "WaterCooler_TapsCold",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    1.0,
+    0.7,
+    0.5
+   ],
+   "center": [
+    0.0,
+    2.4,
+    0.85
+   ],
+   "triangles": 88
+  }
+ ],
+ "Treadmill": [
+  {
+   "name": "Treadmill_Deck",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    2.7,
+    4.706,
+    6.691
+   ],
+   "center": [
+    0.0,
+    2.553,
+    0.054
+   ],
+   "triangles": 216
+  },
+  {
+   "name": "Treadmill_Belt",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    2.0,
+    0.06,
+    5.2
+   ],
+   "center": [
+    0.0,
+    0.73,
+    0.5
+   ],
+   "triangles": 12
+  },
+  {
+   "name": "Treadmill_Frame",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    2.609,
+    3.716,
+    1.949
+   ],
+   "center": [
+    0.0,
+    2.45,
+    -2.085
+   ],
+   "triangles": 720
+  },
+  {
+   "name": "Treadmill_Screen",
+   "color": "screen",
+   "material": "Neon",
+   "size": [
+    1.6,
+    0.581,
+    0.252
+   ],
+   "center": [
+    0.0,
+    4.42,
+    -2.71
+   ],
+   "triangles": 12
+  }
+ ],
+ "DumbbellRack": [
+  {
+   "name": "DumbbellRack_Frame",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    5.0,
+    3.2,
+    1.8
+   ],
+   "center": [
+    0.0,
+    1.6,
+    -0.0
+   ],
+   "triangles": 176
+  },
+  {
+   "name": "DumbbellRack_Bellscoral",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    1.1,
+    2.16,
+    1.16
+   ],
+   "center": [
+    -1.6,
+    2.15,
+    0.1
+   ],
+   "triangles": 232
+  },
+  {
+   "name": "DumbbellRack_Bellssky",
+   "color": "sky",
+   "material": "SmoothPlastic",
+   "size": [
+    1.1,
+    2.16,
+    1.16
+   ],
+   "center": [
+    0.0,
+    2.15,
+    0.1
+   ],
+   "triangles": 232
+  },
+  {
+   "name": "DumbbellRack_Bellsyellow",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    1.1,
+    2.16,
+    1.16
+   ],
+   "center": [
+    1.6,
+    2.15,
+    0.1
+   ],
+   "triangles": 232
+  }
+ ],
+ "WeightBench": [
+  {
+   "name": "WeightBench_Pad",
+   "color": "seat",
+   "material": "Fabric",
+   "size": [
+    1.6,
+    0.4,
+    5.0
+   ],
+   "center": [
+    0.0,
+    1.6,
+    0.6
+   ],
+   "triangles": 236
+  },
+  {
+   "name": "WeightBench_Frame",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    6.4,
+    4.4,
+    4.475
+   ],
+   "center": [
+    0.0,
+    2.2,
+    0.512
+   ],
+   "triangles": 300
+  },
+  {
+   "name": "WeightBench_Plates",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    5.9,
+    1.773,
+    1.8
+   ],
+   "center": [
+    0.0,
+    4.3,
+    -1.6
+   ],
+   "triangles": 272
+  }
+ ],
+ "ElevatorDoor": [
+  {
+   "name": "ElevatorDoor_Frame",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    6.2,
+    8.9,
+    0.8
+   ],
+   "center": [
+    0.0,
+    4.45,
+    -0.0
+   ],
+   "triangles": 132
+  },
+  {
+   "name": "ElevatorDoor_Leaves",
+   "color": "line",
+   "material": "Metal",
+   "size": [
+    4.96,
+    8.3,
+    0.16
+   ],
+   "center": [
+    0.0,
+    4.15,
+    -0.05
+   ],
+   "triangles": 88
+  },
+  {
+   "name": "ElevatorDoor_Sign",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    2.2,
+    0.8,
+    0.2
+   ],
+   "center": [
+    0.0,
+    9.5,
+    0.1
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "ElevatorDoor_Lamp",
+   "color": "yellowSoft",
+   "material": "Neon",
+   "size": [
+    3.85,
+    5.8,
+    0.2
+   ],
+   "center": [
+    1.725,
+    6.8,
+    0.22
+   ],
+   "triangles": 164
+  }
+ ],
+ "NoticeBoard": [
+  {
+   "name": "NoticeBoard_Frame",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    6.0,
+    3.6,
+    0.2
+   ],
+   "center": [
+    0.0,
+    0.0,
+    -0.0
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "NoticeBoard_Cork",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    5.6,
+    3.2,
+    0.06
+   ],
+   "center": [
+    0.0,
+    0.0,
+    0.1
+   ],
+   "triangles": 12
+  },
+  {
+   "name": "NoticeBoard_Paper",
+   "color": "surface",
+   "material": "SmoothPlastic",
+   "size": [
+    4.883,
+    2.273,
+    0.03
+   ],
+   "center": [
+    0.044,
+    0.091,
+    0.14
+   ],
+   "triangles": 36
+  },
+  {
+   "name": "NoticeBoard_Memo",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    3.691,
+    2.591,
+    0.03
+   ],
+   "center": [
+    -0.506,
+    -0.156,
+    0.15
+   ],
+   "triangles": 24
+  }
+ ],
+ "CardboardBox": [
+  {
+   "name": "CardboardBox_Box",
+   "color": "wood",
+   "material": "SmoothPlastic",
+   "size": [
+    2.4,
+    2.0,
+    2.4
+   ],
+   "center": [
+    0.0,
+    1.0,
+    -0.0
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "CardboardBox_Tape",
+   "color": "woodLight",
+   "material": "SmoothPlastic",
+   "size": [
+    0.5,
+    0.805,
+    2.435
+   ],
+   "center": [
+    0.0,
+    1.623,
+    0.007
+   ],
+   "triangles": 24
+  }
+ ],
+ "TrashBin": [
+  {
+   "name": "TrashBin_Bin",
+   "color": "navySoft",
+   "material": "SmoothPlastic",
+   "size": [
+    1.6,
+    2.0,
+    1.576
+   ],
+   "center": [
+    0.0,
+    1.0,
+    -0.0
+   ],
+   "triangles": 180
+  }
+ ]
+}

@@ -390,9 +390,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		player:SetAttribute("AwayGauge", math.floor(d.away))
 		player:SetAttribute("GymMachine", if d.state == "gym" then d.gymMachine or "" else "") -- 🏋️ 운동 자세 (Poses)
 		local buffText = ""
-		for _, item in SalaryConfig.StreetShops.cafe.items do
-			if d.buffs[item.id] then
-				buffText ..= item.emoji
+		for _, shopId in { "cafe", "cafe1f" } do -- ☕ 눈치 커피 · 골목 커피
+			for _, item in SalaryConfig.StreetShops[shopId].items do
+				if d.buffs[item.id] then
+					buffText ..= item.emoji
+				end
 			end
 		end
 		player:SetAttribute("Buffs", buffText)
@@ -1132,7 +1134,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local store = office.shops.store
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if store and (not root or (root.Position - store.counter.Position).Magnitude > 12) then
-			return false, "🏪 사내 매점 계산대 앞에서 사 주세요!"
+			return false, ("🏪 " .. (office.storeName or "사내 매점") .. " 계산대 앞에서 사 주세요!")
 		end
 		if d.profile.money < gift.price then
 			return false, "통장 잔고가 부족해요. 😢"
@@ -1158,7 +1160,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local store = office.shops.store
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if store and (not root or (root.Position - store.counter.Position).Magnitude > 12) then
-			return false, "🏪 사내 매점 계산대 앞에서 사 주세요!"
+			return false, ("🏪 " .. (office.storeName or "사내 매점") .. " 계산대 앞에서 사 주세요!")
 		end
 		if seed.rank and d.profile.rank < seed.rank then
 			return false, `🔒 {SalaryConfig.Ranks[seed.rank].name}부터 살 수 있는 씨앗이에요.`
@@ -1192,7 +1194,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local store = office.shops.store
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if store and (not root or (root.Position - store.counter.Position).Magnitude > 12) then
-			return false, "🏪 사내 매점 계산대 앞에서 사 주세요!"
+			return false, ("🏪 " .. (office.storeName or "사내 매점") .. " 계산대 앞에서 사 주세요!")
 		end
 		local have = d.profile.pigeonSnacks[snack.id] or 0
 		if have + count > SalaryConfig.PIGEON_SNACK_MAX then
@@ -1224,7 +1226,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local store = office.shops.store
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if store and (not root or (root.Position - store.counter.Position).Magnitude > 12) then
-			return false, "🏪 사내 매점 계산대 앞에서 사 주세요!"
+			return false, ("🏪 " .. (office.storeName or "사내 매점") .. " 계산대 앞에서 사 주세요!")
 		end
 		local have = if isFertilizer then d.profile.fertilizer else (d.profile.flowerSeeds[flower.id] or 0)
 		local maxCount = if isFertilizer then SalaryConfig.FERTILIZER_MAX else SalaryConfig.FLOWER_SEED_MAX
@@ -1275,7 +1277,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local store = office.shops.store
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if store and (not root or (root.Position - store.counter.Position).Magnitude > 12) then
-			return false, "🏪 사내 매점 계산대 앞에서 사 주세요!"
+			return false, ("🏪 " .. (office.storeName or "사내 매점") .. " 계산대 앞에서 사 주세요!")
 		end
 		local renewing = not item.consumable and hasItem(d, item.id)
 		if renewing and not item.days then
@@ -2400,7 +2402,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local catOnKeyboard = Employees.hooks.catOn ~= nil and Employees.hooks.catOn(d.desk) -- 🐾 월급냥이 키보드 위에!
 		-- 📄 오늘 업무: 내 자리에 앉아만 있으면 쌓여요 (일하기든, 앉아서 하는 농땡이든) → 자연스럽게 자리로 돌아오게
 		if isSeated(player, d) and not catOnKeyboard then
-			d.workSeconds += dt * (if d.buffs.americano then SalaryConfig.AMERICANO_WORK else 1) -- ☕ 아메리카노
+			d.workSeconds += dt * (if d.buffs.americano then SalaryConfig.AMERICANO_WORK elseif d.buffs.mixcoffee then SalaryConfig.MIXCOFFEE_WORK else 1) -- ☕ 아메리카노 / 믹스커피
 		end
 		if d.state == "snack" then
 			local held = d.heldSnack
@@ -2504,7 +2506,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if blackout then
 			d.away, d.awayWarned = 0, false -- 컴퓨터 꺼짐: 기록 초기화
 		elseif gaugeOn and not isSeated(player, d) then
-			local smoothie = if d.buffs.smoothie then SalaryConfig.SMOOTHIE_AWAY else 1 -- 🍹 에너지 스무디
+			local smoothie = if d.buffs.smoothie then SalaryConfig.SMOOTHIE_AWAY elseif d.buffs.vitamin then SalaryConfig.VITAMIN_AWAY else 1 -- 🍹 에너지 스무디 / 🧃 비타민 음료
 			d.away = math.min(100, d.away + 100 / awayLimit(d) * smoothie * dt)
 			if d.away >= SalaryConfig.AWAY_WARN and not d.awayWarned then
 				d.awayWarned = true
@@ -2528,7 +2530,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		-- 3. 의심도 (점심시간에는 부장이 없어서 안전)
 		local decay = SalaryConfig.SUSPICION_DECAY * (if hasItem(d, "plant") then 1.25 else 1)
 			* (if ReplicatedStorage:GetAttribute("Sunset") == true and Employees.hooks.onRoof and Employees.hooks.onRoof(root.Position) then SalaryConfig.SUNSET_DECAY else 1) -- 🌅 노을 보며 힐링
-			* (if d.buffs.latte then SalaryConfig.LATTE_DECAY else 1) -- 🥛 바닐라 라떼
+			* (if d.buffs.latte then SalaryConfig.LATTE_DECAY elseif d.buffs.yuja then SalaryConfig.YUJA_DECAY else 1) -- 🥛 바닐라 라떼 / 🍵 유자차
 		if dayCycle.phase == "work" and boss.active then
 			local rate = info.detect
 			local coffeeGrace = if hasItem(d, "tumbler") then 90 else SalaryConfig.COFFEE_GRACE

@@ -17,11 +17,15 @@ local CLERK_LOOKS = {
 	store = { skin = Color3.fromRGB(235, 205, 180), shirt = Color3.fromRGB(230, 120, 60), pants = Color3.fromRGB(60, 50, 50) },
 	cafe = { skin = Color3.fromRGB(235, 200, 170), shirt = Color3.fromRGB(40, 120, 80), pants = Color3.fromRGB(50, 40, 35) },
 	dessert = { skin = Color3.fromRGB(240, 210, 185), shirt = Color3.fromRGB(250, 190, 210), pants = Color3.fromRGB(240, 240, 240) },
+	cafe1f = { skin = Color3.fromRGB(232, 200, 172), shirt = Color3.fromRGB(96, 70, 52), pants = Color3.fromRGB(50, 46, 44) },
+	bunsik = { skin = Color3.fromRGB(236, 204, 178), shirt = Color3.fromRGB(196, 70, 60), pants = Color3.fromRGB(60, 56, 60) },
 }
 local GREETINGS = {
 	store = { "어서 와요~ 부장님 선물 찾아요?", "홍삼이 제일 잘 먹혀~ 호호", "꽃다발도 있어요!" },
 	cafe = { "어서 오세요~ 오늘도 출근 고생 많으세요!", "근무 중이세요? 빨리 해 드릴게요 😉", "아아 한 잔 어떠세요?" },
 	dessert = { "갓 구운 크로플 있어요~", "회사에 몰래 가져가시게요? 포장해 드릴게요!", "달콤한 거 드시고 힘내세요!" },
+	cafe1f = { "어서 와요~ 믹스커피가 제일 잘 나가요!", "오늘도 출근했네, 힘내요!", "사무실에서 몰래 마시게? 뚜껑 닫아 줄게요." },
+	bunsik = { "어서 와~ 떡볶이 방금 했어!", "회사에 들고 가서 몰래 먹게? 냄새 조심해~", "김밥은 금방 말아 줄게!" },
 }
 
 -- buy(player, shopId, itemId) → (성공 여부, 메시지)

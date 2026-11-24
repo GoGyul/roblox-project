@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 
 local Ui = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Ui"))
 local SalaryConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SalaryConfig"))
+local Theme = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SalaryTheme"))
 
 local Prompts = {}
 
@@ -42,6 +43,13 @@ function Prompts.start()
 	end
 	workspace.DescendantAdded:Connect(makeCustom)
 
+	-- 🤐 수다 중에는 다른 상호작용([E] 수다 떨기, [R] 감사팀이죠? 등)을 띄우지도, 누를 수도 없게 해요
+	local function refreshBusy()
+		ProximityPromptService.Enabled = player:GetAttribute("SalaryState") ~= "chat"
+	end
+	player:GetAttributeChangedSignal("SalaryState"):Connect(refreshBusy)
+	refreshBusy()
+
 	local playerGui = player:WaitForChild("PlayerGui")
 	local shown: { [ProximityPrompt]: BillboardGui } = {}
 
@@ -69,17 +77,17 @@ function Prompts.start()
 
 		local pill = Ui.make("TextButton", {
 			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = Color3.fromRGB(25, 25, 32),
-			BackgroundTransparency = 0.2,
+			BackgroundColor3 = Theme.Color.surface,
+			BackgroundTransparency = 0.04,
 			AutoButtonColor = false,
 			Text = "",
 			Parent = board,
-		}, { Ui.corner(15) })
+		}, { Ui.corner(15), Ui.stroke(Theme.Color.navy, 2) })
 		local keyBox = Ui.make("TextLabel", {
 			Position = UDim2.fromOffset(3, 3),
 			Size = UDim2.fromOffset(24, 24),
-			BackgroundColor3 = Color3.fromRGB(240, 240, 240),
-			TextColor3 = Color3.fromRGB(25, 25, 32),
+			BackgroundColor3 = Theme.Color.yellow,
+			TextColor3 = Theme.Color.navy,
 			Font = Enum.Font.GothamBlack,
 			TextScaled = true,
 			Text = key,
@@ -87,7 +95,7 @@ function Prompts.start()
 		}, { Ui.corner(12) })
 		local fill = Ui.make("Frame", { -- 꾹 누르기 진행
 			Size = UDim2.fromScale(0, 1),
-			BackgroundColor3 = Color3.fromRGB(255, 200, 80),
+			BackgroundColor3 = Theme.Color.mint,
 			BackgroundTransparency = 0.5,
 			BorderSizePixel = 0,
 			Parent = pill,
@@ -96,7 +104,7 @@ function Prompts.start()
 			Position = UDim2.fromOffset(32, 0),
 			Size = UDim2.new(1, -38, 1, 0),
 			BackgroundTransparency = 1,
-			TextColor3 = Color3.new(1, 1, 1),
+			TextColor3 = Theme.Color.navy,
 			Font = Enum.Font.GothamBold,
 			TextSize = 13,
 			TextXAlignment = Enum.TextXAlignment.Left,

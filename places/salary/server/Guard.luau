@@ -442,7 +442,7 @@ end
 -- 🌳 공원·눈치 스트리트 경비원 (눈치물산만, 밖 공간이 있는 회사)
 function Guard.start(office, dayCycle, events, remotes, useGift)
 	if not office.guardPatrol or not office.guardPost then
-		return nil -- 밖 공간이 없는 회사(대충상사)에는 공원 경비원이 없어요
+		return nil -- 밖 공간이 없는 회사에는 경비원이 없어요 (대충상사는 1층 거리, 눈치물산은 공원·거리)
 	end
 	return Guard.new({
 		folder = office.folder,

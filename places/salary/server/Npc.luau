@@ -155,6 +155,74 @@ export type Look = {
 	pants: Color3,
 }
 
+-- 👔 직장인 옷차림: 색만 칠한 기본 몸에 머리카락·셔츠 깃·넥타이·사원증·벨트·구두를 붙여요.
+--   이름으로 정해지는 값이라 같은 사람은 늘 같은 모습이에요. 모두 장식이라 부딪히지 않아요.
+local HAIR_COLORS = { Color3.fromRGB(34, 30, 28), Color3.fromRGB(58, 44, 36), Color3.fromRGB(24, 24, 28), Color3.fromRGB(88, 66, 48), Color3.fromRGB(120, 120, 124) }
+local TIE_COLORS = { Color3.fromRGB(150, 40, 46), Color3.fromRGB(44, 62, 110), Color3.fromRGB(60, 96, 76), Color3.fromRGB(70, 70, 78) }
+
+local function dress(model: Model, name: string, look: Look)
+	local seed = 0
+	for i = 1, #name do
+		seed += string.byte(name, i) * i
+	end
+	local function attach(bodyName: string, size: Vector3, offset: CFrame, color: Color3, round: boolean?): Part?
+		local body = model:FindFirstChild(bodyName) :: BasePart?
+		if not body then
+			return nil
+		end
+		local part = Instance.new("Part")
+		part.Name = "Outfit"
+		part.Size = size
+		part.Color = color
+		part.Material = Enum.Material.SmoothPlastic
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CanTouch = false
+		part.Massless = true
+		part.CollisionGroup = NPC_GROUP
+		part.TopSurface = Enum.SurfaceType.Smooth
+		part.BottomSurface = Enum.SurfaceType.Smooth
+		if round then
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = part
+		end
+		part.CFrame = body.CFrame * offset
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = body
+		weld.Part1 = part
+		weld.Parent = part
+		part.Parent = model
+		return part
+	end
+	local boss = string.find(name, "부장", 1, true) ~= nil
+	-- 머리카락 (윗머리 + 뒷머리). 부장님은 희끗한 머리예요.
+	local hair = if boss then HAIR_COLORS[5] else HAIR_COLORS[seed % 4 + 1]
+	attach("Head", Vector3.new(1.34, 0.8, 1.34), CFrame.new(0, 0.36, 0.04), hair, true)
+	attach("Head", Vector3.new(1.26, 0.9, 0.5), CFrame.new(0, 0.05, 0.42), hair, true)
+	if seed % 3 == 0 and not boss then
+		attach("Head", Vector3.new(1.3, 0.5, 0.5), CFrame.new(0, 0.42, -0.42), hair, true) -- 앞머리
+	end
+	-- 셔츠 깃 · 넥타이 (부장님과 절반쯤의 직원) · 사원증
+	local white = Color3.fromRGB(240, 240, 238)
+	attach("UpperTorso", Vector3.new(1.1, 0.2, 0.7), CFrame.new(0, 0.72, -0.02), white)
+	if boss or seed % 2 == 0 then
+		local tie = TIE_COLORS[seed % #TIE_COLORS + 1]
+		attach("UpperTorso", Vector3.new(0.26, 0.24, 0.1), CFrame.new(0, 0.56, -0.53), tie)
+		attach("UpperTorso", Vector3.new(0.22, 1.0, 0.08), CFrame.new(0, -0.02, -0.54), tie)
+	else
+		attach("UpperTorso", Vector3.new(0.05, 0.9, 0.05), CFrame.new(0.14, 0.2, -0.53) * CFrame.Angles(0, 0, math.rad(8)), Color3.fromRGB(40, 90, 160)) -- 사원증 줄
+		attach("UpperTorso", Vector3.new(0.05, 0.9, 0.05), CFrame.new(-0.14, 0.2, -0.53) * CFrame.Angles(0, 0, math.rad(-8)), Color3.fromRGB(40, 90, 160))
+		attach("UpperTorso", Vector3.new(0.36, 0.46, 0.06), CFrame.new(0, -0.42, -0.55), white)
+	end
+	-- 벨트 · 구두
+	attach("LowerTorso", Vector3.new(2.04, 0.16, 1.04), CFrame.new(0, 0.16, 0), Color3.fromRGB(30, 28, 28))
+	for _, foot in { "LeftFoot", "RightFoot" } do
+		attach(foot, Vector3.new(1.04, 0.34, 1.2), CFrame.new(0, 0, -0.08), Color3.fromRGB(34, 30, 28))
+	end
+	local _ = look
+end
+
 function Npc.create(name: string, look: Look, parent: Instance): Model
 	local description = Instance.new("HumanoidDescription")
 	description.HeadColor = look.skin
@@ -188,6 +256,7 @@ function Npc.create(name: string, look: Look, parent: Instance): Model
 		end
 	end
 	tracked[model] = true
+	pcall(dress, model, name, look) -- 👔 옷차림 (실패해도 NPC는 그대로 만들어져요)
 
 	-- 머리 위 표시: 이름 / 상태 이모지 / 말풍선
 	local head = model:WaitForChild("Head") :: BasePart

@@ -10,6 +10,13 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local SalaryConfig = require(Shared:WaitForChild("SalaryConfig"))
 local Ui = require(Shared:WaitForChild("Ui"))
 local Sounds = require(Shared:WaitForChild("Sounds"))
+local Theme = require(Shared:WaitForChild("SalaryTheme"))
+
+Ui.setTheme(Theme.UI, {
+	corner = Theme.corner,
+	buttonCorner = 14,
+	stroke = Theme.Color.navy,
+})
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -21,12 +28,12 @@ local Ranks = SalaryConfig.Ranks
 local Hud = {}
 
 Hud.COLORS = {
-	panel = Color3.fromRGB(25, 30, 40),
-	good = Color3.fromRGB(90, 200, 120),
-	warn = Color3.fromRGB(240, 190, 60),
-	bad = Color3.fromRGB(230, 70, 60),
-	locked = Color3.fromRGB(45, 45, 50),
-	idle = Color3.fromRGB(70, 75, 90),
+	panel = Theme.Color.surface,
+	good = Theme.Color.mint,
+	warn = Theme.Color.yellow,
+	bad = Theme.Color.coral,
+	locked = Color3.fromRGB(214, 222, 228),
+	idle = Theme.Color.skySoft,
 }
 local COLORS = Hud.COLORS
 
@@ -43,9 +50,9 @@ Ui.setToastStyle(460, 15, 8) -- 📢 아래쪽 알림을 작게 (예전 620폭·
 
 local function panel(props: { [string]: any }): Frame
 	props.BackgroundColor3 = props.BackgroundColor3 or COLORS.panel
-	props.BackgroundTransparency = props.BackgroundTransparency or 0.15
+	props.BackgroundTransparency = props.BackgroundTransparency or 0.04
 	props.Parent = props.Parent or gui
-	return Ui.make("Frame", props, { Ui.corner(10), Ui.padding(10), Ui.stroke(C.brass) })
+	return Ui.make("Frame", props, { Ui.corner(18), Ui.padding(12), Ui.stroke(Theme.Color.navy, 2) })
 end
 
 function Hud.text(props: { [string]: any }): TextLabel
@@ -68,7 +75,7 @@ local function bar(parent: Instance, y: number, title: string): (TextLabel, Fram
 	local back = Ui.make("Frame", {
 		Position = UDim2.fromOffset(0, y + 22),
 		Size = UDim2.new(1, 0, 0, 12),
-		BackgroundColor3 = Color3.fromRGB(60, 60, 70),
+		BackgroundColor3 = Color3.fromRGB(223, 230, 234),
 		Parent = parent,
 	}, { Ui.corner(6) })
 	local fill = Ui.make("Frame", {
@@ -93,10 +100,20 @@ local moodText = text({
 	Position = UDim2.fromOffset(0, 26),
 	Size = UDim2.new(1, 0, 0, 18),
 	TextSize = 14,
-	TextColor3 = Color3.fromRGB(200, 200, 210),
+	TextColor3 = Theme.Color.muted,
 	TextXAlignment = Enum.TextXAlignment.Center,
 	Parent = clockPanel,
 })
+
+-- 화면 가운데에 배경 없이 뜨는 글씨는 벽·바닥 색에 묻히지 않게 짙은 남색 테두리를 둘러요
+local function outline(label: TextLabel)
+	local edge = Instance.new("UIStroke")
+	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual -- 상자가 아니라 글씨에 테두리
+	edge.Color = Theme.Color.navy
+	edge.Thickness = 2.5
+	edge.LineJoinMode = Enum.LineJoinMode.Round
+	edge.Parent = label
+end
 
 local footstepText = text({
 	AnchorPoint = Vector2.new(0.5, 0),
@@ -104,10 +121,11 @@ local footstepText = text({
 	Size = UDim2.fromOffset(420, 30),
 	TextSize = 22,
 	TextXAlignment = Enum.TextXAlignment.Center,
-	TextStrokeTransparency = 0.3,
+	TextStrokeTransparency = 1, -- (테두리는 outline()이 그려요)
 	Visible = false,
 	Parent = gui,
 })
+outline(footstepText)
 
 -- 🎲 돌발 이벤트 안내 (발소리 표시 아래)
 local eventText = text({
@@ -116,10 +134,11 @@ local eventText = text({
 	Size = UDim2.fromOffset(560, 30),
 	TextSize = 21,
 	TextXAlignment = Enum.TextXAlignment.Center,
-	TextStrokeTransparency = 0.3,
+	TextStrokeTransparency = 1, -- (테두리는 outline()이 그려요)
 	Visible = false,
 	Parent = gui,
 })
+outline(eventText)
 
 -- 👀 이과장이 내 농땡이를 보고 있을 때 경고 (게이지가 다 차면 고자질!)
 local leeText = text({
@@ -129,22 +148,23 @@ local leeText = text({
 	TextSize = 22,
 	TextColor3 = Color3.fromRGB(255, 120, 120),
 	TextXAlignment = Enum.TextXAlignment.Center,
-	TextStrokeTransparency = 0.2,
+	TextStrokeTransparency = 1, -- (테두리는 outline()이 그려요)
 	Visible = false,
 	Parent = gui,
 })
+outline(leeText)
 
 -- 🏢 출근하기 (하루가 시작되기 전, 이 버튼을 눌러야 9시가 돼요)
 local clockIn = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.58),
 	Size = UDim2.fromOffset(380, 170),
-	BackgroundColor3 = Color3.fromRGB(28, 22, 16),
-	BackgroundTransparency = 0.1,
+	BackgroundColor3 = Theme.Color.surface,
+	BackgroundTransparency = 0.02,
 	Visible = false,
 	ZIndex = 20,
 	Parent = gui,
-}, { Ui.corner(14), Ui.stroke(C.brass, 2) })
+}, { Ui.corner(22), Ui.stroke(Theme.Color.navy, 3) })
 local clockInTitle = text({
 	Position = UDim2.fromOffset(0, 12),
 	Size = UDim2.new(1, 0, 0, 30),
@@ -157,7 +177,7 @@ local clockInInfo = text({
 	Position = UDim2.fromOffset(0, 44),
 	Size = UDim2.new(1, 0, 0, 22),
 	TextSize = 15,
-	TextColor3 = Color3.fromRGB(200, 200, 210),
+	TextColor3 = Theme.Color.muted,
 	TextXAlignment = Enum.TextXAlignment.Center,
 	ZIndex = 21,
 	Parent = clockIn,
@@ -252,12 +272,12 @@ local bellButton = Ui.button({
 	TextSize = 24,
 	Parent = gui,
 })
-Ui.stroke(C.brass).Parent = bellButton
+Ui.stroke(Theme.Color.navy, 2).Parent = bellButton
 local bellBadge = Ui.make("TextLabel", {
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.new(1, -4, 0, 4),
 	Size = UDim2.fromOffset(22, 22),
-	BackgroundColor3 = Color3.fromRGB(230, 50, 50),
+	BackgroundColor3 = Theme.Color.coral,
 	TextColor3 = Color3.new(1, 1, 1),
 	Font = Enum.Font.GothamBlack,
 	TextSize = 13,
@@ -327,8 +347,8 @@ local function renderNotices()
 		local row = Ui.make("Frame", {
 			Size = UDim2.new(1, -8, 0, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundColor3 = if notice.read then Color3.fromRGB(45, 50, 62) else Color3.fromRGB(70, 62, 40),
-			BackgroundTransparency = 0.2,
+			BackgroundColor3 = if notice.read then Theme.Color.surfaceSoft else Theme.Color.yellowSoft,
+			BackgroundTransparency = 0,
 			LayoutOrder = shown,
 			ZIndex = 27,
 			Parent = noticeList,
@@ -347,7 +367,7 @@ local function renderNotices()
 			LayoutOrder = 2,
 			Size = UDim2.new(1, 0, 0, 13),
 			TextSize = 11,
-			TextColor3 = Color3.fromRGB(170, 170, 180),
+			TextColor3 = Theme.Color.muted,
 			TextXAlignment = Enum.TextXAlignment.Right,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			Text = stamp,
@@ -356,7 +376,7 @@ local function renderNotices()
 		})
 	end
 	if shown == 0 then
-		text({ Size = UDim2.new(1, 0, 0, 40), TextSize = 15, TextColor3 = Color3.fromRGB(170, 170, 180), Text = "아직 알림이 없어요", ZIndex = 27, Parent = noticeList })
+		text({ Size = UDim2.new(1, 0, 0, 40), TextSize = 15, TextColor3 = Theme.Color.muted, Text = "아직 알림이 없어요", ZIndex = 27, Parent = noticeList })
 	end
 end
 
@@ -665,11 +685,15 @@ local standHint = text({
 	Size = UDim2.fromOffset(520, 28),
 	TextSize = 17,
 	TextXAlignment = Enum.TextXAlignment.Center,
-	TextStrokeTransparency = 0.3,
+	BackgroundColor3 = Theme.Color.surface,
+	BackgroundTransparency = 0.06,
+	TextStrokeTransparency = 1,
 	Text = "🪑 ⭐ 내 자리에 앉으면 농땡이 메뉴가 나와요",
 	Visible = false,
 	Parent = gui,
 })
+Ui.corner(14).Parent = standHint
+Ui.stroke(Theme.Color.navy, 2).Parent = standHint
 
 
 local hintText = text({
@@ -678,9 +702,13 @@ local hintText = text({
 	Size = UDim2.new(1, 0, 0, 22),
 	TextSize = 16,
 	TextXAlignment = Enum.TextXAlignment.Center,
-	TextStrokeTransparency = 0.4,
+	BackgroundColor3 = Theme.Color.surface,
+	BackgroundTransparency = 0.06,
+	TextStrokeTransparency = 1,
 	Parent = actionPanel,
 })
+Ui.corner(11).Parent = hintText
+Ui.stroke(Theme.Color.navy, 1.5).Parent = hintText
 local buttonRow = Ui.make("Frame", {
 	Position = UDim2.fromOffset(0, 28),
 	Size = UDim2.new(1, 0, 0, 88),
@@ -1328,7 +1356,7 @@ RunService.RenderStepped:Connect(function()
 		end
 		button.Text = buttonText(i, actionId, unlocked)
 		button.BackgroundColor3 = if not unlocked then COLORS.locked elseif selected then C.brass else COLORS.idle
-		button.BackgroundTransparency = if selected then 0.05 else 0.3 -- 살짝 비쳐서 게임 화면을 덜 가려요
+		button.BackgroundTransparency = if selected then 0 else 0.08
 		button.TextColor3 = if selected then C.ink else C.text
 	end
 	if hoveredPhoneGame then
@@ -1413,11 +1441,12 @@ function Hud.popup(message: string, color: Color3, seconds: number)
 		Text = message,
 		TextSize = 21, -- (예전 30: 너무 커서 줄였어요)
 		TextColor3 = color,
-		TextStrokeTransparency = 0.2,
+		TextStrokeTransparency = 1,
 		TextXAlignment = Enum.TextXAlignment.Center,
 		ZIndex = 45,
 		Parent = gui,
 	})
+	outline(label)
 	table.insert(popupStack, 1, label)
 	-- 너무 많이 쌓이면 가장 오래된 것부터 정리
 	while #popupStack > 5 do
@@ -1432,6 +1461,10 @@ function Hud.popup(message: string, color: Color3, seconds: number)
 	task.delay(hold, function()
 		if label.Parent then
 			TweenService:Create(label, TweenInfo.new(0.6), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+			local edge = label:FindFirstChildOfClass("UIStroke")
+			if edge then
+				TweenService:Create(edge, TweenInfo.new(0.6), { Transparency = 1 }):Play()
+			end
 		end
 	end)
 	task.delay(hold + 0.6, function()
@@ -1606,14 +1639,14 @@ local CHAT_LOG_LINES = 3
 local chatReactBar = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0),
 	Position = UDim2.new(0.5, 0, 0, 150),
-	Size = UDim2.fromOffset(560, 116),
-	BackgroundColor3 = Color3.fromRGB(36, 30, 26),
-	BackgroundTransparency = 0.05,
+	Size = UDim2.fromOffset(560, 134),
+	BackgroundColor3 = Theme.Color.surface,
+	BackgroundTransparency = 0.02,
 	Visible = false,
 	ZIndex = 40,
 	Parent = gui,
-}, { Ui.corner(12), Ui.stroke(Color3.fromRGB(255, 190, 90), 2), Ui.padding(8) })
-local chatReactTitle = text({ Size = UDim2.new(1, 0, 0, 20), TextSize = 15, TextColor3 = Color3.fromRGB(255, 210, 130), ZIndex = 41, Parent = chatReactBar })
+}, { Ui.corner(20), Ui.stroke(Theme.Color.navy, 3), Ui.padding(12) })
+local chatReactTitle = text({ Size = UDim2.new(1, 0, 0, 20), TextSize = 15, TextColor3 = Theme.Color.navy, ZIndex = 41, Parent = chatReactBar })
 -- 대사 기록 (위가 오래된 것, 아래가 방금 한 말)
 local chatLogLabels: { TextLabel } = {}
 local chatLog: { string } = {}
@@ -1637,10 +1670,11 @@ local function renderChatLog()
 	end
 end
 local REACT_TOP = 24 + CHAT_LOG_LINES * 25 + 4
+local CHAT_PAD = 12 * 2 + 6 -- 창 안쪽 여백(위아래 12씩) + 맨 아랫줄이 테두리에 잘리지 않게 여유
 local chatReactTimer = Ui.make("Frame", {
 	Position = UDim2.fromOffset(0, REACT_TOP),
 	Size = UDim2.new(1, 0, 0, 5),
-	BackgroundColor3 = Color3.fromRGB(255, 190, 90),
+	BackgroundColor3 = Theme.Color.mint,
 	BorderSizePixel = 0,
 	ZIndex = 41,
 	Parent = chatReactBar,
@@ -1657,7 +1691,7 @@ local chatCloseButton = Ui.make("TextButton", {
 	AnchorPoint = Vector2.new(1, 0),
 	Position = UDim2.new(1, 0, 0, -2),
 	Size = UDim2.fromOffset(26, 24),
-	BackgroundColor3 = Color3.fromRGB(80, 70, 60),
+	BackgroundColor3 = Theme.Color.coral,
 	Text = "X",
 	TextColor3 = Color3.new(1, 1, 1),
 	Font = Enum.Font.GothamBlack,
@@ -1679,7 +1713,7 @@ local function setReactVisible(on: boolean)
 	for _, b in chatReactButtons do
 		b.Visible = on
 	end
-	chatReactBar.Size = UDim2.fromOffset(560, if on then REACT_TOP + 70 else REACT_TOP)
+	chatReactBar.Size = UDim2.fromOffset(560, (if on then REACT_TOP + 70 else REACT_TOP) + CHAT_PAD)
 	chatReactTitle.Text = if on then `💬 {chatName}와(과) 수다 · 🗣️ 맞장구! [1]·[2]·[3]` elseif chatEnded then `💬 {chatName}와(과) 오늘 대화 끝 👋` else `💬 {chatName}와(과) 수다 중`
 end
 local function closeChatReact()
@@ -1758,10 +1792,10 @@ Remotes:WaitForChild("ChatLine").OnClientEvent:Connect(function(kind: string, na
 	end
 	chatName = name
 	local entry = if kind == "me"
-		then `<font color="#8FD3FF"><b>나:</b></font> {line}`
-		elseif kind == "sys" then `<font color="#7CE08A">{line}</font>`
-		elseif kind == "end" then `<font color="#FFB36B"><b>{line}</b></font>`
-		else `<font color="#FFD27A"><b>{name}:</b></font> {line}`
+		then `<font color="#287EAF"><b>나:</b></font> {line}`
+		elseif kind == "sys" then `<font color="#237F70"><b>{line}</b></font>`
+		elseif kind == "end" then `<font color="#C64E50"><b>{line}</b></font>`
+		else `<font color="#A85B16"><b>{name}:</b></font> {line}`
 	if kind == "end" then
 		-- 👋 오늘 대화 끝: 창은 그대로 두고 ✕ / 바깥 클릭 / 8초 뒤에 닫혀요
 		chatEnded = true
@@ -1887,13 +1921,13 @@ local elevatorGui = Ui.make("Frame", {
 -- 이동 안내는 시계 바로 아래 작은 알약 모양으로 (다른 UI를 가리지 않게)
 local elevatorPill = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0),
-	Position = UDim2.new(0.5, 0, 0, 76),
-	Size = UDim2.fromOffset(280, 30),
-	BackgroundColor3 = Color3.fromRGB(20, 22, 30),
-	BackgroundTransparency = 0.15,
+	Position = UDim2.new(0.5, 0, 0, 152), -- (가운데 이벤트 문구(74~130)와 겹치지 않게 그 아래로)
+	Size = UDim2.fromOffset(300, 32),
+	BackgroundColor3 = Theme.Color.surface,
+	BackgroundTransparency = 0.04,
 	ZIndex = 45,
 	Parent = elevatorGui,
-}, { Ui.corner(15), Ui.stroke(Color3.fromRGB(255, 200, 80), 1.5) })
+}, { Ui.corner(16), Ui.stroke(Theme.Color.navy, 2) })
 local elevatorTitle = text({
 	Size = UDim2.fromScale(1, 1),
 	TextSize = 16,

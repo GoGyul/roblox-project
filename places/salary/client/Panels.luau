@@ -12,6 +12,7 @@ local ChatTopics = require(Shared:WaitForChild("ChatTopics"))
 local Ui = require(Shared:WaitForChild("Ui"))
 local Hud = require(script.Parent.Hud)
 local Sounds = require(Shared:WaitForChild("Sounds"))
+local Theme = require(Shared:WaitForChild("SalaryTheme"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -20,9 +21,9 @@ local comma = Hud.comma
 local States = SalaryConfig.States
 local Ranks = SalaryConfig.Ranks
 
-local INK = Color3.fromRGB(30, 30, 40)
-local MUTED = Color3.fromRGB(110, 110, 120)
-local RED = Color3.fromRGB(200, 50, 40)
+local INK = Theme.Color.navy
+local MUTED = Theme.Color.muted
+local RED = Theme.Color.coral
 
 local Panels = {}
 local current: Frame? = nil
@@ -51,12 +52,12 @@ local function sheet(width: number, height: number, keepClear: boolean?): Frame
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = if keepClear then UDim2.new(0.5, 0, 0.5, -56) else UDim2.fromScale(0.5, 0.5), -- (위 8·아래 120 사이 가운데)
 		Size = UDim2.fromOffset(width, height),
-		BackgroundColor3 = Color3.fromRGB(250, 250, 245),
+		BackgroundColor3 = Theme.Color.surface,
 		ZIndex = 30,
 		Parent = gui,
 	}, {
-		Ui.corner(12),
-		Ui.stroke(Color3.fromRGB(60, 60, 70), 3),
+		Ui.corner(22),
+		Ui.stroke(Theme.Color.navy, 3),
 		Ui.padding(20),
 		Ui.make("UIScale", { Scale = fitScale(width, height, keepClear) }),
 	})
@@ -76,9 +77,9 @@ local function sheet(width: number, height: number, keepClear: boolean?): Frame
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 10, 0, -10),
 		Size = UDim2.fromOffset(36, 36),
-		BackgroundColor3 = Color3.fromRGB(225, 225, 228),
+		BackgroundColor3 = Theme.Color.coralSoft,
 		Text = "X", -- ✕ 기호는 로블록스 글꼴에 없어서 네모로 보여요
-		TextColor3 = Color3.fromRGB(60, 60, 70),
+		TextColor3 = Theme.Color.navy,
 		Font = Enum.Font.GothamBlack,
 		TextSize = 18,
 		ZIndex = 33,
@@ -1742,6 +1743,10 @@ local function toolButton(label: string, width: number, onClick: () -> (), tip: 
 		TextSize = 15,
 		Parent = Hud.toolbar,
 	})
+	local colors = { Theme.Color.yellow, Theme.Color.mint, Theme.Color.coralSoft, Theme.Color.skySoft, Theme.Color.mintSoft, Theme.Color.coral }
+	local index = #Hud.toolbar:GetChildren()
+	b.BackgroundColor3 = colors[(index - 1) % #colors + 1]
+	b.TextColor3 = Theme.Color.navy
 	b.Activated:Connect(function()
 		hideToolTip(b)
 		onClick()

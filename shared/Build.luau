@@ -54,11 +54,13 @@ function Build:wall(
 		end
 		local length, h = b - a, yTop - yBottom
 		local mid = (a + b) / 2
+		local part
 		if axis == "Z" then
-			self:part(Vector3.new(1, h, length), Vector3.new(fixed, yBottom + h / 2, mid), props)
+			part = self:part(Vector3.new(1, h, length), Vector3.new(fixed, yBottom + h / 2, mid), props)
 		else
-			self:part(Vector3.new(length, h, 1), Vector3.new(mid, yBottom + h / 2, fixed), props)
+			part = self:part(Vector3.new(length, h, 1), Vector3.new(mid, yBottom + h / 2, fixed), props)
 		end
+		part:SetAttribute("Wall", true) -- 벽 조각 표시 (월급루팡 OfficeSkin이 메시 패널을 입혀요)
 	end
 
 	local sorted = table.clone(doors or {})

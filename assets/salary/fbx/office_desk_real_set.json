@@ -1,0 +1,250 @@
+{
+ "RDesk": [
+  {
+   "name": "RDesk_Top",
+   "color": "laminate",
+   "material": "SmoothPlastic",
+   "size": [
+    7.6,
+    0.2,
+    3.8
+   ],
+   "center": [
+    -0.2,
+    2.46,
+    -0.0
+   ],
+   "triangles": 108
+  },
+  {
+   "name": "RDesk_Frame",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    7.36,
+    2.36,
+    3.44
+   ],
+   "center": [
+    -0.2,
+    1.18,
+    -0.04
+   ],
+   "triangles": 352
+  },
+  {
+   "name": "RDesk_Partition",
+   "color": "sage",
+   "material": "Fabric",
+   "size": [
+    8.42,
+    3.0,
+    3.21
+   ],
+   "center": [
+    -0.2,
+    1.5,
+    -0.605
+   ],
+   "triangles": 132
+  },
+  {
+   "name": "RDesk_Trim",
+   "color": "metal",
+   "material": "SmoothPlastic",
+   "size": [
+    8.5,
+    3.12,
+    3.49
+   ],
+   "center": [
+    -0.2,
+    1.56,
+    -0.505
+   ],
+   "triangles": 220
+  },
+  {
+   "name": "RDesk_Keyboard",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    2.72,
+    0.12,
+    0.64
+   ],
+   "center": [
+    0.11,
+    2.62,
+    0.51
+   ],
+   "triangles": 152
+  },
+  {
+   "name": "RDesk_Paper",
+   "color": "paper",
+   "material": "SmoothPlastic",
+   "size": [
+    1.427,
+    0.06,
+    1.651
+   ],
+   "center": [
+    -2.421,
+    2.595,
+    0.337
+   ],
+   "triangles": 24
+  },
+  {
+   "name": "RDesk_Cup",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    0.39,
+    0.42,
+    0.4
+   ],
+   "center": [
+    2.6,
+    2.77,
+    -0.7
+   ],
+   "triangles": 220
+  }
+ ],
+ "RMonitor": [
+  {
+   "name": "RMonitor_Frame",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    3.3,
+    2.575,
+    0.9
+   ],
+   "center": [
+    0.75,
+    3.787,
+    -1.3
+   ],
+   "triangles": 132
+  },
+  {
+   "name": "RMonitor_Screen",
+   "color": "screen",
+   "material": "Neon",
+   "size": [
+    3.14,
+    1.78,
+    0.03
+   ],
+   "center": [
+    0.75,
+    4.12,
+    -1.18
+   ],
+   "triangles": 12
+  }
+ ],
+ "RChair": [
+  {
+   "name": "RChair_Seat",
+   "color": "seat",
+   "material": "Fabric",
+   "size": [
+    1.95,
+    0.34,
+    1.95
+   ],
+   "center": [
+    0.0,
+    1.6,
+    -0.0
+   ],
+   "triangles": 284
+  },
+  {
+   "name": "RChair_Back",
+   "color": "seat",
+   "material": "Fabric",
+   "size": [
+    1.85,
+    2.281,
+    0.502
+   ],
+   "center": [
+    0.0,
+    3.15,
+    1.0
+   ],
+   "triangles": 284
+  },
+  {
+   "name": "RChair_Frame",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    2.46,
+    3.74,
+    2.33
+   ],
+   "center": [
+    0.0,
+    2.1,
+    0.125
+   ],
+   "triangles": 1304
+  },
+  {
+   "name": "RChair_Wheels",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    2.536,
+    0.28,
+    2.437
+   ],
+   "center": [
+    0.0,
+    0.14,
+    0.115
+   ],
+   "triangles": 400
+  }
+ ],
+ "RDrawer": [
+  {
+   "name": "RDrawer_Body",
+   "color": "surfaceSoft",
+   "material": "Metal",
+   "size": [
+    1.7,
+    2.05,
+    2.4
+   ],
+   "center": [
+    0.0,
+    1.1,
+    -0.0
+   ],
+   "triangles": 44
+  },
+  {
+   "name": "RDrawer_Lines",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    1.56,
+    1.22,
+    0.045
+   ],
+   "center": [
+    0.0,
+    1.345,
+    1.207
+   ],
+   "triangles": 72
+  }
+ ]
+}

@@ -40,11 +40,46 @@ local Teleport = require(ReplicatedStorage.Shared.Teleport)
 local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 
 -- 사무실 조명 (너무 밝으면 캐릭터가 하얗게 빛나 보여요)
-Lighting.ClockTime = 13
-Lighting.Brightness = 1.5
-Lighting.Ambient = Color3.fromRGB(115, 115, 120)
-Lighting.OutdoorAmbient = Color3.fromRGB(120, 120, 125)
-Lighting.ExposureCompensation = -0.25
+Lighting.ClockTime = 13.5
+-- 🧊 질감 B안: 그림자가 지는 차분한 실내 조명 (조명 방식 Technology는 Studio의 Lighting 속성에서 Future로 바꿔요)
+Lighting.Brightness = 1.3 -- (너무 밝아서 낮췄어요)
+Lighting.Ambient = Color3.fromRGB(58, 60, 66)
+Lighting.OutdoorAmbient = Color3.fromRGB(92, 98, 106)
+Lighting.ExposureCompensation = -0.75
+Lighting.EnvironmentDiffuseScale = 0.4
+Lighting.EnvironmentSpecularScale = 0.3
+Lighting.GlobalShadows = true
+do
+	local grade = Lighting:FindFirstChild("SalaryGrade") or Instance.new("ColorCorrectionEffect")
+	grade.Name = "SalaryGrade"
+	grade.Saturation = -0.12
+	grade.Contrast = 0.06
+	grade.TintColor = Color3.fromRGB(255, 250, 244)
+	grade.Parent = Lighting
+end
+
+local colorGrade = Lighting:FindFirstChild("SalaryColorGrade") :: ColorCorrectionEffect?
+if not colorGrade then
+	colorGrade = Instance.new("ColorCorrectionEffect")
+	colorGrade.Name = "SalaryColorGrade"
+	colorGrade.Parent = Lighting
+end
+colorGrade.Brightness = 0.015
+colorGrade.Contrast = 0.14
+colorGrade.Saturation = 0.12
+colorGrade.TintColor = Color3.fromRGB(255, 250, 242)
+
+local atmosphere = Lighting:FindFirstChild("SalaryAtmosphere") :: Atmosphere?
+if not atmosphere then
+	atmosphere = Instance.new("Atmosphere")
+	atmosphere.Name = "SalaryAtmosphere"
+	atmosphere.Parent = Lighting
+end
+atmosphere.Color = Color3.fromRGB(205, 232, 244)
+atmosphere.Decay = Color3.fromRGB(126, 164, 180)
+atmosphere.Density = 0.16
+atmosphere.Haze = 0.7
+atmosphere.Glare = 0.05
 -- 템플릿에 들어 있는 빛 번짐(Bloom) 효과를 약하게
 for _, effect in Lighting:GetDescendants() do
 	if effect:IsA("BloomEffect") then
@@ -64,6 +99,7 @@ ReplicatedStorage:SetAttribute("SalaryCompany", company.id)
 print(`🏢 오늘의 사무실: {company.name}`)
 
 local office = OfficeBuilder.build(company.id)
+require(script.OfficeSkin).apply(office) -- 🧊 벽·바닥·천장에 메시 키트를 입혀요
 local boss = Boss.new(office)
 local dayCycle = DayCycle.new()
 
@@ -88,6 +124,7 @@ end
 local cat = Cat.start(office, boss, dayCycle, Remotes, Employees.catHooks) -- 🐱 사무실 고양이 월급냥
 Employees.hooks.catOn = cat.sittingOn
 local rooftop = Rooftop.start(office, boss, dayCycle, Remotes, Employees.roofHooks, events) -- 🏢 옥상 + 🚪 엘리베이터
+require(script.Arrival).start(office, Remotes) -- 🚏 건물 앞 거리 + 1층 로비 + 계단 (리뉴얼 대충상사)
 require(script.ParkGarden).start(office.parkBeds, Remotes, { action = Employees.parkAction }) -- 🌷 내 공원 화단 (눈치물산만)
 -- 🪑 부장님·동료가 책상·탁자 위로 올라가지 않게 (사무실 바닥 높이 1, 옥상 300)
 require(script.Npc).guardFurniture(office.folder, { 1, 300 })
