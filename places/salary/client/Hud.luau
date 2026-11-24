@@ -889,10 +889,11 @@ for _, frame in { clockPanel, moneyPanel, statusPanel, Hud.toolbar, actionPanel,
 end
 
 -- 작은 화면인가? (패널을 줄여요)
+Hud.smallMode = false -- 🗕 [H]로 켜는 "작은 화면 표시": 큰 화면에서도 창들을 70% 크기로 줄여 게임 화면을 넓게 봐요
 function Hud.isCompact(): boolean
 	local camera = workspace.CurrentCamera
 	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
-	return Hud.isPhone() or viewport.X < 1000 or viewport.Y < 560
+	return Hud.smallMode or Hud.isPhone() or viewport.X < 1000 or viewport.Y < 560
 end
 
 -- 폰처럼 터치만 되는 기기인가? (행동 버튼을 2줄 큰 버튼으로)
@@ -982,6 +983,15 @@ end
 applyLayout()
 if workspace.CurrentCamera then
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyLayout)
+	-- 🗕 [H] 화면 표시 크게/작게 (글자를 치는 중에는 동작하지 않아요)
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed or input.KeyCode ~= Enum.KeyCode.H then
+			return
+		end
+		Hud.smallMode = not Hud.smallMode
+		applyLayout()
+		Hud.popup(if Hud.smallMode then "🗕 화면 표시를 작게 했어요 · [H]로 되돌리기" else "🗖 화면 표시를 원래 크기로 · [H]로 작게", COLORS.good, 2)
+	end)
 end
 -- 막 들어왔을 땐 화면 크기가 정확하지 않을 수 있어서, 잠시 뒤 한 번 더 맞춰요
 for _, delay in { 0.5, 1.5, 3 } do

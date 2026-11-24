@@ -7,13 +7,15 @@ Build.__index = Build
 
 export type Door = { center: number, width: number, height: number }
 
-function Build.new(parent: Instance, offset: Vector3)
-	return setmetatable({ parent = parent, offset = offset }, Build)
+-- offset에 CFrame을 주면 돌려서도 지을 수 있어요 (월급루팡 회사 단지의 대충상사 건물이 그래요).
+function Build.new(parent: Instance, offset: Vector3 | CFrame)
+	local base = if typeof(offset) == "CFrame" then offset else CFrame.new(offset :: Vector3)
+	return setmetatable({ parent = parent, offset = base.Position, base = base }, Build)
 end
 
 -- 상대 좌표 CFrame → 실제 월드 CFrame
 function Build:cf(relative: CFrame): CFrame
-	return CFrame.new(self.offset) * relative
+	return self.base * relative
 end
 
 -- 파트 하나 만들기. props.CFrame을 주면 회전된 파트도 만들 수 있어요 (상대 좌표).

@@ -41,7 +41,7 @@ function Street.start(office, remotes, buy: (Player, string, string) -> (boolean
 		end
 		-- 사장님 (계산대 뒤에 가만히 서 있어요)
 		local clerk = Npc.create(shop.clerk, CLERK_LOOKS[shopId] or CLERK_LOOKS.cafe, office.folder)
-		clerk:PivotTo(CFrame.lookAt(spot.clerkSpot + Vector3.new(0, 3, 0), spot.clerkSpot + Vector3.new(0, 3, 5)))
+		clerk:PivotTo(CFrame.lookAt(spot.clerkSpot + Vector3.new(0, 3, 0), spot.clerkSpot + Vector3.new(0, 3, 0) + (spot.clerkLook or Vector3.new(0, 0, 1)) * 5))
 		local clerkRoot = clerk:FindFirstChild("HumanoidRootPart") :: BasePart
 		clerkRoot.Anchored = true
 		Npc.setStatus(clerk, utf8.char(utf8.codepoint(shop.name, 1))) -- 가게 이름 맨 앞 이모지

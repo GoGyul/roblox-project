@@ -251,3 +251,27 @@ Remotes.ReturnToLobby.OnServerEvent:Connect(function(player)
 end)
 
 print("💼 월급루팡 시뮬레이터 준비 완료!")
+
+-- 📊 성능 점검용 집계 (Studio에서만): 맵을 다 지은 뒤 파트·메시·조명 개수를 Output에 찍어요
+if RunService:IsStudio() then
+	task.delay(8, function()
+		local parts, meshes, lights, shadowLights, unanchored = 0, 0, 0, 0, 0
+		for _, item in workspace:GetDescendants() do
+			if item:IsA("BasePart") then
+				parts += 1
+				if item:IsA("MeshPart") then
+					meshes += 1
+				end
+				if not item.Anchored and not item:FindFirstAncestorWhichIsA("Model") then
+					unanchored += 1
+				end
+			elseif item:IsA("Light") then
+				lights += 1
+				if item.Shadows then
+					shadowLights += 1
+				end
+			end
+		end
+		print(`📊 [성능 집계] 파트 {parts}개 (그중 메시 {meshes}개) · 조명 {lights}개 (그림자 켠 조명 {shadowLights}개) · 고정 안 된 낱개 파트 {unanchored}개`)
+	end)
+end

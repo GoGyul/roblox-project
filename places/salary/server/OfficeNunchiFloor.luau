@@ -1,8 +1,8 @@
 -- 🏙️ (주)눈치물산 사무실 층 — 리뉴얼 평면 (신축 사옥: 통유리, 유리 회의실, 카페 라운지)
--- 건물 밖(공원·눈치 스트리트)은 OfficeNunchi가 예전처럼 짓고, 이 모듈은 건물 안(사무실 층 + 체력 단련실)만 지어요.
+-- 유리 타워 12층이에요. 밖(회사 단지: 공원·눈치 스트리트)은 Campus 모듈이 따로 짓고 엘리베이터로 오가요.
 --
 --   x -56                                         20                 56
---   ┌═══════════ 통유리 ═══[출입문 x 0 → 공원]════╦══════════════════┐ z -34
+--   ┌═══════════ 통유리 ════════════════════════╦══════════════════┐ z -34
 --   ║ [7] [1] [2] [8]            🖨️               ┊ 📊 유리 회의실     │
 --   ║ [9] [3] [4] [10]                            ┊┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┤ z -18
 --   ║ [11][5] [6] [12]                            ┊ ☕ 카페 라운지     │
@@ -42,7 +42,7 @@ local GLASS_IN = { Color = Color3.fromRGB(200, 222, 232), Material = Enum.Materi
 local LAYOUT = {
 	-- { 축, 고정 좌표, 시작, 끝, 재질("wall" | "out" | "in"), 문 { 중심, 폭 }... }
 	walls = {
-		{ "X", -HZ - 0.4, -HX - 1, HX + 1, "out", { 0, 6 } }, -- 북: 통유리 + 공원으로 나가는 출입문
+		{ "X", -HZ - 0.4, -HX - 1, HX + 1, "out" }, -- 북: 통유리 (12층이라 문은 없어요. 밖은 엘리베이터로)
 		{ "Z", -HX - 0.4, -HZ, 10, "out" }, -- 서: 사무실 쪽 통유리
 		{ "Z", -HX - 0.4, 10, HZ, "wall" }, -- 서: 복도·화장실 쪽
 		{ "Z", HX + 0.4, -HZ, HZ, "wall" }, -- 동
@@ -115,18 +115,13 @@ function Floor.build(B, folder: Folder, company, helpers, C)
 	-- 통유리 창틀 (북 · 서) + 안쪽 유리 칸막이 위아래 틀
 	local frame = { Color = dark, Material = Enum.Material.Metal, CanCollide = false, CanQuery = false }
 	for x = -HX, HX, 7 do
-		if math.abs(x) > 3 then
-			B:part(Vector3.new(0.5, H, 1.2), v(x, H / 2, -HZ - 0.4), frame)
-		end
+		B:part(Vector3.new(0.5, H, 1.2), v(x, H / 2, -HZ - 0.4), frame)
 	end
 	for z = -HZ, 10, 7 do
 		B:part(Vector3.new(1.2, H, 0.5), v(-HX - 0.4, H / 2, z), frame)
 	end
 	B:part(Vector3.new(0.5, 0.5, 44 * S), v(20, DOOR_H + 0.3, -12), frame)
 	B:part(Vector3.new(36 * S, 0.5, 0.5), v(38, DOOR_H + 0.3, -18), frame)
-	for _, x in { -3.2 / S, 3.2 / S } do
-		B:part(Vector3.new(0.5, DOOR_H, 1.2), v(x, DOOR_H / 2, -HZ - 0.4), frame) -- 출입문 틀
-	end
 	-- 사훈 · 벽시계 (사무실 남쪽 벽, 부장님 자리 뒤)
 	local banner = B:part(Vector3.new(22, 2, 0.2), v(-24, 15, 9.55), { Color = C.accent, CanCollide = false })
 	Build.surfaceText(banner, Enum.NormalId.Front, company.motto, { Font = Enum.Font.GothamBlack, TextColor3 = Color3.new(1, 1, 1) })
@@ -366,7 +361,7 @@ function Floor.build(B, folder: Folder, company, helpers, C)
 		bossStand = v(BX, 0, BZ + 3.6),
 		-- 🏢 사무실 방이 예전 큰 홀보다 좁아진 만큼 부장님 시야 거리와 걸음을 조금 줄여요
 		bossScale = { range = 0.85, walkSpeed = 0.92 },
-		entrance = rv(0, 0, -HZ * S + 2),
+		entrance = v(-HX + 5, 0, CORRIDOR_Z), -- 엘리베이터 앞 (부장님·손님이 드나드는 곳)
 		-- 건물 안 순찰 지점 (공원·거리 지점은 OfficeNunchi가 덧붙여요). 화장실은 들어가지 않아요.
 		waypoints = {
 			v(BX, 0, 0.5), -- 부장 자리 앞

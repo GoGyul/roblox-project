@@ -27,11 +27,11 @@ local Theme = require(ReplicatedStorage.Shared.SalaryTheme)
 local Meshes = require(script.Parent.Meshes)
 local Npc = require(script.Parent.Npc)
 local Ambience = require(script.Parent.Ambience)
+local Campus = require(script.Parent.Campus)
 
 local OfficeDaechung = {}
 
 -- 🚏 건물 앞 거리·1층의 기준점 (거리 바닥 윗면, 건물 남쪽 벽이 z 0). Arrival 모듈이 이 자리에 거리와 로비를 지어요.
-OfficeDaechung.STREET_BASE = Vector3.new(0, 1, 700)
 
 local M = Theme.Mesh
 local H = 20 -- 천장 높이 (카메라가 답답하지 않게 높여요)
@@ -217,37 +217,10 @@ function OfficeDaechung.build(B, folder: Folder, company, helpers)
 
 	---------------------------------------------------------------- 🏪 매점 = 1층 편의점 (건물 앞 거리, Arrival이 가게 벽과 문을 지어요)
 	-- 가게 안: 거리 기준 x -23.5~-0.5 / z -19~0. 문은 남쪽(길 쪽)이고 계산대가 문을 봐요.
-	local SB = OfficeDaechung.STREET_BASE
-	local store = helpers.buildStore(B, SB.X - 12, SB.Z - 11, COLORS.accent)
-	helpers.decorateStore(B, {
-		center = Vector2.new(SB.X - 12, SB.Z - 9.5),
-		size = Vector2.new(23, 19),
-		wallX = SB.X - 22.7,
-		z1 = SB.Z - 15,
-		z2 = SB.Z - 4,
-		fridge = Vector2.new(SB.X - 22, SB.Z - 17.2),
-		signPosition = rv(SB.X - 0.7, 10, SB.Z - 10),
-		signFace = Enum.NormalId.Left,
-	})
-	-- ☕ 커피집 · 🍢 분식집 계산대 (문을 보고 있어요. 점원과 [E] 주문은 Street 모듈이 붙여요)
-	local function shopCounter(x: number, title: string, menu: string): { counter: BasePart, clerkSpot: Vector3 }
-		local z = SB.Z - 11
-		local counter = B:part(Vector3.new(6, 3.4, 2), rv(x, 1.7, z), { Name = "ShopCounter", Color = M.woodLight, Material = Enum.Material.Wood })
-		if Meshes.ready("StoreCounter") then
-			counter.Transparency = 1
-			Meshes.place(B, "StoreCounter", rv(x, 0, z), 0)
-		end
-		if Meshes.ready("StoreShelf") then
-			Meshes.place(B, "StoreShelf", rv(x + 6, 0, z - 7), 0, { scale = 0.9 })
-		end
-		local board = B:part(Vector3.new(9, 1.4, 0.2), rv(x - 2, 10.2, z - 7.7), { Color = M.navy, CanCollide = false })
-		Build.surfaceText(board, Enum.NormalId.Back, title, { Font = Enum.Font.GothamBold, TextColor3 = Color3.new(1, 1, 1) })
-		local list = B:part(Vector3.new(9, 3, 0.2), rv(x - 2, 7.8, z - 7.7), { Color = M.cream, CanCollide = false })
-		Build.surfaceText(list, Enum.NormalId.Back, menu, { Font = Enum.Font.GothamMedium, TextColor3 = M.navy })
-		return { counter = counter, clerkSpot = rv(x, 0, z - 2.2) }
-	end
-	local cafe = shopCounter(SB.X + 14, "골목 커피", "믹스커피 500\n유자차 700\n비타민 음료 900")
-	local bunsik = shopCounter(SB.X + 39, "대충 분식", "떡볶이 600\n김밥 1,000\n라볶이 세트 1,800")
+	-- 가게는 회사 단지(Campus)의 상가 건물 1층에 있어요. 단지를 지으면서 공원·가게 거리의 시설도 함께 받아 와요.
+	local campus = Campus.build(folder, helpers, company.id)
+	local shops = table.clone(campus.shops) -- ☕ 골목 커피 · 🍢 분식 · 눈치 스트리트의 ☕ 커피 · 🍰 디저트
+	shops.store = campus.daechungStore -- 🏪 1층 편의점
 
 	---------------------------------------------------------------- ☕ 탕비실 (동쪽 아래)
 	local pantryCounter = B:part(Vector3.new(2.5, 3, 10), v(46.75, 1.5, 3), { Name = "PantryCounter", Color = M.surface }) -- 조리대 (라면) z -2~8
@@ -434,23 +407,13 @@ function OfficeDaechung.build(B, folder: Folder, company, helpers)
 		workshopStart = v(BX, 0, 9.3), -- 부장 책상 뒤 (남쪽 벽 앞)
 		workshopBoss = v(BX, 0, -28.4), -- 창가
 		workshopLook = Vector3.new(0, 0, 1),
-		candyZone = nil,
-		shops = { store = store, cafe1f = cafe, bunsik = bunsik }, -- 🏪 편의점 · ☕ 커피 · 🍢 분식 (모두 1층)
+		candyZone = campus.candyZone, -- 🍭 공원 사탕 쉼터
+		shops = shops, -- 🏪 편의점 · ☕ 커피 · 🍢 분식 (상가 1층) + 눈치 스트리트 가게
 		storeName = "1층 편의점", -- 구매 안내 문구에 쓰여요
-		-- 👮 1층 경비원 (Guard 모듈이 이 두 값을 보고 만들어요): 건물 입구 서쪽 인도의 경비 초소 + 순찰 지점
-		--   인도 → 로비 → 가게 세 곳 → 길 건너편까지 돌아다녀요. 근무 시간에 1층에서 놀다 눈에 띄면 의심도가 올라요.
-		guardPost = SB + Vector3.new(-70, 0, 6),
-		guardPatrol = {
-			SB + Vector3.new(-80, 0, 8), SB + Vector3.new(-40, 0, 8), SB + Vector3.new(-10, 0, 8), SB + Vector3.new(20, 0, 6), SB + Vector3.new(52, 0, 8), -- 건물 앞 인도
-			SB + Vector3.new(-45, 0, -6), SB + Vector3.new(-40, 0, -13), -- 로비
-			SB + Vector3.new(-12, 0, -5), SB + Vector3.new(14, 0, -5), SB + Vector3.new(42, 0, -5), -- 편의점 · 커피 · 분식
-			SB + Vector3.new(-45, 0, 52), SB + Vector3.new(10, 0, 53), -- 길 건너편
-		},
-		-- 🛍️ 1층(건물 앞 거리·로비·가게)에 있나: 옥상처럼 농땡이 수입이 쌓여요 ("street" 상태, 옥상과 같은 초당 9원)
-		inStreet = function(position: Vector3): boolean
-			local offset = position - SB
-			return math.abs(offset.X) <= 115 and offset.Z >= -45 and offset.Z <= 66 and math.abs(offset.Y) <= 100
-		end,
+		-- 👮 단지 경비원 · 🛍️ 단지에 있나 (옥상처럼 농땡이 수입이 쌓여요: "street" 상태, 초당 9원)
+		guardPost = campus.guardPost,
+		guardPatrol = campus.guardPatrol,
+		inStreet = campus.contains,
 		packageBox = packageBox,
 		deliveryShelf = deliveryShelf,
 		elevator = elevator,
@@ -464,13 +427,17 @@ function OfficeDaechung.build(B, folder: Folder, company, helpers)
 			return math.abs(position.X - G.cx) <= G.hx + 1 and position.Z > HZS * S and position.Z <= G.cz + G.hz + 1
 		end,
 		packageSpots = { v(10, 0, -2), v(-45.5, 0, 2), v(34, 0, 9.5), v(-34, 0, CORRIDOR_Z), v(-22, 0, 9), v(-38, 0, 26.5), v(30, 0, -27), v(-20, 0, -14.5), v(22, 0, CORRIDOR_Z) },
-		clawMachines = {},
+		clawMachines = campus.clawMachines, -- 🧸 눈치 스트리트 (단지 공용)
+		wheel = campus.wheel,
+		dart = campus.dart,
+		arcade = campus.arcade,
+		parkBeds = campus.parkBeds, -- 🌷 공원 화단
 		arcade = nil,
 		wheel = nil,
 		dart = nil,
-		dinnerSeats = {},
-		dinnerBoss = nil,
-		dinnerLook = nil,
+		dinnerSeats = campus.dinnerSeats, -- 🍻 회식은 공원 식탁에서
+		dinnerBoss = campus.dinnerBoss,
+		dinnerLook = campus.dinnerLook,
 		setClock = setClock,
 	}
 end

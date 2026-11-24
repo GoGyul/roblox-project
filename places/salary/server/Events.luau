@@ -451,7 +451,7 @@ function Events:runDrill(token: number)
 	self:publish("active", SalaryConfig.DRILL_SECONDS)
 	office.setAssemblyVisible(true)
 	self.boss:evacuate(office.assemblyPoint)
-	self:notify(`🚨 소방 훈련! {SalaryConfig.DRILL_SECONDS}초 안에 출입문 앞 초록색 집결지로! (점프하면 의자에서 일어나요)`)
+	self:notify(`🚨 소방 훈련! {SalaryConfig.DRILL_SECONDS}초 안에 사무실 창가의 초록색 집결지로! (점프하면 의자에서 일어나요)`)
 
 	if not self:wait(SalaryConfig.DRILL_SECONDS, token) then
 		return
@@ -537,9 +537,7 @@ function Events:runWorkshop(token: number)
 	local look = office.workshopLook -- 술래가 직원들을 볼 때 방향
 	self.boss:host(office.workshopBoss, look)
 	office.setAssemblyVisible(true, "🏁 결승선")
-	self:notify(if office.candyZone
-		then "🌸 공원에서 워크숍 레크리에이션! 동료들도 다 같이! 부장님이 뒤돌아볼 때 움직이면 탈락!"
-		else "🌸 워크숍 레크리에이션! 동료들도 다 같이! 부장님이 뒤돌아볼 때 움직이면 탈락!")
+	self:notify("🌸 워크숍 레크리에이션! 동료들도 다 같이! 부장님이 뒤돌아볼 때 움직이면 탈락!")
 
 	-- 출발선에 한 줄로 세우기
 	for i, racer in racers do
