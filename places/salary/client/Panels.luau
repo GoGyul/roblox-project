@@ -4776,6 +4776,15 @@ local function showStreetShop(shopId: string)
 		return
 	end
 	local items = shop.items
+	-- (요일 메뉴가 있는 가게는 오늘 파는 것만 보여 줘요)
+	local today = ReplicatedStorage:GetAttribute("SalaryWeekday")
+	local todays = {}
+	for _, item in items do
+		if not item.days or table.find(item.days, today) then
+			table.insert(todays, item)
+		end
+	end
+	items = todays
 	local frame = sheet(560, 130 + #items * 64)
 	line(frame, 0, 30, shop.name, { Font = Enum.Font.GothamBlack, TextSize = 24 })
 	local balance = line(frame, 0, 30, "", {
@@ -4792,7 +4801,7 @@ local function showStreetShop(shopId: string)
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, 0, 0, y + 8),
 			Size = UDim2.fromOffset(110, 40),
-			Text = if item.gift then "사기" elseif item.snack then "포장하기" else "마시기",
+			Text = if item.gift then "사기" elseif item.snack then "포장하기" elseif item.food then "먹기" else "마시기",
 			TextSize = 16,
 			ZIndex = 31,
 			Parent = frame,
@@ -6333,9 +6342,34 @@ function Panels.showPuzzle()
 			return true
 		end
 		if result.correct == false then
-			Sounds.play("bass", 0.4, 1.3)
+			Sounds.play("bass", 0.6, 1.1)
 			status.Text = result.message
 			status.TextColor3 = RED
+			-- ❌ 틀렸다는 걸 놓치지 않게 창 가운데에 크게 띄워요 (1.8초). 퀴즈는 방금 문제의 정답도 알려 줘요
+			local old = frame:FindFirstChild("WrongBanner")
+			if old then
+				old:Destroy()
+			end
+			local banner = Ui.make("Frame", {
+				Name = "WrongBanner",
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, 74),
+				Size = UDim2.new(1, -20, 0, if result.rightAnswer then 118 else 84),
+				BackgroundColor3 = Color3.fromRGB(70, 26, 30),
+				BackgroundTransparency = 0.04,
+				ZIndex = 70,
+				Parent = frame,
+			}, { Ui.corner(14), Ui.stroke(Theme.Color.coral, 2.5) })
+			line(banner, 10, 36, "❌ 틀렸어요!", { Font = Enum.Font.GothamBlack, TextSize = 28, TextColor3 = Color3.fromRGB(255, 226, 220), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 71 })
+			line(banner, 48, 28, (string.gsub(result.message, "^❌ ", "")), { TextSize = 15, TextColor3 = Color3.fromRGB(255, 200, 190), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 71, Size = UDim2.new(1, -16, 0, 28), Position = UDim2.fromOffset(8, 48) })
+			if result.rightAnswer then
+				line(banner, 82, 26, `방금 문제의 정답: {result.rightAnswer}`, { Font = Enum.Font.GothamBold, TextSize = 17, TextColor3 = Color3.fromRGB(255, 236, 170), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 71 })
+			end
+			task.delay(1.8, function()
+				if banner.Parent then
+					banner:Destroy()
+				end
+			end)
 		elseif result.correct then
 			Sounds.play("ping", 0.5, 1.2)
 			status.Text = "✅ 정답!"

@@ -89,6 +89,59 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	local setClock, storeSpot = F.setClock, F.store
 	local GYM_X, GYM_HX, GYM_HZ, GYM_Z = F.gymRect.cx, F.gymRect.hx, F.gymRect.hz, F.gymRect.cz
 
+	---------------------------------------------------------------- 🌆 12층 창밖 풍경 (북쪽 · 서쪽 통유리 밖)
+	--   사무실은 타워 12층이라, 창밖으로 저 아래 땅과 다른 빌딩들이 보여요. 전부 장식이에요 (충돌·그림자 없음).
+	do
+		local baseplate = workspace:FindFirstChild("Baseplate")
+		if baseplate and baseplate:IsA("BasePart") then
+			baseplate.Transparency = 1 -- (사무실 바닥 높이의 회색 평지가 창밖에 보이지 않게)
+			baseplate.CastShadow = false
+		end
+		local far = { CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false }
+		local function scenery(size: Vector3, position: Vector3, color: Color3, material: Enum.Material)
+			local props: { [string]: any } = { Color = color, Material = material }
+			for key, value in far do
+				props[key] = value
+			end
+			return B:part(size, position, props)
+		end
+		local GROUND = -150
+		scenery(Vector3.new(1100, 2, 1000), Vector3.new(-120, GROUND - 1, -230), Color3.fromRGB(98, 106, 102), Enum.Material.Concrete) -- 저 아래 땅
+		for i = 0, 5 do -- 큰길
+			scenery(Vector3.new(1100, 0.4, 14), Vector3.new(-120, GROUND + 0.2, -110 - i * 95), Color3.fromRGB(62, 66, 72), Enum.Material.Asphalt)
+			scenery(Vector3.new(14, 0.4, 1000), Vector3.new(-560 + i * 190, GROUND + 0.25, -230), Color3.fromRGB(62, 66, 72), Enum.Material.Asphalt)
+		end
+		for i = 0, 7 do -- 공원 초록 조각
+			scenery(Vector3.new(60, 0.6, 46), Vector3.new(-430 + i * 120, GROUND + 0.3, -160 - (i % 3) * 130), Color3.fromRGB(92, 136, 96), Enum.Material.Grass)
+		end
+		local random = Random.new(12)
+		local tones = { Color3.fromRGB(150, 160, 174), Color3.fromRGB(124, 134, 152), Color3.fromRGB(176, 176, 170), Color3.fromRGB(104, 114, 134), Color3.fromRGB(158, 150, 142) }
+		local function tower(x: number, z: number, width: number, depth: number, top: number, facing: "south" | "east")
+			local height = top - GROUND
+			scenery(Vector3.new(width, height, depth), Vector3.new(x, GROUND + height / 2, z), tones[random:NextInteger(1, #tones)], Enum.Material.Concrete)
+			-- 사무실 쪽 면에 창 띠 (위쪽 여섯 층)
+			for floor = 0, 5 do
+				local y = top - 8 - floor * 13
+				if y < GROUND + 10 then
+					break
+				end
+				if facing == "south" then
+					scenery(Vector3.new(width * 0.84, 6, 0.4), Vector3.new(x, y, z + depth / 2 + 0.1), Color3.fromRGB(150, 182, 204), Enum.Material.Glass)
+				else
+					scenery(Vector3.new(0.4, 6, depth * 0.84), Vector3.new(x + width / 2 + 0.1, y, z), Color3.fromRGB(150, 182, 204), Enum.Material.Glass)
+				end
+			end
+		end
+		for i = 0, 17 do -- 북쪽 빌딩들 (가까운 줄은 낮게, 먼 줄은 높게)
+			local row = i % 3
+			tower(-300 + i * 34 + random:NextNumber(-8, 8), -120 - row * 90 - random:NextNumber(0, 30), random:NextNumber(24, 44), random:NextNumber(24, 40), -70 + row * 55 + random:NextNumber(-25, 35), "south")
+		end
+		for i = 0, 8 do -- 서쪽 빌딩들
+			local row = i % 3
+			tower(-150 - row * 85 - random:NextNumber(0, 30), -60 + i * 30 + random:NextNumber(-8, 8), random:NextNumber(24, 40), random:NextNumber(24, 40), -70 + row * 55 + random:NextNumber(-25, 35), "east")
+		end
+	end
+
 	---------------------------------------------------------------- 🏙️ 회사 단지 (Campus): 공원 · 눈치 스트리트 · 타워 1층 로비
 	--   예전엔 사무실 문 밖이 바로 공원이었지만, 이제 사무실은 유리 타워 12층이고 단지는 엘리베이터로 내려가요.
 	local campus = Campus.build(folder, helpers, company.id)

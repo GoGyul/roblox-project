@@ -15,7 +15,7 @@ Sounds.IDS = {
 	ping = "rbxasset://sounds/electronicpingshort.wav", -- 보너스, 알림
 	caught = "rbxasset://sounds/uuhhh.mp3", -- 적발! (으악)
 	crunch = "rbxasset://sounds/snap.wav", -- 간식 바삭
-	swoosh = "rbxasset://sounds/swoosh.wav", -- 명세서, 창 열기
+	swoosh = "rbxasset://sounds/switch.wav", -- 명세서, 창 열기 (예전 swoosh.wav는 "승인되지 않은 에셋"이라 소리가 안 났어요)
 	bass = "rbxasset://sounds/bass.wav", -- 점심 끝, 해고
 	typing = "rbxasset://sounds/clickfast.wav", -- 타자 치는 소리 (일하기 중 반복)
 }

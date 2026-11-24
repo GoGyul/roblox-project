@@ -35,6 +35,8 @@ export type SpawnOptions = {
 }
 
 -- 데이터에 있는 모든 가구 종류
+-- 지금까지 놓은 가구들 (Solid 모듈이 충돌 상자를 씌울 때 봐요)
+Meshes.placed = {} :: { { kind: string, parts: { [string]: MeshPart } } }
 Meshes.ALL = {} :: { string }
 for kind in Data do
 	table.insert(Meshes.ALL, kind)
@@ -118,9 +120,16 @@ function Meshes.spawn(kind: string, parent: Instance, origin: CFrame, options: S
 		-- 월드용 차분한 색(Theme.Mesh)이 먼저, 없으면 기본 색. 둘 다 없어도 짓다가 멈추지 않게 회색을 써요
 		part.Color = colors[name] or (Theme.Mesh :: any)[info.color] or (Theme.Color :: any)[info.color] or Color3.fromRGB(200, 200, 200)
 		part.Material = if info.material == "SmoothPlastic" then (MATERIAL_BY_COLOR[info.color] or Enum.Material.SmoothPlastic) else (Enum.Material :: any)[info.material]
+		-- 작은 조각(컵·손잡이·버튼…)은 그림자를 드리우지 않아요: 그림자 계산이 메시 수만큼 늘어나는 걸 줄여요
+		part.CastShadow = math.max(part.Size.X, part.Size.Y, part.Size.Z) >= 2.5
+		if info.material == "Glass" then
+			part.Transparency = 0.6 -- (유리 진열장·기계 창: 안이 비쳐 보여요)
+			part.CastShadow = false
+		end
 		part.Parent = parent
 		parts[name] = part
 	end
+	table.insert(Meshes.placed, { kind = kind, parts = parts })
 	return parts
 end
 

@@ -14,6 +14,7 @@ local Theme = require(ReplicatedStorage.Shared.SalaryTheme)
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local Meshes = require(script.Parent.Meshes)
 local CampusDaechung = require(script.Parent.CampusDaechung)
+local CampusStreet = require(script.Parent.CampusStreet)
 
 local Campus = {}
 
@@ -107,7 +108,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	if built then
 		return built
 	end
-	local F: any = { shops = {}, clawMachines = {} }
+	local F: any = { shops = {}, clawMachines = {}, treeLeaves = {}, truckLabels = {} }
 	built = F
 	local folder = Instance.new("Folder")
 	folder.Name = "Campus"
@@ -320,26 +321,36 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		P(Vector3.new(1.8, 1.3, 6), Vector3.new(144, 0.65, z), { Transparency = 1 })
 	end
 	-- 사옥 앞 광장 (타워 남쪽): 푸드트럭 두 대와 파라솔 자리
-	for i, info in { { 170, Color3.fromRGB(190, 108, 92) }, { 200, Color3.fromRGB(88, 150, 132) } } do
+	local truckReady = Meshes.ready("FoodTruck")
+	for i, info in { { 170, M.coral }, { 200, M.mintDark } } do
 		local x = info[1]
-		P(Vector3.new(20, 9, 9), Vector3.new(x, 6, 48), { Color = info[2] })
-		P(Vector3.new(6, 6, 8.6), Vector3.new(x + 12.6, 4.5, 48), { Color = info[2] })
-		deco(Vector3.new(12, 4, 0.4), Vector3.new(x - 1, 7, 43.3), Color3.fromRGB(250, 246, 236))
-		deco(Vector3.new(12, 0.4, 5), Vector3.new(x - 1, 10.4, 41.4), Color3.fromRGB(250, 246, 236)).CFrame *= CFrame.Angles(math.rad(18), 0, 0)
-		local board = deco(Vector3.new(8, 1.6, 0.3), Vector3.new(x - 1, 9.6, 43.2), Color3.fromRGB(30, 35, 45))
-		text(board, Enum.NormalId.Front, if i == 1 then "오늘의 푸드트럭 · 타코" else "오늘의 푸드트럭 · 닭강정")
+		if truckReady then
+			-- 판매 창구(메시의 앞)가 북쪽 광장을 봐요. 운전석은 서쪽
+			mesh("FoodTruck", x, 48, 180, { scale = 1.25, colors = { Body = info[2] } })
+			P(Vector3.new(25, 11, 9), Vector3.new(x - 0.5, 5.5, 48), { Transparency = 1 })
+			local board = deco(Vector3.new(8.4, 1.7, 0.2), Vector3.new(x + 3.25, 11.4, 47.6), M.yellow)
+			table.insert(F.truckLabels, Build.surfaceText(board, Enum.NormalId.Front, "오늘의 푸드트럭", { Font = Enum.Font.GothamBold, TextColor3 = M.ink })) -- (메뉴는 요일마다 CampusEvents가 써요)
+		else
+			P(Vector3.new(20, 9, 9), Vector3.new(x, 6, 48), { Color = info[2] })
+			P(Vector3.new(6, 6, 8.6), Vector3.new(x + 12.6, 4.5, 48), { Color = info[2] })
+			deco(Vector3.new(12, 4, 0.4), Vector3.new(x - 1, 7, 43.3), Color3.fromRGB(250, 246, 236))
+			deco(Vector3.new(12, 0.4, 5), Vector3.new(x - 1, 10.4, 41.4), Color3.fromRGB(250, 246, 236)).CFrame *= CFrame.Angles(math.rad(18), 0, 0)
+			local board = deco(Vector3.new(8, 1.6, 0.3), Vector3.new(x - 1, 9.6, 43.2), Color3.fromRGB(30, 35, 45))
+			text(board, Enum.NormalId.Front, if i == 1 then "오늘의 푸드트럭 · 타코" else "오늘의 푸드트럭 · 닭강정")
+		end
 	end
 	for _, x in { 176, 196, 216 } do
 		mesh("Parasol", x, 32, x, { scale = 1.5 })
 		shade(x, 32, 5.5)
 	end
 	-- 🚚 타코 트럭 창구: 점심시간에만 팔아요 (Street 모듈이 사장님과 [E] 주문을 붙여요)
-	local truckCounter = P(Vector3.new(10, 0.5, 1.6), Vector3.new(169, 4.4, 43), { Name = "ShopCounter", Color = Color3.fromRGB(250, 246, 236) })
-	P(Vector3.new(0.4, 4.2, 0.4), Vector3.new(164.4, 2.1, 42.6), { Color = DARK, Material = Enum.Material.Metal })
-	local truckSign = deco(Vector3.new(4.6, 5.4, 0.3), Vector3.new(158, 3.2, 41.5), Color3.fromRGB(44, 62, 92))
+	local truckCounter = if truckReady
+		then P(Vector3.new(11.6, 0.5, 2), Vector3.new(173.25, 4.9, 42.9), { Name = "ShopCounter", Transparency = 1 })
+		else P(Vector3.new(10, 0.5, 1.6), Vector3.new(169, 4.4, 43), { Name = "ShopCounter", Color = Color3.fromRGB(250, 246, 236) })
+	local truckSign = deco(Vector3.new(4.6, 5.4, 0.3), Vector3.new(181.5, 3.2, 41.2), Color3.fromRGB(44, 62, 92))
 	truckSign.CFrame *= CFrame.Angles(math.rad(-12), 0, 0)
-	text(truckSign, Enum.NormalId.Front, "🚚 점심 한정\n12시~1시\n🌮 타코 800\n🍗 닭강정 800")
-	F.shops.truck = { counter = truckCounter, clerkSpot = Campus.point(156, 0, 45.5), clerkLook = Vector3.new(0, 0, -1) }
+	F.truckMenuLabel = Build.surfaceText(truckSign, Enum.NormalId.Front, "🚚 점심 한정\n12시~1시", { Font = Enum.Font.GothamBold, TextColor3 = Color3.new(1, 1, 1) })
+	F.shops.truck = { counter = truckCounter, clerkSpot = Campus.point(if truckReady then 165.5 else 156, 0, if truckReady then 41.4 else 45.5), clerkLook = Vector3.new(0, 0, -1) } -- (사장님은 창구 옆에 나와 서 있어요)
 
 	---------------------------------------------------------------- 중앙 공원
 	-- ⛲ 분수 광장 (한가운데)
@@ -498,7 +509,11 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		if clear then
 			table.insert(kept, spot)
 			local scale = random:NextNumber(1.5, 2.3)
-			mesh("Tree", x, z, random:NextNumber(0, 360), { scale = scale })
+			local tree = mesh("Tree", x, z, random:NextNumber(0, 360), { scale = scale })
+			if tree then
+				table.insert(F.treeLeaves, tree.Canopy)
+				table.insert(F.treeLeaves, tree.CanopyLight)
+			end
 			shade(x, z, 2.6 * scale) -- 나무 그늘
 			P(Vector3.new(1.6, 6 * scale, 1.6), Vector3.new(x, 3 * scale, z), { Transparency = 1 })
 		end
@@ -518,164 +533,8 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	end
 
 	---------------------------------------------------------------- 눈치 스트리트 (남쪽): 가게 9칸 겉모습 + 위층
-	local BLOCK = Color3.fromRGB(204, 196, 182)
-	P(Vector3.new(HALF_X * 2 - 20, 44, 26), Vector3.new(0, 36, 122), { Color = BLOCK, Material = Enum.Material.Concrete, CastShadow = false })
-	P(Vector3.new(HALF_X * 2 - 20, 14, 7), Vector3.new(0, 7, 131.5), { Color = BLOCK, Material = Enum.Material.Concrete })
-	-- 가게 한 칸: 안쪽 x ±23.5 / z 109(유리 앞면) ~ 128(뒷벽). open = 들어갈 수 있는 가게
-	local SHOPS = {
-		{ "꽃집", M.coral }, { "서점", M.mintDark },
-		{ "☕ 눈치 커피", M.mintDark, "cafe" }, { "🍰 달콤 디저트", M.coral, "dessert" }, { "🧸 뽑기 천국", M.yellow, "claw" }, { "🕹️ 오락실", Color3.fromRGB(104, 100, 160), "arcade" },
-		{ "미용실", M.yellow }, { "약국", M.sky }, { "문구점", M.coral },
-	}
-	local shopGlass = { Color = Color3.fromRGB(176, 206, 214), Material = Enum.Material.Glass, Transparency = 0.45 }
-	local shopX: { [string]: number } = {}
-	for i, shop in SHOPS do
-		local x = -208 + (i - 1) * 52
-		local board = deco(Vector3.new(40, 4, 1.2), Vector3.new(x, 15.6, 108.4), shop[2])
-		text(board, Enum.NormalId.Front, shop[1])
-		local awning = deco(Vector3.new(42, 0.4, 5), Vector3.new(x, 12.9, 106), shop[2], Enum.Material.Fabric)
-		awning.CFrame *= CFrame.Angles(math.rad(-14), 0, 0)
-		local light = Instance.new("PointLight")
-		light.Range = 20
-		light.Brightness = 0.5
-		light.Parent = board
-		P(Vector3.new(47, 1.2, 0.8), Vector3.new(x, 12.9, 109), { Color = BLOCK, Material = Enum.Material.Concrete }) -- 유리 위 띠
-		if not shop[3] then
-			P(Vector3.new(47, 12.3, 0.5), Vector3.new(x, 6.15, 109), shopGlass)
-			deco(Vector3.new(46.6, 12.3, 13), Vector3.new(x, 6.15, 116.2), Color3.fromRGB(236, 232, 222)) -- 가게 안 (구경만)
-			P(Vector3.new(47, 14, 6), Vector3.new(x, 7, 125.5), { Color = BLOCK, Material = Enum.Material.Concrete })
-			continue
-		end
-		shopX[shop[3]] = x
-		-- 앞면: 유리창 두 장 + 가운데 문 자리(폭 10 · 높이 10) + 문 위 유리
-		for _, dx in { -14.25, 14.25 } do
-			P(Vector3.new(18.5, 12.3, 0.5), Vector3.new(x + dx, 6.15, 109), shopGlass)
-		end
-		P(Vector3.new(10, 2.3, 0.5), Vector3.new(x, 11.15, 109), shopGlass)
-		for _, dx in { -5.1, 5.1 } do
-			P(Vector3.new(0.4, 10, 0.7), Vector3.new(x + dx, 5, 109), { Color = DARK, Material = Enum.Material.Metal })
-		end
-		-- 안: 바닥 · 뒷벽 · 천장 · 조명 (햇빛이 안 들어서 조명이 없으면 캄캄해요)
-		local dark = shop[3] == "arcade"
-		local wallColor = if dark then Color3.fromRGB(60, 60, 110) else Color3.fromRGB(240, 238, 230)
-		deco(Vector3.new(46.8, 0.12, 18.6), Vector3.new(x, 0.06, 118.4), if dark then Color3.fromRGB(40, 30, 70) else M.woodLight, if dark then Enum.Material.Carpet else Enum.Material.WoodPlanks)
-		P(Vector3.new(47, 14, 1), Vector3.new(x, 7, 127.5), { Color = wallColor, Material = Enum.Material.Plaster })
-		deco(Vector3.new(46.8, 0.3, 17.6), Vector3.new(x, 13.7, 118.2), wallColor)
-		for _, dx in { -23.42, 23.42 } do
-			deco(Vector3.new(0.12, 13.5, 17.6), Vector3.new(x + dx, 6.8, 118.2), wallColor)
-		end
-		for _, dx in { -12, 0, 12 } do
-			for _, dz in { 114, 122 } do
-				local lamp = deco(Vector3.new(5, 0.25, 1.2), Vector3.new(x + dx, 13.45, dz), Color3.fromRGB(240, 238, 228), Enum.Material.Neon)
-				local glow = Instance.new("PointLight")
-				glow.Range = 22
-				glow.Brightness = 0.9
-				glow.Color = Color3.fromRGB(255, 246, 228)
-				glow.Shadows = false
-				glow.Parent = lamp
-			end
-		end
-	end
-	local function counter(x: number, name: string, size: Vector3, color: Color3, material: Enum.Material?): BasePart
-		return P(size, Vector3.new(x, size.Y / 2, 121), { Name = name, Color = color, Material = material or Enum.Material.SmoothPlastic })
-	end
-	local function label(x: number, y: number, z: number, width: number, message: string)
-		local sign = deco(Vector3.new(width, 0.9, 0.2), Vector3.new(x, y, z), Color3.fromRGB(30, 30, 40))
-		Build.surfaceText(sign, Enum.NormalId.Front, message, { Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 230, 120) })
-	end
-	local function tables(x: number)
-		for _, dx in { -15, 15 } do
-			mesh("RoundTable", x + dx, 115, 0)
-			P(Vector3.new(2.4, 1.4, 2.4), Vector3.new(x + dx, 0.7, 115), { Transparency = 1 })
-			mesh("DiningChair", x + dx - 2.8, 115, -90)
-			mesh("DiningChair", x + dx + 2.8, 115, 90)
-		end
-	end
-	local shopLook = Vector3.new(0, 0, -1) -- 점원은 문(북쪽)을 봐요
-	do -- ☕ 눈치 커피
-		local x = shopX.cafe
-		local cafeCounter = counter(x, "ShopCounter", Vector3.new(10, 3.5, 2), Color3.fromRGB(120, 85, 60), Enum.Material.Wood)
-		deco(Vector3.new(1.4, 2, 1.4), Vector3.new(x - 3, 4.5, 121), Color3.fromRGB(190, 190, 195), Enum.Material.Metal) -- 커피머신
-		local menu = deco(Vector3.new(10, 3, 0.3), Vector3.new(x, 8, 126.8), Color3.fromRGB(30, 30, 30))
-		text(menu, Enum.NormalId.Front, "☕ NUNCHI COFFEE")
-		tables(x)
-		F.shops.cafe = { counter = cafeCounter, clerkSpot = Campus.point(x, 0, 124), clerkLook = shopLook }
-	end
-	do -- 🍰 달콤 디저트
-		local x = shopX.dessert
-		local dessertCounter = counter(x, "ShopCounter", Vector3.new(10, 3.5, 2), Color3.fromRGB(120, 85, 60), Enum.Material.Wood)
-		deco(Vector3.new(6, 1.6, 1.6), Vector3.new(x, 4.3, 121), Color3.fromRGB(220, 240, 250), Enum.Material.Glass, { Transparency = 0.4 }) -- 진열장
-		for i, color in { Color3.fromRGB(255, 170, 200), Color3.fromRGB(180, 230, 170), Color3.fromRGB(220, 160, 80), Color3.fromRGB(255, 240, 240), Color3.fromRGB(190, 170, 255) } do
-			deco(Vector3.new(0.7, 0.5, 0.7), Vector3.new(x - 2.7 + i * 0.9, 3.9, 121), color)
-		end
-		tables(x)
-		F.shops.dessert = { counter = dessertCounter, clerkSpot = Campus.point(x, 0, 124), clerkLook = shopLook }
-	end
-	do -- 🧸 뽑기 천국: 인형뽑기 2대 + 🎡 다 같이 돌림판 + 🎯 풍선 다트
-		local x = shopX.claw
-		for i, color in { Color3.fromRGB(255, 120, 170), Color3.fromRGB(120, 190, 255) } do
-			local mx, mz = x - 22 + i * 5.5, 123
-			local cabinet = P(Vector3.new(3.4, 3, 3.4), Vector3.new(mx, 1.5, mz), { Name = "ClawMachine", Color = color })
-			P(Vector3.new(3.4, 3.6, 3.4), Vector3.new(mx, 4.8, mz), { Color = Color3.fromRGB(220, 240, 255), Material = Enum.Material.Glass, Transparency = 0.6 })
-			deco(Vector3.new(3.6, 0.6, 3.6), Vector3.new(mx, 6.9, mz), color, Enum.Material.Neon)
-			deco(Vector3.new(0.15, 1.4, 0.15), Vector3.new(mx, 5.9, mz), Color3.fromRGB(200, 200, 205), Enum.Material.Metal) -- 집게 줄
-			deco(Vector3.new(0.7, 0.3, 0.7), Vector3.new(mx, 5.1, mz), Color3.fromRGB(200, 200, 205), Enum.Material.Metal) -- 집게
-			for j = 1, 7 do -- 안에 쌓인 인형들
-				local plush = SalaryConfig.Plushies[(j + i) % #SalaryConfig.Plushies + 1]
-				deco(Vector3.new(0.8, 0.8, 0.8), Vector3.new(mx + random:NextNumber(-1, 1), 3.4 + (j % 2) * 0.5, mz + random:NextNumber(-1, 1)), plush.color, nil, { Shape = Enum.PartType.Ball })
-			end
-			table.insert(F.clawMachines, cabinet)
-		end
-		-- 🎡 돌림판 (뒷벽에 세운 큰 원판, 글씨·회전은 Wheel 모듈이 그려요. 원판의 Left 면이 문 쪽을 봐요)
-		local wheelDisc = P(Vector3.new(0.6, 9, 9), nil, { Name = "WheelDisc", Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(x + 1, 6.8, 126.6) * CFrame.Angles(0, math.rad(-90), 0), Color = Color3.fromRGB(40, 40, 50) })
-		deco(Vector3.new(0.8, 1.2, 0.8), Vector3.new(x + 1, 11.7, 126.1), Color3.fromRGB(230, 50, 50), Enum.Material.Neon) -- ▼ 바늘
-		local wheelKiosk = counter(x + 1, "WheelKiosk", Vector3.new(5, 3.5, 1.6), Color3.fromRGB(250, 200, 80))
-		label(x + 1, 4, 120.1, 5, "🎡 다 같이 돌림판")
-		F.wheel = { disc = wheelDisc, kiosk = wheelKiosk }
-		-- 🎯 풍선 다트 벽: 알록달록 풍선 장식 (실제 경품은 창에서 서버가 섞어요)
-		local dartX = x + 14
-		local dartBoard = P(Vector3.new(6.2, 5, 0.4), Vector3.new(dartX, 6.2, 126.7), { Name = "DartBoard", Color = Color3.fromRGB(165, 220, 255), Material = Enum.Material.Wood })
-		local balloonColors = {}
-		for _, info in SalaryConfig.DartPrizes do
-			table.insert(balloonColors, info.color)
-		end
-		for i, slot in SalaryConfig.DART_SLOTS do
-			local bx = dartX + 2.8 - slot.x / SalaryConfig.DART_FIELD_W * 5.6
-			local by = 8.4 - (slot.y - 40) / 150 * 3.6
-			deco(Vector3.new(0.85, 0.95, 0.8), Vector3.new(bx, by, 126.2), balloonColors[i % #balloonColors + 1], nil, { Shape = Enum.PartType.Ball })
-			deco(Vector3.new(0.05, 0.6, 0.05), Vector3.new(bx, by - 0.75, 126.35), Color3.fromRGB(110, 110, 120))
-		end
-		local dartCounter = counter(dartX, "DartCounter", Vector3.new(5, 3.5, 1.6), Color3.fromRGB(120, 200, 255))
-		label(dartX, 4, 120.1, 5, "🎯 풍선 다트")
-		F.dart = { board = dartBoard, counter = dartCounter }
-	end
-	do -- 🕹️ 오락실: 게임기 2대 + 경품 교환대 + 최고 기록판
-		local x = shopX.arcade
-		local arcade: any = { machines = {} }
-		for i, info in { { "mole", "🔨 두더지 잡기", Color3.fromRGB(230, 90, 60) }, { "memory", "🃏 카드 짝 맞추기", Color3.fromRGB(60, 170, 230) } } do
-			local mx = x - 18 + i * 7
-			arcade.machines[info[1]] = P(Vector3.new(3.2, 6, 2.6), Vector3.new(mx, 3, 124.5), { Name = "ArcadeMachine", Color = info[3] })
-			deco(Vector3.new(2.6, 2, 0.1), Vector3.new(mx, 4.2, 123.15), Color3.fromRGB(120, 255, 200), Enum.Material.Neon)
-			P(Vector3.new(3.2, 0.3, 1.2), Vector3.new(mx, 2.9, 122.8), { Color = Color3.fromRGB(40, 40, 45) }) -- 조작판
-			label(mx, 6.5, 123.1, 3.2, info[2])
-		end
-		arcade.prizeCounter = counter(x + 12, "PrizeCounter", Vector3.new(4.5, 3.5, 2), Color3.fromRGB(250, 200, 80))
-		label(x + 12, 4, 119.9, 4.5, "🎟️ 경품 교환")
-		deco(Vector3.new(5, 0.3, 1.5), Vector3.new(x + 12, 5, 126.2), Color3.fromRGB(120, 85, 60)) -- 선반
-		for i, plush in { SalaryConfig.Plushies[1], SalaryConfig.Plushies[8], SalaryConfig.Plushies[10] } do
-			deco(Vector3.new(0.9, 0.9, 0.9), Vector3.new(x + 10.5 + (i - 1) * 1.5, 5.6, 126.2), plush.color, nil, { Shape = Enum.PartType.Ball })
-		end
-		arcade.board = P(Vector3.new(12, 4.5, 0.3), Vector3.new(x - 6, 10, 126.8), { Name = "ArcadeBoard", Color = Color3.fromRGB(20, 20, 30), CanCollide = false }) -- 🏆 최고 기록판 (서버가 글씨를 채워요)
-		F.arcade = arcade
-	end
-	for i = 0, 9 do
-		P(Vector3.new(5, 14, 27), Vector3.new(-234 + i * 52, 7, 122), { Color = BLOCK, Material = Enum.Material.Concrete })
-	end
-	for floor = 0, 3 do
-		for x = -224, 224, 14 do
-			deco(Vector3.new(9, 7, 0.4), Vector3.new(x, 23.5 + floor * 11, 108.9), Color3.fromRGB(120, 150, 172), Enum.Material.Glass, steel)
-		end
-	end
+	--   (가게 안팎은 CampusStreet 모듈이 지어요: 카페 · 디저트 · 뽑기 천국 · 오락실 + 구경만 되는 가게 5칸)
+	CampusStreet.build(folder, Campus.ORIGIN, F, HALF_X)
 	for x = -200, 200, 50 do
 		lampPost(x, 88)
 	end
@@ -688,6 +547,32 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		deco(Vector3.new(info[3], info[5], info[4]), Vector3.new(info[1], info[5] / 2, info[2]), info[6], Enum.Material.Concrete, steel)
 	end
 
+	---------------------------------------------------------------- 🛍️ 금요일 플리마켓 (야외무대 앞 잔디): 평소엔 치워 두고 금요일에만 꺼내요
+	do
+		local flea = Instance.new("Folder")
+		flea.Name = "FleaMarket"
+		F.fleaFolder = flea
+		F.fleaStalls = {}
+		local FB = Build.new(flea, Campus.ORIGIN)
+		for i, info in { { 46, -52, M.coral }, { 62, -48, M.yellow }, { 78, -52, M.mint } } do
+			local x, z = info[1], info[2]
+			if Meshes.ready("Stall") then
+				Meshes.place(FB, "Stall", Vector3.new(x, 0, z), 0, { scale = 1.6, colors = { Awning = info[3] } })
+			end
+			local counter = FB:part(Vector3.new(10, 4, 3.2), Vector3.new(x, 2, z), { Name = "FleaStall", Color = M.woodLight, Transparency = if Meshes.ready("Stall") then 1 else 0 })
+			counter:SetAttribute("Stall", i)
+			table.insert(F.fleaStalls, counter)
+			for k = 0, 2 do -- 좌판 위 잡동사니
+				FB:part(Vector3.new(1.1, 0.9, 1.1), Vector3.new(x - 2.4 + k * 2.4, 4.3, z + 0.6), { Color = ({ M.sky, M.blush, M.lilac })[(i + k) % 3 + 1], CanCollide = false, Shape = if k == 1 then Enum.PartType.Ball else Enum.PartType.Block })
+			end
+		end
+		local banner = FB:part(Vector3.new(26, 2.2, 0.3), Vector3.new(62, 9.5, -57), { Color = M.ink, CanCollide = false })
+		Build.surfaceText(banner, Enum.NormalId.Back, "🛍️ 금요 플리마켓 · 한 번 500원", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 230, 140) })
+		for _, dx in { -12.6, 12.6 } do
+			FB:part(Vector3.new(0.4, 10.6, 0.4), Vector3.new(62 + dx, 5.3, -57), { Color = DARK, Material = Enum.Material.Metal })
+		end
+	end
+
 	---------------------------------------------------------------- 🏬 대충상사 상가 건물 (서쪽) + 1층 가게 계산대
 	local SITE = Campus.DAECHUNG_SITE
 	F.daechung = CampusDaechung.build(folder, SITE)
@@ -697,24 +582,29 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		return SITE:PointToWorldSpace(Vector3.new(x, y, z))
 	end
 	-- ☕ 커피집 · 🍢 분식집 계산대 (문을 보고 있어요. 점원과 [E] 주문은 Street 모듈이 붙여요)
-	local function shopCounter(x: number, title: string, menu: string)
+	local function shopCounter(x: number, title: string, menu: string, kind: string, options: any?, extra: (() -> ())?)
 		local z = -11
-		local part = DB:part(Vector3.new(6, 3.4, 2), Vector3.new(x, 1.7, z), { Name = "ShopCounter", Color = M.woodLight, Material = Enum.Material.Wood })
-		if Meshes.ready("StoreCounter") then
-			part.Transparency = 1
-			Meshes.place(DB, "StoreCounter", Vector3.new(x, 0, z), 0)
+		local ready = Meshes.ready(kind)
+		local part = DB:part(Vector3.new(6.6, 3.5, 2.6), Vector3.new(x, 1.75, z), { Name = "ShopCounter", Color = M.woodLight, Material = Enum.Material.Wood, Transparency = if ready then 1 else 0 })
+		if ready then
+			Meshes.place(DB, kind, Vector3.new(x, 0, z), 0, options)
+			if extra then
+				extra()
+			end
 		end
-		if Meshes.ready("StoreShelf") then
-			Meshes.place(DB, "StoreShelf", Vector3.new(x + 6, 0, z - 7), 0, { scale = 0.9 })
-		end
-		local board = DB:part(Vector3.new(9, 1.4, 0.2), Vector3.new(x - 2, 10.2, z - 7.7), { Color = M.navy, CanCollide = false })
-		Build.surfaceText(board, Enum.NormalId.Back, title, { Font = Enum.Font.GothamBold, TextColor3 = Color3.new(1, 1, 1) })
-		local list = DB:part(Vector3.new(9, 3, 0.2), Vector3.new(x - 2, 7.8, z - 7.7), { Color = M.cream, CanCollide = false })
-		Build.surfaceText(list, Enum.NormalId.Back, menu, { Font = Enum.Font.GothamMedium, TextColor3 = M.navy })
-		return { counter = part, clerkSpot = world(x, 0, z - 2.2), clerkLook = frontLook }
+		local board = DB:part(Vector3.new(9, 1.4, 0.2), Vector3.new(x, 10.6, z - 7.7), { Color = M.ink, CanCollide = false })
+		Build.surfaceText(board, Enum.NormalId.Back, title, { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 244, 226) })
+		local list = DB:part(Vector3.new(9, 3.2, 0.2), Vector3.new(x, 8.1, z - 7.7), { Color = M.ink, CanCollide = false })
+		Build.surfaceText(list, Enum.NormalId.Back, menu, { Font = Enum.Font.GothamMedium, TextColor3 = M.cakeCream })
+		return { counter = part, clerkSpot = world(x, 0, z - 2.4), clerkLook = frontLook }
 	end
-	F.shops.cafe1f = shopCounter(14, "골목 커피", "믹스커피 500\n유자차 700\n비타민 음료 900")
-	F.shops.bunsik = shopCounter(39, "대충 분식", "떡볶이 600\n김밥 1,000\n라볶이 세트 1,800")
+	F.shops.cafe1f = shopCounter(14, "골목 커피", "믹스커피 500\n유자차 700\n비타민 음료 900", "CafeBar", { stretch = Vector3.new(0.55, 1, 0.9) }, function()
+		Meshes.place(DB, "EspressoMachine", Vector3.new(12.6, 3.64, -11.1), 0, { scale = 0.9 })
+		if Meshes.ready("CakeStand") then
+			Meshes.place(DB, "CakeStand", Vector3.new(16.2, 3.64, -11), 0, { scale = 0.8 })
+		end
+	end)
+	F.shops.bunsik = shopCounter(39, "대충 분식", "떡볶이 600\n김밥 1,000\n라볶이 세트 1,800", "DessertCounter", { colors = { Body = M.red, Panel = M.cakeCream, Trim = M.yellow } })
 	-- 🏪 편의점: 두 서버 모두 영업해요. 대충상사에겐 이곳이 매점이고, 눈치물산에겐 12층 사내 매점의 2호점이에요 (파는 물건은 같아요).
 	local SB = Build.new(folder, SITE * CFrame.new(0, -helpers.FLOOR_Y, 0)) -- (helpers.v가 바닥 높이를 더해 주니 그만큼 빼 둬요)
 	helpers.decorateStore(SB, {

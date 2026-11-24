@@ -76,8 +76,10 @@ function CampusDaechung.build(folder: Instance, SITE: CFrame)
 		P(Vector3.new(7.5, 12, 0.4), Vector3.new(x + 7.75, 6, -0.2), shopGlass)
 		P(Vector3.new(8, 2, 0.4), Vector3.new(x, 11, -0.2), shopGlass) -- 문 위 유리 (문은 폭 8 · 높이 10)
 		P(Vector3.new(23, 1.5, 0.9), Vector3.new(x, 12.75, -0.5), { Color = FACADE, Material = Enum.Material.Concrete })
-		for _, dx in { -4.1, 4.1 } do
-			P(Vector3.new(0.3, 10, 0.5), Vector3.new(x + dx, 5, -0.2), { Color = DARK, Material = Enum.Material.Metal }) -- 문틀
+		if not Meshes.ready("ShopDoor") then
+			for _, dx in { -4.1, 4.1 } do
+				P(Vector3.new(0.3, 10, 0.5), Vector3.new(x + dx, 5, -0.2), { Color = DARK, Material = Enum.Material.Metal }) -- 문틀
+			end
 		end
 		-- 안쪽: 흰 벽·천장, 조명
 		-- (건물 앞면 z 0까지 닿으면 유리·외벽과 같은 면에서 떨려서, 앞쪽 1칸은 비워요. 높이도 천장 덩어리에서 살짝 띄워요)
@@ -95,18 +97,58 @@ function CampusDaechung.build(folder: Instance, SITE: CFrame)
 		local openSign = deco(Vector3.new(3, 1, 0.15), Vector3.new(x, 11, 0.1), shop.color)
 		text(openSign, Enum.NormalId.Back, "영업중")
 	end
-	-- ☕ 커피집: 창가 테이블 두 개 / 🍢 분식집: 식탁 두 개와 의자
-	for _, tx in { 6, 22 } do
-		mesh("RoundTable", tx, 0, -4.5, 0)
-		P(Vector3.new(2.4, 1.4, 2.4), Vector3.new(tx, 0.7, -4.5), { Transparency = 1 })
-		mesh("DiningChair", tx, 0, -7.2, 180)
+	-- 가게 앞: 줄무늬 차양 · 돌출 간판 · 열린 유리문 · 화분 · 입간판 (street_shops_set 메시)
+	for _, shop in SHOPS do
+		local x = shop.x
+		mesh("ShopAwning", x, 12.3, 0.4, 0, { stretch = Vector3.new(20 / 12, 1, 0.9), colors = { StripeA = shop.color } })
+		mesh("BladeSign", x - 11.6, 10.6, 0.5, -90, { colors = { Board = shop.color } })
+		mesh("ShopDoor", x, 0, -0.2, 0, { stretch = Vector3.new(0.76, 1, 0.75) })
+		mesh("ShopPlanter", x + 8, 0, 2.4, 0, { scale = 0.9 })
+		P(Vector3.new(5.4, 2.4, 1.4), Vector3.new(x + 8, 1.2, 2.4), { Transparency = 1 })
+		mesh("ABoard", x - 7, 0, 3.6, -15)
 	end
-	for _, tz in { -5, -11 } do
+	local function lamp(x: number, z: number, color: Color3?)
+		local parts = mesh("PendantLamp", x, SHOP_H, z, 0)
+		if parts then
+			local glow = Instance.new("PointLight")
+			glow.Range = 16
+			glow.Brightness = 0.6
+			glow.Color = color or Color3.fromRGB(255, 240, 214)
+			glow.Shadows = false
+			glow.Parent = parts.Bulb
+		end
+	end
+	-- 🏪 편의점: 입구 옆 캡슐 뽑기 (장식)
+	mesh("GachaMachine", -21.6, 0, -2.6, 90, { colors = { Body = M.mint } })
+	mesh("GachaMachine", -21.6, 0, -5.0, 90, { colors = { Body = M.coral } })
+	-- ☕ 골목 커피: 계산대(바)는 Campus가 놓아요. 창가 탁자 두 개 · 벽 선반 · 화분 · 조명
+	for _, tx in { 6.5, 21.5 } do
+		mesh("CafeTable", tx, 0, -4.2, 0)
+		P(Vector3.new(1.2, 2.7, 1.2), Vector3.new(tx, 1.35, -4.2), { Transparency = 1 })
+		mesh("CafeChair", tx - 2.2, 0, -4.2, 90)
+		mesh("CafeChair", tx + 2.2, 0, -4.2, -90)
+	end
+	mesh("WallShelf", 24.9, 7.2, -12, -90)
+	mesh("Plant", 4.2, 0, -17, 0, { scale = 1.6 })
+	deco(Vector3.new(22.8, 3, 0.12), Vector3.new(14, 1.5, -18.86), M.mintDark) -- 허리벽
+	for _, xz in { { 11.5, -11 }, { 16.5, -11 }, { 6.5, -4.2 }, { 21.5, -4.2 } } do
+		lamp(xz[1], xz[2])
+	end
+	-- 🍢 대충 분식: 식탁 두 개 · 벽 쪽 간이 자리 · 빨간 조명
+	local redChair = { colors = { Seat = M.red, Back = M.red } }
+	for _, tz in { -4.5, -10.5 } do
 		mesh("DiningTable", 49, 0, tz, 90, { scale = 0.8 })
 		P(Vector3.new(2.8, 2.2, 4.8), Vector3.new(49, 1.1, tz), { Transparency = 1 })
-		mesh("DiningChair", 46, 0, tz, -90)
-		mesh("DiningChair", 52, 0, tz, 90)
+		mesh("CafeChair", 46.2, 0, tz, 90, redChair)
+		mesh("CafeChair", 51.8, 0, tz, -90, redChair)
+		lamp(49, tz, Color3.fromRGB(255, 226, 200))
 	end
+	deco(Vector3.new(1.5, 0.25, 8), Vector3.new(31.5, 3.3, -6.5), M.woodLight, Enum.Material.Wood) -- 벽 쪽 간이 자리
+	for _, tz in { -3.5, -6.5, -9.5 } do
+		mesh("BarStool", 33.4, 0, tz, 0, { colors = { Seat = M.red } })
+	end
+	deco(Vector3.new(22.8, 3, 0.12), Vector3.new(42, 1.5, -18.86), M.red) -- 허리벽
+	lamp(39, -11, Color3.fromRGB(255, 226, 200))
 	-- 옥상 난간 · 물탱크
 	deco(Vector3.new(120, 3, 1), Vector3.new(0, top + 1.5, -0.5), FACADE, Enum.Material.Concrete)
 	deco(Vector3.new(10, 7, 10), Vector3.new(26, top + 7.5, -12), Color3.fromRGB(220, 178, 70), Enum.Material.Metal).Shape = Enum.PartType.Cylinder
@@ -207,7 +249,7 @@ function CampusDaechung.build(folder: Instance, SITE: CFrame)
 		end
 	end
 	flight(-50.6, -22, 0, -1)
-	P(Vector3.new(10, 0.4, 2), Vector3.new(-48, RISE - 0.2, -30), concrete) -- 계단참
+	P(Vector3.new(10, 0.4, 2), Vector3.new(-48, RISE - 0.2, -30), concrete):SetAttribute("Walk", true) -- 계단참 (걸어 올라가는 곳: 올라타기 막기에서 빼요)
 	flight(-45.4, -29, RISE, 1)
 	P(Vector3.new(4.8, 9, 0.6), Vector3.new(-45.4, 10, -21.4), { Transparency = 1 }) -- 2층 쪽은 막아 둬요
 	local floorMark = deco(Vector3.new(0.15, 1.6, 2.4), Vector3.new(-53, 9.5, -27), DARK)

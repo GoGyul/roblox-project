@@ -3,7 +3,7 @@
 --   😱 근무 중엔 가끔 부장님과 같이 타요: 부장님이 이쪽을 볼 때(👀 예고) 시선을 피해야 해요 → 못 피하면 의심도 +
 --   🌬️ 옥상: 바람 쐬기 / 🏖️ 선베드 일광욕 / 🔭 망원경(부장님 위치 보기) / 물탱크·실외기 뒤에 숨기
 --   👮 옥상 경비원이 근무 시간 내내 순찰해요 (부장님은 사무실에만). 💤 가끔 경비실에서 쉬는 틈을 노려요
---   📐 옥상 크기: 대충상사 98×70칸 / 눈치물산 140×85칸 (12층 전체와 같은 넓이)
+--   📐 옥상 크기: 대충상사 120×80칸 / 눈치물산 140×85칸 (각자 사무실 층 전체와 같은 넓이)
 --
 -- 옥상과 엘리베이터 칸은 사무실 훨씬 위 하늘에 지어요 (사무실 천장에 가려서 안 보여요).
 
@@ -37,14 +37,14 @@ Rooftop.ride = nil :: ((Player, boolean, boolean?) -> ())? -- (플레이어, 옥
 
 local ROOF = Vector3.new(0, 300, 0) -- 옥상 바닥 윗면 가운데
 -- 📐 옥상 크기 배율 (기준 70×50칸). 물건 묶음들도 이만큼 바깥쪽으로 퍼져요.
---   대충상사: 가로·세로 1.4배 (98×70) / 눈치물산: 12층 전체와 같은 넓이 (140×85 = 가로 2배 · 세로 1.7배)
+--   대충상사: 3층 전체와 같은 넓이 (120×80) / 눈치물산: 12층 전체와 같은 넓이 (140×85)
 local SX, SZ = 1.4, 1.4
 local ROOF_W, ROOF_D = 70 * SX, 50 * SZ
 local function setRoofScale(companyId: string)
 	if companyId == "nunchi" then
 		SX, SZ = 2, 1.7
 	else
-		SX, SZ = 1.4, 1.4
+		SX, SZ = 120 / 70, 80 / 50 -- 대충상사: 3층 전체와 같은 넓이 (120×80)
 	end
 	ROOF_W, ROOF_D = 70 * SX, 50 * SZ
 end
@@ -130,8 +130,10 @@ local function buildRoof(folder: Instance, companyId: string)
 	Build.surfaceText(tankLabel, Enum.NormalId.Left, "💧 물탱크", { TextColor3 = Color3.new(1, 1, 1) })
 	for _, xz in { { 0, -20 }, { -12, 18 }, { 28, 10 }, { -30, -16 }, { -2, 2 } } do
 		group(xz[1], xz[2])
-		B:part(Vector3.new(4, 3, 3), at(xz[1], 1.5, xz[2]), { Color = Color3.fromRGB(215, 215, 210), Material = Enum.Material.Metal }) -- 실외기
-		B:part(Vector3.new(0.1, 2, 2), at(xz[1] + 2.05, 1.6, xz[2]), { Color = Color3.fromRGB(60, 60, 65), Shape = Enum.PartType.Cylinder })
+		Meshes.over(B, "AcUnit", at(xz[1], 0, xz[2]), 90, { stretch = Vector3.new(0.8, 1, 1.5) }, function()
+			B:part(Vector3.new(4, 3, 3), at(xz[1], 1.5, xz[2]), { Color = Color3.fromRGB(215, 215, 210), Material = Enum.Material.Metal }) -- 실외기
+			B:part(Vector3.new(0.1, 2, 2), at(xz[1] + 2.05, 1.6, xz[2]), { Color = Color3.fromRGB(60, 60, 65), Shape = Enum.PartType.Cylinder })
+		end)
 	end
 	-- 🙈 숨을 곳 더 (부장님 시선을 가려요)
 	-- 📦 택배 상자 더미 (오른쪽)
@@ -330,10 +332,10 @@ local function buildRoof(folder: Instance, companyId: string)
 	if not fancy then
 		-- 초록 방수 바닥의 이음선과 물 빠지는 배수구 (장식)
 		group(0, 0)
-		for x = -42, 42, 14 do
+		for x = -math.floor(ROOF_W / 28) * 14, ROOF_W / 2 - 4, 14 do
 			B:part(Vector3.new(0.15, 0.04, ROOF_D - 2), at(x, 0.03, 0), { Color = Color3.fromRGB(62, 104, 84), CanCollide = false, CanQuery = false })
 		end
-		for _, xz in { { -44, -30 }, { 44, 30 }, { 44, -30 } } do
+		for _, xz in { { -ROOF_W / 2 + 5, -ROOF_D / 2 + 5 }, { ROOF_W / 2 - 5, ROOF_D / 2 - 5 }, { ROOF_W / 2 - 5, -ROOF_D / 2 + 5 } } do
 			B:part(Vector3.new(1.6, 0.06, 1.6), at(xz[1], 0.04, xz[2]), { Color = Color3.fromRGB(60, 62, 66), Material = Enum.Material.DiamondPlate, CanCollide = false, CanQuery = false })
 		end
 		-- 장독대 (물탱크 옆, 장식)
@@ -344,6 +346,36 @@ local function buildRoof(folder: Instance, companyId: string)
 			local _ = jar, i
 		end
 		group(0, 0)
+	end
+	if not fancy then
+		-- 🪴 대충상사 옥상 (옥탑 감성): 넓어진 자리에 평상 · 빨랫줄 · 고무 대야 텃밭 · 플라스틱 의자
+		--   (기존 시설 사이 빈 곳만 골랐어요. 좌표는 옥상 가운데 기준 실제 칸)
+		group(0, 0)
+		local function put(kind: string, x: number, z: number, yaw: number, options: any?, box: Vector3?)
+			if not Meshes.ready(kind) then
+				return
+			end
+			Meshes.place(B, kind, ROOF + Vector3.new(x, 0, z), yaw, options)
+			if box then
+				B:part(box, ROOF + Vector3.new(x, box.Y / 2, z), hidden)
+			end
+		end
+		for i, xz in { { 25, 0 }, { 36, 22 } } do
+			put("Pyeongsang", xz[1], xz[2], if i == 1 then 0 else 90, nil, if i == 1 then Vector3.new(8, 1.5, 5) else Vector3.new(5, 1.5, 8))
+			put("PlasticChair", xz[1] - 6.5, xz[2] + 1.5, 70)
+			put("PlasticChair", xz[1] - 6, xz[2] - 2.2, 110)
+		end
+		put("ClothesLine", -52, 22, 90)
+		for i = 0, 4 do
+			put("TubPlanter", -14 + i * 3.8, -22 + (i % 2) * 1.4, i * 40, { scale = 0.9 + (i % 3) * 0.1 }, Vector3.new(3, 1.3, 3))
+		end
+		for z = -24, 24, 12 do
+			put("TubPlanter", ROOF_W / 2 - 4, z, z * 7, nil, Vector3.new(3.4, 1.3, 3.4))
+		end
+		for x = -20, 44, 16 do
+			put("TubPlanter", x, ROOF_D / 2 - 3.5, x * 5, { scale = 0.9 }, Vector3.new(3, 1.3, 3))
+		end
+		put("PlasticChair", -8, -17.5, 200)
 	end
 	if fancy then
 		-- 🌿 눈치물산 옥상 정원: 12층 넓이로 커진 만큼 빈 자리에 쉼터와 화단을 더하고, 가장자리를 나무로 둘러요

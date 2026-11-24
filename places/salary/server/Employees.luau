@@ -279,6 +279,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		return limit * (1 + fitnessEffect(d, "away")) -- 🔋 지구력: 게이지가 천천히 차요 (최대 +40%)
 	end
 
+	-- 💸 돈이 모자랄 때: 창 안의 작은 글씨만으로는 놓치기 쉬워서 화면 가운데에 크게 알려요
+	local function broke(player: Player, need: number?)
+		remotes.Broke:FireClient(player, need)
+	end
+
 	-- 🏪 매점 계산대 앞인가 (눈치물산은 12층 매점과 상가 1층 편의점 두 곳)
 	local function nearStore(position: Vector3): boolean
 		for key, spot in office.shops do
@@ -775,6 +780,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			return false, `🚚 오늘 주문은 {SalaryConfig.SHOP_DAILY_ORDERS}번까지! 내일 또 와요`
 		end
 		if d.profile.money < price then
+			broke(player, price)
 			return false, `통장 잔고가 부족해요. 😢 ({price}원 필요)`
 		end
 		d.profile.money -= price
@@ -1159,6 +1165,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			return false, ("🏪 " .. (office.storeName or "사내 매점") .. " 계산대 앞에서 사 주세요!")
 		end
 		if d.profile.money < gift.price then
+			broke(player, nil)
 			return false, "통장 잔고가 부족해요. 😢"
 		end
 		d.profile.money -= gift.price
@@ -1193,6 +1200,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 		local cost = SalaryConfig.seedPrice(seed, d.profile.stats.days) * count
 		if d.profile.money < cost then
+			broke(player, nil)
 			return false, "통장 잔고가 부족해요. 😢"
 		end
 		d.profile.money -= cost
@@ -1224,6 +1232,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 		local cost = snack.price * count
 		if d.profile.money < cost then
+			broke(player, nil)
 			return false, "통장 잔고가 부족해요. 😢"
 		end
 		d.profile.money -= cost
@@ -1257,6 +1266,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 		local cost = (if isFertilizer then SalaryConfig.FERTILIZER_PRICE else flower.price) * count
 		if d.profile.money < cost then
+			broke(player, nil)
 			return false, "통장 잔고가 부족해요. 😢"
 		end
 		d.profile.money -= cost
@@ -1313,6 +1323,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			return false, `{if need then need.emoji .. " " .. need.name else "이전 단계"}부터 먼저 사 주세요!`
 		end
 		if d.profile.money < item.price then
+			broke(player, nil)
 			return false, "통장 잔고가 부족해요. 😢"
 		end
 		d.profile.money -= item.price
@@ -1393,6 +1404,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if quantity > 0 then
 			local cost = price * quantity
 			if profile.money < cost then
+				broke(player, cost)
 				return false, `통장 잔고가 부족해요. (필요 {cost}원)`
 			end
 			profile.money -= cost
@@ -1777,6 +1789,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				return { ok = false, message = "📚 시험은 하루 한 번! 내일 다시 도전해요." }
 			end
 			if d.profile.money < cert.price then
+				broke(player, cert.price)
 				return { ok = false, message = `통장 잔고가 부족해요. 😢 (응시료 {cert.price}원)` }
 			end
 			d.profile.money -= cert.price
@@ -1874,6 +1887,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			return { ok = false, message = "지금은 쓸 수 없어요." }
 		end
 		if d.profile.money < coupon.price then
+			broke(player, coupon.price)
 			return { ok = false, message = `통장 잔고가 부족해요. 😢 ({coupon.price}원 필요)` }
 		end
 		local message = ""
@@ -2426,6 +2440,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if d.state == "street" and office.streetScale then
 			-- 💰 단지 산책: 건물 안 < 그늘 < 탁 트인 곳 (위험할수록 많이 벌어요)
 			local scale, zone = office.streetScale(root.Position)
+			if zone == "open" and ReplicatedStorage:GetAttribute("CampusRain") == true then
+				scale = 1 -- 🌧️ 비 오는 날엔 탁 트인 곳 수당이 없어요 (대신 창밖 시선도 쉬어요)
+			end
+			if zone ~= "indoor" and ReplicatedStorage:GetAttribute("CampusBlossom") == true then
+				scale *= SalaryConfig.BLOSSOM_INCOME -- 🌸 벚꽃 구경
+			end
 			baseIncome *= scale
 			if zone == "open" and not d.openTipped then
 				d.openTipped = true
@@ -2439,7 +2459,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local catOnKeyboard = Employees.hooks.catOn ~= nil and Employees.hooks.catOn(d.desk) -- 🐾 월급냥이 키보드 위에!
 		-- 📄 오늘 업무: 내 자리에 앉아만 있으면 쌓여요 (일하기든, 앉아서 하는 농땡이든) → 자연스럽게 자리로 돌아오게
 		if isSeated(player, d) and not catOnKeyboard then
-			d.workSeconds += dt * (if d.buffs.americano then SalaryConfig.AMERICANO_WORK elseif d.buffs.mixcoffee then SalaryConfig.MIXCOFFEE_WORK else 1) -- ☕ 아메리카노 / 믹스커피
+			d.workSeconds += dt * (if d.buffs.americano then SalaryConfig.AMERICANO_WORK elseif d.buffs.mixcoffee then SalaryConfig.MIXCOFFEE_WORK else 1) * (if d.buffs.cupbap then SalaryConfig.CUPBAP_WORK else 1) -- ☕ 아메리카노 / 믹스커피 · 🍚 컵밥
 		end
 		if d.state == "snack" then
 			local held = d.heldSnack
@@ -2593,6 +2613,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			d.away, d.awayWarned = 0, false -- 컴퓨터 꺼짐: 기록 초기화
 		elseif gaugeOn and not isSeated(player, d) then
 			local smoothie = if d.buffs.smoothie then SalaryConfig.SMOOTHIE_AWAY elseif d.buffs.vitamin then SalaryConfig.VITAMIN_AWAY else 1 -- 🍹 에너지 스무디 / 🧃 비타민 음료
+			smoothie *= if d.buffs.hotdog then SalaryConfig.HOTDOG_AWAY else 1 -- 🌭 핫도그
 			local late = if dayCycle.minute >= SalaryConfig.AWAY_LATE_FROM then SalaryConfig.AWAY_LATE_SCALE else 1 -- 🕟 4시 반 이후엔 절반 속도
 			d.away = math.min(100, d.away + 100 / awayLimit(d) * smoothie * late * dt)
 			if late < 1 and not d.lateTipped then
@@ -3104,10 +3125,14 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if not d or d.fired or not item then
 			return false, "지금은 살 수 없어요."
 		end
+		if item.days and not table.find(item.days, dayCycle:weekday().name) then
+			return false, `{item.emoji} {item.name}은(는) 오늘 메뉴가 아니에요.`
+		end
 		if SalaryConfig.StreetShops[shopId].lunchOnly and dayCycle.phase ~= "lunch" then
 			return false, "🚚 점심시간(12시~1시)에만 팔아요!"
 		end
 		if d.profile.money < item.price then
+			broke(player, item.price)
 			return false, `통장 잔고가 부족해요. 😢 ({item.price}원 필요)`
 		end
 		if item.gift then
@@ -3122,9 +3147,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			d.heldSnack = { id = item.snack, progress = 0 }
 		else
 			if d.buffs[item.id] then
-				return false, `{item.emoji} 오늘은 이미 마셨어요! 내일 또 와요.`
+				return false, if item.food then `{item.emoji} 오늘은 이미 먹었어요! 내일 또 와요.` else `{item.emoji} 오늘은 이미 마셨어요! 내일 또 와요.`
 			end
 			d.buffs[item.id] = true
+			if item.id == "burger" then
+				d.suspicion = math.max(0, d.suspicion - SalaryConfig.BURGER_SUSPICION) -- 🍔 먹는 순간 의심도 -
+			end
 			unlockAchievement(player, d, "street_cafe")
 			publishCollection(player, d)
 		end
@@ -3137,7 +3165,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if item.snack then
 			return true, `{item.emoji} {item.name} 포장 완료! 자리에서 [8]`
 		end
-		return true, `{item.emoji} {item.name} 꿀꺽! {item.description}`
+		return true, if item.food then `{item.emoji} {item.name} 냠냠! {item.description}` else `{item.emoji} {item.name} 꿀꺽! {item.description}`
 	end
 
 	---------------------------------------------------------------- 🧸 인형뽑기 (Claw 모듈이 불러요)
@@ -3147,6 +3175,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			return false, "지금은 할 수 없어요."
 		end
 		if d.profile.money < price then
+			broke(player, price)
 			return false, `통장 잔고가 부족해요. 😢 ({price}원 필요)`
 		end
 		d.profile.money -= price

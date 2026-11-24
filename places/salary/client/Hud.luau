@@ -1577,6 +1577,69 @@ function Hud.popup(message: string, color: Color3, seconds: number)
 	end)
 end
 
+-- 💸 돈이 모자라요: 화면 가운데에 크게, 통장 금액도 빨갛게 깜빡 (창 안의 작은 글씨만으로는 놓치기 쉬워요)
+local brokeBanner: Frame? = nil
+Remotes:WaitForChild("Broke").OnClientEvent:Connect(function(need: number?)
+	Sounds.play("bass", 0.7, 0.9)
+	if brokeBanner then
+		brokeBanner:Destroy()
+	end
+	local money = player:GetAttribute("TotalMoney") or 0
+	local banner = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.3),
+		Size = UDim2.fromOffset(340, if need then 72 else 48),
+		BackgroundColor3 = Color3.fromRGB(60, 24, 28),
+		BackgroundTransparency = 0.08,
+		ZIndex = 300,
+		Parent = gui,
+	}, { Ui.corner(14), Ui.stroke(Theme.Color.coral, 2) })
+	brokeBanner = banner
+	Ui.make("TextLabel", {
+		Position = UDim2.fromOffset(0, 8),
+		Size = UDim2.new(1, 0, 0, 30),
+		BackgroundTransparency = 1,
+		Text = "💸 돈이 모자라요!",
+		TextColor3 = Color3.fromRGB(255, 226, 220),
+		Font = Enum.Font.GothamBlack,
+		TextSize = 23,
+		ZIndex = 301,
+		Parent = banner,
+	})
+	if need then
+		Ui.make("TextLabel", {
+			Position = UDim2.fromOffset(0, 40),
+			Size = UDim2.new(1, 0, 0, 22),
+			BackgroundTransparency = 1,
+			Text = `필요 {comma(need)}원 · 통장 {comma(money)}원 ({comma(math.max(0, need - money))}원 부족)`,
+			TextColor3 = Color3.fromRGB(255, 200, 190),
+			Font = Enum.Font.GothamBold,
+			TextSize = 15,
+			ZIndex = 301,
+			Parent = banner,
+		})
+	end
+	-- 살짝 튀어나왔다가 2.2초 뒤 사라져요
+	local scale = Ui.make("UIScale", { Scale = 0.8, Parent = banner })
+	TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	-- 통장 금액 깜빡
+	local original = totalText.TextColor3
+	task.spawn(function()
+		for _ = 1, 3 do
+			totalText.TextColor3 = Theme.Color.coral
+			task.wait(0.18)
+			totalText.TextColor3 = original
+			task.wait(0.14)
+		end
+	end)
+	task.delay(2.2, function()
+		if brokeBanner == banner then
+			brokeBanner = nil
+		end
+		banner:Destroy()
+	end)
+end)
+
 Remotes:WaitForChild("NearMiss").OnClientEvent:Connect(function(bonus: number, combo: number, left: number?, label: string?)
 	Sounds.play("ping", 0.6, 1 + combo * 0.1)
 	local leftText = if left == nil then "" elseif left > 0 then ` · 오늘 {left}번 남음` else " · 오늘은 끝!"

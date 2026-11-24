@@ -1,0 +1,952 @@
+{
+ "FoodTruck": [
+  {
+   "name": "FoodTruck_Body",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    19.9,
+    6.6,
+    7.0
+   ],
+   "center": [
+    0.45,
+    5.0,
+    -0.0
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "FoodTruck_Stripe",
+   "color": "cakeCream",
+   "material": "SmoothPlastic",
+   "size": [
+    20.0,
+    0.7,
+    7.1
+   ],
+   "center": [
+    0.45,
+    2.4,
+    -0.0
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "FoodTruck_Window",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    11.0,
+    3.8,
+    7.14
+   ],
+   "center": [
+    -3.8,
+    5.2,
+    -0.0
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "FoodTruck_Glass",
+   "color": "glass",
+   "material": "Glass",
+   "size": [
+    4.175,
+    2.135,
+    6.92
+   ],
+   "center": [
+    8.588,
+    4.9,
+    -0.0
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "FoodTruck_Counter",
+   "color": "woodLight",
+   "material": "Wood",
+   "size": [
+    9.4,
+    1.52,
+    1.6
+   ],
+   "center": [
+    -2.6,
+    3.29,
+    4.1
+   ],
+   "triangles": 1148
+  },
+  {
+   "name": "FoodTruck_AwningA",
+   "color": "red",
+   "material": "Fabric",
+   "size": [
+    8.64,
+    1.658,
+    3.068
+   ],
+   "center": [
+    -3.06,
+    7.769,
+    4.716
+   ],
+   "triangles": 1480
+  },
+  {
+   "name": "FoodTruck_AwningB",
+   "color": "cakeCream",
+   "material": "Fabric",
+   "size": [
+    8.64,
+    1.658,
+    3.068
+   ],
+   "center": [
+    -2.1,
+    7.769,
+    4.716
+   ],
+   "triangles": 1480
+  },
+  {
+   "name": "FoodTruck_Wheels",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    15.6,
+    2.5,
+    7.3
+   ],
+   "center": [
+    0.05,
+    1.25,
+    -0.0
+   ],
+   "triangles": 1776
+  },
+  {
+   "name": "FoodTruck_Hubs",
+   "color": "metal",
+   "material": "Metal",
+   "size": [
+    20.6,
+    1.65,
+    7.36
+   ],
+   "center": [
+    0.45,
+    1.525,
+    -0.0
+   ],
+   "triangles": 808
+  },
+  {
+   "name": "FoodTruck_Lights",
+   "color": "yellowSoft",
+   "material": "Neon",
+   "size": [
+    0.3,
+    0.7,
+    5.7
+   ],
+   "center": [
+    10.45,
+    3.0,
+    -0.0
+   ],
+   "triangles": 1056
+  },
+  {
+   "name": "FoodTruck_Sign",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    7.0,
+    1.8,
+    0.4
+   ],
+   "center": [
+    -2.6,
+    9.0,
+    -0.0
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "FoodTruck_Menu",
+   "color": "cakeCream",
+   "material": "SmoothPlastic",
+   "size": [
+    3.6,
+    1.3,
+    0.1
+   ],
+   "center": [
+    -4.4,
+    5.9,
+    3.6
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "FoodTruck_Food",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    2.5,
+    0.4,
+    0.5
+   ],
+   "center": [
+    1.1,
+    4.25,
+    4.2
+   ],
+   "triangles": 1584
+  }
+ ],
+ "GymBike": [
+  {
+   "name": "GymBike_Base",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    2.6,
+    0.3,
+    4.7
+   ],
+   "center": [
+    0.0,
+    0.15,
+    -0.0
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "GymBike_Frame",
+   "color": "metal",
+   "material": "Metal",
+   "size": [
+    0.32,
+    3.52,
+    3.72
+   ],
+   "center": [
+    0.0,
+    1.9,
+    1.0
+   ],
+   "triangles": 1440
+  },
+  {
+   "name": "GymBike_Wheel",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    0.5,
+    2.3,
+    2.3
+   ],
+   "center": [
+    0.0,
+    1.6,
+    1.5
+   ],
+   "triangles": 444
+  },
+  {
+   "name": "GymBike_Hub",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    0.56,
+    1.0,
+    1.0
+   ],
+   "center": [
+    0.0,
+    1.6,
+    1.5
+   ],
+   "triangles": 108
+  },
+  {
+   "name": "GymBike_Saddle",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    1.1,
+    0.3,
+    1.5
+   ],
+   "center": [
+    0.0,
+    2.25,
+    -0.75
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "GymBike_Bars",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    2.4,
+    0.349,
+    0.799
+   ],
+   "center": [
+    0.0,
+    3.674,
+    2.301
+   ],
+   "triangles": 1440
+  },
+  {
+   "name": "GymBike_Screen",
+   "color": "neonCyan",
+   "material": "Neon",
+   "size": [
+    1.1,
+    0.663,
+    0.317
+   ],
+   "center": [
+    0.0,
+    4.05,
+    2.95
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "GymBike_Pedals",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    2.1,
+    0.14,
+    0.8
+   ],
+   "center": [
+    0.0,
+    1.1,
+    0.4
+   ],
+   "triangles": 856
+  }
+ ],
+ "GymRower": [
+  {
+   "name": "GymRower_Rail",
+   "color": "metal",
+   "material": "Metal",
+   "size": [
+    0.5,
+    0.3,
+    8.0
+   ],
+   "center": [
+    0.0,
+    0.5,
+    -0.5
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "GymRower_Feet",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    2.0,
+    0.55,
+    8.1
+   ],
+   "center": [
+    0.0,
+    0.275,
+    -0.5
+   ],
+   "triangles": 752
+  },
+  {
+   "name": "GymRower_Fan",
+   "color": "coral",
+   "material": "SmoothPlastic",
+   "size": [
+    1.5,
+    1.9,
+    1.9
+   ],
+   "center": [
+    0.0,
+    1.3,
+    3.5
+   ],
+   "triangles": 444
+  },
+  {
+   "name": "GymRower_FanCover",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    1.6,
+    1.5,
+    1.7
+   ],
+   "center": [
+    0.0,
+    1.15,
+    3.25
+   ],
+   "triangles": 296
+  },
+  {
+   "name": "GymRower_Pads",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    1.9,
+    0.722,
+    0.953
+   ],
+   "center": [
+    0.0,
+    1.0,
+    2.2
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "GymRower_Handle",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    1.96,
+    0.21,
+    0.51
+   ],
+   "center": [
+    0.0,
+    1.475,
+    2.775
+   ],
+   "triangles": 960
+  },
+  {
+   "name": "GymRower_Screen",
+   "color": "neonCyan",
+   "material": "Neon",
+   "size": [
+    0.9,
+    0.835,
+    0.414
+   ],
+   "center": [
+    0.0,
+    2.359,
+    3.452
+   ],
+   "triangles": 668
+  }
+ ],
+ "GymSandbag": [
+  {
+   "name": "GymSandbag_Bag",
+   "color": "coral",
+   "material": "Fabric",
+   "size": [
+    2.0,
+    4.0,
+    2.0
+   ],
+   "center": [
+    0.0,
+    4.0,
+    1.6
+   ],
+   "triangles": 444
+  },
+  {
+   "name": "GymSandbag_Bands",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    2.06,
+    2.85,
+    2.06
+   ],
+   "center": [
+    0.0,
+    4.0,
+    1.6
+   ],
+   "triangles": 216
+  },
+  {
+   "name": "GymSandbag_Chain",
+   "color": "metal",
+   "material": "Metal",
+   "size": [
+    1.28,
+    1.49,
+    1.28
+   ],
+   "center": [
+    0.0,
+    6.705,
+    1.6
+   ],
+   "triangles": 2028
+  },
+  {
+   "name": "GymSandbag_Mat",
+   "color": "sky",
+   "material": "SmoothPlastic",
+   "size": [
+    4.0,
+    0.14,
+    5.0
+   ],
+   "center": [
+    0.0,
+    0.07,
+    -0.0
+   ],
+   "triangles": 188
+  }
+ ],
+ "GymMat": [
+  {
+   "name": "GymMat_Mat",
+   "color": "sky",
+   "material": "SmoothPlastic",
+   "size": [
+    3.0,
+    0.12,
+    6.5
+   ],
+   "center": [
+    0.0,
+    0.06,
+    -0.0
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "GymMat_Roll",
+   "color": "lilac",
+   "material": "SmoothPlastic",
+   "size": [
+    3.0,
+    0.56,
+    0.56
+   ],
+   "center": [
+    0.0,
+    0.3,
+    3.5
+   ],
+   "triangles": 444
+  },
+  {
+   "name": "GymMat_Bottle",
+   "color": "mint",
+   "material": "SmoothPlastic",
+   "size": [
+    0.32,
+    0.73,
+    0.32
+   ],
+   "center": [
+    1.9,
+    0.365,
+    1.0
+   ],
+   "triangles": 552
+  },
+  {
+   "name": "GymMat_Dumbbells",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    0.86,
+    0.4,
+    1.1
+   ],
+   "center": [
+    -1.9,
+    0.2,
+    0.95
+   ],
+   "triangles": 2736
+  }
+ ],
+ "GymBall": [
+  {
+   "name": "GymBall_Ball",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    3.2,
+    3.2,
+    3.2
+   ],
+   "center": [
+    0.0,
+    1.6,
+    -0.0
+   ],
+   "triangles": 728
+  },
+  {
+   "name": "GymBall_Ring",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    2.6,
+    0.25,
+    2.6
+   ],
+   "center": [
+    0.0,
+    0.125,
+    -0.0
+   ],
+   "triangles": 168
+  },
+  {
+   "name": "GymBall_Mat",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    3.6,
+    0.08,
+    3.6
+   ],
+   "center": [
+    0.0,
+    0.04,
+    -0.0
+   ],
+   "triangles": 108
+  }
+ ],
+ "Pyeongsang": [
+  {
+   "name": "Pyeongsang_Deck",
+   "color": "woodLight",
+   "material": "Wood",
+   "size": [
+    7.92,
+    0.2,
+    5.0
+   ],
+   "center": [
+    0.0,
+    1.3,
+    -0.0
+   ],
+   "triangles": 1880
+  },
+  {
+   "name": "Pyeongsang_Frame",
+   "color": "woodDark",
+   "material": "Wood",
+   "size": [
+    8.0,
+    1.2,
+    4.9
+   ],
+   "center": [
+    0.0,
+    0.6,
+    -0.0
+   ],
+   "triangles": 1128
+  },
+  {
+   "name": "Pyeongsang_Cushions",
+   "color": "coral",
+   "material": "Fabric",
+   "size": [
+    6.4,
+    0.25,
+    1.6
+   ],
+   "center": [
+    0.0,
+    1.55,
+    -1.2
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "Pyeongsang_Table",
+   "color": "wood",
+   "material": "Wood",
+   "size": [
+    2.4,
+    0.67,
+    1.5
+   ],
+   "center": [
+    0.6,
+    1.735,
+    0.9
+   ],
+   "triangles": 940
+  },
+  {
+   "name": "Pyeongsang_Kettle",
+   "color": "yellow",
+   "material": "Metal",
+   "size": [
+    1.38,
+    0.56,
+    0.72
+   ],
+   "center": [
+    0.53,
+    2.35,
+    0.9
+   ],
+   "triangles": 364
+  }
+ ],
+ "PlasticChair": [
+  {
+   "name": "PlasticChair_Chair",
+   "color": "rubber",
+   "material": "SmoothPlastic",
+   "size": [
+    1.58,
+    3.084,
+    1.655
+   ],
+   "center": [
+    0.0,
+    1.502,
+    -0.038
+   ],
+   "triangles": 2296
+  }
+ ],
+ "TubPlanter": [
+  {
+   "name": "TubPlanter_Tub",
+   "color": "tub",
+   "material": "SmoothPlastic",
+   "size": [
+    3.4,
+    1.2,
+    3.4
+   ],
+   "center": [
+    0.0,
+    0.6,
+    -0.0
+   ],
+   "triangles": 336
+  },
+  {
+   "name": "TubPlanter_Soil",
+   "color": "choco",
+   "material": "SmoothPlastic",
+   "size": [
+    3.0,
+    0.1,
+    3.0
+   ],
+   "center": [
+    0.0,
+    1.0,
+    -0.0
+   ],
+   "triangles": 108
+  },
+  {
+   "name": "TubPlanter_Lettuce",
+   "color": "grassLight",
+   "material": "SmoothPlastic",
+   "size": [
+    2.247,
+    0.5,
+    2.322
+   ],
+   "center": [
+    0.076,
+    1.25,
+    -0.0
+   ],
+   "triangles": 2640
+  },
+  {
+   "name": "TubPlanter_Onions",
+   "color": "grass",
+   "material": "SmoothPlastic",
+   "size": [
+    0.7,
+    1.35,
+    0.52
+   ],
+   "center": [
+    0.0,
+    1.675,
+    0.01
+   ],
+   "triangles": 1920
+  }
+ ],
+ "AcUnit": [
+  {
+   "name": "AcUnit_Body",
+   "color": "surface",
+   "material": "Metal",
+   "size": [
+    4.0,
+    3.1,
+    1.6
+   ],
+   "center": [
+    0.0,
+    1.55,
+    -0.0
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "AcUnit_Fan",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    2.3,
+    2.3,
+    0.12
+   ],
+   "center": [
+    -0.6,
+    1.6,
+    0.82
+   ],
+   "triangles": 108
+  },
+  {
+   "name": "AcUnit_Grille",
+   "color": "metal",
+   "material": "Metal",
+   "size": [
+    2.26,
+    2.26,
+    0.08
+   ],
+   "center": [
+    -0.6,
+    1.6,
+    0.92
+   ],
+   "triangles": 1392
+  },
+  {
+   "name": "AcUnit_Vents",
+   "color": "line",
+   "material": "SmoothPlastic",
+   "size": [
+    0.9,
+    1.48,
+    0.06
+   ],
+   "center": [
+    1.35,
+    1.6,
+    0.82
+   ],
+   "triangles": 1128
+  }
+ ],
+ "ClothesLine": [
+  {
+   "name": "ClothesLine_Poles",
+   "color": "metal",
+   "material": "Metal",
+   "size": [
+    11.0,
+    7.0,
+    1.74
+   ],
+   "center": [
+    0.0,
+    3.5,
+    -0.0
+   ],
+   "triangles": 1552
+  },
+  {
+   "name": "ClothesLine_Lines",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    10.05,
+    0.05,
+    1.45
+   ],
+   "center": [
+    0.0,
+    6.8,
+    -0.0
+   ],
+   "triangles": 960
+  },
+  {
+   "name": "ClothesLine_White",
+   "color": "cakeCream",
+   "material": "Fabric",
+   "size": [
+    8.3,
+    3.6,
+    1.48
+   ],
+   "center": [
+    -0.05,
+    5.0,
+    -0.0
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "ClothesLine_Blue",
+   "color": "sky",
+   "material": "Fabric",
+   "size": [
+    3.5,
+    3.2,
+    1.48
+   ],
+   "center": [
+    0.75,
+    5.2,
+    -0.0
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "ClothesLine_Pink",
+   "color": "blush",
+   "material": "Fabric",
+   "size": [
+    6.1,
+    2.0,
+    0.08
+   ],
+   "center": [
+    -1.15,
+    5.8,
+    0.7
+   ],
+   "triangles": 376
+  }
+ ]
+}

@@ -501,6 +501,7 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 						return { ok = true, correct = false, done = true, message = `❌ {wrongs}번 연속 오답… 프로젝트 실패!` }
 					end
 					-- 틀리면 잠깐 잠기고 다른 문제로 (찍어서 맞히기 방지)
+					local rightAnswer = puzzle.choices[puzzle.correct] -- (틀린 문제의 정답: 화면에 알려 줘요)
 					local nextQuiz = makeQuiz(puzzle.index)
 					nextQuiz.wrongs = wrongs
 					nextQuiz.lockUntil = now + SalaryConfig.QUIZ_WRONG_LOCK
@@ -511,6 +512,7 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 						ok = true,
 						correct = false,
 						message = "❌ 틀렸어요! 한 번 더 틀리면 실패! (다른 문제로 바뀌었어요)",
+						rightAnswer = rightAnswer,
 						text = nextQuiz.text,
 						choices = nextQuiz.choices,
 						lockUntil = nextQuiz.lockUntil,

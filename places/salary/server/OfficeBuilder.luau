@@ -605,7 +605,7 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 	local slots = { -0.8 * hx, -0.4 * hx, 0, 0.4 * hx, 0.8 * hx }
 
 	-- 🏃 러닝머신 (서서 달려요)
-	do
+	Meshes.over(B, "Treadmill", at(slots[1], 0, 0.2), 180, { scale = 1.2 }, function()
 		local mx = slots[1]
 		B:part(Vector3.new(3.4, 0.6, 7), at(mx, 0.3, 0), { Color = black })
 		B:part(Vector3.new(2.8, 0.1, 6.4), at(mx, 0.65, -0.2), { Color = Color3.fromRGB(20, 20, 22), Material = Enum.Material.Rubber })
@@ -618,10 +618,10 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 		B:part(Vector3.new(2, 0.6, 0.05), nil, { CFrame = console.CFrame * CFrame.new(0, 0, -0.32), Color = Color3.fromRGB(90, 230, 200), Material = Enum.Material.Neon, CanCollide = false })
 		B:part(Vector3.new(0.15, 1.2, 1), at(mx + 1.62, 3.3, 1.6), { Color = Color3.fromRGB(250, 250, 250), Material = Enum.Material.Fabric, CanCollide = false }) -- 걸어 둔 수건
 		gymSeat("treadmill", CFrame.new(at(mx, 0.7 + STAND_SEAT_HEIGHT - 0.1, -0.6)) * FACE, Vector3.new(1.6, 0.2, 1.6), { Transparency = 1, CanCollide = false })
-	end
+	end)
 
 	-- 🏋️ 벤치프레스 (뒤로 비스듬히 기댄 인클라인 벤치 + 바벨 거치대)
-	do
+	Meshes.over(B, "WeightBench", at(slots[2], 0, -0.4), 0, { colors = { Pad = TC.coral } }, function()
 		local mx = slots[2]
 		local seatCFrame = CFrame.new(at(mx, 1.6, -0.3)) * FACE * CFrame.Angles(math.rad(30), 0, 0)
 		local red = TC.coral
@@ -636,10 +636,10 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 			B:part(Vector3.new(0.35, 1.9, 1.9), at(mx + side * 2.85, 5.8, -1.6), { Shape = Enum.PartType.Cylinder, Color = black, CanCollide = false }) -- 원판
 		end
 		metal(Vector3.new(6.4, 0.25, 0.25), at(mx, 5.8, -1.6), { Shape = Enum.PartType.Cylinder, CanCollide = false }) -- 바벨
-	end
+	end)
 
 	-- 🚴 실내 자전거
-	do
+	Meshes.over(B, "GymBike", at(slots[3], 0, 0), 0, nil, function()
 		local mx = slots[3]
 		B:part(Vector3.new(0.6, 0.3, 4.4), at(mx, 0.15, 0), { Color = black })
 		for _, dz in { -2, 2 } do
@@ -656,10 +656,10 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 			B:part(Vector3.new(0.5, 0.15, 0.8), at(mx + side * 0.8, 1.1, 0.4), { Color = black, CanCollide = false }) -- 페달
 		end
 		gymSeat("bike", CFrame.new(at(mx, 2.5, -0.7)) * FACE, Vector3.new(1.4, 0.4, 1.6))
-	end
+	end)
 
 	-- 🚣 로잉머신 (낮은 레일 위 미끄러지는 의자 + 앞쪽 바람 바퀴)
-	do
+	Meshes.over(B, "GymRower", at(slots[4], 0, 0), 0, nil, function()
 		local mx = slots[4]
 		metal(Vector3.new(0.6, 0.3, 8), at(mx, 0.45, -0.5))
 		for _, dz in { -4.3, 3.3 } do
@@ -672,10 +672,10 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 		end
 		B:part(Vector3.new(1.8, 0.2, 0.2), at(mx, 1.4, 2.7), { Shape = Enum.PartType.Cylinder, Color = black, CanCollide = false }) -- 손잡이
 		gymSeat("rowing", CFrame.new(at(mx, 0.85, -1.2)) * FACE, Vector3.new(1.4, 0.5, 1.4))
-	end
+	end)
 
 	-- 🥊 샌드백 (천장에 매달린 빨간 샌드백 앞에 서서 펀치!)
-	do
+	Meshes.over(B, "GymSandbag", at(slots[5], 0, 0), 0, nil, function()
 		local mx = slots[5]
 		B:part(Vector3.new(4, 0.14, 5), at(mx, 0.13, 0), { Color = TC.sky, Material = Enum.Material.Rubber, CanCollide = false })
 		metal(Vector3.new(2, 0.3, 2), at(mx, wallHeight - 0.15, 1.6), { Color = black })
@@ -689,24 +689,28 @@ local function buildGym(B, info): { seats: { Seat }, zone: BasePart, lamps: { Ba
 			Material = Enum.Material.Leather,
 		})
 		gymSeat("sandbag", CFrame.new(at(mx, STAND_SEAT_HEIGHT - 0.1, -0.4)) * FACE, Vector3.new(1.6, 0.2, 1.6), { Transparency = 1, CanCollide = false })
-	end
+	end)
 
+	if Meshes.ready("GymSandbag") then
+		metal(Vector3.new(0.16, wallHeight - 7.4, 0.16), at(slots[5], 7.4 + (wallHeight - 7.4) / 2, 1.6), { CanCollide = false })
+		metal(Vector3.new(2, 0.3, 2), at(slots[5], wallHeight - 0.15, 1.6), { Color = black, CanCollide = false })
+	end
 	-- 🤸 스트레칭 매트 (입구 쪽 왼편, 바닥에 앉아서) · ⚖️ 밸런스 볼 (입구 쪽 오른편, 공 위에 앉아서)
 	--   (가운데 입구 길은 비워 둬요)
-	do
+	Meshes.over(B, "GymMat", at(-0.62 * hx, 0, -hz + 8), 0, nil, function()
 		local mx, mz = -0.62 * hx, -hz + 8
 		B:part(Vector3.new(3, 0.12, 6.5), at(mx, 0.16, mz), { Color = TC.sky, Material = Enum.Material.Rubber, CanCollide = false }) -- 요가 매트
 		B:part(Vector3.new(3, 0.5, 0.5), at(mx, 0.35, mz + 3.4), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 90, 0), Color = Color3.fromRGB(120, 70, 170), Material = Enum.Material.Rubber, CanCollide = false }) -- 말아 둔 매트 끝
 		gymSeat("stretch", CFrame.new(at(mx, 0.45, mz + 1.2)) * FACE, Vector3.new(2, 0.3, 2), { Transparency = 1, CanCollide = false })
 		local signPart = B:part(Vector3.new(2.6, 0.9, 0.1), at(mx, 0.6, mz - 3.4), { Color = Color3.fromRGB(250, 245, 255), CanCollide = false })
 		Build.surfaceText(signPart, Enum.NormalId.Back, "🤸 스트레칭", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(120, 70, 170) })
-	end
-	do
+	end)
+	Meshes.over(B, "GymBall", at(0.62 * hx, 0, -hz + 8), 0, nil, function()
 		local mx, mz = 0.62 * hx, -hz + 8
 		B:part(Vector3.new(3.2, 3.2, 3.2), at(mx, 1.6, mz), { Shape = Enum.PartType.Ball, Color = TC.yellow, Material = Enum.Material.Rubber })
 		B:part(Vector3.new(3.6, 0.1, 3.6), at(mx, 0.12, mz), { Shape = Enum.PartType.Cylinder, Orientation = Vector3.new(0, 0, 90), Color = Color3.fromRGB(70, 70, 80), CanCollide = false }) -- 받침 매트
 		gymSeat("balance", CFrame.new(at(mx, 3.3, mz)) * FACE, Vector3.new(1.6, 0.2, 1.6), { Transparency = 1, CanCollide = false })
-	end
+	end)
 
 	-- 조명 (정전 때 같이 꺼지게 lamps로 돌려줘요)
 	local lamps = {}

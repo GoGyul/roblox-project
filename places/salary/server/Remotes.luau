@@ -84,6 +84,7 @@ local Remotes = {
 	ToggleDeskItem = event("ToggleDeskItem"), -- 클라 → 서버: 🪑 산 사무용품을 책상에 놓기/치우기 (아이템 ID)
 	BuyItem = func("BuyItem"), -- 클라 → 서버 → 답장: 매점에서 아이템 사기 (성공 여부, 메시지)
 	TradeStock = func("TradeStock"), -- 클라 → 서버 → 답장: 화장실 주식 사고팔기 (회사, 수량: +살 때 / -팔 때)
+	Broke = event("Broke"), -- 서버 → 클라: 💸 돈이 모자라요 (화면 가운데 크게 알려요)
 	Notify = event("Notify"), -- 서버 → 클라: 안내 문구
 	ElevatorMenu = event("ElevatorMenu"), -- 서버 → 클라: 🚪 엘리베이터 층 고르기 (지금 층 ID, { { id, 이름 } ... })
 	ElevatorGo = event("ElevatorGo"), -- 클라 → 서버: 🚪 고른 층 ID

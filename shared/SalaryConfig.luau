@@ -1066,7 +1066,8 @@ SalaryConfig.Companies = {
 
 SalaryConfig.TEST_MONEY = 0 -- 🧪 스튜디오에서 통장을 최소 이만큼 채워 줘요 (가게·인형뽑기 테스트용, 실제 게임엔 영향 없음)
 SalaryConfig.TEST_RANK = 4 -- 🧪 스튜디오에서 직급을 최소 이만큼으로 (2 = 사원, 0이면 끔. 저장이 꺼져 있을 때만)
-SalaryConfig.TEST_COMPANY = "nunchi" -- 🧪 스튜디오에서 "nunchi"를 넣으면 눈치물산 사무실로 시작 (실제 게임엔 영향 없음)
+SalaryConfig.TEST_CAMPUS_EVENT = "" -- 🧪 스튜디오에서 "rain" · "blossom" · "flea"를 넣으면 그 단지 행사를 바로 볼 수 있어요
+SalaryConfig.TEST_COMPANY = "daechung" -- 🧪 스튜디오에서 "nunchi"를 넣으면 눈치물산 사무실로 시작 (실제 게임엔 영향 없음)
 SalaryConfig.TEST_DELIVERY = false -- 🧪 true면 스튜디오에서 들어오자마자 📦 택배 하나가 도착해 있어요 (🔔 알림 테스트, 실제 게임엔 영향 없음)
 
 function SalaryConfig.getCompany(companyId: string): CompanyInfo
@@ -1125,7 +1126,7 @@ end
 --   buff: 사면 바로 마시고 오늘 하루 효과 (같은 음료는 하루 한 번)
 --   snack: 들고 가서 자리에서 [8] 몰래 먹기 (간식 시스템과 같아요)
 ---------------------------------------------------------------------------
-export type StreetItem = { id: string, emoji: string, name: string, price: number, description: string, snack: string?, gift: boolean? }
+export type StreetItem = { id: string, emoji: string, name: string, price: number, description: string, snack: string?, gift: boolean?, food: boolean?, days: { string }? } -- food = 마시는 게 아니라 먹는 것 (버튼·문구가 "먹기"로 나와요)
 export type StreetShop = { id: string, name: string, clerk: string, items: { StreetItem }, lunchOnly: boolean? }
 
 SalaryConfig.StreetShops = {
@@ -1189,18 +1190,35 @@ SalaryConfig.StreetShops = {
 		clerk = "푸드트럭 사장님",
 		lunchOnly = true,
 		items = {
-			{ id = "taco", emoji = "🌮", name = "든든 타코", price = 800, description = "든든한 점심! 오늘 남은 하루 농땡이 수입 +25%" },
-			{ id = "gangjeong", emoji = "🍗", name = "닭강정 컵", price = 800, description = "기분 좋은 점심! 오늘 남은 하루 의심도가 40% 더 빨리 줄어요" },
+			-- days: 이 요일에만 팔아요 (요일마다 두 가지씩)
+			{ id = "taco", emoji = "🌮", name = "든든 타코", price = 800, food = true, days = { "월요일", "수요일" }, description = "든든한 점심! 오늘 남은 하루 농땡이 수입 +25%" },
+			{ id = "gangjeong", emoji = "🍗", name = "닭강정 컵", price = 800, food = true, days = { "화요일", "목요일" }, description = "기분 좋은 점심! 오늘 남은 하루 의심도가 40% 더 빨리 줄어요" },
+			{ id = "cupbap", emoji = "🍚", name = "스팸 컵밥", price = 800, food = true, days = { "월요일", "목요일" }, description = "밥심으로 일해요! 오늘 남은 업무 시간이 1.5배 빨리 채워져요" },
+			{ id = "hotdog", emoji = "🌭", name = "핫도그", price = 800, food = true, days = { "화요일", "금요일" }, description = "들고 다니며 먹어요! 오늘 남은 하루 자리 부재 게이지가 20% 천천히 차요" },
+			{ id = "burger", emoji = "🍔", name = "수제 버거", price = 1000, food = true, days = { "수요일", "금요일" }, description = "스트레스가 싹! 먹는 순간 의심도 -30" },
 		},
 	},
 } :: { [string]: StreetShop }
 
 SalaryConfig.TACO_INCOME = 1.25 -- 🌮 타코: 농땡이 수입 배율
+SalaryConfig.CUPBAP_WORK = 1.5 -- 🍚 컵밥: 업무 시간 배율
+SalaryConfig.HOTDOG_AWAY = 0.8 -- 🌭 핫도그: 자리 부재 게이지 속도 배율
+SalaryConfig.BURGER_SUSPICION = 30 -- 🍔 버거: 먹는 순간 의심도 -
 SalaryConfig.GANGJEONG_DECAY = 1.4 -- 🍗 닭강정: 의심도 줄어드는 속도 배율 (라떼·유자차와 곱해져요)
 
 -- 🪪 사원증 등급: 이 직급부터 쓸 수 있는 단지 시설 (Ranks 번호: 1 인턴 · 2 사원 · 3 주임 · 4 대리)
 --   공원 시설·커피·디저트·인형뽑기는 누구나. 눈치물산 타워는 대리부터 (회사 자체가 대리부터예요)
 SalaryConfig.BADGE = { dart = 2, arcade = 3, wheel = 4 }
+
+-- 🎪 단지 행사: 날마다 단지가 조금씩 달라져요
+SalaryConfig.RAIN_CHANCE = 0.18 -- 🌧️ 비 오는 날 확률: 창밖 시선이 쉬고 경비원 시야가 줄지만, 탁 트인 곳 수당(1.4배)도 없어요
+SalaryConfig.RAIN_GUARD_RANGE = 0.75 -- 비 오는 날 경비원 시야 배율
+SalaryConfig.BLOSSOM_EVERY = 4 -- 🌸 벚꽃 주간: 이 주(5일)마다 한 번, 그 주 내내
+SalaryConfig.BLOSSOM_INCOME = 1.15 -- 벚꽃 주간 단지 산책 수입 배율 (건물 안 제외)
+SalaryConfig.FLEA_PRICE = 500 -- 🛍️ 금요일 플리마켓 뽑기 한 번
+SalaryConfig.FLEA_PRIZES = { -- { 풍선 다트 경품 id, 비중 }
+	{ "none", 30 }, { "won100", 18 }, { "won300", 22 }, { "tickets", 16 }, { "plush", 12 }, { "jackpot", 2 },
+}
 
 -- 🚏 출근 시간: 아침마다 단지 버스 정류장에서 시작해 내 자리까지 가요 (시각은 게임 속 분)
 SalaryConfig.COMMUTE_EARLY = 9 * 60 + 40 -- 이때까지 앉으면 칼출근 보너스

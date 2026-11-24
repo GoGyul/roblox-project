@@ -64,6 +64,7 @@ function WindowWatch.start(office, boss, dayCycle, events, remotes)
 	end
 	local function canWatch(): boolean
 		return dayCycle.phase == "work" and boss.active == true and not events:is("drill") and not events:is("workshop")
+			and ReplicatedStorage:GetAttribute("CampusRain") ~= true -- 🌧️ 비 오는 날엔 창밖이 안 보여요
 	end
 
 	task.spawn(function()

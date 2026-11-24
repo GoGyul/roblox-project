@@ -67,6 +67,22 @@ Theme.Mesh = {
 	screen = Color3.fromRGB(170, 200, 225),
 	laminate = Color3.fromRGB(214, 204, 190),
 	paper = Color3.fromRGB(244, 243, 238),
+	-- 눈치 스트리트 가게 (street_shops_set)
+	espresso = Color3.fromRGB(78, 58, 46),
+	blush = Color3.fromRGB(226, 184, 184),
+	lilac = Color3.fromRGB(168, 160, 204),
+	arcade = Color3.fromRGB(62, 58, 104),
+	neonPink = Color3.fromRGB(255, 120, 180),
+	neonCyan = Color3.fromRGB(120, 225, 240),
+	glass = Color3.fromRGB(196, 222, 232),
+	ink = Color3.fromRGB(36, 38, 44),
+	gold = Color3.fromRGB(208, 170, 96),
+	red = Color3.fromRGB(196, 74, 66),
+	cakeCream = Color3.fromRGB(246, 236, 220),
+	berry = Color3.fromRGB(206, 70, 90),
+	choco = Color3.fromRGB(104, 70, 52),
+	rubber = Color3.fromRGB(58, 96, 150), -- 파란 플라스틱 의자
+	tub = Color3.fromRGB(150, 60, 52), -- 빨간 고무 대야
 }
 
 Theme.UI = {

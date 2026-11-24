@@ -464,4 +464,392 @@ return {
 			LeavesLight = { id = "rbxassetid://117189573731398", size = Vector3.new(1.461, 2.232, 1.121), center = Vector3.new(0.023, 2.216, -0.004), color = "grassLight", material = "SmoothPlastic" },
 		},
 	},
+	FoodTruck = {
+		flip = true,
+		parts = {
+			Body = { id = "rbxassetid://103841276350949", size = Vector3.new(19.9, 6.6, 7), center = Vector3.new(0.45, 5, -0), color = "coral", material = "SmoothPlastic" },
+			Stripe = { id = "rbxassetid://86821988818794", size = Vector3.new(20, 0.7, 7.1), center = Vector3.new(0.45, 2.4, -0), color = "cakeCream", material = "SmoothPlastic" },
+			Window = { id = "rbxassetid://85847186295084", size = Vector3.new(11, 3.8, 7.14), center = Vector3.new(-3.8, 5.2, -0), color = "ink", material = "SmoothPlastic" },
+			Glass = { id = "rbxassetid://133020706297782", size = Vector3.new(4.175, 2.135, 6.92), center = Vector3.new(8.588, 4.9, -0), color = "glass", material = "Glass" },
+			Counter = { id = "rbxassetid://101922096064375", size = Vector3.new(9.4, 1.52, 1.6), center = Vector3.new(-2.6, 3.29, 4.1), color = "woodLight", material = "Wood" },
+			AwningA = { id = "rbxassetid://106926586870131", size = Vector3.new(8.64, 1.658, 3.068), center = Vector3.new(-3.06, 7.769, 4.716), color = "red", material = "Fabric" },
+			AwningB = { id = "rbxassetid://102315484183564", size = Vector3.new(8.64, 1.658, 3.068), center = Vector3.new(-2.1, 7.769, 4.716), color = "cakeCream", material = "Fabric" },
+			Wheels = { id = "rbxassetid://75985313574516", size = Vector3.new(15.6, 2.5, 7.3), center = Vector3.new(0.05, 1.25, -0), color = "ink", material = "SmoothPlastic" },
+			Hubs = { id = "rbxassetid://80480791849293", size = Vector3.new(20.6, 1.65, 7.36), center = Vector3.new(0.45, 1.525, -0), color = "metal", material = "Metal" },
+			Lights = { id = "rbxassetid://136766402394230", size = Vector3.new(0.3, 0.7, 5.7), center = Vector3.new(10.45, 3, -0), color = "yellowSoft", material = "Neon" },
+			Sign = { id = "rbxassetid://76567803276516", size = Vector3.new(7, 1.8, 0.4), center = Vector3.new(-2.6, 9, -0), color = "yellow", material = "SmoothPlastic" },
+			Menu = { id = "rbxassetid://124102598767806", size = Vector3.new(3.6, 1.3, 0.1), center = Vector3.new(-4.4, 5.9, 3.6), color = "cakeCream", material = "SmoothPlastic" },
+			Food = { id = "rbxassetid://77233605042643", size = Vector3.new(2.5, 0.4, 0.5), center = Vector3.new(1.1, 4.25, 4.2), color = "yellow", material = "SmoothPlastic" },
+		},
+	},
+	GymBike = {
+		flip = true,
+		parts = {
+			Base = { id = "rbxassetid://98260944601236", size = Vector3.new(2.6, 0.3, 4.7), center = Vector3.new(0, 0.15, -0), color = "ink", material = "SmoothPlastic" },
+			Frame = { id = "rbxassetid://78937577515100", size = Vector3.new(0.32, 3.52, 3.72), center = Vector3.new(0, 1.9, 1), color = "metal", material = "Metal" },
+			Wheel = { id = "rbxassetid://124398858333721", size = Vector3.new(0.5, 2.3, 2.3), center = Vector3.new(0, 1.6, 1.5), color = "coral", material = "SmoothPlastic" },
+			Hub = { id = "rbxassetid://102886269301013", size = Vector3.new(0.56, 1, 1), center = Vector3.new(0, 1.6, 1.5), color = "ink", material = "SmoothPlastic" },
+			Saddle = { id = "rbxassetid://96477788504417", size = Vector3.new(1.1, 0.3, 1.5), center = Vector3.new(0, 2.25, -0.75), color = "ink", material = "SmoothPlastic" },
+			Bars = { id = "rbxassetid://72434509986575", size = Vector3.new(2.4, 0.349, 0.799), center = Vector3.new(0, 3.674, 2.301), color = "ink", material = "SmoothPlastic" },
+			Screen = { id = "rbxassetid://89122173247528", size = Vector3.new(1.1, 0.663, 0.317), center = Vector3.new(0, 4.05, 2.95), color = "neonCyan", material = "Neon" },
+			Pedals = { id = "rbxassetid://120239677051038", size = Vector3.new(2.1, 0.14, 0.8), center = Vector3.new(0, 1.1, 0.4), color = "ink", material = "SmoothPlastic" },
+		},
+	},
+	GymRower = {
+		flip = true,
+		parts = {
+			Rail = { id = "rbxassetid://77525010545287", size = Vector3.new(0.5, 0.3, 8), center = Vector3.new(0, 0.5, -0.5), color = "metal", material = "Metal" },
+			Feet = { id = "rbxassetid://93978712687597", size = Vector3.new(2, 0.55, 8.1), center = Vector3.new(0, 0.275, -0.5), color = "ink", material = "SmoothPlastic" },
+			Fan = { id = "rbxassetid://125828608010981", size = Vector3.new(1.5, 1.9, 1.9), center = Vector3.new(0, 1.3, 3.5), color = "coral", material = "SmoothPlastic" },
+			FanCover = { id = "rbxassetid://121074416739949", size = Vector3.new(1.6, 1.5, 1.7), center = Vector3.new(0, 1.15, 3.25), color = "ink", material = "SmoothPlastic" },
+			Pads = { id = "rbxassetid://80558820536724", size = Vector3.new(1.9, 0.722, 0.953), center = Vector3.new(0, 1, 2.2), color = "ink", material = "SmoothPlastic" },
+			Handle = { id = "rbxassetid://72399882773373", size = Vector3.new(1.96, 0.21, 0.51), center = Vector3.new(0, 1.475, 2.775), color = "ink", material = "SmoothPlastic" },
+			Screen = { id = "rbxassetid://111673451411475", size = Vector3.new(0.9, 0.835, 0.414), center = Vector3.new(0, 2.359, 3.452), color = "neonCyan", material = "Neon" },
+		},
+	},
+	GymSandbag = {
+		flip = true,
+		parts = {
+			Bag = { id = "rbxassetid://105680703627365", size = Vector3.new(2, 4, 2), center = Vector3.new(0, 4, 1.6), color = "coral", material = "Fabric" },
+			Bands = { id = "rbxassetid://99585363362371", size = Vector3.new(2.06, 2.85, 2.06), center = Vector3.new(0, 4, 1.6), color = "ink", material = "SmoothPlastic" },
+			Chain = { id = "rbxassetid://93636773946945", size = Vector3.new(1.28, 1.49, 1.28), center = Vector3.new(0, 6.705, 1.6), color = "metal", material = "Metal" },
+			Mat = { id = "rbxassetid://105471879845588", size = Vector3.new(4, 0.14, 5), center = Vector3.new(0, 0.07, -0), color = "sky", material = "SmoothPlastic" },
+		},
+	},
+	GymMat = {
+		flip = true,
+		parts = {
+			Mat = { id = "rbxassetid://92995139122514", size = Vector3.new(3, 0.12, 6.5), center = Vector3.new(0, 0.06, -0), color = "sky", material = "SmoothPlastic" },
+			Roll = { id = "rbxassetid://115445946799749", size = Vector3.new(3, 0.56, 0.56), center = Vector3.new(0, 0.3, 3.5), color = "lilac", material = "SmoothPlastic" },
+			Bottle = { id = "rbxassetid://71754804904306", size = Vector3.new(0.32, 0.73, 0.32), center = Vector3.new(1.9, 0.365, 1), color = "mint", material = "SmoothPlastic" },
+			Dumbbells = { id = "rbxassetid://107748987391797", size = Vector3.new(0.86, 0.4, 1.1), center = Vector3.new(-1.9, 0.2, 0.95), color = "ink", material = "SmoothPlastic" },
+		},
+	},
+	GymBall = {
+		flip = true,
+		parts = {
+			Ball = { id = "rbxassetid://111019458445182", size = Vector3.new(3.2, 3.2, 3.2), center = Vector3.new(0, 1.6, -0), color = "yellow", material = "SmoothPlastic" },
+			Ring = { id = "rbxassetid://129746288572471", size = Vector3.new(2.6, 0.25, 2.6), center = Vector3.new(0, 0.125, -0), color = "ink", material = "SmoothPlastic" },
+			Mat = { id = "rbxassetid://109092600686392", size = Vector3.new(3.6, 0.08, 3.6), center = Vector3.new(0, 0.04, -0), color = "navy", material = "SmoothPlastic" },
+		},
+	},
+	Pyeongsang = {
+		flip = true,
+		parts = {
+			Deck = { id = "rbxassetid://102793261811676", size = Vector3.new(7.92, 0.2, 5), center = Vector3.new(0, 1.3, -0), color = "woodLight", material = "Wood" },
+			Frame = { id = "rbxassetid://107265543084672", size = Vector3.new(8, 1.2, 4.9), center = Vector3.new(0, 0.6, -0), color = "woodDark", material = "Wood" },
+			Cushions = { id = "rbxassetid://93954760047617", size = Vector3.new(6.4, 0.25, 1.6), center = Vector3.new(0, 1.55, -1.2), color = "coral", material = "Fabric" },
+			Table = { id = "rbxassetid://120031602729999", size = Vector3.new(2.4, 0.67, 1.5), center = Vector3.new(0.6, 1.735, 0.9), color = "wood", material = "Wood" },
+			Kettle = { id = "rbxassetid://102043900279084", size = Vector3.new(1.38, 0.56, 0.72), center = Vector3.new(0.53, 2.35, 0.9), color = "yellow", material = "Metal" },
+		},
+	},
+	PlasticChair = {
+		flip = true,
+		parts = {
+			Chair = { id = "rbxassetid://108893447924383", size = Vector3.new(1.58, 3.084, 1.655), center = Vector3.new(0, 1.502, -0.038), color = "rubber", material = "SmoothPlastic" },
+		},
+	},
+	TubPlanter = {
+		flip = true,
+		parts = {
+			Tub = { id = "rbxassetid://73955523339122", size = Vector3.new(3.4, 1.2, 3.4), center = Vector3.new(0, 0.6, -0), color = "tub", material = "SmoothPlastic" },
+			Soil = { id = "rbxassetid://114674697667395", size = Vector3.new(3, 0.1, 3), center = Vector3.new(0, 1, -0), color = "choco", material = "SmoothPlastic" },
+			Lettuce = { id = "rbxassetid://75695921699925", size = Vector3.new(2.247, 0.5, 2.322), center = Vector3.new(0.076, 1.25, -0), color = "grassLight", material = "SmoothPlastic" },
+			Onions = { id = "rbxassetid://114413170644665", size = Vector3.new(0.7, 1.35, 0.52), center = Vector3.new(0, 1.675, 0.01), color = "grass", material = "SmoothPlastic" },
+		},
+	},
+	AcUnit = {
+		flip = true,
+		parts = {
+			Body = { id = "rbxassetid://125606111600052", size = Vector3.new(4, 3.1, 1.6), center = Vector3.new(0, 1.55, -0), color = "surface", material = "Metal" },
+			Fan = { id = "rbxassetid://133920414427746", size = Vector3.new(2.3, 2.3, 0.12), center = Vector3.new(-0.6, 1.6, 0.82), color = "ink", material = "SmoothPlastic" },
+			Grille = { id = "rbxassetid://118648470714633", size = Vector3.new(2.26, 2.26, 0.08), center = Vector3.new(-0.6, 1.6, 0.92), color = "metal", material = "Metal" },
+			Vents = { id = "rbxassetid://137748746119534", size = Vector3.new(0.9, 1.48, 0.06), center = Vector3.new(1.35, 1.6, 0.82), color = "line", material = "SmoothPlastic" },
+		},
+	},
+	ClothesLine = {
+		flip = true,
+		parts = {
+			Poles = { id = "rbxassetid://125959767645764", size = Vector3.new(11, 7, 1.74), center = Vector3.new(0, 3.5, -0), color = "metal", material = "Metal" },
+			Lines = { id = "rbxassetid://95310757795259", size = Vector3.new(10.05, 0.05, 1.45), center = Vector3.new(0, 6.8, -0), color = "ink", material = "SmoothPlastic" },
+			White = { id = "rbxassetid://99384399460592", size = Vector3.new(8.3, 3.6, 1.48), center = Vector3.new(-0.05, 5, -0), color = "cakeCream", material = "Fabric" },
+			Blue = { id = "rbxassetid://105254818682186", size = Vector3.new(3.5, 3.2, 1.48), center = Vector3.new(0.75, 5.2, -0), color = "sky", material = "Fabric" },
+			Pink = { id = "rbxassetid://82673296846592", size = Vector3.new(6.1, 2, 0.08), center = Vector3.new(-1.15, 5.8, 0.7), color = "blush", material = "Fabric" },
+		},
+	},
+	CafeBar = {
+		flip = true,
+		parts = {
+			Body = { id = "rbxassetid://121069954260659", size = Vector3.new(11.6, 3.2, 2.2), center = Vector3.new(0, 1.75, -0.1), color = "espresso", material = "SmoothPlastic" },
+			Slats = { id = "rbxassetid://129908493209004", size = Vector3.new(11.34, 3, 0.16), center = Vector3.new(0, 1.75, 1.06), color = "wood", material = "Wood" },
+			Top = { id = "rbxassetid://136284590307766", size = Vector3.new(12.2, 0.28, 2.9), center = Vector3.new(0, 3.5, -0), color = "stone", material = "SmoothPlastic" },
+			Kick = { id = "rbxassetid://123374627211165", size = Vector3.new(11.4, 0.3, 2), center = Vector3.new(0, 0.15, -0.1), color = "ink", material = "SmoothPlastic" },
+		},
+	},
+	EspressoMachine = {
+		flip = true,
+		parts = {
+			Body = { id = "rbxassetid://87863961597548", size = Vector3.new(2.6, 1.7, 1.7), center = Vector3.new(0, 0.85, 0.05), color = "metal", material = "Metal" },
+			Panel = { id = "rbxassetid://129575886593330", size = Vector3.new(2.3, 1.18, 0.49), center = Vector3.new(0, 0.96, 0.595), color = "ink", material = "SmoothPlastic" },
+			Cups = { id = "rbxassetid://91080306105308", size = Vector3.new(2, 0.26, 0.4), center = Vector3.new(0, 1.86, -0.1), color = "cakeCream", material = "SmoothPlastic" },
+			Grinder = { id = "rbxassetid://105800898216778", size = Vector3.new(0.72, 1.62, 0.8), center = Vector3.new(2, 0.81, -0), color = "ink", material = "SmoothPlastic" },
+		},
+	},
+	PastryCase = {
+		flip = true,
+		parts = {
+			Frame = { id = "rbxassetid://140172920159945", size = Vector3.new(4.2, 1.96, 1.7), center = Vector3.new(0, 0.98, -0), color = "ink", material = "SmoothPlastic" },
+			Glass = { id = "rbxassetid://135696863290570", size = Vector3.new(4, 1.7, 1.5), center = Vector3.new(0, 1, -0), color = "glass", material = "Glass" },
+			Shelf = { id = "rbxassetid://75881120280464", size = Vector3.new(3.9, 0.06, 1.4), center = Vector3.new(0, 1, -0), color = "metal", material = "Metal" },
+			Bread = { id = "rbxassetid://100481085021401", size = Vector3.new(3.3, 0.3, 0.36), center = Vector3.new(0, 0.35, 0.2), color = "wood", material = "SmoothPlastic" },
+			Cakes = { id = "rbxassetid://110929920493597", size = Vector3.new(3.28, 0.3, 0.48), center = Vector3.new(0, 1.2, 0.1), color = "cakeCream", material = "SmoothPlastic" },
+			Berries = { id = "rbxassetid://73768252400764", size = Vector3.new(2.94, 0.14, 0.14), center = Vector3.new(0, 1.42, 0.1), color = "berry", material = "SmoothPlastic" },
+		},
+	},
+	MenuBoard = {
+		flip = true,
+		parts = {
+			Board = { id = "rbxassetid://78367754092595", size = Vector3.new(8.6, 3, 0.16), center = Vector3.new(0, 0, 0.08), color = "ink", material = "SmoothPlastic" },
+			Frame = { id = "rbxassetid://107944775585567", size = Vector3.new(9, 3.4, 0.26), center = Vector3.new(0, 0, 0.13), color = "wood", material = "Wood" },
+			Chalk = { id = "rbxassetid://131432641260644", size = Vector3.new(7.7, 1.62, 0.04), center = Vector3.new(0, 0, 0.18), color = "cakeCream", material = "SmoothPlastic" },
+			Accent = { id = "rbxassetid://72358035059266", size = Vector3.new(8, 0.2, 0.04), center = Vector3.new(0, 1.2, 0.18), color = "yellow", material = "SmoothPlastic" },
+		},
+	},
+	CafeTable = {
+		flip = true,
+		parts = {
+			Top = { id = "rbxassetid://87266748544398", size = Vector3.new(3, 0.16, 3), center = Vector3.new(0, 2.62, -0), color = "woodLight", material = "Wood" },
+			Base = { id = "rbxassetid://74647993928192", size = Vector3.new(1.8, 2.55, 1.8), center = Vector3.new(0, 1.275, -0), color = "ink", material = "SmoothPlastic" },
+		},
+	},
+	CafeChair = {
+		flip = true,
+		parts = {
+			Seat = { id = "rbxassetid://94440574786179", size = Vector3.new(1.44, 0.14, 1.44), center = Vector3.new(0, 1.6, -0), color = "wood", material = "Wood" },
+			Frame = { id = "rbxassetid://113867431692466", size = Vector3.new(1.34, 3.069, 1.399), center = Vector3.new(0, 1.515, -0.03), color = "ink", material = "SmoothPlastic" },
+			Back = { id = "rbxassetid://133314259567824", size = Vector3.new(1.4, 0.497, 0.141), center = Vector3.new(0, 2.8, -0.68), color = "wood", material = "Wood" },
+		},
+	},
+	BarStool = {
+		flip = true,
+		parts = {
+			Seat = { id = "rbxassetid://135195714436473", size = Vector3.new(1.2, 0.22, 1.2), center = Vector3.new(0, 2.78, -0), color = "seat", material = "Fabric" },
+			Frame = { id = "rbxassetid://122875642254851", size = Vector3.new(1.19, 2.76, 1.19), center = Vector3.new(0, 1.365, -0), color = "ink", material = "SmoothPlastic" },
+		},
+	},
+	PendantLamp = {
+		flip = true,
+		parts = {
+			Cord = { id = "rbxassetid://77229022232975", size = Vector3.new(0.4, 2.2, 0.4), center = Vector3.new(0, -1.1, -0), color = "ink", material = "SmoothPlastic" },
+			Shade = { id = "rbxassetid://92344858021921", size = Vector3.new(1.6, 1, 1.6), center = Vector3.new(0, -2.7, -0), color = "ink", material = "SmoothPlastic" },
+			Bulb = { id = "rbxassetid://100093842020154", size = Vector3.new(0.42, 0.42, 0.42), center = Vector3.new(0, -3, -0), color = "yellowSoft", material = "Neon" },
+		},
+	},
+	WallShelf = {
+		flip = true,
+		parts = {
+			Plank = { id = "rbxassetid://116331980895360", size = Vector3.new(5, 0.63, 0.9), center = Vector3.new(0, -0.235, 0.45), color = "woodLight", material = "Wood" },
+			Cups = { id = "rbxassetid://109696947328446", size = Vector3.new(1.64, 0.3, 0.38), center = Vector3.new(-1.37, 0.23, 0.5), color = "cakeCream", material = "SmoothPlastic" },
+			Jars = { id = "rbxassetid://113705032432398", size = Vector3.new(1.4, 0.6, 0.4), center = Vector3.new(0.6, 0.38, 0.5), color = "glass", material = "Glass" },
+			Pot = { id = "rbxassetid://109924989990321", size = Vector3.new(0.56, 0.34, 0.56), center = Vector3.new(2, 0.25, 0.5), color = "coral", material = "SmoothPlastic" },
+			Leaves = { id = "rbxassetid://90900472454285", size = Vector3.new(0.7, 0.6, 0.6), center = Vector3.new(2, 0.75, 0.5), color = "grass", material = "SmoothPlastic" },
+		},
+	},
+	BoothSofa = {
+		flip = true,
+		parts = {
+			Base = { id = "rbxassetid://94165549342383", size = Vector3.new(6, 0.9, 2.2), center = Vector3.new(0, 0.45, -0), color = "woodDark", material = "Wood" },
+			Seat = { id = "rbxassetid://140244756841045", size = Vector3.new(5.9, 0.6, 2), center = Vector3.new(0, 1.2, 0.1), color = "sage", material = "Fabric" },
+			Back = { id = "rbxassetid://94388168021475", size = Vector3.new(5.9, 2, 0.5), center = Vector3.new(0, 2.5, -0.8), color = "sage", material = "Fabric" },
+		},
+	},
+	DessertShowcase = {
+		flip = true,
+		parts = {
+			Base = { id = "rbxassetid://91297276548271", size = Vector3.new(8, 1.5, 2.6), center = Vector3.new(0, 0.75, -0), color = "blush", material = "SmoothPlastic" },
+			Trim = { id = "rbxassetid://105210911638249", size = Vector3.new(8.1, 4, 2.7), center = Vector3.new(0, 2, -0), color = "gold", material = "Metal" },
+			Glass = { id = "rbxassetid://128598842994291", size = Vector3.new(7.8, 2.3, 2.4), center = Vector3.new(0, 2.75, -0), color = "glass", material = "Glass" },
+			Shelf = { id = "rbxassetid://138389597762801", size = Vector3.new(7.6, 0.06, 2), center = Vector3.new(0, 2.7, -0), color = "cakeCream", material = "SmoothPlastic" },
+			Cake = { id = "rbxassetid://71042339213438", size = Vector3.new(7, 0.5, 1), center = Vector3.new(0, 1.9, 0.2), color = "cakeCream", material = "SmoothPlastic" },
+			Cream = { id = "rbxassetid://80001409519339", size = Vector3.new(7.04, 1.17, 1.04), center = Vector3.new(0, 2.715, 0.2), color = "blush", material = "SmoothPlastic" },
+			Berry = { id = "rbxassetid://80891366800173", size = Vector3.new(6.2, 0.2, 0.2), center = Vector3.new(0, 2.34, 0.2), color = "berry", material = "SmoothPlastic" },
+			Choco = { id = "rbxassetid://119467870692616", size = Vector3.new(6.8, 0.4, 0.8), center = Vector3.new(0, 2.95, 0.1), color = "choco", material = "SmoothPlastic" },
+		},
+	},
+	DessertCounter = {
+		flip = true,
+		parts = {
+			Body = { id = "rbxassetid://84231067645158", size = Vector3.new(5.8, 3.2, 2), center = Vector3.new(0, 1.6, -0), color = "blush", material = "SmoothPlastic" },
+			Panel = { id = "rbxassetid://108856685554584", size = Vector3.new(5.1, 2.2, 0.08), center = Vector3.new(0, 1.7, 1.02), color = "cakeCream", material = "SmoothPlastic" },
+			Top = { id = "rbxassetid://116350726123033", size = Vector3.new(6.2, 0.26, 2.4), center = Vector3.new(0, 3.4, -0), color = "stone", material = "SmoothPlastic" },
+			Trim = { id = "rbxassetid://114661426960142", size = Vector3.new(5.9, 0.1, 2.1), center = Vector3.new(0, 0.5, -0), color = "gold", material = "Metal" },
+			Register = { id = "rbxassetid://76785453224214", size = Vector3.new(1.3, 1.288, 1), center = Vector3.new(1.8, 4.194, -0.1), color = "ink", material = "SmoothPlastic" },
+		},
+	},
+	CakeStand = {
+		flip = true,
+		parts = {
+			Stand = { id = "rbxassetid://132074825219478", size = Vector3.new(1.8, 2, 1.8), center = Vector3.new(0, 1, -0), color = "gold", material = "Metal" },
+			MacaronPink = { id = "rbxassetid://81310359059419", size = Vector3.new(1.575, 1.56, 1.122), center = Vector3.new(0.033, 1.17, -0.115), color = "blush", material = "SmoothPlastic" },
+			MacaronMint = { id = "rbxassetid://122441630269214", size = Vector3.new(1.375, 1.56, 1.122), center = Vector3.new(-0.067, 1.17, 0.115), color = "mint", material = "SmoothPlastic" },
+			MacaronYellow = { id = "rbxassetid://78792739345378", size = Vector3.new(0.727, 1.56, 1.607), center = Vector3.new(0.057, 1.17, -0), color = "yellow", material = "SmoothPlastic" },
+		},
+	},
+	CupcakeSign = {
+		flip = true,
+		parts = {
+			Cup = { id = "rbxassetid://80875587738844", size = Vector3.new(2.9, 2, 2.9), center = Vector3.new(0, 1, -0), color = "blush", material = "SmoothPlastic" },
+			Pleats = { id = "rbxassetid://99463502868840", size = Vector3.new(2.58, 2, 2.58), center = Vector3.new(0, 1, -0), color = "cakeCream", material = "SmoothPlastic" },
+			Cream = { id = "rbxassetid://119852663570958", size = Vector3.new(3.2, 3.25, 3.2), center = Vector3.new(0, 3.425, -0), color = "cakeCream", material = "SmoothPlastic" },
+			Cherry = { id = "rbxassetid://136826538627432", size = Vector3.new(0.7, 0.7, 0.7), center = Vector3.new(0, 5.15, -0), color = "berry", material = "SmoothPlastic" },
+			Sprinkles = { id = "rbxassetid://97865596666581", size = Vector3.new(2.537, 1.2, 2.313), center = Vector3.new(0.031, 3.4, 0.142), color = "yellow", material = "SmoothPlastic" },
+		},
+	},
+	ClawMachine = {
+		flip = true,
+		parts = {
+			Base = { id = "rbxassetid://101970771311088", size = Vector3.new(3.6, 3, 3.6), center = Vector3.new(0, 1.5, -0), color = "coral", material = "SmoothPlastic" },
+			Chute = { id = "rbxassetid://109997216823023", size = Vector3.new(2.9, 2.75, 0.9), center = Vector3.new(0, 1.825, 1.5), color = "ink", material = "SmoothPlastic" },
+			Stick = { id = "rbxassetid://110238777551850", size = Vector3.new(0.24, 0.67, 0.24), center = Vector3.new(0.55, 3.485, 1.5), color = "red", material = "SmoothPlastic" },
+			Button = { id = "rbxassetid://122257911368785", size = Vector3.new(0.32, 0.12, 0.32), center = Vector3.new(1.1, 3.26, 1.5), color = "yellow", material = "Neon" },
+			Posts = { id = "rbxassetid://115662582518081", size = Vector3.new(3.54, 3.6, 3.54), center = Vector3.new(0, 4.8, -0), color = "cakeCream", material = "SmoothPlastic" },
+			Glass = { id = "rbxassetid://140410170454986", size = Vector3.new(3.3, 3.5, 3.3), center = Vector3.new(0, 4.8, -0), color = "glass", material = "Glass" },
+			Top = { id = "rbxassetid://108414209514789", size = Vector3.new(3.8, 0.9, 3.8), center = Vector3.new(0, 7, -0), color = "coral", material = "SmoothPlastic" },
+			Marquee = { id = "rbxassetid://87844627540066", size = Vector3.new(3.2, 0.6, 0.12), center = Vector3.new(0, 7, 1.92), color = "yellowSoft", material = "Neon" },
+			Claw = { id = "rbxassetid://138734369157154", size = Vector3.new(0.701, 2.035, 0.798), center = Vector3.new(0.104, 5.583, -0.002), color = "metal", material = "Metal" },
+			PlushA = { id = "rbxassetid://137141065085012", size = Vector3.new(2.36, 1.41, 2.7), center = Vector3.new(-0.25, 3.705, 0.05), color = "blush", material = "SmoothPlastic" },
+			PlushB = { id = "rbxassetid://108448568629300", size = Vector3.new(1.81, 0.91, 2.75), center = Vector3.new(0.575, 3.455, -0.025), color = "sky", material = "SmoothPlastic" },
+			PlushC = { id = "rbxassetid://92440629339921", size = Vector3.new(2.96, 1.41, 2.4), center = Vector3.new(-0.05, 3.705, 0.1), color = "yellow", material = "SmoothPlastic" },
+		},
+	},
+	GachaMachine = {
+		flip = true,
+		parts = {
+			Body = { id = "rbxassetid://131726418411855", size = Vector3.new(2.1, 5.2, 1.9), center = Vector3.new(0, 2.6, -0), color = "sky", material = "SmoothPlastic" },
+			Window = { id = "rbxassetid://92104651037621", size = Vector3.new(1.6, 3.8, 0.3), center = Vector3.new(0, 3.15, 0.8), color = "glass", material = "Glass" },
+			Knob = { id = "rbxassetid://77550360134654", size = Vector3.new(1.51, 3.23, 0.2), center = Vector3.new(-0.045, 1.995, 0.95), color = "cakeCream", material = "SmoothPlastic" },
+			CapA = { id = "rbxassetid://122148860068183", size = Vector3.new(1.47, 3.32, 0.36), center = Vector3.new(0.005, 3.08, 0.72), color = "coral", material = "SmoothPlastic" },
+			CapB = { id = "rbxassetid://130498241852201", size = Vector3.new(0.73, 3.32, 0.36), center = Vector3.new(-0.365, 3.08, 0.72), color = "yellow", material = "SmoothPlastic" },
+			CapC = { id = "rbxassetid://86800912744407", size = Vector3.new(0.73, 3.32, 0.36), center = Vector3.new(0.005, 3.08, 0.72), color = "mint", material = "SmoothPlastic" },
+		},
+	},
+	WheelFrame = {
+		flip = true,
+		parts = {
+			Ring = { id = "rbxassetid://81590895200812", size = Vector3.new(10.1, 10.1, 0.5), center = Vector3.new(0, 0, -0), color = "red", material = "SmoothPlastic" },
+			Bulbs = { id = "rbxassetid://82343212272859", size = Vector3.new(9.9, 9.9, 0.34), center = Vector3.new(0, 0, 0.3), color = "yellowSoft", material = "Neon" },
+			Pointer = { id = "rbxassetid://135707508450544", size = Vector3.new(0.75, 0.9, 0.866), center = Vector3.new(0.125, 4.65, 0.45), color = "gold", material = "Metal" },
+			Stand = { id = "rbxassetid://88302697134575", size = Vector3.new(8.4, 6.278, 1.6), center = Vector3.new(0, -5.611, -0), color = "woodDark", material = "Wood" },
+		},
+	},
+	DartBooth = {
+		flip = true,
+		parts = {
+			Posts = { id = "rbxassetid://104337846505665", size = Vector3.new(7.1, 7.6, 3.1), center = Vector3.new(0, 3.8, -0), color = "cakeCream", material = "SmoothPlastic" },
+			AwningRed = { id = "rbxassetid://72385943014529", size = Vector3.new(6.3, 1.546, 3.641), center = Vector3.new(-0.45, 7.273, 0.249), color = "red", material = "Fabric" },
+			AwningWhite = { id = "rbxassetid://123408782581599", size = Vector3.new(6.3, 1.546, 3.641), center = Vector3.new(0.45, 7.273, 0.249), color = "cakeCream", material = "Fabric" },
+			Shelf = { id = "rbxassetid://129653342797631", size = Vector3.new(7.2, 3.4, 1.2), center = Vector3.new(0, 1.75, 1.5), color = "woodLight", material = "Wood" },
+			Darts = { id = "rbxassetid://115757253620495", size = Vector3.new(1.16, 0.16, 0.82), center = Vector3.new(-1.5, 3.5, 1.53), color = "ink", material = "SmoothPlastic" },
+		},
+	},
+	PlushShelf = {
+		flip = true,
+		parts = {
+			Frame = { id = "rbxassetid://129142078602756", size = Vector3.new(6.04, 5.2, 1.2), center = Vector3.new(0, 2.6, -0), color = "woodLight", material = "Wood" },
+			BearA = { id = "rbxassetid://70679695058958", size = Vector3.new(5.2, 5.74, 1), center = Vector3.new(0, 3.62, -0), color = "blush", material = "Fabric" },
+			BearB = { id = "rbxassetid://139496617817367", size = Vector3.new(5.2, 5.74, 1), center = Vector3.new(0, 3.62, -0), color = "sky", material = "Fabric" },
+			BearC = { id = "rbxassetid://124027396910459", size = Vector3.new(3.8, 5.74, 1), center = Vector3.new(-0.7, 3.62, -0), color = "yellow", material = "Fabric" },
+			BearD = { id = "rbxassetid://124603602803208", size = Vector3.new(3.8, 5.74, 1), center = Vector3.new(0.7, 3.62, -0), color = "mint", material = "Fabric" },
+		},
+	},
+	ArcadeCabinet = {
+		flip = true,
+		parts = {
+			Body = { id = "rbxassetid://115992810781912", size = Vector3.new(3, 6.4, 2.6), center = Vector3.new(0, 3.2, -0.1), color = "arcade", material = "SmoothPlastic" },
+			Sides = { id = "rbxassetid://114198288970484", size = Vector3.new(3.24, 6.4, 2.8), center = Vector3.new(0, 3.3, -0.1), color = "ink", material = "SmoothPlastic" },
+			Stripe = { id = "rbxassetid://96866862957441", size = Vector3.new(3.33, 1.1, 2.4), center = Vector3.new(0, 2.35, -0.1), color = "neonPink", material = "Neon" },
+			Screen = { id = "rbxassetid://124334461350027", size = Vector3.new(2.4, 1.761, 0.451), center = Vector3.new(0, 4.3, 0.34), color = "neonCyan", material = "Neon" },
+			Bezel = { id = "rbxassetid://108500899923476", size = Vector3.new(2.8, 2.152, 0.534), center = Vector3.new(0, 4.3, 0.28), color = "ink", material = "SmoothPlastic" },
+			Marquee = { id = "rbxassetid://122723943991759", size = Vector3.new(2.8, 0.8, 0.14), center = Vector3.new(0, 5.95, 0.36), color = "neonPink", material = "Neon" },
+			Deck = { id = "rbxassetid://113286141788067", size = Vector3.new(3, 0.456, 1.307), center = Vector3.new(0, 3.05, 0.75), color = "ink", material = "SmoothPlastic" },
+			Stick = { id = "rbxassetid://119425489796093", size = Vector3.new(0.26, 0.68, 0.26), center = Vector3.new(-0.8, 3.49, 0.75), color = "red", material = "SmoothPlastic" },
+			Buttons = { id = "rbxassetid://102734767406973", size = Vector3.new(1.56, 0.12, 0.62), center = Vector3.new(0.73, 3.24, 0.76), color = "yellow", material = "Neon" },
+			Coin = { id = "rbxassetid://83328466770483", size = Vector3.new(0.9, 0.5, 0.08), center = Vector3.new(0, 1.8, 1.22), color = "metal", material = "Metal" },
+		},
+	},
+	MoleMachine = {
+		flip = true,
+		parts = {
+			Body = { id = "rbxassetid://102820704749933", size = Vector3.new(4, 2.8, 3), center = Vector3.new(0, 1.4, -0), color = "mintDark", material = "SmoothPlastic" },
+			Deck = { id = "rbxassetid://128218457444956", size = Vector3.new(4.1, 0.701, 3.084), center = Vector3.new(0, 2.95, -0), color = "grassLight", material = "SmoothPlastic" },
+			Holes = { id = "rbxassetid://133162414488223", size = Vector3.new(3.56, 0.262, 2.26), center = Vector3.new(0, 3.113, 0.05), color = "ink", material = "SmoothPlastic" },
+			Moles = { id = "rbxassetid://106278354299632", size = Vector3.new(3.4, 1.082, 2.1), center = Vector3.new(0, 3.413, 0.05), color = "wood", material = "SmoothPlastic" },
+			Noses = { id = "rbxassetid://83087729252220", size = Vector3.new(2.78, 0.362, 1.48), center = Vector3.new(0, 3.513, 0.43), color = "blush", material = "SmoothPlastic" },
+			Back = { id = "rbxassetid://137731782321495", size = Vector3.new(4, 3, 0.3), center = Vector3.new(0, 4.6, -1.35), color = "mintDark", material = "SmoothPlastic" },
+			Marquee = { id = "rbxassetid://93359324176948", size = Vector3.new(3.4, 1.4, 0.1), center = Vector3.new(0, 5, -1.16), color = "yellowSoft", material = "Neon" },
+			Hammer = { id = "rbxassetid://72061925032500", size = Vector3.new(1.219, 1.069, 1.069), center = Vector3.new(2.04, 3.766, 0.734), color = "red", material = "SmoothPlastic" },
+		},
+	},
+	PrizeCounter = {
+		flip = true,
+		parts = {
+			Body = { id = "rbxassetid://90564445573835", size = Vector3.new(6, 3.2, 2), center = Vector3.new(0, 1.6, -0.1), color = "arcade", material = "SmoothPlastic" },
+			Glass = { id = "rbxassetid://126198008359135", size = Vector3.new(5.4, 1.6, 0.3), center = Vector3.new(0, 2, 0.85), color = "glass", material = "Glass" },
+			Neon = { id = "rbxassetid://107280358843548", size = Vector3.new(6.1, 2.82, 0.1), center = Vector3.new(0, 1.85, 1), color = "neonCyan", material = "Neon" },
+			Top = { id = "rbxassetid://107086715146847", size = Vector3.new(6.2, 0.2, 2.3), center = Vector3.new(0, 3.4, -0.05), color = "ink", material = "SmoothPlastic" },
+			PrizeA = { id = "rbxassetid://104423068799133", size = Vector3.new(4.6, 0.6, 0.6), center = Vector3.new(0, 1.75, 0.6), color = "blush", material = "SmoothPlastic" },
+			PrizeB = { id = "rbxassetid://97362420189175", size = Vector3.new(2.6, 0.6, 0.4), center = Vector3.new(0, 1.7, 0.6), color = "yellow", material = "SmoothPlastic" },
+			Tickets = { id = "rbxassetid://139527023003304", size = Vector3.new(0.3, 0.6, 0.6), center = Vector3.new(2.3, 3.65, 0.2), color = "red", material = "SmoothPlastic" },
+		},
+	},
+	NeonSign = {
+		flip = true,
+		parts = {
+			Star = { id = "rbxassetid://136210244231575", size = Vector3.new(2.462, 2.35, 0.18), center = Vector3.new(-2, 0.115, 0.14), color = "yellowSoft", material = "Neon" },
+			Bolt = { id = "rbxassetid://122368769657341", size = Vector3.new(1.13, 2.579, 0.18), center = Vector3.new(0.025, -0, 0.14), color = "neonCyan", material = "Neon" },
+			Heart = { id = "rbxassetid://73763682575965", size = Vector3.new(1.899, 1.783, 0.18), center = Vector3.new(2, -0.055, 0.14), color = "neonPink", material = "Neon" },
+			Plate = { id = "rbxassetid://109442399157617", size = Vector3.new(6.4, 3, 0.08), center = Vector3.new(0, 0, 0.04), color = "ink", material = "SmoothPlastic" },
+		},
+	},
+	ShopAwning = {
+		flip = true,
+		parts = {
+			StripeA = { id = "rbxassetid://73502610880604", size = Vector3.new(11, 2.482, 4.026), center = Vector3.new(-0.5, -1.209, 2.027), color = "coral", material = "Fabric" },
+			StripeB = { id = "rbxassetid://111146369630550", size = Vector3.new(11, 2.482, 4.026), center = Vector3.new(0.5, -1.209, 2.027), color = "cakeCream", material = "Fabric" },
+			Arms = { id = "rbxassetid://79390418158872", size = Vector3.new(11.92, 1.82, 3.92), center = Vector3.new(0, -0.95, 2), color = "ink", material = "SmoothPlastic" },
+		},
+	},
+	BladeSign = {
+		flip = true,
+		parts = {
+			Bracket = { id = "rbxassetid://86178412016881", size = Vector3.new(2.74, 1.149, 0.4), center = Vector3.new(1.3, -0.375, -0), color = "ink", material = "SmoothPlastic" },
+			Board = { id = "rbxassetid://112662927279423", size = Vector3.new(2.3, 2.3, 0.2), center = Vector3.new(1.75, -1.65, -0), color = "cakeCream", material = "SmoothPlastic" },
+			Rim = { id = "rbxassetid://130548141397480", size = Vector3.new(2.56, 2.56, 0.26), center = Vector3.new(1.75, -1.65, -0), color = "ink", material = "SmoothPlastic" },
+		},
+	},
+	ABoard = {
+		flip = true,
+		parts = {
+			Frame = { id = "rbxassetid://75476218142301", size = Vector3.new(2.4, 3.896, 2.199), center = Vector3.new(0, 1.95, -0), color = "woodLight", material = "Wood" },
+			Board = { id = "rbxassetid://126583847682196", size = Vector3.new(2, 2.911, 2.089), center = Vector3.new(0, 2.1, -0), color = "ink", material = "SmoothPlastic" },
+			Chalk = { id = "rbxassetid://84337436983086", size = Vector3.new(1.3, 1.466, 0.394), center = Vector3.new(0, 2.325, 0.648), color = "cakeCream", material = "SmoothPlastic" },
+		},
+	},
+	ShopDoor = {
+		flip = true,
+		parts = {
+			Frame = { id = "rbxassetid://106250100012145", size = Vector3.new(10.8, 10.4, 0.6), center = Vector3.new(0, 5.2, -0), color = "ink", material = "SmoothPlastic" },
+			Leaf = { id = "rbxassetid://88136340732579", size = Vector3.new(9.94, 9.8, 4.6), center = Vector3.new(0, 5, -2.5), color = "glass", material = "Glass" },
+			LeafFrame = { id = "rbxassetid://95416446443801", size = Vector3.new(10, 9.95, 4.8), center = Vector3.new(0, 5.025, -2.5), color = "ink", material = "SmoothPlastic" },
+			Handle = { id = "rbxassetid://103412388463502", size = Vector3.new(9.38, 2.74, 0.14), center = Vector3.new(0, 4.9, -4.2), color = "gold", material = "Metal" },
+		},
+	},
+	ShopPlanter = {
+		flip = true,
+		parts = {
+			Box = { id = "rbxassetid://136999314094559", size = Vector3.new(6, 1.3, 1.5), center = Vector3.new(0, 0.65, -0), color = "espresso", material = "SmoothPlastic" },
+			Hedge = { id = "rbxassetid://103488868004921", size = Vector3.new(5.7, 1.3, 1.25), center = Vector3.new(0, 1.8, -0), color = "grass", material = "SmoothPlastic" },
+			Flowers = { id = "rbxassetid://109478853897866", size = Vector3.new(5.16, 0.36, 0.86), center = Vector3.new(0, 2.5, -0), color = "blush", material = "SmoothPlastic" },
+		},
+	},
 }

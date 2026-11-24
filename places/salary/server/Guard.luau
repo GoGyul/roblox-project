@@ -142,6 +142,7 @@ function Guard.new(opts)
 		resting = false, -- 💤 경비실에서 쉬는 중
 		investigateAt = nil :: Vector3?, -- 🔊 소리 난 곳
 	}
+	local baseRange: number = guard.range
 	local guardId: string = opts.id or "guard"
 	local bribedUntil: { [Player]: number } = {} -- 🎁 이 시각(os.clock)까지 못 본 척
 	local bribeCount: { [Player]: { day: number, count: number } } = {}
@@ -193,6 +194,8 @@ function Guard.new(opts)
 			end
 			talkingUntil[seenPlayer] = nil -- 멀어지면 대화 끝
 		end
+		-- 🌧️ 비 오는 날엔 멀리까지 안 보여요
+		guard.range = baseRange * (if ReplicatedStorage:GetAttribute("CampusRain") == true then SalaryConfig.RAIN_GUARD_RANGE else 1)
 		local seen, distance = Boss.canSee(guard, character)
 		if seen then
 			if not staring() then
