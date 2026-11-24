@@ -381,6 +381,14 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 			return { ok = false, message = "천천히!" }
 		end
 		local state = states[player]
+		-- 🏳️ 포기: 실패로 끝내요 (실패와 같은 결과: 오늘의 의심도 속도가 조금 올라요)
+		if action == "giveup" then
+			if state and state.status == "active" then
+				finish(player, state, false, "프로젝트를 포기했어요.")
+				return { ok = true }
+			end
+			return { ok = false, message = "진행 중인 프로젝트가 없어요." }
+		end
 		local step = state and state.status == "active" and currentStep(state)
 		local d = api.get(player)
 		if not step or not d then

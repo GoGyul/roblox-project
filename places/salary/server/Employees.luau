@@ -81,6 +81,7 @@ type EmployeeData = {
 	state: string,
 	suspicion: number,
 	spawnedOnce: boolean?, -- 캐릭터가 한 번이라도 나왔나
+	lateTipped: boolean?, -- 🕟 4시 반 안내를 봤나 (하루 한 번)
 	openTipped: boolean?, -- ☀️ 탁 트인 곳 안내를 봤나 (접속당 한 번)
 	commuteWalk: boolean?, -- 🚏 오늘 걸어서 출근하기로 했나
 	commute: boolean?, -- 🚏 출근길 (아직 자리에 안 앉았어요)
@@ -2592,7 +2593,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			d.away, d.awayWarned = 0, false -- 컴퓨터 꺼짐: 기록 초기화
 		elseif gaugeOn and not isSeated(player, d) then
 			local smoothie = if d.buffs.smoothie then SalaryConfig.SMOOTHIE_AWAY elseif d.buffs.vitamin then SalaryConfig.VITAMIN_AWAY else 1 -- 🍹 에너지 스무디 / 🧃 비타민 음료
-			d.away = math.min(100, d.away + 100 / awayLimit(d) * smoothie * dt)
+			local late = if dayCycle.minute >= SalaryConfig.AWAY_LATE_FROM then SalaryConfig.AWAY_LATE_SCALE else 1 -- 🕟 4시 반 이후엔 절반 속도
+			d.away = math.min(100, d.away + 100 / awayLimit(d) * smoothie * late * dt)
+			if late < 1 and not d.lateTipped then
+				d.lateTipped = true
+				remotes.Notify:FireClient(player, "🕟 4시 반! 다들 슬슬 풀어지는 시간이에요. 자리 부재 게이지가 절반 속도로 차요.")
+			end
 			if d.away >= SalaryConfig.AWAY_WARN and not d.awayWarned then
 				d.awayWarned = true
 				remotes.AwayAlert:FireClient(player)
@@ -4364,6 +4370,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 			updateBubble(player, "work")
 			d.lunchWarned, d.lunchDue = false, nil
+			d.lateTipped = false
 			if office.commuteSpawn and player.Character and d.commuteWalk then
 				-- 🚏 출근길 (아침에 "걸어서 출근"을 고른 사람만): 단지 버스 정류장에서 내 자리까지 (칼출근 보너스 / 지각)
 				d.commute = nil

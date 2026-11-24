@@ -3,7 +3,7 @@
 --   😱 근무 중엔 가끔 부장님과 같이 타요: 부장님이 이쪽을 볼 때(👀 예고) 시선을 피해야 해요 → 못 피하면 의심도 +
 --   🌬️ 옥상: 바람 쐬기 / 🏖️ 선베드 일광욕 / 🔭 망원경(부장님 위치 보기) / 물탱크·실외기 뒤에 숨기
 --   👮 옥상 경비원이 근무 시간 내내 순찰해요 (부장님은 사무실에만). 💤 가끔 경비실에서 쉬는 틈을 노려요
---   📐 옥상은 예전보다 가로·세로 1.4배 넓어요 (ROOF_SCALE)
+--   📐 옥상 크기: 대충상사 98×70칸 / 눈치물산 140×85칸 (12층 전체와 같은 넓이)
 --
 -- 옥상과 엘리베이터 칸은 사무실 훨씬 위 하늘에 지어요 (사무실 천장에 가려서 안 보여요).
 
@@ -36,11 +36,21 @@ Rooftop.onElevator = nil :: ((Player, string) -> boolean)? -- 엘리베이터 [E
 Rooftop.ride = nil :: ((Player, boolean, boolean?) -> ())? -- (플레이어, 옥상행인가, 1층 로비에서 타나)
 
 local ROOF = Vector3.new(0, 300, 0) -- 옥상 바닥 윗면 가운데
-local ROOF_SCALE = 1.4 -- 📐 옥상을 넓혔어요 (가로·세로 1.4배 = 넓이 약 2배). 물건 묶음들도 이만큼 바깥쪽으로 퍼져요
-local ROOF_W, ROOF_D = 70 * ROOF_SCALE, 50 * ROOF_SCALE
+-- 📐 옥상 크기 배율 (기준 70×50칸). 물건 묶음들도 이만큼 바깥쪽으로 퍼져요.
+--   대충상사: 가로·세로 1.4배 (98×70) / 눈치물산: 12층 전체와 같은 넓이 (140×85 = 가로 2배 · 세로 1.7배)
+local SX, SZ = 1.4, 1.4
+local ROOF_W, ROOF_D = 70 * SX, 50 * SZ
+local function setRoofScale(companyId: string)
+	if companyId == "nunchi" then
+		SX, SZ = 2, 1.7
+	else
+		SX, SZ = 1.4, 1.4
+	end
+	ROOF_W, ROOF_D = 70 * SX, 50 * SZ
+end
 -- 예전 좌표(x, z)를 넓어진 옥상 좌표로
 local function spread(x: number, y: number, z: number): Vector3
-	return ROOF + Vector3.new(x * ROOF_SCALE, y, z * ROOF_SCALE)
+	return ROOF + Vector3.new(x * SX, y, z * SZ)
 end
 local CABIN_BASE = Vector3.new(260, 300, 0) -- 엘리베이터 칸들 (한 사람당 하나씩)
 local BOSS_LOOK = { skin = Color3.fromRGB(225, 190, 160), shirt = Color3.fromRGB(70, 70, 85), pants = Color3.fromRGB(40, 40, 50) }
@@ -54,11 +64,12 @@ end
 -- 옥상 짓기
 ---------------------------------------------------------------------------
 local function buildRoof(folder: Instance, companyId: string)
+	setRoofScale(companyId) -- (맨 먼저: 아래 모든 좌표가 이 배율을 써요)
 	local B = Build.new(folder, Vector3.zero)
 	-- 📐 물건 묶음 단위로 옮겨요: group(묶음 중심)을 부르면 그 묶음은 통째로 넓어진 자리로 (모양은 그대로)
 	local shift = Vector3.zero
 	local function group(cx: number, cz: number)
-		shift = Vector3.new(cx * (ROOF_SCALE - 1), 0, cz * (ROOF_SCALE - 1))
+		shift = Vector3.new(cx * (SX - 1), 0, cz * (SZ - 1))
 	end
 	local function at(x: number, y: number, z: number): Vector3
 		return ROOF + Vector3.new(x, y, z) + shift
@@ -334,10 +345,68 @@ local function buildRoof(folder: Instance, companyId: string)
 		end
 		group(0, 0)
 	end
+	if fancy then
+		-- 🌿 눈치물산 옥상 정원: 12층 넓이로 커진 만큼 빈 자리에 쉼터와 화단을 더하고, 가장자리를 나무로 둘러요
+		--   (기존 시설 사이 빈 곳만 골랐어요. 좌표는 옥상 가운데 기준 실제 칸)
+		group(0, 0)
+		local function spot(x: number, z: number): Vector3
+			return ROOF + Vector3.new(x, 0, z)
+		end
+		local function put(kind: string, x: number, z: number, yaw: number, options: any?, box: Vector3?)
+			if not Meshes.ready(kind) then
+				return
+			end
+			Meshes.place(B, kind, spot(x, z), yaw, options)
+			if box then
+				B:part(box, spot(x, z) + Vector3.new(0, box.Y / 2, 0), hidden)
+			end
+		end
+		-- 쉼터 (소파 + 탁자 + 가로등)
+		for _, xz in { { -48, -12 }, { 24, -1 }, { 48, -12 } } do
+			local x, z = xz[1], xz[2]
+			B:part(Vector3.new(13, 0.12, 10), spot(x, z) + Vector3.new(0, 0.07, 0), { Color = TC.sage, Material = Enum.Material.Fabric, CanCollide = false, CanQuery = false })
+			put("Sofa", x, z - 3, 0, nil, Vector3.new(6, 2.6, 2.6))
+			put("RoundTable", x, z + 1.5, 0, nil, Vector3.new(2.4, 1.4, 2.4))
+			put("PodChair", x + 4.5, z + 2, -60, nil, Vector3.new(2.4, 3, 2.4))
+			put("Plant", x - 5, z - 3, 0, { scale = 1.5 })
+			local post = if Meshes.ready("LampPost") then Meshes.place(B, "LampPost", spot(x - 5.5, z + 3.5), 0, { scale = 1.4 }) else nil
+			if post then
+				local glow = Instance.new("PointLight")
+				glow.Range = 18
+				glow.Brightness = 0.5
+				glow.Color = TC.yellowSoft
+				glow.Parent = post.Bulb
+			end
+		end
+		-- 화단 (꽃밭 + 덤불 + 디딤돌)
+		for _, xz in { { -60, 21 }, { -12, -23 }, { 0, -12 }, { 36, 21 } } do
+			local x, z = xz[1], xz[2]
+			put("FlowerBed", x, z, 0, { scale = 1.5 })
+			put("Bush", x - 5, z + 1.5, 40, { scale = 1.4 })
+			put("Bush", x + 5, z - 1.5, 200, { scale = 1.2 })
+			put("Stone", x + 2, z + 4, 0, nil)
+			put("Bench", x, z + 5.5, 180, { scale = 1.2 }, Vector3.new(5, 1.8, 1.8))
+		end
+		-- 가장자리 나무 화분 (동쪽 · 서쪽 · 남쪽 난간 앞)
+		local edge: { { number } } = {}
+		for z = -30, 30, 15 do
+			table.insert(edge, { ROOF_W / 2 - 4, z })
+			if math.abs(z) > 10 then
+				table.insert(edge, { -ROOF_W / 2 + 4, z }) -- (서쪽 가운데는 엘리베이터 탑)
+			end
+		end
+		for x = -32, 64, 16 do
+			table.insert(edge, { x, ROOF_D / 2 - 3.5 })
+		end
+		for i, xz in edge do
+			put("Planter", xz[1], xz[2], if math.abs(xz[2]) < ROOF_D / 2 - 5 then 90 else 0, { scale = 0.9, colors = { Box = TC.woodLight }, skip = { Flowercoral = true, Floweryellow = true } })
+			put("Tree", xz[1], xz[2], i * 47, { scale = 1.1 + (i % 3) * 0.12 }, Vector3.new(1.6, 6, 1.6))
+		end
+	end
 	-- 🏙️ 주변 빌딩 숲 (아래로 보이는 도시)
 	for i = 1, 26 do
 		local angle = (i / 26) * math.pi * 2
-		local distance = math.random(80, 160) -- (옥상이 넓어져서 더 멀리)
+		local distance = math.max(ROOF_W, ROOF_D) / 2 + math.random(34, 110) -- (옥상 크기에 맞춰 바깥으로)
 		local height = math.random(30, 110)
 		local width = math.random(10, 22)
 		local base = ROOF + Vector3.new(math.cos(angle) * distance, -height / 2 - 6, math.sin(angle) * distance)
@@ -355,7 +424,7 @@ local function buildRoof(folder: Instance, companyId: string)
 		telescope = telescope,
 		loungers = loungerSeats,
 		gardenBoxes = gardenBoxes,
-		guardPost = ROOF + Vector3.new(44, 0, -26), -- 오른쪽 앞 구석 (경비실은 그 뒤 난간 쪽)
+		guardPost = ROOF + Vector3.new(ROOF_W / 2 - 5, 0, -ROOF_D / 2 + 9), -- 오른쪽 앞 구석 (경비실은 그 뒤 난간 쪽)
 		-- 👮 경비원 순찰 지점 (숨을 곳 뒤까지 둘러봐요)
 		patrol = {
 			spread(-10, 0, 0), spread(10, 0, 0), spread(22, 0, -18), spread(22, 0, 8), spread(5, 0, -18), spread(-18, 0, 15),

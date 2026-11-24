@@ -1042,6 +1042,7 @@ local function foldable(frame: Frame, keep: GuiObject, fullSize: UDim2, foldedSi
 		Sounds.play("click", 0.4)
 		toggle.Text = if folded then "+" else "–"
 		frame.Size = if folded then foldedSize else fullSize
+		frame:SetAttribute("Folded", folded) -- (다른 모듈이 이 창에 붙인 버튼도 접힌 동안은 숨기게)
 		for _, child in frame:GetChildren() do
 			-- 첫 줄(keep)·접기 버튼·창 밖에 붙은 버튼(이과장·감사관 소개 등)은 그대로 둬요
 			if child:IsA("GuiObject") and child ~= keep and child ~= toggle and child.Position.X.Scale < 1 then
@@ -1061,6 +1062,7 @@ local function foldable(frame: Frame, keep: GuiObject, fullSize: UDim2, foldedSi
 end
 foldable(clockPanel, clockText, UDim2.fromOffset(300, 62), UDim2.fromOffset(300, 48))
 foldable(moneyPanel, rankText, UDim2.fromOffset(250, 136), UDim2.fromOffset(250, 46))
+foldable(missionPanel, missionTitle, UDim2.fromOffset(290, 196), UDim2.fromOffset(290, 48)) -- 📋 긴급 프로젝트 카드도 접을 수 있어요
 
 Hud.relayout = function()
 	task.defer(applyLayout)

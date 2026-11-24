@@ -1193,7 +1193,7 @@ function Panels.showFitness(backTo: (() -> ())?)
 			Parent = row,
 		}, { Ui.corner(7) })
 		local fill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.fromRGB(110, 200, 120), ZIndex = 34, Parent = track }, { Ui.corner(7) })
-		helpButton(row, UDim2.new(1, -28, 0, 0), `{stat.emoji} {stat.name}`, function()
+		helpButton(row, UDim2.new(1, -34, 0, 0), `{stat.emoji} {stat.name}`, function()
 			return detailText(stat)
 		end, frame)
 		local now = line(row, 34, 26, "", { TextSize = 18, ZIndex = 33, TextColor3 = INK })
@@ -1261,7 +1261,7 @@ function Panels.showDecor(startTab: string?)
 	})
 	-- 🚚 주문 → 다음 날 📦 택배 보관함 → 내 자리에서 뜯기 (자세한 건 ❓)
 	local orderText = line(frame, 34, 22, "", { TextSize = 15, TextXAlignment = Enum.TextXAlignment.Right, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(60, 110, 190), Size = UDim2.new(1, -44, 0, 22) })
-	helpButton(frame, UDim2.new(1, -28, 1, -80), "🚚 택배 주문", table.concat({
+	helpButton(frame, UDim2.new(1, -36, 1, -38), "🚚 택배 주문", table.concat({
 		"🛒 주문하면 돈은 바로 나가고, 물건은 다음 근무일에 회사로 와요.",
 		"📦 출입문 옆 [택배 보관함]에서 [E] 받기 → 들고 내 자리로 → 앉으면 뜯어요!",
 		`🚚 주문은 하루 {SalaryConfig.SHOP_DAILY_ORDERS}번까지 · 상자를 들면 조금 느려져요 (💪 근력이 도와줘요)`,
@@ -7624,14 +7624,44 @@ end
 
 -- 📋 프로젝트 카드의 "🧩 풀기" 버튼 (퍼즐 단계일 때만)
 local puzzleButton = Ui.button({
-	AnchorPoint = Vector2.new(0.5, 1),
-	Position = UDim2.new(0.5, 0, 1, 4),
-	Size = UDim2.fromOffset(150, 36),
+	AnchorPoint = Vector2.new(1, 1),
+	Position = UDim2.new(0.5, -4, 1, 4),
+	Size = UDim2.fromOffset(104, 30),
 	Text = "🧩 풀기",
-	TextSize = 18,
+	TextSize = 15,
 	Visible = false,
 	Parent = Hud.missionPanel,
 })
+-- 🏳️ 포기 버튼 (풀기 옆): 한 번 누르면 "정말 포기?"로 바뀌고, 3초 안에 다시 눌러야 포기해요 (실수 방지)
+local giveUpButton = Ui.button({
+	AnchorPoint = Vector2.new(0, 1),
+	Position = UDim2.new(0.5, 4, 1, 4),
+	Size = UDim2.fromOffset(104, 30), -- (풀기와 같은 크기)
+	BackgroundColor3 = Color3.fromRGB(225, 225, 228),
+	Text = "🏳️ 포기",
+	TextSize = 15,
+	Visible = false,
+	Parent = Hud.missionPanel,
+})
+local giveUpArmedAt = 0
+giveUpButton.Activated:Connect(function()
+	if os.clock() - giveUpArmedAt <= 3 then
+		giveUpArmedAt = 0
+		giveUpButton.Text = "🏳️ 포기"
+		if current then
+			close()
+		end
+		Remotes.MissionPuzzle:InvokeServer("giveup")
+		return
+	end
+	giveUpArmedAt = os.clock()
+	giveUpButton.Text = "정말 포기?"
+	task.delay(3, function()
+		if giveUpArmedAt ~= 0 and os.clock() - giveUpArmedAt >= 3 then
+			giveUpButton.Text = "🏳️ 포기"
+		end
+	end)
+end)
 puzzleButton.Activated:Connect(function()
 	if current then
 		close()
@@ -7641,7 +7671,9 @@ end)
 task.spawn(function()
 	while true do
 		local step = currentMissionStep()
-		puzzleButton.Visible = step ~= nil and PUZZLE_KINDS[step.kind] == true
+		local folded = Hud.missionPanel:GetAttribute("Folded") == true
+		puzzleButton.Visible = not folded and step ~= nil and PUZZLE_KINDS[step.kind] == true
+		giveUpButton.Visible = not folded and player:GetAttribute("MissionStatus") == "active"
 		task.wait(0.3)
 	end
 end)
