@@ -250,7 +250,7 @@ SalaryConfig.States = {
 		income = 9,
 		detect = 25,
 		payLabel = "단지 산책 수당",
-		hint = "🏙️ 회사 단지에 있으면 돼요 (엘리베이터로 1층). 건물 안 0.8배 · 지붕/나무 밑 1배 · 탁 트인 곳 1.4배! 자리를 오래 비우면 티 나요, 👮 경비원도 조심!",
+		hint = "🏙️ 회사 단지에 있으면 돼요 (엘리베이터로 1층). 건물 안 0.8배 · 그늘이나 우리 회사 창에서 안 보이는 곳 1배 · 창에서 보이는 탁 트인 곳 1.4배! 자리를 오래 비우면 티 나요, 👮 경비원도 조심!",
 	},
 	hiding = {
 		emoji = "📦",
@@ -543,7 +543,7 @@ function SalaryConfig.carrySpeed(player: Player, slowSpeed: number): number
 	return SalaryConfig.walkSpeed(player, 16 - slowdown)
 end
 
--- 자리에서 고를 수 있는 행동 (숫자키 1~7, 직급이 오르면 하나씩 열려요)
+-- 자리에서 고를 수 있는 행동 (숫자키 1~9, 직급이 오르면 하나씩 열려요)
 ---------------------------------------------------------------------------
 -- 📱 폰 게임: [폰 게임] 버튼 → 게임을 골라야 농땡이 시작 (창을 닫으면 일하기로 복귀)
 ---------------------------------------------------------------------------
@@ -1209,13 +1209,13 @@ SalaryConfig.COMMUTE_LATE_DELTA = 0.15 -- 지각: 오늘의 의심도 속도
 
 -- 🍚 점심시간: 12:45에 "곧 1시" 알림, 13:20까지 단지에 남아 있으면 지각
 SalaryConfig.LUNCH_WARN = 12 * 60 + 45
-SalaryConfig.LUNCH_LATE = 13 * 60 + 20
+SalaryConfig.LUNCH_LATE = 13 * 60 + 20 -- (단지나 옥상에 남아 있으면)
 SalaryConfig.LUNCH_LATE_SUSPICION = 30 -- 점심 지각: 의심도 +
 
 -- 👀 창밖 시선: 부장님이 가끔 창가에서 단지를 내려다봐요. 지붕·나무 밑·건물 안이면 안 보여요
 SalaryConfig.WINDOW_GAP = { 45, 80 } -- 다음 번까지 쉬는 시간 (초)
 SalaryConfig.WINDOW_WARN = 3 -- "창가로 와요" 예고 (초)
-SalaryConfig.WINDOW_SECONDS = 7 -- 내려다보는 시간 (초)
+SalaryConfig.WINDOW_SECONDS = 7 -- 내려다보는 시간 (초). 이 동안 사무실 안은 안 봐요
 SalaryConfig.WINDOW_MULTIPLIER = 1.2 -- 보이는 동안 의심도 배율 (7초 내내 서 있으면 의심도 약 +70: 한 번 놓쳐도 바로 적발은 아니에요)
 SalaryConfig.STREET_HUNCH_EXTRA = 30 -- 🏙️ 단지 산책은 "오래 농땡이 눈치"가 이만큼(초) 늦게 와요 (오가는 길이 머니까)
 

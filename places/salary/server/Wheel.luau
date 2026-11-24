@@ -104,6 +104,9 @@ function Wheel.start(office, remotes, hooks)
 	ReplicatedStorage:SetAttribute("WheelSpinStart", 0)
 
 	local function near(player: Player): boolean
+		if ((player:GetAttribute("Rank") :: number?) or 1) < SalaryConfig.BADGE.wheel then
+			return false -- 🪪 사원증 등급이 모자라요 (창을 안 거치고 보낸 요청도 막아요)
+		end
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		return root ~= nil and (root.Position - wheel.kiosk.Position).Magnitude <= RANGE
 	end

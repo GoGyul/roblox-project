@@ -277,6 +277,16 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		return limit * (1 + fitnessEffect(d, "away")) -- 🔋 지구력: 게이지가 천천히 차요 (최대 +40%)
 	end
 
+	-- 🏪 매점 계산대 앞인가 (눈치물산은 12층 매점과 상가 1층 편의점 두 곳)
+	local function nearStore(position: Vector3): boolean
+		for key, spot in office.shops do
+			if (spot.shopId or key) == "store" and (position - spot.counter.Position).Magnitude <= 12 then
+				return true
+			end
+		end
+		return false
+	end
+
 	-- 📸 오늘 감사 보고서(처벌)가 정해졌나? 농땡이 사진 2장 이상 또는 빈자리 사진 3장 이상
 	local function auditReported(d: EmployeeData): boolean
 		return (d.today.photos or 0) >= SalaryConfig.AUDIT_REPORT_AT or (d.today.emptyPhotos or 0) >= SalaryConfig.AUDIT_EMPTY_REPORT_AT
@@ -1143,7 +1153,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 		local store = office.shops.store
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if store and (not root or (root.Position - store.counter.Position).Magnitude > 12) then
+		if store and (not root or not nearStore(root.Position)) then
 			return false, ("🏪 " .. (office.storeName or "사내 매점") .. " 계산대 앞에서 사 주세요!")
 		end
 		if d.profile.money < gift.price then
@@ -1169,7 +1179,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local count = if amount == 5 then 5 else 1
 		local store = office.shops.store
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if store and (not root or (root.Position - store.counter.Position).Magnitude > 12) then
+		if store and (not root or not nearStore(root.Position)) then
 			return false, ("🏪 " .. (office.storeName or "사내 매점") .. " 계산대 앞에서 사 주세요!")
 		end
 		if seed.rank and d.profile.rank < seed.rank then
@@ -1203,7 +1213,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local count = if amount == 5 then 5 else 1
 		local store = office.shops.store
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if store and (not root or (root.Position - store.counter.Position).Magnitude > 12) then
+		if store and (not root or not nearStore(root.Position)) then
 			return false, ("🏪 " .. (office.storeName or "사내 매점") .. " 계산대 앞에서 사 주세요!")
 		end
 		local have = d.profile.pigeonSnacks[snack.id] or 0
@@ -1235,7 +1245,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local count = if amount == 5 then 5 else 1
 		local store = office.shops.store
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if store and (not root or (root.Position - store.counter.Position).Magnitude > 12) then
+		if store and (not root or not nearStore(root.Position)) then
 			return false, ("🏪 " .. (office.storeName or "사내 매점") .. " 계산대 앞에서 사 주세요!")
 		end
 		local have = if isFertilizer then d.profile.fertilizer else (d.profile.flowerSeeds[flower.id] or 0)
@@ -1286,7 +1296,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		-- 🛡️ 이제 사무실의 🏪 사내 매점 계산대 앞에서만 살 수 있어요
 		local store = office.shops.store
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if store and (not root or (root.Position - store.counter.Position).Magnitude > 12) then
+		if store and (not root or not nearStore(root.Position)) then
 			return false, ("🏪 " .. (office.storeName or "사내 매점") .. " 계산대 앞에서 사 주세요!")
 		end
 		local renewing = not item.consumable and hasItem(d, item.id)
@@ -2397,7 +2407,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		-- 2. 돈 벌기 (농땡이는 직급 배율을 받아요)
 		local onHalfDay = daily(d).halfday == true -- 🏖️ 반차: 쉬는 중 (수입 없음, 안 들킴)
 		local multiplier = if onHalfDay then 0 elseif d.state == "work" then 1 else rankOf(d).bonus
-		if events:is("audit") and d.state ~= "work" then
+		if events:is("audit") and d.state ~= "work" and office.insideOffice(root.Position) then -- (감사관이 있는 사무실 안에서만: 단지·옥상은 위험이 없으니 그대로)
 			multiplier *= SalaryConfig.AUDIT_INCOME -- 🔍 감사 기간: 위험한 만큼 농땡이 수입 ×2
 		end
 		if d.buffs.taco and d.state ~= "work" then
@@ -2417,7 +2427,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			baseIncome *= scale
 			if zone == "open" and not d.openTipped then
 				d.openTipped = true
-				remotes.Notify:FireClient(player, "☀️ 탁 트인 곳! 단지 산책 수당 1.4배. 대신 👀 부장님이 창가에 서면 그대로 보여요. (그늘 1배 · 건물 안 0.8배)")
+				remotes.Notify:FireClient(player, "☀️ 탁 트인 곳! 단지 산책 수당 1.4배. 대신 👀 부장님이 창가에 서면 그대로 보여요. (그늘·창에서 안 보이는 곳 1배 · 건물 안 0.8배)")
 			end
 		end
 		d.incomeRate = baseIncome * multiplier -- 화면에 "+N원/초"로 보여 줘요
@@ -2553,13 +2563,14 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local onCampus = office.inStreet ~= nil and office.inStreet(root.Position)
 		if dayCycle.phase == "lunch" and not d.lunchWarned and dayCycle.minute >= SalaryConfig.LUNCH_WARN then
 			d.lunchWarned = true
-			if onCampus then
-				remotes.Notify:FireClient(player, "🍚 곧 1시예요! 슬슬 사무실로 돌아가요. (1시 20분까지 단지에 있으면 지각)")
+			if onCampus or (Employees.hooks.onRoof ~= nil and Employees.hooks.onRoof(root.Position)) then
+				remotes.Notify:FireClient(player, "🍚 곧 1시예요! 슬슬 사무실로 돌아가요. (1시 20분까지 단지나 옥상에 있으면 지각)")
 			end
 		end
 		if d.lunchDue and dayCycle.phase == "work" and dayCycle.minute >= d.lunchDue then
 			d.lunchDue = nil
-			if onCampus and not onHalfDay and boss.active then
+			local onRoof = Employees.hooks.onRoof ~= nil and Employees.hooks.onRoof(root.Position)
+			if (onCampus or onRoof) and not onHalfDay and boss.active then
 				d.suspicion = math.min(99, d.suspicion + SalaryConfig.LUNCH_LATE_SUSPICION)
 				remotes.Notify:FireClient(player, `⏰ 점심 지각! 부장님이 빈자리를 봤어요. 의심도 +{SalaryConfig.LUNCH_LATE_SUSPICION}`)
 			end
@@ -2622,6 +2633,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			local raised = false
 			if rate > 0 then
 				local seen, distance = boss:canSee(character)
+				if seen and Employees.hooks.windowBusy and Employees.hooks.windowBusy() and office.insideOffice(root.Position) then
+					seen = false -- 🪟 부장님이 창밖(단지)을 내려다보는 중이라 사무실 안은 못 봐요
+				end
 				if seen and blackout and distance > boss.range * 0.5 then
 					seen = false -- 어두워서 멀리는 안 보여요
 				end

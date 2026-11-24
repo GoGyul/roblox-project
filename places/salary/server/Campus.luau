@@ -58,6 +58,24 @@ function Campus.hidden(position: Vector3): boolean
 	return false
 end
 
+-- 👀 우리 회사 창에서 내려다보이는 곳인가 (지붕·나무 밑은 hidden이 따로 걸러요)
+--   창은 건물의 공원 쪽 면에 있어요: 건물 옆·뒤, 창에서 230칸 넘게 먼 곳, 눈치 스트리트 차양 밑은 안 보여요.
+--   → 우리 회사 건물에서 멀리 갈수록 부장님 눈은 피하지만, 돌아오는 길이 멀어요.
+local WINDOW_REACH = 230
+function Campus.inWindowView(position: Vector3, companyId: string): boolean
+	local offset = position - Campus.ORIGIN
+	local x, z = offset.X, offset.Z
+	if z >= 103 then
+		return false -- 눈치 스트리트 차양 밑
+	end
+	local front = if companyId == "nunchi" then 150 - x else x + 150 -- 창 앞쪽으로 얼마나 나와 있나
+	if front < 0 then
+		return false -- 건물 옆·뒤
+	end
+	local dz = z + 50
+	return front * front + dz * dz <= WINDOW_REACH * WINDOW_REACH
+end
+
 -- 건물 안인가 (상가 1층·타워 로비·눈치 스트리트 가게)
 function Campus.indoor(position: Vector3): boolean
 	local offset = position - Campus.ORIGIN
@@ -65,11 +83,11 @@ function Campus.indoor(position: Vector3): boolean
 end
 
 -- 💰 단지 산책 수입 배율: 위험할수록 많이 벌어요
---   건물 안 0.8 (안전) · 지붕/나무 밑 1.0 · 탁 트인 곳 1.4 (👀 창가의 부장님 눈에 보여요)
-function Campus.incomeScale(position: Vector3): (number, string)
+--   건물 안 0.8 (안전) · 지붕/나무 밑이나 창에서 안 보이는 곳 1.0 · 창에서 보이는 탁 트인 곳 1.4
+function Campus.incomeScale(position: Vector3, companyId: string): (number, string)
 	if Campus.indoor(position) then
 		return 0.8, "indoor"
-	elseif Campus.hidden(position) then
+	elseif Campus.hidden(position) or not Campus.inWindowView(position, companyId) then
 		return 1, "shade"
 	end
 	return 1.4, "open"
@@ -395,9 +413,9 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
 		text(bedSign, face, "🌷 내 공원 화단 [E]", Color3.fromRGB(200, 70, 110))
 	end
-	-- 🍻 야외 식탁 (남동): 차양 아래 긴 식탁 세 줄. 가운데가 회식 자리예요 (의자 8개, 부장님은 서쪽 끝 상석)
+	-- 🍻 야외 식탁 (남동): 차양 아래 긴 식탁 세 줄. 회식 자리예요 (의자 24개, 가운데 식탁부터 앉고 부장님은 가운데 식탁 서쪽 끝 상석)
 	F.dinnerSeats = {}
-	for i = 0, 2 do
+	for _, i in { 1, 0, 2 } do -- (가운데 식탁부터 앉혀요. 의자는 모두 24개)
 		local x = 52 + i * 22
 		mesh("Pergola", x, 30, 0, { scale = 1.45, colors = { Canopy = M.coralSoft } })
 		shade(x, 30, 7.5)
@@ -408,7 +426,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		for _, side in { -1, 1 } do
 			local z = 30 + side * 2.9
 			P(Vector3.new(12, 0.3, 1.6), Vector3.new(x, 1.6, z), { Color = M.wood, Material = Enum.Material.WoodPlanks })
-			if i == 1 then
+			do
 				for _, dx in { -4.5, -1.5, 1.5, 4.5 } do
 					-- 의자는 식탁 쪽을 보고 앉아요 (앞쪽이 -Z라서, 북쪽 긴 의자는 180° 돌려요)
 					local seat = P(Vector3.new(1.8, 0.4, 1.4), nil, {
@@ -695,7 +713,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	end
 	F.shops.cafe1f = shopCounter(14, "골목 커피", "믹스커피 500\n유자차 700\n비타민 음료 900")
 	F.shops.bunsik = shopCounter(39, "대충 분식", "떡볶이 600\n김밥 1,000\n라볶이 세트 1,800")
-	-- 🏪 편의점: 진열대는 늘 있고, 계산대(=대충상사의 매점)는 대충상사 서버에만 있어요. 눈치물산은 12층 복도에 사내 매점이 있어요.
+	-- 🏪 편의점: 두 서버 모두 영업해요. 대충상사에겐 이곳이 매점이고, 눈치물산에겐 12층 사내 매점의 2호점이에요 (파는 물건은 같아요).
 	local SB = Build.new(folder, SITE * CFrame.new(0, -helpers.FLOOR_Y, 0)) -- (helpers.v가 바닥 높이를 더해 주니 그만큼 빼 둬요)
 	helpers.decorateStore(SB, {
 		center = Vector2.new(-12, -9.5),
@@ -707,11 +725,11 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		signPosition = helpers.v(-0.7, 10, -10),
 		signFace = Enum.NormalId.Left,
 	})
-	if companyId == "daechung" then
+	do
 		local store = helpers.buildStore(SB, -12, -11, M.mintDark)
 		store.clerkSpot = SB:cf(CFrame.new(store.clerkSpot)).Position
 		store.clerkLook = frontLook
-		F.daechungStore = store
+		F.mallStore = store
 	end
 
 	---------------------------------------------------------------- 👮 단지 경비원 (Guard 모듈이 만들어요): 대충상사 입구 옆 초소 + 순찰 지점

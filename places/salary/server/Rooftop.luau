@@ -547,7 +547,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 	-- 🔭 건너편 빌딩 관찰 일지 (오른쪽 난간)
 	RoofScope.start(folder, spread(32, 0, -6), dayCycle, remotes, { found = hooks.sceneFound })
 
-	-- 🌱 텃밭 (내 화분 4칸)
+	-- 🌱 텃밭 (내 화분 6칸)
 	RoofGarden.start(roof.gardenBoxes, remotes, { action = hooks.gardenAction })
 
 	-- ✈️ 종이비행기 (앞 난간, 도시 쪽으로)

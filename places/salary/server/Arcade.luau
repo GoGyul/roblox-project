@@ -255,6 +255,9 @@ function Arcade.start(office, remotes, hooks)
 	end)
 
 	local function near(player: Player): boolean
+		if ((player:GetAttribute("Rank") :: number?) or 1) < SalaryConfig.BADGE.arcade then
+			return false -- 🪪 사원증 등급이 모자라요 (창을 안 거치고 보낸 요청도 막아요)
+		end
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not root then
 			return false

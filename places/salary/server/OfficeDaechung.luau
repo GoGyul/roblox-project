@@ -220,7 +220,7 @@ function OfficeDaechung.build(B, folder: Folder, company, helpers)
 	-- 가게는 회사 단지(Campus)의 상가 건물 1층에 있어요. 단지를 지으면서 공원·가게 거리의 시설도 함께 받아 와요.
 	local campus = Campus.build(folder, helpers, company.id)
 	local shops = table.clone(campus.shops) -- ☕ 골목 커피 · 🍢 분식 · 눈치 스트리트의 ☕ 커피 · 🍰 디저트
-	shops.store = campus.daechungStore -- 🏪 1층 편의점
+	shops.store = campus.mallStore -- 🏪 1층 편의점
 
 	---------------------------------------------------------------- ☕ 탕비실 (동쪽 아래)
 	local pantryCounter = B:part(Vector3.new(2.5, 3, 10), v(46.75, 1.5, 3), { Name = "PantryCounter", Color = M.surface }) -- 조리대 (라면) z -2~8
@@ -413,7 +413,9 @@ function OfficeDaechung.build(B, folder: Folder, company, helpers)
 		-- 👮 단지 경비원 · 🛍️ 단지에 있나 (옥상처럼 농땡이 수입이 쌓여요: "street" 상태, 초당 9원)
 		guardPost = campus.guardPost,
 		guards = campus.guards, -- 👮 구역별 경비원 세 명
-		streetScale = Campus.incomeScale, -- 💰 단지 산책 수입 배율 (건물 안 < 그늘 < 탁 트인 곳)
+		streetScale = function(position: Vector3)
+			return Campus.incomeScale(position, company.id)
+		end, -- 💰 단지 산책 수입 배율 (건물 안 < 그늘 < 탁 트인 곳)
 		commuteSpawn = campus.commuteSpawn, -- 🚏 아침 출근길 시작 자리 (단지 버스 정류장)
 		guardPatrol = campus.guardPatrol,
 		inStreet = campus.contains,

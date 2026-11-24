@@ -1,5 +1,6 @@
 -- 👀 창밖 시선: 부장님이 가끔 사무실 창가에서 회사 단지를 내려다봐요
---   예고(3초) → 내려다보기(7초). 그동안 단지에서 지붕·나무 밑·건물 안이 아닌 곳에 있으면 의심도가 올라요.
+--   예고(3초) → 내려다보기(7초). 그동안 창에서 보이는 곳(지붕·나무 밑·건물 안·건물 옆과 뒤·아주 먼 곳 제외)에 있으면 의심도가 올라요.
+--   내려다보는 동안에는 사무실 안을 못 봐요: 사무실에 남은 사람에게는 잠깐의 기회예요.
 --   단지에 있는 사람에게만 알림이 가고, 우리 회사 건물 창에 👀 표시가 켜져요 (멀리서도 보여요).
 --   실제 의심도 계산은 Employees가 해요 (Employees.hooks.windowSees).
 
@@ -53,6 +54,14 @@ function WindowWatch.start(office, boss, dayCycle, events, remotes)
 			end
 		end
 	end
+	local function tellOffice(message: string)
+		for _, player in Players:GetPlayers() do
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if root and office.insideOffice(root.Position) then
+				remotes.Notify:FireClient(player, message, 3)
+			end
+		end
+	end
 	local function canWatch(): boolean
 		return dayCycle.phase == "work" and boss.active == true and not events:is("drill") and not events:is("workshop")
 	end
@@ -69,6 +78,7 @@ function WindowWatch.start(office, boss, dayCycle, events, remotes)
 			if canWatch() then
 				watching = true
 				show("watch")
+				tellOffice("🪟 부장님이 창밖을 내려다봐요. 지금 사무실 안은 안 봐요! (잠깐)")
 				local left = SalaryConfig.WINDOW_SECONDS
 				while left > 0 and canWatch() do
 					left -= task.wait(0.25)
@@ -83,7 +93,11 @@ function WindowWatch.start(office, boss, dayCycle, events, remotes)
 	return {
 		-- 지금 이 자리가 창가의 부장님 눈에 보이나
 		sees = function(position: Vector3): boolean
-			return watching and Campus.contains(position) and not Campus.hidden(position)
+			return watching and Campus.contains(position) and Campus.inWindowView(position, office.companyId) and not Campus.hidden(position)
+		end,
+		-- 부장님이 창밖을 보느라 사무실 안을 못 보는 중인가
+		busy = function(): boolean
+			return watching
 		end,
 	}
 end

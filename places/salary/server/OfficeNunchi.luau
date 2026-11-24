@@ -98,7 +98,9 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	-- 12층이라 밖으로 못 나가요: 사무실 동쪽 통로 창가에 모여요 (워크숍도 이 통로에서 해요)
 	local assemblyZone, assemblyPoint, setAssemblyVisible = helpers.makeAssembly(B, 10, -33.75)
 
-	shops.store = storeSpot -- 🏪 사내 매점 (뒤쪽 오른쪽 방)
+	shops.store = storeSpot -- 🏪 사내 매점 (12층 복도)
+	shops.store2 = campus.mallStore -- 🏪 상가 1층 편의점 = 매점 2호점 (같은 물건)
+	shops.store2.shopId = "store"
 	-- 📦 택배 상자 · 택배 보관함 · 🚪 엘리베이터 · 시작 지점은 건물 안이라 OfficeNunchiFloor가 지었어요
 	local packageBox, deliveryShelf, elevator = F.packageBox, F.deliveryShelf, F.elevator
 
@@ -134,7 +136,9 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		-- 👮 경비원: 경비실 앞(정문 옆) + 공원·거리 순찰 지점 (나무·벤치·분수·회식 테이블·흡연구역을 피해서)
 		guardPost = campus.guardPost,
 		guards = campus.guards, -- 👮 구역별 경비원 세 명
-		streetScale = Campus.incomeScale, -- 💰 단지 산책 수입 배율 (건물 안 < 그늘 < 탁 트인 곳)
+		streetScale = function(position: Vector3)
+			return Campus.incomeScale(position, company.id)
+		end, -- 💰 단지 산책 수입 배율 (건물 안 < 그늘 < 탁 트인 곳)
 		commuteSpawn = campus.commuteSpawn, -- 🚏 아침 출근길 시작 자리 (단지 버스 정류장)
 		-- 🛍️ 눈치 스트리트 위에 있나 (공원 정문 밖 거리, 가게 안 포함)
 		inStreet = campus.contains, -- 🛍️ 단지(공원·눈치 스트리트·로비)에 있나

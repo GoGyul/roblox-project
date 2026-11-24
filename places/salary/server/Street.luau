@@ -36,7 +36,8 @@ function Street.start(office, remotes, buy: (Player, string, string) -> (boolean
 		return -- 눈치물산에만 거리가 있어요
 	end
 
-	for shopId, spot in office.shops do
+	for key, spot in office.shops do
+		local shopId = spot.shopId or key -- (같은 가게의 2호점은 shopId로 원래 가게를 가리켜요)
 		local shop = SalaryConfig.StreetShops[shopId]
 		if not shop then
 			continue
@@ -70,12 +71,17 @@ function Street.start(office, remotes, buy: (Player, string, string) -> (boolean
 		if typeof(shopId) ~= "string" or typeof(itemId) ~= "string" then
 			return false, "잘못된 주문이에요."
 		end
-		local spot = office.shops[shopId]
-		if not spot or not SalaryConfig.getStreetItem(shopId, itemId) then
+		if not SalaryConfig.getStreetItem(shopId, itemId) then
 			return false, "없는 메뉴예요."
 		end
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if not root or (root.Position - spot.counter.Position).Magnitude > ORDER_RANGE then
+		local close = false
+		for key, spot in office.shops do -- (2호점이 있는 가게는 어느 계산대든)
+			if (spot.shopId or key) == shopId and root and (root.Position - spot.counter.Position).Magnitude <= ORDER_RANGE then
+				close = true
+			end
+		end
+		if not close then
 			return false, "가게 계산대 앞에서 주문해 주세요!"
 		end
 		return buy(player, shopId, itemId)

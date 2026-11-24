@@ -115,13 +115,17 @@ function Arrival.start(office, remotes, events)
 		elseif from == "office" and destination == "lobby" then
 			travel(player, place.lobbyElevator, ELEVATOR_SECONDS, "🚪 엘리베이터를 타고 1층으로 내려가요...")
 		elseif from == "lobby" and destination == "office" then
-			travel(player, officeElevator, ELEVATOR_SECONDS, `🚪 엘리베이터를 타고 {FLOOR}으로 올라가요...`)
-		elseif from == "lobby" and destination == "roof" then
-			travel(player, officeElevator, ELEVATOR_SECONDS, `🚪 엘리베이터를 타고 올라가요... ({FLOOR}을 지나 옥상으로)`)
-			task.wait(ELEVATOR_SECONDS + 0.4)
-			if near(player, office.elevator.exit, 14) then
-				rideRoof(player, true)
+			-- 올라가는 엘리베이터는 사무실↔옥상처럼 칸을 타요: 근무 중엔 부장님과 마주칠 수 있어요 (그래서 계단이 안전해요)
+			if Rooftop.ride then
+				remotes.Notify:FireClient(player, `🚪 엘리베이터를 타고 {FLOOR}으로 올라가요...`)
+				Rooftop.ride(player, false)
+			else
+				travel(player, officeElevator, ELEVATOR_SECONDS, `🚪 엘리베이터를 타고 {FLOOR}으로 올라가요...`)
 			end
+		elseif from == "lobby" and destination == "roof" then
+			-- 옥상까지 한 번에: 옥상행 칸을 타요 (부장님과 마주칠 수 있어요)
+			remotes.Notify:FireClient(player, `🚪 엘리베이터를 타고 올라가요... ({FLOOR}을 지나 옥상으로)`)
+			rideRoof(player, true)
 		elseif from == "roof" and destination == "lobby" then
 			rideRoof(player, false) -- 사무실 층에 닿을 때까지 기다려요
 			if near(player, office.elevator.exit, 14) then
