@@ -33,7 +33,7 @@ local Meshes = require(script.Parent.Meshes)
 
 local Rooftop = {}
 Rooftop.onElevator = nil :: ((Player, string) -> boolean)? -- 엘리베이터 [E]를 가로채는 훅 (true면 여기서 안 태워요)
-Rooftop.ride = nil :: ((Player, boolean) -> ())?
+Rooftop.ride = nil :: ((Player, boolean, boolean?) -> ())? -- (플레이어, 옥상행인가, 1층 로비에서 타나)
 
 local ROOF = Vector3.new(0, 300, 0) -- 옥상 바닥 윗면 가운데
 local ROOF_SCALE = 1.4 -- 📐 옥상을 넓혔어요 (가로·세로 1.4배 = 넓이 약 2배). 물건 묶음들도 이만큼 바깥쪽으로 퍼져요
@@ -365,7 +365,7 @@ local function buildRoof(folder: Instance, companyId: string)
 end
 
 -- 엘리베이터 칸 하나 짓기 (탈 때마다 하나씩)
-local function buildCabin(folder: Instance, center: Vector3, toRoof: boolean): Model
+local function buildCabin(folder: Instance, center: Vector3, toRoof: boolean, fromLobby: boolean?): Model
 	local model = Instance.new("Model")
 	model.Name = "ElevatorCabin"
 	model.Parent = folder
@@ -378,7 +378,7 @@ local function buildCabin(folder: Instance, center: Vector3, toRoof: boolean): M
 	B:part(Vector3.new(8, 10, 1), center + Vector3.new(0, 5, 4.5), { Color = Color3.fromRGB(180, 210, 230), Material = Enum.Material.Glass, Reflectance = 0.4 }) -- 뒤쪽 거울
 	B:part(Vector3.new(8, 10, 1), center + Vector3.new(0, 5, -4.5), { Color = Color3.fromRGB(170, 175, 185), Material = Enum.Material.Metal }) -- 문
 	local display = B:part(Vector3.new(2, 0.8, 0.1), center + Vector3.new(0, 8.6, -3.95), { Color = Color3.fromRGB(20, 20, 25) })
-	Build.surfaceText(display, Enum.NormalId.Back, if toRoof then "▲ 옥상" else "▼ 사무실", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 120, 60) })
+	Build.surfaceText(display, Enum.NormalId.Back, if toRoof then "▲ 옥상" elseif fromLobby then "▲ 사무실" else "▼ 사무실", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 120, 60) })
 	local lamp = B:part(Vector3.new(3, 0.2, 3), center + Vector3.new(0, 9.9, 0), { Color = Color3.fromRGB(255, 245, 220), Material = Enum.Material.Neon })
 	local light = Instance.new("PointLight")
 	light.Range = 14
@@ -588,7 +588,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		return phone
 	end
 
-	local function ride(player: Player, toRoof: boolean)
+	local function ride(player: Player, toRoof: boolean, fromLobby: boolean?)
 		if riding[player] then
 			return
 		end
@@ -609,7 +609,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		end
 		cabinSlot = (cabinSlot % 8) + 1
 		local center = CABIN_BASE + Vector3.new(0, 0, cabinSlot * 20)
-		local cabin = buildCabin(folder, center, toRoof)
+		local cabin = buildCabin(folder, center, toRoof, fromLobby)
 		local testing = RunService:IsStudio() and SalaryConfig.TEST_ELEVATOR
 		local withBoss = dayCycle.phase == "work" and boss.active and (testing or math.random() < SalaryConfig.ELEVATOR_BOSS_CHANCE)
 		local duration = if withBoss then SalaryConfig.ELEVATOR_RIDE else SalaryConfig.ELEVATOR_RIDE_ALONE
@@ -645,6 +645,7 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 			start = session.start,
 			duration = duration,
 			toRoof = toRoof,
+			fromLobby = fromLobby == true, -- 1층 로비에서 올라가는 중 (안내 문구용)
 			withBoss = withBoss,
 			events = session.events,
 			warn = SalaryConfig.ELEVATOR_WARN,

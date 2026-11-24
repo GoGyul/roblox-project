@@ -227,10 +227,11 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	car(66, -145, Color3.fromRGB(70, 110, 170), 16, 4.4)
 	car(196, -131, Color3.fromRGB(190, 84, 72), 16, 4.4)
 	-- 출근 자리 앞 길 안내판 (북쪽에서 내려오는 사람이 읽어요: 왼쪽이 동쪽)
-	local guide = deco(Vector3.new(26, 3.4, 0.5), Vector3.new(20, 8, -99), Color3.fromRGB(44, 62, 92))
+	--   (머리 위로 높이 달아요: 낮으면 출근 자리에서 카메라가 팻말 뒤에 놓여 화면을 가려요)
+	local guide = deco(Vector3.new(26, 3.4, 0.5), Vector3.new(20, 15.5, -95), Color3.fromRGB(44, 62, 92))
 	text(guide, Enum.NormalId.Front, "◀ (주)눈치물산 타워    중앙 공원 ▼    (주)대충상사 · 상가 ▶")
 	for _, dx in { -12, 12 } do
-		P(Vector3.new(0.5, 9.6, 0.5), Vector3.new(20 + dx, 4.8, -99), { Color = DARK, Material = Enum.Material.Metal })
+		P(Vector3.new(0.5, 17.2, 0.5), Vector3.new(20 + dx, 8.6, -95), { Color = DARK, Material = Enum.Material.Metal })
 	end
 	-- 지하철 출구
 	deco(Vector3.new(12, 0.6, 20), Vector3.new(96, 9, -112), DARK, Enum.Material.Metal)
@@ -262,9 +263,10 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		P(Vector3.new(0.7, 12, 0.5), Vector3.new(152.2, 6, z), { Color = Color3.fromRGB(52, 56, 62), Material = Enum.Material.Metal })
 	end
 	for _, info in { { Vector3.new(43.6, LOBBY_H, 0.3), Vector3.new(174, LOBBY_H / 2, -79.8) }, { Vector3.new(43.6, LOBBY_H, 0.3), Vector3.new(174, LOBBY_H / 2, -20.2) }, { Vector3.new(0.3, LOBBY_H, 59.4), Vector3.new(195.8, LOBBY_H / 2, -50) } } do
-		deco(info[1], info[2], M.wall, Enum.Material.Plaster)
+		-- (충돌을 켜 둬요: 꺼 두면 카메라가 이 판 뒤로 넘어가서 화면이 벽 속에 박혀요)
+		P(info[1], info[2], { Color = M.wall, Material = Enum.Material.Plaster, CastShadow = false })
 	end
-	deco(Vector3.new(0.2, 6, 59), Vector3.new(195.6, 3, -50), M.woodLight, Enum.Material.Wood) -- 뒷벽 원목 띠
+	P(Vector3.new(0.2, 6, 59), Vector3.new(195.6, 3, -50), { Color = M.woodLight, Material = Enum.Material.Wood, CastShadow = false }) -- 뒷벽 원목 띠
 	for _, x in { 162, 176, 190 } do
 		for _, z in { -66, -34 } do
 			local lamp = deco(Vector3.new(6, 0.2, 2), Vector3.new(x, LOBBY_H - 0.15, z), Color3.fromRGB(236, 234, 226), Enum.Material.Neon)
@@ -292,7 +294,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 	end
 	F.nunchi = {
 		elevatorDoor = towerElevator,
-		lobbyElevator = CFrame.new(Campus.point(189, 3, -68)) * CFrame.Angles(0, math.rad(90), 0), -- 엘리베이터 앞, 로비를 보고
+		lobbyElevator = CFrame.new(Campus.point(178, 3, -62)) * CFrame.Angles(0, math.rad(90), 0), -- 엘리베이터에서 나와 로비 안쪽에 선 자리 (벽에서 충분히 떨어져야 화면이 벽에 안 묻혀요), 출입문을 보고
 	}
 	local steel = { CastShadow = false }
 	local STEEL = Color3.fromRGB(52, 56, 62)

@@ -416,7 +416,8 @@ function OfficeDaechung.build(B, folder: Folder, company, helpers)
 		streetScale = function(position: Vector3)
 			return Campus.incomeScale(position, company.id)
 		end, -- 💰 단지 산책 수입 배율 (건물 안 < 그늘 < 탁 트인 곳)
-		commuteSpawn = campus.commuteSpawn, -- 🚏 아침 출근길 시작 자리 (단지 버스 정류장)
+		commuteSpawn = campus.commuteSpawn,
+		commuteLobby = campus.daechung.elevatorDoor.Position, -- 🧭 출근길 안내: 우리 회사 로비 엘리베이터 -- 🚏 아침 출근길 시작 자리 (단지 버스 정류장)
 		guardPatrol = campus.guardPatrol,
 		inStreet = campus.contains,
 		packageBox = packageBox,

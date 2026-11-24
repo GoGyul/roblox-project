@@ -157,6 +157,10 @@ Employees.hooks.guardSees = function(character: Model): (boolean, number, boolea
 	end
 	return false, math.huge, false, SalaryConfig.GUARD_RANGE
 end
+-- ⏸️ 다 같이 하는 이벤트 중인가 (긴급 프로젝트가 이때는 시작하지 않고 시계를 멈춰요)
+Employees.hooks.eventBusy = function(): boolean
+	return events:is("drill") or events:is("workshop") or events:is("blackout")
+end
 Missions.start(office, boss, dayCycle, Remotes, Employees.missionApi, Employees.hooks, coworkers) -- 📋 긴급 프로젝트 + 🎁 선물
 Wheel.start(office, Remotes, { charge = Employees.chargeClaw, payout = Employees.payWheel }) -- 🎡 돌림판
 Dart.start(office, Remotes, { charge = Employees.chargeClaw, prize = Employees.dartPrize }) -- 🎯 끌어서 던지기 풍선 다트

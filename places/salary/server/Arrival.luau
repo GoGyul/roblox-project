@@ -52,6 +52,9 @@ function Arrival.start(office, remotes, events)
 					humanoid.WalkSpeed = speed
 				end
 				character:PivotTo(target)
+				-- 📷 도착: 화면을 캐릭터 등 뒤로 돌려 도착한 곳이 바로 보이게 해요 (Guide 모듈이 받아서 돌려요)
+				player:SetAttribute("ArriveLook", target.LookVector)
+				player:SetAttribute("ArriveTick", os.clock())
 				if string.find(message, "엘리베이터", 1, true) then
 					Ambience.ding(target.Position) -- 🔔 띵
 				end
@@ -105,7 +108,7 @@ function Arrival.start(office, remotes, events)
 		-- 🛡️ 아직 그 엘리베이터 앞에 있는지 다시 확인해요
 		if from == "office" and not near(player, office.elevator.exit, 18) then
 			return
-		elseif from == "lobby" and not near(player, place.lobbyElevator.Position, 18) then
+		elseif from == "lobby" and not near(player, place.elevatorDoor.Position, 16) then
 			return
 		end
 		if from == "office" and destination == "roof" then
@@ -118,14 +121,16 @@ function Arrival.start(office, remotes, events)
 			-- 올라가는 엘리베이터는 사무실↔옥상처럼 칸을 타요: 근무 중엔 부장님과 마주칠 수 있어요 (그래서 계단이 안전해요)
 			if Rooftop.ride then
 				remotes.Notify:FireClient(player, `🚪 엘리베이터를 타고 {FLOOR}으로 올라가요...`)
-				Rooftop.ride(player, false)
+				Rooftop.ride(player, false, true)
 			else
 				travel(player, officeElevator, ELEVATOR_SECONDS, `🚪 엘리베이터를 타고 {FLOOR}으로 올라가요...`)
 			end
 		elseif from == "lobby" and destination == "roof" then
 			-- 옥상까지 한 번에: 옥상행 칸을 타요 (부장님과 마주칠 수 있어요)
 			remotes.Notify:FireClient(player, `🚪 엘리베이터를 타고 올라가요... ({FLOOR}을 지나 옥상으로)`)
-			rideRoof(player, true)
+			if Rooftop.ride then
+				Rooftop.ride(player, true, true)
+			end
 		elseif from == "roof" and destination == "lobby" then
 			rideRoof(player, false) -- 사무실 층에 닿을 때까지 기다려요
 			if near(player, office.elevator.exit, 14) then

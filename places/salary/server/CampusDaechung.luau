@@ -222,7 +222,7 @@ function CampusDaechung.build(folder: Instance, SITE: CFrame)
 	local stairTrigger = P(Vector3.new(4.6, 3, 1), Vector3.new(-50.6, 1.5, -21.4), { Transparency = 1, CanCollide = false }) -- 계단 첫 단 앞: [E] 3층으로 올라가기
 
 	return {
-		lobbyElevator = SITE * CFrame.new(-55, 3, -12) * CFrame.Angles(0, math.rad(-90), 0),
+		lobbyElevator = SITE * CFrame.new(-47, 3, -10) * CFrame.Angles(0, math.rad(-90), 0), -- (벽에서 떨어진 로비 가운데쯤: 화면이 벽에 안 묻히게)
 		lobbyStairs = SITE * CFrame.new(-48, 3, -17.5) * CFrame.Angles(0, math.rad(180), 0), -- 계단실 입구 앞 (로비를 보고)
 		elevatorDoor = elevatorDoor,
 		stairTrigger = stairTrigger,

@@ -57,12 +57,18 @@ local function walls(folder: Instance, inside: (Vector3) -> boolean)
 				for i = 1, count do
 					local center = position + dir * (-length / 2 + (i - 0.5) * width) + out * (thick / 2 + PANEL_DEPTH / 4)
 					local origin = CFrame.fromMatrix(Vector3.new(center.X, bottom, center.Z), Vector3.yAxis:Cross(out), Vector3.yAxis, out)
-					Meshes.spawn("WallPanel", folder, origin, {
+					local panel = Meshes.spawn("WallPanel", folder, origin, {
 						stretch = Vector3.new(width / 8, 1, PANEL_DEPTH),
 						scales = { Wall = Vector3.new(1, size.Y / 12, 1) }, -- 벽 면만 높이에 맞춰 늘리고 걸레받이·몰딩 높이는 그대로
 						skip = if grounded then nil else { Base = true, Rail = true },
 						colors = { Wall = part.Color },
 					})
+					-- 📷 벽 패널은 "벽"으로 쳐요 (충돌·광선 켜기): 꺼 두면 카메라가 패널 뒤 진짜 벽까지 물러나
+					--    패널 속에서 화면을 비춰요 (벽이 화면을 가리던 문제)
+					for _, piece in panel do
+						piece.CanCollide = true
+						piece.CanQuery = true
+					end
 				end
 			end
 		end

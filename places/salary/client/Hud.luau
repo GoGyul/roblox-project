@@ -158,7 +158,7 @@ outline(leeText)
 local clockIn = Ui.make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.58),
-	Size = UDim2.fromOffset(380, 170),
+	Size = UDim2.fromOffset(420, 196),
 	BackgroundColor3 = Theme.Color.surface,
 	BackgroundTransparency = 0.02,
 	Visible = false,
@@ -182,21 +182,49 @@ local clockInInfo = text({
 	ZIndex = 21,
 	Parent = clockIn,
 })
-local clockInButton = Ui.button({
-	AnchorPoint = Vector2.new(0.5, 1),
-	Position = UDim2.new(0.5, 0, 1, -14),
-	Size = UDim2.fromOffset(260, 64),
-	Text = "🏢 출근하기!",
-	TextSize = 26,
+-- 출근 방식 두 가지: 🚏 걸어서(단지 버스 정류장에서 시작, 칼출근 보너스) / 🪑 바로 자리로(보너스 없음)
+local clockInHint = text({
+	Position = UDim2.fromOffset(0, 68),
+	Size = UDim2.new(1, 0, 0, 20),
+	TextSize = 13,
+	TextColor3 = Theme.Color.muted,
+	TextXAlignment = Enum.TextXAlignment.Center,
+	Text = "걸어서 출근하면 9시 40분까지 앉을 때 칼출근 보너스! (9시 50분 넘으면 지각)",
 	ZIndex = 21,
 	Parent = clockIn,
 })
-clockInButton.Activated:Connect(function()
+local clockInButton = Ui.button({
+	AnchorPoint = Vector2.new(0, 1),
+	Position = UDim2.new(0, 14, 1, -14),
+	Size = UDim2.fromOffset(192, 78),
+	Text = "🚏 걸어서 출근\n(보너스)",
+	TextSize = 20,
+	ZIndex = 21,
+	Parent = clockIn,
+})
+local clockInDeskButton = Ui.button({
+	AnchorPoint = Vector2.new(1, 1),
+	Position = UDim2.new(1, -14, 1, -14),
+	Size = UDim2.fromOffset(192, 78),
+	BackgroundColor3 = Theme.Color.skySoft,
+	TextColor3 = Theme.Color.navy,
+	Text = "🪑 바로 자리로\n(보너스 없음)",
+	TextSize = 20,
+	ZIndex = 21,
+	Parent = clockIn,
+})
+local function sendClockIn(mode: string)
 	if player:GetAttribute("ClockedIn") then
 		return
 	end
 	Sounds.play("click", 0.6)
-	Remotes.ClockIn:FireServer()
+	Remotes.ClockIn:FireServer(mode)
+end
+clockInButton.Activated:Connect(function()
+	sendClockIn("walk")
+end)
+clockInDeskButton.Activated:Connect(function()
+	sendClockIn("desk")
 end)
 
 local function updateClockIn()
@@ -212,12 +240,17 @@ local function updateClockIn()
 	local left = ReplicatedStorage:GetAttribute("ClockInLeft") or -1
 	local done = player:GetAttribute("ClockedIn") == true
 	if done then
-		clockInButton.Text = "✅ 출근 완료!"
+		local walk = player:GetAttribute("ClockInWalk") == true
+		clockInButton.Text = if walk then "✅ 걸어서 출근" else "🚏 걸어서 출근\n(보너스)"
+		clockInDeskButton.Text = if walk then "🪑 바로 자리로\n(보너스 없음)" else "✅ 바로 자리로"
 		clockInButton.BackgroundColor3 = Color3.fromRGB(110, 110, 120)
+		clockInDeskButton.BackgroundColor3 = Color3.fromRGB(110, 110, 120)
 		clockInInfo.Text = if left >= 0 then `동료 기다리는 중 ({count}) · {left}초 뒤 자동 출근` else `동료 기다리는 중 ({count})`
 	else
-		clockInButton.Text = "🏢 출근하기!"
+		clockInButton.Text = "🚏 걸어서 출근\n(보너스)"
+		clockInDeskButton.Text = "🪑 바로 자리로\n(보너스 없음)"
 		clockInButton.BackgroundColor3 = C.brass
+		clockInDeskButton.BackgroundColor3 = Theme.Color.skySoft
 		clockInInfo.Text = if left >= 0 then `준비 {count} · {left}초 뒤 출근해요!` else `부장님 기분: {nextWeekday.mood}`
 	end
 end
@@ -908,16 +941,21 @@ local function applyLayout()
 	local grid = buttonRow:FindFirstChild("Grid") :: UIGridLayout
 	local small = if compact then 0.7 else 1
 
-	scales[clockPanel].Scale = small
-	clockPanel.Position = UDim2.new(0.5, 0, 0, if compact then 4 else 8)
-	footstepText.Position = UDim2.new(0.5, 0, 0, if compact then 50 else 78)
+	local top = if compact then 0.7 else 0.88 -- (시계·직급 창은 큰 화면에서도 조금 작게)
+	scales[clockPanel].Scale = top
+	-- 🎲 돌발 이벤트 안내 줄은 화면 맨 위(시계 창 위)에 띄워요: 화면 가운데를 가리지 않게.
+	--    안내 줄이 떠 있는 동안만 시계 창과 그 아래 글씨들이 한 줄만큼 내려가요.
+	local banner = if eventText.Visible then (if compact then 22 else 28) else 0
+	eventText.Position = UDim2.new(0.5, 0, 0, if compact then 2 else 4)
+	eventText.TextSize = if compact then 15 else 19
+	clockPanel.Position = UDim2.new(0.5, 0, 0, (if compact then 4 else 8) + banner)
+	local below = (if compact then 4 else 8) + banner + math.floor(clockPanel.AbsoluteSize.Y) + 6 -- 시계 창 바로 아래
+	footstepText.Position = UDim2.new(0.5, 0, 0, below)
 	footstepText.TextSize = if compact then 17 else 22
-	eventText.Position = UDim2.new(0.5, 0, 0, if compact then 74 else 110)
-	eventText.TextSize = if compact then 16 else 21
-	leeText.Position = UDim2.new(0.5, 0, 0, if compact then 96 else 142)
+	leeText.Position = UDim2.new(0.5, 0, 0, below + (if compact then 22 else 30))
 	leeText.TextSize = if compact then 17 else 22
 
-	scales[moneyPanel].Scale = small
+	scales[moneyPanel].Scale = top
 	moneyPanel.Position = UDim2.new(1, if compact then -6 else -12, 0, if compact then 4 else 8)
 	-- 🔔 알림 종은 직급 창 바로 왼쪽, 알림 창은 직급 창 아래
 	scales[bellButton].Scale = small
@@ -980,6 +1018,53 @@ local function applyLayout()
 	Ui.setToastPosition(UDim2.new(0.5, 0, 1, -(bottomGap + barHeight + 10)))
 end
 
+---------------------------------------------------------------------------
+-- 🗕 시계 창 · 직급 창 접기: 오른쪽 위 [–]를 누르면 첫 줄만 남기고 접어요 ([+]로 다시 펴기)
+--   접으면 시계 창은 "시각 · 요일"만, 직급 창은 "직급 이름"만 보여요. 접은 상태는 나갈 때까지 유지돼요.
+---------------------------------------------------------------------------
+local function foldable(frame: Frame, keep: GuiObject, fullSize: UDim2, foldedSize: UDim2)
+	local folded = false
+	local toggle = Ui.button({
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 8, 0, -8),
+		Size = UDim2.fromOffset(24, 24),
+		BackgroundColor3 = Theme.Color.surfaceSoft,
+		TextColor3 = Theme.Color.navy,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 18,
+		Text = "–",
+		ZIndex = 5,
+		Parent = frame,
+	})
+	local hiddenByFold: { [GuiObject]: boolean } = {}
+	toggle.Activated:Connect(function()
+		folded = not folded
+		Sounds.play("click", 0.4)
+		toggle.Text = if folded then "+" else "–"
+		frame.Size = if folded then foldedSize else fullSize
+		for _, child in frame:GetChildren() do
+			-- 첫 줄(keep)·접기 버튼·창 밖에 붙은 버튼(이과장·감사관 소개 등)은 그대로 둬요
+			if child:IsA("GuiObject") and child ~= keep and child ~= toggle and child.Position.X.Scale < 1 then
+				if folded then
+					if child.Visible then
+						hiddenByFold[child] = true
+						child.Visible = false
+					end
+				elseif hiddenByFold[child] then
+					hiddenByFold[child] = nil
+					child.Visible = true
+				end
+			end
+		end
+		task.defer(applyLayout) -- (알림 종·프로젝트 카드가 직급 창 크기에 맞춰 따라와요)
+	end)
+end
+foldable(clockPanel, clockText, UDim2.fromOffset(300, 62), UDim2.fromOffset(300, 48))
+foldable(moneyPanel, rankText, UDim2.fromOffset(250, 136), UDim2.fromOffset(250, 46))
+
+Hud.relayout = function()
+	task.defer(applyLayout)
+end
 applyLayout()
 if workspace.CurrentCamera then
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyLayout)
@@ -1133,7 +1218,10 @@ local function updateEvent()
 			Hud.popup("🌸 워크숍 레크리에이션!", Color3.fromRGB(255, 180, 210), 3)
 		end
 	end
-	eventText.Visible = message ~= nil
+	if eventText.Visible ~= (message ~= nil) then
+		eventText.Visible = message ~= nil
+		Hud.relayout() -- (안내 줄이 생기거나 사라지면 시계 창 자리를 다시 맞춰요)
+	end
 	if message then
 		eventText.Text = message
 		eventText.TextColor3 = color
@@ -2072,7 +2160,7 @@ Remotes:WaitForChild("ElevatorRide").OnClientEvent:Connect(function(info)
 		while elevatorRide == info do
 			local elapsed = workspace:GetServerTimeNow() - info.start
 			local left = math.max(0, math.ceil(info.duration - math.max(0, elapsed)))
-			elevatorTitle.Text = (if info.toRoof then "🚪 ▲ 옥상으로 올라가는 중" else "🚪 ▼ 사무실로 내려가는 중") .. ` ({left}초)`
+			elevatorTitle.Text = (if info.toRoof then "🚪 ▲ 옥상으로 올라가는 중" elseif info.fromLobby then "🚪 ▲ 사무실로 올라가는 중" else "🚪 ▼ 사무실로 내려가는 중") .. ` ({left}초)`
 			if info.withBoss then
 				if elapsed < 0 then
 					bossState.Text = `😐 준비… {math.ceil(-elapsed)}`

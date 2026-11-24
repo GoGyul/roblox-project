@@ -139,7 +139,8 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		streetScale = function(position: Vector3)
 			return Campus.incomeScale(position, company.id)
 		end, -- 💰 단지 산책 수입 배율 (건물 안 < 그늘 < 탁 트인 곳)
-		commuteSpawn = campus.commuteSpawn, -- 🚏 아침 출근길 시작 자리 (단지 버스 정류장)
+		commuteSpawn = campus.commuteSpawn,
+		commuteLobby = campus.nunchi.elevatorDoor.Position, -- 🧭 출근길 안내: 우리 회사 로비 엘리베이터 -- 🚏 아침 출근길 시작 자리 (단지 버스 정류장)
 		-- 🛍️ 눈치 스트리트 위에 있나 (공원 정문 밖 거리, 가게 안 포함)
 		inStreet = campus.contains, -- 🛍️ 단지(공원·눈치 스트리트·로비)에 있나
 		guardPatrol = campus.guardPatrol,

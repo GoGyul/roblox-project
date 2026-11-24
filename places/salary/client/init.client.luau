@@ -39,6 +39,7 @@ require(script.Poses).start()
 require(script.StockPanel).start()
 require(script.ElevatorMenu).start() -- 🚪 엘리베이터 층 고르기 창
 require(script.Sprint).start() -- 🏃 [Shift] 달리기
+require(script.Guide).start() -- 🧭 출근길 안내 선
 local Panels = require(script.Panels)
 Panels.showWelcome()
 

@@ -552,11 +552,34 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 					end
 					continue
 				end
-				if state.status == "" and state.startMinute and dayCycle.phase == "work" and dayCycle.minute >= state.startMinute then
-					startMission(player, state)
+				-- ⏸️ 다 같이 하는 이벤트(소방 훈련·워크숍·정전) 중인가: 그동안은 프로젝트를 시작하지 않고, 하던 프로젝트는 시계를 멈춰요
+				local busy = hooks.eventBusy ~= nil and hooks.eventBusy()
+				if state.status == "" and state.startMinute and dayCycle.phase == "work" and dayCycle.minute >= state.startMinute and not busy then
+					-- 사무실 안에 있을 때만 시작해요 (단지·옥상에 있으면 전화를 받을 수도, 제출할 수도 없어요)
+					-- 너무 늦은 시각이면 오늘은 건너뛰어요 (퇴근 전에 끝낼 수 없어요)
+					local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+					if dayCycle.minute > SalaryConfig.MISSION_LAST_START then
+						state.startMinute = nil
+					elseif root and office.insideOffice(root.Position) then
+						startMission(player, state)
+					end
 				end
 				if state.status ~= "active" then
 					continue
+				end
+				if busy or dayCycle.phase == "lunch" then
+					-- ⏸️ 이벤트·점심시간(부장님이 없어서 제출을 못 해요) 동안은 남은 시간이 줄지 않아요
+					state.endsAt += dt
+					if state.ringUntil then
+						state.ringUntil += dt
+					end
+					state.progressText = if busy then "⏸️ 이벤트 중 (시간 멈춤)" else "⏸️ 점심시간 (시간 멈춤)"
+					state.paused = true
+					publish(player, state)
+					continue
+				elseif state.paused then
+					state.paused = nil
+					state.progressText = "" -- (멈춤 표시 지우기)
 				end
 				local now = workspace:GetServerTimeNow()
 				if now > state.endsAt then

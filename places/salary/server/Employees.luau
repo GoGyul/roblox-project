@@ -82,6 +82,7 @@ type EmployeeData = {
 	suspicion: number,
 	spawnedOnce: boolean?, -- 캐릭터가 한 번이라도 나왔나
 	openTipped: boolean?, -- ☀️ 탁 트인 곳 안내를 봤나 (접속당 한 번)
+	commuteWalk: boolean?, -- 🚏 오늘 걸어서 출근하기로 했나
 	commute: boolean?, -- 🚏 출근길 (아직 자리에 안 앉았어요)
 	lunchWarned: boolean?,
 	lunchDue: number?, -- 🍚 이 시각까지 단지에 있으면 점심 지각
@@ -2538,6 +2539,17 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		--   소방 훈련·워크숍(나가야 하니까)·점심시간엔 멈춰요.
 		--   💡 정전 때는 내 컴퓨터가 꺼져서 기록이 날아가요 → 0%로 초기화
 		-- 🚏 출근길: 자리에 앉으면 끝. 일찍 앉으면 보너스, 너무 늦으면 지각 (그동안은 게이지·경비원 모두 봐줘요)
+		-- 🧭 출근길 안내 (내 화면에만 선과 목적지가 떠요): 단지에서는 로비 엘리베이터, 사무실 층에서는 내 자리
+		if d.commute and not isSeated(player, d) and dayCycle.phase ~= "offwork" and not onHalfDay then
+			local inOffice = office.insideOffice(root.Position) or root.Position.Y > 150 -- (엘리베이터 칸 안도 "올라온 뒤"로 쳐요)
+			local target = if inOffice or not office.commuteLobby then d.desk.seat.Position else office.commuteLobby
+			if player:GetAttribute("CommuteTarget") ~= target then
+				player:SetAttribute("CommuteTarget", target)
+				player:SetAttribute("CommuteLabel", if inOffice then "🪑 내 자리" else "🏢 우리 회사 엘리베이터")
+			end
+		elseif player:GetAttribute("CommuteTarget") ~= nil then
+			player:SetAttribute("CommuteTarget", nil)
+		end
 		if d.commute then
 			if dayCycle.phase == "offwork" or onHalfDay then
 				d.commute = nil
@@ -3007,7 +3019,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	dayCycle.readyGate = function()
 		for player, d in data do
 			d.ready = false
+			d.commuteWalk = false -- 🚏 걸어서 출근을 골랐나 (안 고르면 바로 자리로: 자리 비운 사람이 지각하지 않게)
 			player:SetAttribute("ClockedIn", false)
+			player:SetAttribute("ClockInWalk", false)
 		end
 		local firstReadyAt: number? = nil
 		while true do
@@ -3036,9 +3050,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 		ReplicatedStorage:SetAttribute("ClockInLeft", -1)
 	end
-	remotes.ClockIn.OnServerEvent:Connect(function(player)
+	remotes.ClockIn.OnServerEvent:Connect(function(player, mode)
 		local d = data[player]
 		if d and dayCycle.waiting then
+			d.commuteWalk = mode == "walk"
+			player:SetAttribute("ClockInWalk", d.commuteWalk)
 			-- 📦 내 회사에 다니다가 진급/좌천으로 회사가 바뀌었으면 → 출근할 때 새 회사로 이동
 			-- (친구를 따라 다른 회사 서버에 온 경우는 그대로 같이 일해요)
 			-- (해고로 직급이 내려간 다음 날도 출근 전엔 아직 fired 표시가 남아 있어서 fired는 보지 않아요 · 스튜디오는 텔레포트가 안 돼서 건너뛰어요)
@@ -4348,8 +4364,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 			updateBubble(player, "work")
 			d.lunchWarned, d.lunchDue = false, nil
-			if office.commuteSpawn and player.Character then
-				-- 🚏 출근길: 단지 버스 정류장에서 내 자리까지 (칼출근 보너스 / 지각)
+			if office.commuteSpawn and player.Character and d.commuteWalk then
+				-- 🚏 출근길 (아침에 "걸어서 출근"을 고른 사람만): 단지 버스 정류장에서 내 자리까지 (칼출근 보너스 / 지각)
 				d.commute = nil
 				commuteCount += 1
 				local slot = commuteCount % 6

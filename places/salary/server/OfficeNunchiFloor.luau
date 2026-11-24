@@ -250,7 +250,12 @@ function Floor.build(B, folder: Folder, company, helpers, C)
 	Build.surfaceText(logo, Enum.NormalId.Front, "NUNCHI CORP.", { Font = Enum.Font.GothamBlack, TextColor3 = C.accent })
 	local deliveryShelf = helpers.buildDeliveryShelf(B, -12 * S, 10 * S + 1.5)
 	local packageBox = helpers.buildPackage(B, -18 * S, 10 * S + 2)
-	local store = helpers.buildStore(B, 40 * S, 10 * S + 5.2, C.accent) -- 🏪 사내 매점 키오스크 (복도 동쪽, 남쪽을 보고 있어요)
+	-- 🏪 사내 매점 키오스크: 복도 남쪽 벽에 등을 대고 북쪽(복도·카페 라운지 쪽)을 봐요.
+	--   (예전엔 라운지 쪽으로 등을 돌리고 있어서 진열대 뒷면만 보였어요. 창고 문(x 38)과 폰부스 문(x 6) 사이 벽 앞이에요)
+	local storeBuild = Build.new(folder, CFrame.new(24 * S, 0, 20 * S - 4.8) * CFrame.Angles(0, math.pi, 0))
+	local store = helpers.buildStore(storeBuild, 0, 0, C.accent)
+	store.clerkSpot = storeBuild:cf(CFrame.new(store.clerkSpot)).Position
+	store.clerkLook = Vector3.new(0, 0, -1)
 	prop("Vending", 54.5, 17.4, -90, Vector3.new(3, 6.2, 2.4))
 	prop("Plant", 52, 19, 0, Vector3.new(1.8, 2, 1.8), { scale = 1.4 })
 	decor("NoticeBoard", 0, 19.5, 180, nil, 6)
@@ -385,7 +390,7 @@ function Floor.build(B, folder: Folder, company, helpers, C)
 			v(6, 0, CORRIDOR_Z), -- 복도
 			v(-30, 0, CORRIDOR_Z),
 			v(28, 0, CORRIDOR_Z),
-			v(40, 0, 17.5), -- 매점 키오스크 앞
+			v(24, 0, 13.5), -- 매점 키오스크 앞
 			v(-22, 0, 22.5), -- 휴게 라운지 문 (안을 들여다봐요)
 			rv(G.cx, 0, gymNear + 8), -- 🏋️ 체력 단련실 (가끔 들여다봐요)
 		},

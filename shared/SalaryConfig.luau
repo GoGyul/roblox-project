@@ -1528,6 +1528,7 @@ export type MissionStep = { kind: string, text: string, count: number?, place: s
 export type MissionInfo = { id: string, emoji: string, name: string, seconds: number, steps: { MissionStep }, company: string? }
 
 SalaryConfig.MISSION_WINDOWS = { { 10 * 60, 10 * 60 + 25 }, { 13 * 60 + 5, 15 * 60 } } -- 시작 시각 (점심과 겹치지 않게)
+SalaryConfig.MISSION_LAST_START = 15 * 60 + 10 -- 이 시각을 넘기면 오늘 프로젝트는 건너뛰어요 (퇴근 전에 끝낼 수 없어서)
 SalaryConfig.MISSION_BONUS = 3000 -- 경고가 없을 때 성공 보너스
 SalaryConfig.MEMORY_SHOW = 3 -- 주문번호를 보여 주는 시간 (초)
 SalaryConfig.MEMORY_HOLD = 12 -- 번호를 기억한 채 일하기로 버텨야 하는 시간 (초)
