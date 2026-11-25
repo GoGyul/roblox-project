@@ -161,6 +161,9 @@ end
 -- 불러오기. 두 번째 값 canSave가 false면 저장하지 않아요
 -- (불러오기에 실패했는데 저장해 버리면 진짜 데이터를 빈 데이터로 덮어쓸 수 있어서)
 function Profiles.load(player: Player): (Profile, boolean)
+	if require(game:GetService("ReplicatedStorage").Shared.SalarySimulation).enabled() then
+		return Profiles.default(), false
+	end
 	if not store then
 		return Profiles.default(), false
 	end
@@ -181,6 +184,9 @@ function Profiles.load(player: Player): (Profile, boolean)
 end
 
 function Profiles.save(player: Player, profile: Profile): boolean
+	if require(game:GetService("ReplicatedStorage").Shared.SalarySimulation).enabled() then
+		return false
+	end
 	if not store then
 		return false
 	end

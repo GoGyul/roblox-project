@@ -1,0 +1,71 @@
+2026-11-24T21:09:43.738Z,60190.738281,7009b000,6,Info [FLog::CreatorOutput] V4_A_BEGIN nil
+2026-11-24T21:09:45.933Z,60192.933594,704b3000,6,Info [FLog::CreatorOutput] [Poses] 자세 연출 시작
+2026-11-24T21:09:53.621Z,60200.621094,708cb000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetAsync, Data Store: SalaryLupin_v1
+2026-11-24T21:09:53.628Z,60200.628906,708cb000,6,Warning [FLog::CreatorWarning] Warning: [Profiles] 불러오기 실패 (1/3): 502: API Services rejected request with error. Error code: 7 Reason: Studio access to APIs is not allowed.
+2026-11-24T21:09:58.000Z,60205.000000,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://10066921516 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.011Z,60205.011719,706bf000,6,Error [FLog::CreatorError] Error: Failed to load sound rbxassetid://10066921516: HttpError: NetFail
+2026-11-24T21:09:58.011Z,60205.011719,706bf000,6,Error [FLog::CreatorError] Error: Failed to load sound rbxassetid://10066921516: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://3056541177 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://5981360137 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://6017289712 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://14011257320 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://10434408368 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://10434144680 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://5990772764 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://14011257320 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://4918677124 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://10434145835 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://16571172190 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://6016251644 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://6017213752 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://6017289904 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://16571019891 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://3405341609 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://16588411361 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://6012985953 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://16571012729 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://6017290134 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://12045401097 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://16565325171 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://16565035221 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.644Z,60205.644531,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://10142422327 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.648Z,60205.648438,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://203785492 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.648Z,60205.648438,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://6016251963 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.648Z,60205.648438,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://3222731032 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.648Z,60205.648438,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://3222730627 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.648Z,60205.648438,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://9529784530 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.648Z,60205.648438,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://3088713341 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.648Z,60205.648438,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://2600845734 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.648Z,60205.648438,74993000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://9529783993 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.648Z,60205.648438,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://10131770538 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.648Z,60205.648438,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://5981360418 failed due to: HttpError: NetFail
+2026-11-24T21:09:58.648Z,60205.648438,740c7000,6,Warning [FLog::CreatorWarning] Warning: ContentId: rbxassetid://2609138523 failed due to: HttpError: NetFail
+2026-11-24T21:09:59.339Z,60206.339844,70ad7000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetAsync, Data Store: SalaryLupin_v1
+2026-11-24T21:09:59.347Z,60206.347656,704b3000,6,Warning [FLog::CreatorWarning] Warning: [Profiles] 불러오기 실패 (2/3): 502: API Services rejected request with error. Error code: 7 Reason: Studio access to APIs is not allowed.
+2026-11-24T21:10:00.644Z,60207.644531,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetAsync, Data Store: SalaryLupin_v1
+2026-11-24T21:10:00.648Z,60207.648438,704b3000,6,Warning [FLog::CreatorWarning] Warning: [Profiles] 불러오기 실패 (3/3): 502: API Services rejected request with error. Error code: 7 Reason: Studio access to APIs is not allowed.
+2026-11-24T21:10:01.656Z,60208.656250,7009b000,6,Info [FLog::CreatorOutput] 🏢 오늘의 사무실: (주)눈치물산
+2026-11-24T21:10:03.371Z,60210.371094,6fe8f000,6,Info [FLog::CreatorOutput] 🧱 [충돌 정리] 통과 막은 가구 123개 · 올라타기 막은 가구 314개
+2026-11-24T21:10:03.390Z,60210.390625,6fe8f000,6,Info [FLog::CreatorOutput] 💼 월급루팡 시뮬레이터 준비 완료!
+2026-11-24T21:10:03.542Z,60210.542969,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetAsync, Data Store: SalaryLupin_v1
+2026-11-24T21:10:03.546Z,60210.546875,704b3000,6,Warning [FLog::CreatorWarning] Warning: [Profiles] 불러오기 실패 (1/3): 502: API Services rejected request with error. Error code: 7 Reason: Studio access to APIs is not allowed.
+2026-11-24T21:10:03.839Z,60210.839844,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetSortedAsync, Data Store: SalaryArcade_mole
+2026-11-24T21:10:04.097Z,60211.097656,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetSortedAsync, Data Store: SalaryArcade_memory
+2026-11-24T21:10:04.359Z,60211.359375,f7dc1f00,6,Info [FLog::CreatorOutput] [Poses] 내 캐릭터 자세 연출 준비 완료 ✅ (R15 / AnimationConstraint)
+2026-11-24T21:10:05.187Z,60212.187500,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetAsync, Data Store: SalaryLupin_v1
+2026-11-24T21:10:05.195Z,60212.195312,704b3000,6,Warning [FLog::CreatorWarning] Warning: [Profiles] 불러오기 실패 (2/3): 502: API Services rejected request with error. Error code: 7 Reason: Studio access to APIs is not allowed.
+2026-11-24T21:10:07.292Z,60214.292969,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetAsync, Data Store: SalaryLupin_v1
+2026-11-24T21:10:07.296Z,60214.296875,702a7000,6,Warning [FLog::CreatorWarning] Warning: [Profiles] 불러오기 실패 (3/3): 502: API Services rejected request with error. Error code: 7 Reason: Studio access to APIs is not allowed.
+2026-11-24T21:10:11.406Z,60218.406250,7009b000,6,Info [FLog::CreatorOutput] 📊 [성능 집계] 파트 6037개 (그중 메시 3253개) · 조명 171개 (그림자 켠 조명 0개) · 고정 안 된 낱개 파트 0개
+2026-11-24T21:10:11.410Z,60218.410156,7009b000,6,Info [FLog::CreatorOutput] 📊 [성능 집계 2] 단지 파트 2577개 · 단지 조명 106개 · 그림자 드리우는 파트 3732개 · 글씨판 132개
+2026-11-24T21:11:10.218Z,60277.218750,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetSortedAsync, Data Store: SalaryArcade_mole
+2026-11-24T21:11:11.398Z,60278.398438,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetSortedAsync, Data Store: SalaryArcade_memory
+2026-11-24T21:12:14.968Z,60341.968750,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetSortedAsync, Data Store: SalaryArcade_mole
+2026-11-24T21:12:17.648Z,60344.648438,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetSortedAsync, Data Store: SalaryArcade_memory
+2026-11-24T21:13:18.000Z,60405.000000,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetSortedAsync, Data Store: SalaryArcade_mole
+2026-11-24T21:13:18.605Z,60405.605469,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetSortedAsync, Data Store: SalaryArcade_memory
+2026-11-24T21:13:55.433Z,60442.433594,6fe8f000,6,Info [FLog::CreatorOutput] > local p=game.Players.LocalPlayer; local r=p.Character.HumanoidRootPart; print("V4_A_OBSERVE", require(game.ReplicatedStorage.Shared.SalarySimulation).protocol, require(game.ReplicatedStorage.Shared.SalarySimulation).enabled(), r.Position, game.ReplicatedStorage:GetAttribute("SalaryDay")); task.delay(15,function() print("V4_A_OBSERVE_END",r.Position,game.ReplicatedStorage:GetAttribute("SalaryDay")) end)
+2026-11-24T21:13:55.437Z,60442.437500,708cb000,6,Info [FLog::CreatorOutput] V4_A_OBSERVE v4-fast-sight-validity false 20, 3.9633450508117676, 788 0
+2026-11-24T21:14:10.453Z,60457.453125,706bf000,6,Info [FLog::CreatorOutput] V4_A_OBSERVE_END 20, 3.9633450508117676, 788 0
+2026-11-24T21:14:18.972Z,60465.972656,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetSortedAsync, Data Store: SalaryArcade_mole
+2026-11-24T21:14:19.863Z,60466.863281,6fe8f000,6,Error [FLog::CreatorError] Error: DataStoreService: StudioAccessToApisNotAllowed: Studio access to APIs is not allowed. API: GetSortedAsync, Data Store: SalaryArcade_memory

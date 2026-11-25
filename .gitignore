@@ -21,3 +21,7 @@ sourcemap.json
 # Studio에서 저장한 가져오기 확인용 플레이스
 /assets/model/
 __pycache__/
+
+# 실측 진단 로그 (계정 번호·내 컴퓨터 경로가 들어 있어요)
+/docs/simulation/**/*_diagnostics.log
+/docs/simulation/v5/transport_smoke.json

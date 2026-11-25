@@ -270,6 +270,11 @@ Remotes.ReturnToLobby.OnServerEvent:Connect(function(player)
 end)
 
 print("💼 월급루팡 시뮬레이터 준비 완료!")
+if require(ReplicatedStorage.Shared.SalarySimulation).enabled() then
+	-- ⚠️ 평소 개발 중에 이 줄이 보이면 안 돼요: Workspace의 SalarySimulation 속성이 남아 있다는 뜻이에요
+	warn("🧪🧪🧪 [월급루팡] 측정 모드가 켜져 있어요! 자동 봇이 대신 플레이하고, 저장·TEST_ 스위치가 꺼져요. 평소 테스트라면 Workspace의 SalarySimulation 속성을 지우세요.")
+	require(script.SimulationRecorder).start(office, boss, dayCycle, Employees)
+end
 
 -- 📊 성능 점검용 집계 (Studio에서만): 맵을 다 지은 뒤 파트·메시·조명 개수를 Output에 찍어요
 if RunService:IsStudio() then

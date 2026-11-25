@@ -1146,6 +1146,10 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			local returnTime = (States[d.deskAction].returnTime or 0) * (if d.energyActive then 0.5 else 1)
 				* (1 - upgradeValue(d, "chair")) -- 🪑 좋은 의자는 빨리 돌아와요
 				* (1 - fitnessEffect(d, "return")) -- ⚡ 민첩성: 복귀 시간 짧게 (최대 -30%)
+			if not d.returnUntil and Employees.simulationObserve then
+				pcall(Employees.simulationObserve, "return_requested", {playerId = player.UserId,
+					action = d.deskAction, expectedReturnSeconds = returnTime, caught = d.today.caught})
+			end
 			if d.returnUntil then
 				return -- 이미 복귀 중
 			elseif returnTime > 0 then
@@ -1768,6 +1772,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local d = data[player]
 		if not canStartActivity(player, d) then
 			return
+		end
+		if not coworker.atDesk or coworker.chatting or coworker.borrowed then
+			return -- (걸어 다니는 중·다른 사람과 수다 중에는 수다를 시작하지 않아요)
 		end
 		local employee = d :: EmployeeData
 		-- 💬 같은 동료와는 하루 한 번만 (내 근무일 기준, 다시 들어와도 그대로)
@@ -2905,6 +2912,16 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				d.today.nearMissCount = (d.today.nearMissCount or 0) + 1
 				local bonus = SalaryConfig.NEAR_MISS_BONUS * d.combo
 				d.today.nearMiss += bonus
+				if Employees.simulationObserve then
+					pcall(function()
+						local visible = boss:canSee(character)
+						Employees.simulationObserve("near_miss_award", {playerId = player.UserId,
+							reason = label, suspicion = d.suspicion, distance = (root.Position - boss.root.Position).Magnitude,
+							bossVisible = visible, state = d.state, action = d.deskAction, amount = bonus, combo = d.combo,
+							count = d.today.nearMissCount, total = d.today.nearMiss,
+							secondsSinceReturn = if d.lastReturnEnd then now - d.lastReturnEnd else nil})
+					end)
+				end
 				d.profile.stats.nearMiss += 1
 				remotes.NearMiss:FireClient(player, bonus, d.combo, SalaryConfig.NEAR_MISS_DAILY_MAX - d.today.nearMissCount, label)
 				unlockAchievement(player, d, "near_miss")
@@ -4574,9 +4591,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		tattled = function(player: Player, d: EmployeeData, name: string)
 			d.suspicion = math.min(95, d.suspicion + SalaryConfig.REVIEW_TATTLE_SUSPICION)
 			adjustSpeed(player, d, "npcTattle", false, SalaryConfig.REVIEW_TATTLE_DELTA, `🙊 {name} 고자질`)
+			-- 부장님은 사무실 안에서만 찾아와요 (내가 단지·옥상에 있으면 빈자리를 보러 가요: 건물 밖까지 쫓아 나오지 않게)
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-			if root then
+			if root and office.insideOffice(root.Position) then
 				boss:callTo(root.Position)
+			else
+				boss:callTo(d.desk.seat.Position)
 			end
 			publish(player, d)
 		end,
@@ -4769,7 +4789,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 
 			-- 📊 인사평가: 오늘 점수 (금요일이면 순위 발표 → 성과급·감봉 줄이 붙어요)
 			local reviewLines, reviewXp, reviewNote = reviewApi.settle(player, d, {
-				earned = earned,
+				-- (적발 감봉은 빼지 않은 금액으로: 적발은 태도 점수에서 이미 깎여요. 실적까지 깎으면 이중 벌이에요)
+				earned = earned + d.today.caught * SalaryConfig.caughtPenalty(profile.rank),
 				target = target,
 				basePay = rank.basePay,
 				quotaOk = quotaOk,
@@ -4879,6 +4900,21 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	end)
 
 	---------------------------------------------------------------- 플레이어 받기 (반드시 맨 마지막!)
+	-- Read-only snapshot: internal precision and counters are not inferred from warning changes.
+	if require(ReplicatedStorage.Shared.SalarySimulation).enabled() then
+		Employees.simulationSnapshot = function(player: Player)
+			local d = data[player]
+			if not d then return nil end
+			return {
+				state = d.state, action = d.deskAction, suspicion = d.suspicion,
+				speed = d.speed, caught = d.today.caught, earned = runningTotal(d),
+				workSeconds = d.workSeconds, warnings = d.profile.warnings,
+				rank = d.profile.rank, xp = d.profile.xp, bank = d.profile.money,
+				fired = d.fired, nearMiss = d.today.nearMiss,
+				today = d.today, review = player:GetAttribute("Review"),
+			}
+		end
+	end
 	-- 위의 "하루 일정"(출근하면 부장님 등장) 같은 기능을 모두 연결한 다음에 플레이어를 받아요.
 	-- 먼저 받으면 첫날 출근 신호를 놓쳐서 부장님이 점심 끝날 때까지 안 나오는 버그가 있었어요.
 	Players.PlayerAdded:Connect(onPlayerAdded)

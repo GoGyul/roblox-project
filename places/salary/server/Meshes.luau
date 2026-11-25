@@ -11,7 +11,8 @@ local Theme = require(ReplicatedStorage.Shared.SalaryTheme)
 local Meshes = {}
 
 local FLIP = CFrame.Angles(0, math.pi, 0)
-local LOAD_TIMEOUT = 10 -- 초. 넘기면 파트 가구로 지어요
+-- 🧪 실측(측정 모드)에서는 더 오래 기다려요: 대체 가구 맵에서 잰 시야·충돌이 표본에 섞이지 않게 (실제 게임은 그대로 10초)
+local LOAD_TIMEOUT = if require(ReplicatedStorage.Shared.SalarySimulation).enabled() then 30 else 10 -- 초. 넘기면 파트 가구로 지어요
 
 -- 나무·금속 색은 재질도 그에 맞게 입혀요 (질감 B안)
 local MATERIAL_BY_COLOR: { [string]: Enum.Material } = {
@@ -78,12 +79,26 @@ function Meshes.preload(kinds: { string })
 	end
 	if pending > 0 then
 		warn("[Meshes] 메시를 제때 못 불러왔어요 → 파트 가구로 지어요")
+		workspace:SetAttribute("SalaryMeshFallback", true) -- 📏 이번 서버는 대체 가구 맵 (실측 기록이 이 표시를 봐요)
 		return
 	end
+	local failedKinds = {}
 	for kind, parts in loaded do
 		if not failed[kind] then
 			templates[kind] = parts
+		else
+			table.insert(failedKinds, kind)
 		end
+	end
+	-- 📏 맵 로딩 상태 남기기: 전부 대체(true) / 일부 종류만 대체(SalaryMeshFailedKinds에 이름) / 정상(false)
+	if workspace:GetAttribute("SalaryMeshFallback") == nil then
+		workspace:SetAttribute("SalaryMeshFallback", false)
+	end
+	if #failedKinds > 0 then
+		table.sort(failedKinds)
+		local before = workspace:GetAttribute("SalaryMeshFailedKinds")
+		local text = table.concat(failedKinds, ",")
+		workspace:SetAttribute("SalaryMeshFailedKinds", if typeof(before) == "string" and before ~= "" then before .. "," .. text else text)
 	end
 end
 

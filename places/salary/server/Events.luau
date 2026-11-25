@@ -23,6 +23,10 @@ local Events = {}
 Events.__index = Events
 
 local IS_STUDIO = RunService:IsStudio()
+local Simulation = require(ReplicatedStorage.Shared.SalarySimulation)
+local WORKSHOP_TEST = Simulation.enabled() and Simulation.scenario == "workshop"
+-- Measurement mode follows production selection/timing; ordinary Studio keeps its preview tour.
+local STUDIO_PREVIEW = IS_STUDIO and not require(ReplicatedStorage.Shared.SalarySimulation).enabled()
 
 -- 감사팀 시야
 local AUDITOR_RANGE = 36 -- (사무실이 넓어져서 26 → 36)
@@ -34,7 +38,8 @@ end
 
 -- 근무 중 이벤트가 일어날 시각 (점심과 퇴근 직전은 피해요)
 local function triggerMinute(): number
-	if IS_STUDIO then
+	if WORKSHOP_TEST then return SalaryConfig.START_MINUTE + 10 end
+	if STUDIO_PREVIEW then
 		return SalaryConfig.START_MINUTE + 40
 	end
 	if math.random() < 0.35 then
@@ -164,10 +169,11 @@ function Events:wait(seconds: number, token: number): boolean
 end
 
 function Events:choose()
+	if WORKSHOP_TEST then return SalaryConfig.getEvent("workshop") end
 	local day = self.dayCycle.day
 	-- 👀 이과장이 출근하는 날(수·목)에는 감사 기간이 안 나와요 (감시자가 너무 많아지니까)
 	local leeToday = SalaryConfig.leeWorksOn(self.dayCycle:weekday().name)
-	if IS_STUDIO then
+	if STUDIO_PREVIEW then
 		local forced = SalaryConfig.getEvent(SalaryConfig.TEST_EVENT)
 		if forced then
 			return forced

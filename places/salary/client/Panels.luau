@@ -1996,7 +1996,7 @@ function Panels.showReview()
 		"한 주(월~금) 동안 동료 3명과 점수로 겨뤄요. <b>금요일 퇴근 때 발표!</b>",
 		"",
 		"<b>내 점수 (100점)</b>",
-		"· 실적 40: 하루 실적 목표를 넘긴 만큼 (2배면 만점)",
+		"· 실적 40: 목표를 채우면 24점, 넘긴 만큼 더 (3.5배면 만점)",
 		"· 근태 20: 지각·점심 지각·업무 미달이면 감점",
 		"· 태도 20: 적발되거나 고자질당하면 감점",
 		"· 동료평가 20: 금요일에 동료들이 친밀도만큼 표를 줘요",
@@ -2065,7 +2065,7 @@ function Panels.showReview()
 		line(frame, y + 6, 26, `실적 {review.perf}/40 · 근태 {review.attend}/20 · 태도 {review.attitude}/20 · 동료평가 {review.peer}/20`
 			.. (if (review.mod or 0) ~= 0 then ` · 보정 +{review.mod}` else ""), { TextSize = 17 })
 	else
-		line(frame, y + 6, 26, `동료평가 예상 {review.peer or 10}/20 (친밀도가 오르면 같이 올라요)`, { TextSize = 17 })
+		line(frame, y + 6, 26, `동료평가 예상 {review.peer or 11.5}/20 (친밀도가 오르면 같이 올라요)`, { TextSize = 17 })
 	end
 	local _ = review.locked or line(frame, y + 34, 24, if review.reported then "📢 오늘 신고는 이미 했어요" else "📢 오늘 신고 1번 남음 · 🗡️ = 나를 고자질한 동료", { TextSize = 16, TextColor3 = MUTED })
 	y += 70

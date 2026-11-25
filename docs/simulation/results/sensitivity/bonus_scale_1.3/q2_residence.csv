@@ -1,0 +1,9 @@
+﻿type,strategy,rank,n,dwell_mean,dwell_median,definition
+보통형,save,인턴,2000,1.4905,1.0,total residence including repeat demotions; includes censored trajectories
+보통형,save,사원,2000,2.051,2.0,total residence including repeat demotions; includes censored trajectories
+보통형,save,주임,2000,4.172,4.0,total residence including repeat demotions; includes censored trajectories
+보통형,save,대리,2000,7.1165,5.0,total residence including repeat demotions; includes censored trajectories
+보통형,save,과장,2000,9.43,7.0,total residence including repeat demotions; includes censored trajectories
+보통형,save,차장,2000,11.0695,8.0,total residence including repeat demotions; includes censored trajectories
+보통형,save,부장,2000,9.705,8.0,total residence including repeat demotions; includes censored trajectories
+보통형,save,이사,2000,0.0,0.0,total residence including repeat demotions; includes censored trajectories

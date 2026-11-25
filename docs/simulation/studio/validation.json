@@ -1,0 +1,13 @@
+{
+  "session": "studio_03",
+  "protocol": "v2-production-events-navigation",
+  "samples": 351,
+  "observed_seconds": 354.7,
+  "complete_day": false,
+  "forced_event_absent": true,
+  "seated_samples": 351,
+  "navigation_records": 0,
+  "navigation_validation": "미검증: 수동 스페이스 입력 후 미착석 전환이 관측되지 않았음. 워크숍 복귀는 별도 이벤트 실행 필요",
+  "editor_simulation_attribute_cleared": true,
+  "cleanup_evidence": "Studio Edit output SIMULATION_MODE nil at 12:09:08.127"
+}

@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "checks": [
+    "q1_income.csv: 96 rows",
+    "q2_careers.csv: 12 rows",
+    "q2_residence.csv: 96 rows",
+    "q3_review.csv: 24 rows",
+    "q4_friendships.csv: 144 rows",
+    "q4_distributions.csv: 648 rows",
+    "q5_risk.csv: 180 rows",
+    "q6_events.csv: 10 rows",
+    "q7_items.csv: 212 rows",
+    "sample counts verified",
+    "review probabilities sum to 100%",
+    "censoring identities verified",
+    "item profit identities verified"
+  ]
+}

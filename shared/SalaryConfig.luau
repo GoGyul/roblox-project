@@ -57,8 +57,8 @@ SalaryConfig.SLACK_HUNCH_RATE = 1.5
 SalaryConfig.SLACK_FORCE_VISIT = 70
 -- ⚡ 오늘의 의심도 속도: 매일 아침 x1로 리셋 → 사건이 생길 때마다 더하거나 빼요 (합연산, x0.70 ~ x2.50)
 --   왼쪽 상태창 "의심도" 줄에 ⏩x1.20처럼 보이고, 누르면 오늘 바뀐 이유 목록이 떠요.
-SalaryConfig.SPEED_MIN = 0.7 -- 아무리 잘해도 이 밑으로는 안 내려가요
-SalaryConfig.SPEED_MAX = 2.5 -- 아무리 찍혀도 이 위로는 안 올라가요
+SalaryConfig.SPEED_MIN = 0.5 -- (0.7 → 0.5) 아무리 잘해도 이 밑으로는 안 내려가요
+SalaryConfig.SPEED_MAX = 2.0 -- (2.5 → 2.0) 아무리 찍혀도 이 위로는 안 올라가요
 SalaryConfig.SpeedFactors = {
 	-- 빨라지는 것 (위험!)
 	caught = { delta = 0.15, label = "🚨 적발" },
@@ -136,7 +136,8 @@ SalaryConfig.FRIEND_GIFT = 6 -- 🎁 간식·커피 선물: 들고 있는 간식
 SalaryConfig.FRIEND_HELP = 10 -- 🙏 업무 도와주기
 SalaryConfig.FRIEND_REPORT = -25 -- 📢 내가 그 동료를 부장님께 신고
 SalaryConfig.FRIEND_REPORT_REVENGE = -10 -- 📢 나를 먼저 고자질한 동료를 신고 (당할 만했지)
-SalaryConfig.FRIEND_WITNESS = -5 -- 📢 신고 장면을 본 다른 동료들 (보복 신고면 0)
+SalaryConfig.FRIEND_WITNESS = -5 -- 📢 신고 장면을 가까이서 본 다른 동료들 (보복 신고면 0)
+SalaryConfig.REVIEW_WITNESS_RANGE = 30 -- 이 거리 안에 앉아 있던 동료만 봤어요
 SalaryConfig.FRIEND_FALSE_TATTLE = -5 -- 허위 고자질로 망신당한 동료가 삐져요
 SalaryConfig.FRIEND_HOLD = 8 -- 🍪 고자질하러 가는 동료를 간식으로 붙잡기 (역시 가진 간식·커피를 써요)
 SalaryConfig.FRIEND_DECAY_FROM = 65 -- 이 점수 이상은 유지비가 있어요:
@@ -208,11 +209,11 @@ SalaryConfig.REVIEW_MIN_RANK = 5 -- 📊 과장부터 인사평가 대상이에�
 SalaryConfig.REVIEW_MIN_DAYS = 3 -- 이만큼은 근무해야 순위에 들어요 (주 중간에 들어오면 평가 제외)
 -- 성격: base = 하루 평균 점수, swing = 기복(±), grow = 날마다 오르는 점수, bossAway = 부장님이 자리를 비운 날 보정
 SalaryConfig.ReviewTypes = {
-	steady = { label = "성실형", base = 79, swing = 3, grow = 0, bossAway = 0, tattle = 1 },
-	rival = { label = "견제형", base = 77, swing = 5, grow = 0, bossAway = 0, tattle = 1.4 },
-	flatter = { label = "아부형", base = 77, swing = 5, grow = 0, bossAway = -8, tattle = 1 },
-	slacker = { label = "농땡이형", base = 70, swing = 11, grow = 0, bossAway = 4, tattle = 0.6 },
-	newbie = { label = "열정형", base = 65, swing = 7, grow = 2.5, bossAway = 0, tattle = 0.5 },
+	steady = { label = "성실형", base = 82, swing = 3, grow = 0, bossAway = 0, tattle = 1 },
+	rival = { label = "견제형", base = 80.5, swing = 5, grow = 0, bossAway = 0, tattle = 1.4 },
+	flatter = { label = "아부형", base = 80.5, swing = 5, grow = 0, bossAway = -8, tattle = 1 },
+	slacker = { label = "농땡이형", base = 73.5, swing = 11, grow = 0, bossAway = 4, tattle = 0.6 },
+	newbie = { label = "열정형", base = 68.5, swing = 7, grow = 2.5, bossAway = 0, tattle = 0.5 },
 }
 SalaryConfig.ReviewPeople = {
 	["이대리"] = "flatter", ["박사원"] = "slacker", ["최주임"] = "steady", ["정과장"] = "rival", ["한인턴"] = "newbie",
@@ -220,28 +221,30 @@ SalaryConfig.ReviewPeople = {
 	["오차장"] = "steady", ["유사원"] = "newbie", -- 대충상사
 }
 -- 내 하루 점수
-SalaryConfig.REVIEW_PERF_AT_TARGET = 16 -- 실적 목표를 딱 채우면 (40점 만점)
-SalaryConfig.REVIEW_PERF_FULL = 2 -- 목표의 몇 배를 벌면 만점
+-- (모의 실험으로 맞춘 값: 예전 16점·2배는 보통 플레이어가 친밀도 없이도 1등 90%였어요.
+--  지금은 친밀도 0이면 1등 약 10%·꼴찌 약 20%, 동료 몇 명과 친하면 1등 35~50%, 전부와 친하면 90% 이상)
+SalaryConfig.REVIEW_PERF_AT_TARGET = 24 -- 실적 목표를 딱 채우면 (40점 만점)
+SalaryConfig.REVIEW_PERF_FULL = 3.5 -- 목표의 몇 배를 벌면 만점
 SalaryConfig.REVIEW_LATE = 6 -- 근태: 지각
 SalaryConfig.REVIEW_LUNCH_LATE = 5 -- 근태: 점심 지각
 SalaryConfig.REVIEW_QUOTA_FAIL = 8 -- 근태: 업무 시간 미달
-SalaryConfig.REVIEW_CAUGHT = 6 -- 태도: 적발 1번
+SalaryConfig.REVIEW_CAUGHT = 8 -- 태도: 적발 1번 (6 → 8: 많이 걸리면서 많이 버는 쪽이 유리하지 않게)
 SalaryConfig.REVIEW_TATTLED = 3 -- 태도: 고자질당함
 SalaryConfig.REVIEW_BOSS_COFFEE = 2 -- 태도: 부장님께 커피 (20점까지만)
 SalaryConfig.REVIEW_HELP_COST = 2 -- 실적: 동료 업무를 도와준 날
--- 동료평가 (사무실 동료 모두가 친밀도에 따라 한 표씩 → 평균을 내서 -5 ~ 20점)
+-- 동료평가 (사무실 동료 모두가 친밀도에 따라 한 표씩 → 평균을 내서 0 ~ 20점 · 친밀도 0이면 11.5점)
 function SalaryConfig.reviewVote(points: number?): number
 	local value = points or 0
 	if value >= 40 then
 		return 4
 	elseif value >= 20 then
-		return 3
+		return 3.2
 	elseif value > SalaryConfig.FRIEND_HOSTILE then
-		return 2
+		return 2.3
 	elseif value > SalaryConfig.FRIEND_ENEMY then
-		return 0.5
+		return 1.15
 	end
-	return -1
+	return 0
 end
 -- 경쟁자 점수가 깎이는 일
 SalaryConfig.REVIEW_RIVAL_SCOLDED = 3 -- 딴짓하다 부장님께 혼남 (하루 한 번만 반영)
@@ -2790,4 +2793,19 @@ SalaryConfig.PIGEON_GUARD_RANGE = 16 -- 🐦 경비원이 이만큼 가까이 �
 SalaryConfig.TELESCOPE_SECONDS = 15 -- 🔭 망원경으로 부장님 위치 보기
 SalaryConfig.TEST_ELEVATOR = false -- 🧪 true면 스튜디오에서 엘리베이터에 부장님이 항상 타요
 
+if require(script.Parent.SalarySimulation).enabled() then
+	local experiment = require(script.Parent.SalarySimulation)
+	SalaryConfig.TEST_RANK = experiment.rank
+	SalaryConfig.TEST_COMPANY = experiment.company
+	SalaryConfig.TEST_MONEY = 0
+	SalaryConfig.TEST_REVIEW = false
+	SalaryConfig.TEST_EVENT = ""
+	SalaryConfig.TEST_MISSION = ""
+	SalaryConfig.TEST_CAT = false
+	SalaryConfig.TEST_LEE = false
+	SalaryConfig.TEST_DINNER = false
+	SalaryConfig.TEST_ELEVATOR = false
+	SalaryConfig.TEST_CAMPUS_EVENT = ""
+	SalaryConfig.TEST_DELIVERY = false
+end
 return SalaryConfig

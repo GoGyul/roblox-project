@@ -1,0 +1,13 @@
+﻿day,strategy,scenario,n,visibility,visit_mean,modeled_net,observed_pay,relative_difference_pct,modeled_catches,observed_catches,caveat
+1,normal,document,10000,0.25,8,7146.290464999999,4922,45.190785554652564,0.2809,1,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"
+1,normal,pilot_visibility,10000,0.247,2.7,8623.046059999999,4922,75.19394676960582,0.0788,1,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"
+1,normal,pilot_visibility_phone_factor,10000,0.247,2.7,8754.018535,4922,77.85490725314911,0.0233,1,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"
+2,cautious,document,10000,0.25,8,5864.615069999992,5968,-1.7323212131368693,0.0,0,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"
+2,cautious,pilot_visibility,10000,0.276,2.9,7188.6881949999915,5968,20.45389066688994,0.0,0,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"
+2,cautious,pilot_visibility_phone_factor,10000,0.276,2.9,7188.6881949999915,5968,20.45389066688994,0.0,0,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"
+3,greedy,document,10000,0.25,8,4704.844315000007,7634,-38.36986750065488,0.4189,0,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"
+3,greedy,pilot_visibility,10000,0.21899999999999997,2.6,8266.707235000009,7634,8.288017225569936,0.0813,0,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"
+3,greedy,pilot_visibility_phone_factor,10000,0.21899999999999997,2.6,8266.707235000009,7634,8.288017225569936,0.0813,0,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"
+4,novice,document,10000,0.25,8,4688.972069999991,5645,-16.935835783879707,0.9989,1,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"
+4,novice,pilot_visibility,10000,0.174,2.3,6807.0192199999865,5645,20.5849286093886,0.1388,1,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"
+4,novice,pilot_visibility_phone_factor,10000,0.174,2.3,7144.896129999986,5645,26.5703477413638,0.0,1,"single observed day vs model mean; event pay, chat/project behavior and sub-second sight unresolved"

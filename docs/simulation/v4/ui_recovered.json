@@ -1,0 +1,63 @@
+[
+  {
+    "session_time": 1795589029.946392,
+    "protocol": "v4-fast-sight-validity",
+    "source": "Studio Output accessibility text, 16:20:28.662, Server SimulationRecorder:19; original disk log truncated",
+    "row": {
+      "action": "work",
+      "workSeconds": 419.88382187183015,
+      "today": {
+        "seconds": {
+          "phone": 40.662477019941434,
+          "webtoon": 46.91791005525738,
+          "returning": 7.196379873901606,
+          "work": 283.07573981117457,
+          "shopping": 42.03131511155516,
+          "roam": 0.10626391554251313,
+          "street": 0.11099175363779068
+        },
+        "photos": 0,
+        "accuseWrong": 0,
+        "nearMiss": 800,
+        "nearMissCount": 3,
+        "snackBonus": 0,
+        "stockProfit": 0,
+        "chatTopics": 0,
+        "snacksEaten": 0,
+        "eventBonus": 0,
+        "emptyPhotos": 0,
+        "earned": {
+          "phone": 475.7509811333149,
+          "webtoon": 426.95298150284214,
+          "returning": 0,
+          "work": 566.1514796223491,
+          "shopping": 601.0478060952387,
+          "roam": 0,
+          "street": 1.298603517562151
+        },
+        "caught": 1,
+        "chatBonus": 0,
+        "settled": true
+      },
+      "strategy": "normal",
+      "suspicion": 0,
+      "time": 1795591228.661775,
+      "fired": false,
+      "earned": 1071.201851871307,
+      "caught": 1,
+      "bank": 30217,
+      "company": "nunchi",
+      "minute": 1080,
+      "xp": 36217,
+      "day": 5,
+      "state": "work",
+      "source": "studio_measured",
+      "nearMiss": 800,
+      "warnings": 2,
+      "review": "{\"locked\":true,\"weekday\":5,\"minRank\":\"과장\"}",
+      "kind": "day_summary",
+      "speed": 1.15,
+      "rank": 3
+    }
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "log": "studio_04.jsonl",
+    "case": "timeout",
+    "observed_outcome": "timeout",
+    "status_cleared": true,
+    "returned": false,
+    "work_resumed": false,
+    "return_seconds": null,
+    "navigation_attempts": 73,
+    "path_statuses": [
+      "Enum.PathStatus.NoPath"
+    ],
+    "last_position": [
+      -4.003910064697266,
+      4.003910064697266,
+      7.499511241912842
+    ]
+  },
+  {
+    "log": "studio_05.jsonl",
+    "case": "timeout",
+    "observed_outcome": "timeout",
+    "status_cleared": true,
+    "returned": true,
+    "work_resumed": true,
+    "return_seconds": 2.73,
+    "navigation_attempts": 1,
+    "path_statuses": [
+      "Enum.PathStatus.Success"
+    ],
+    "last_position": [
+      -38.125,
+      4.20081901550293,
+      -5.449999809265137
+    ]
+  },
+  {
+    "log": "studio_06.jsonl",
+    "case": "out",
+    "observed_outcome": "out",
+    "status_cleared": true,
+    "returned": true,
+    "work_resumed": true,
+    "return_seconds": 3.62,
+    "navigation_attempts": 1,
+    "path_statuses": [
+      "Enum.PathStatus.Success"
+    ],
+    "last_position": [
+      -38.125,
+      4.20081901550293,
+      -5.449999809265137
+    ]
+  },
+  {
+    "log": "studio_07.jsonl",
+    "case": "finish",
+    "observed_outcome": "finished",
+    "status_cleared": true,
+    "returned": true,
+    "work_resumed": true,
+    "return_seconds": 6.1,
+    "navigation_attempts": 2,
+    "path_statuses": [
+      "Enum.PathStatus.Success"
+    ],
+    "last_position": [
+      -38.125,
+      4.20081901550293,
+      -5.449999809265137
+    ]
+  }
+]

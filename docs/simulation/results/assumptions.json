@@ -1,0 +1,17 @@
+{
+  "status": "All Monte Carlo outputs are 계산; Studio telemetry is separately labelled 실측.",
+  "source": "Request-sheet rules, not a claim of parity with current SalaryConfig/Employees.",
+  "visibility": "Alternating fixed 8s visits / exponential gaps, gap mean 8*(1-p)/p. Initially random stationary state; lunch interrupts visibility.",
+  "time_resolution": "Q1 1s, Q5 .25s. Delay boundaries rounded up to tick; clock never accelerated in Studio.",
+  "action_policy": "Initial quota seconds work (lunch still slack); then 8s decisions with type slack probability; actions uniformly drawn among unlocked pool. Visible players return to work after reaction+return delay and wait until visit ends.",
+  "work_quota": "All seated seconds count as work in current game. Model deliberately works first quota seconds as request wording specifies; all simulated actions are seated.",
+  "bonuses": "Chat count uniform 0..3; 3 reactions per chat, independent 60% good. Chat and project bonuses consume no time (optimistic document abstraction). Project resolves at 300s, 40% chance; success reduces warning or pays 3000; failure adds .10 speed, no invented warning.",
+  "near_miss": "Only visible-entry while slacking, on-time return before visit end, maximum 5; combo reset on caught. No 30s cooldown in document model (actual game has one).",
+  "weekdays": "Q1 equal Monday-Friday allocation; Q5 no project/chat/target warnings, rank 대리 fixed (not specified in Q5); Q2 carries warnings and removes one on project, Q2 Friday review rewards only.",
+  "career": "Censor at 400 days; report reach fraction and conditional completion quantiles, never count censored players as reaching. Certificates one-time, cheapest affordable first, XP-only per document. Spending is 30% positive daily pay after settlement.",
+  "review": "No commute/late-lunch penalties unless configured. 5 daily Q1 gross-income draws including fired-day outcomes, virtual full week (no survivor selection); day-1 provisional rank uses prior 0 score + peer score. Ties give worse rank. Theft/false-report adjustments are daily scores before averaging.",
+  "friends": "Run full cross-product 4 strategies x chat budgets 2/4/6 x gift budgets 1/2/4. Three reaction attempts; bad answer ends conversation and loses 4, no completion +3. Gifts free for relationship-only study. Help random NPC. Report strategy picks focused NPC weekly; 0..3 random witnesses excluding target. No invented tattle-intercept opportunities.",
+  "events": "Uniform starts in allowed windows; project duration U60..90, event U30..90. Window watches renewal U45..80, lunches not excluded by request. Manager tattle daily probability from neutral-normal Q3; deputy Wed/Thu one instantaneous incident. Video fraction defaults 0 because type pools contain no video; absence alarm 0 because desk model has no away route. Instantaneous incidents count but occupy zero time.",
+  "items": "Paired seeds, independent repeated daily expectations times expiry. Warning coupon conditional valuation only. Attendance dolls cannot be priced from seated-only model; mark not identified rather than invent travel. Sleeping coffee success .85, failure +40 suspicion and +.10 at wake; no changed slack schedule when boss away. Halfday gives zero income as document says.",
+  "not_measured": "Studio complete factorial runs, travel paths, 50-day mission frequency, item comparison and 20% calibration remain pending until adequate telemetry exists."
+}

@@ -1,0 +1,13 @@
+﻿rank,type,variable,value,n,target_success,net
+과장,조심형,catch_penalty_scale,1.0,10000,95.7,9399.3159
+과장,보통형,catch_penalty_scale,1.0,10000,91.29,9846.5189
+과장,욕심형,catch_penalty_scale,1.0,10000,84.06,9762.34295
+과장,초보,catch_penalty_scale,1.0,10000,54.59,5862.692525
+과장,조심형,catch_penalty_scale,1.3,10000,95.7,9399.3159
+과장,보통형,catch_penalty_scale,1.3,10000,88.29,9698.1089
+과장,욕심형,catch_penalty_scale,1.3,10000,77.56,9226.704225
+과장,초보,catch_penalty_scale,1.3,10000,48.58,5514.228675
+과장,조심형,catch_penalty_scale,2.0,10000,95.7,9399.3159
+과장,보통형,catch_penalty_scale,2.0,10000,85.33,9386.3609
+과장,욕심형,catch_penalty_scale,2.0,10000,63.160000000000004,8410.590375
+과장,초보,catch_penalty_scale,2.0,10000,45.49,4800.269175

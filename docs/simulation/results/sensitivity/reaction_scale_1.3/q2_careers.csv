@@ -1,0 +1,2 @@
+﻿type,strategy,n,reached_pct,days_mean,days_p10,days_p90,hours,deputy_hours,fires,early_stuck_pct,censored
+보통형,save,2000,95.55,138.99529042386186,48.0,271.0,17.374411302982733,1.2251875,12.0195,0.0,89

@@ -644,7 +644,8 @@ function Review.start(ctx)
 		local witnesses = 0
 		if not revenge then
 			for _, other in coworkers.list() do
-				if other ~= c and other.atDesk and not other.borrowed then
+				-- (가까이 앉아서 실제로 본 동료만: 사무실이 넓고 직원이 많아서 전부 깎이면 너무 가혹해요)
+				if other ~= c and other.atDesk and not other.borrowed and (other.root.Position - c.root.Position).Magnitude <= SalaryConfig.REVIEW_WITNESS_RANGE then
 					ctx.addFriendship(player, d, other.name, SalaryConfig.FRIEND_WITNESS, "quiet")
 					witnesses += 1
 				end
@@ -672,8 +673,8 @@ function Review.start(ctx)
 		local thursday = dayCycle:weekday().name == "목요일"
 		local gain = SalaryConfig.FRIEND_GIFT * (if thursday then 2 else 1)
 		Npc.say(c.model, pick(GIFT_LINES), 3)
-		ctx.addFriendship(player, d, c.name, gain, "event")
 		notify(player, `🎁 {c.name}에게 {what} 선물! 친밀도 +{gain}` .. (if thursday then " (평가 전날이라 2배)" else ""), 4)
+		ctx.addFriendship(player, d, c.name, gain, "event") -- (새 혜택이 풀리면 그 알림이 위 알림 대신 보여요)
 	end
 
 	-- 🍪 고자질하러 가는 동료에게 [E] → 가진 간식·커피로 붙잡기 (급하니까 메뉴 없이 바로)
@@ -692,8 +693,8 @@ function Review.start(ctx)
 			local what = ctx.takeGift(player, d)
 			if what then
 				job.held = true
-				ctx.addFriendship(player, d, c.name, SalaryConfig.FRIEND_HOLD, "event")
 				notify(player, `🍪 {c.name}을(를) {what}(으)로 붙잡았어요! 고자질 취소 · 친밀도 +{SalaryConfig.FRIEND_HOLD}`, 4)
+				ctx.addFriendship(player, d, c.name, SalaryConfig.FRIEND_HOLD, "event")
 			else
 				notify(player, "🍪 줄 간식이 없어요! 자리에 앉아 일하는 척하면 허위 신고가 돼요.", 4)
 			end
@@ -707,7 +708,7 @@ function Review.start(ctx)
 	function api.menu(player: Player, c): boolean
 		local d = data[player]
 		if not d or d.fired or c.removed or dayCycle.phase == "offwork" then
-			return false
+			return not c.atDesk -- (걸어 다니는 동료와는 수다를 시작하지 않아요)
 		end
 		-- (걸어 다니는 중에는 수다는 못 하고, 감사 기간의 "감사팀이죠?"만 할 수 있어요)
 		local options = {}
@@ -738,6 +739,7 @@ function Review.start(ctx)
 			-- (걸어가는 중이라 수다는 못 해요: 대답만 하고 가던 길을 가요)
 			Npc.say(c.model, "지금은 좀 바빠서요~ 자리에서 얘기해요!", 2)
 			notify(player, `💬 {c.name}은(는) 볼일 보러 가는 중이에요. 자리에 돌아오면 수다를 떨 수 있어요. (간식은 지금도 줄 수 있어요)`, 3)
+			Npc.resume(c.humanoid, player) -- (고를 게 없으니 붙잡아 두지 않아요)
 			return true
 		elseif #options == 1 and options[1].id == "chat" then
 			return false -- 수다뿐이면 창 없이 바로 수다
@@ -775,8 +777,8 @@ function Review.start(ctx)
 				today.reviewHelp = true
 				Npc.say(c.model, "살았다… 고마워요!", 3)
 				Npc.setStatus(c.model, "⌨️")
-				ctx.addFriendship(player, d, c.name, SalaryConfig.FRIEND_HELP, "event")
 				notify(player, `🙏 {c.name}의 일을 도와줬어요! 친밀도 +{SalaryConfig.FRIEND_HELP} · 오늘 실적 점수 -{SalaryConfig.REVIEW_HELP_COST}`, 4)
+				ctx.addFriendship(player, d, c.name, SalaryConfig.FRIEND_HELP, "event")
 			end
 		elseif choice == "gift" then
 			if not c.chatting and not c.borrowed then
