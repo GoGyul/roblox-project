@@ -52,6 +52,24 @@ local frame = Ui.make("Frame", {
 	Parent = Ui.gui,
 }, { Ui.corner(14), Ui.padding(14), Ui.stroke(Color3.fromRGB(90, 160, 255), 2) })
 local scale = Ui.make("UIScale", { Parent = frame })
+-- 오른쪽 위 X 닫기 (변기에 앉아 있는 동안 창만 닫아 둬요. 다시 앉으면 열려요)
+local dismissed = false
+local closeButton = Ui.make("TextButton", {
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, 8, 0, -8),
+	Size = UDim2.fromOffset(30, 30),
+	BackgroundColor3 = Color3.fromRGB(255, 190, 180),
+	Text = "X",
+	TextColor3 = Color3.fromRGB(30, 36, 60),
+	Font = Enum.Font.GothamBlack,
+	TextSize = 16,
+	ZIndex = 23,
+	Parent = frame,
+}, { Ui.corner(15) })
+closeButton.Activated:Connect(function()
+	dismissed = true
+	frame.Visible = false
+end)
 
 text({ Size = UDim2.new(1, 0, 0, 30), TextSize = 26, Text = "📈 화장실 증권", ZIndex = 21, Parent = frame })
 local balanceText = text({
@@ -269,13 +287,16 @@ function StockPanel.start()
 	task.spawn(function()
 		while true do
 			local onToilet = player:GetAttribute("OnToilet") == true and player:GetAttribute("ScreenHidden") ~= true
-			if onToilet and not frame.Visible then
+			if onToilet and not frame.Visible and not dismissed then
 				fit()
 				Sounds.play("swoosh", 0.4)
 				messageText.Text = "🚽 변기에 앉았다… 이제 시장을 볼 시간!"
 				messageText.TextColor3 = MUTED
 			end
-			frame.Visible = onToilet
+			if not onToilet then
+				dismissed = false -- (다음에 변기에 앉으면 다시 열려요)
+			end
+			frame.Visible = onToilet and not dismissed
 			if onToilet then
 				refresh()
 			end

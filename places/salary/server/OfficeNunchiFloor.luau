@@ -151,14 +151,12 @@ function Floor.build(B, folder: Folder, company, helpers, C)
 		{ name = "강주임", skin = Color3.fromRGB(232, 200, 172), shirt = Color3.fromRGB(226, 222, 212), pants = Color3.fromRGB(70, 66, 62) },
 		{ name = "윤사원", skin = Color3.fromRGB(240, 212, 188), shirt = Color3.fromRGB(196, 206, 196), pants = Color3.fromRGB(48, 52, 60) },
 	}
+	-- (Coworkers가 이 자리에 동료를 만들어요: 다른 동료처럼 말 걸기·친밀도·인사평가가 돼요)
+	local extraDesks = {}
 	for i, extra in EXTRAS do
 		local desk = spareDesks[if i <= 2 then i else i + 1] -- 창가 두 자리 + 가운데·뒷줄 한 자리씩
 		if desk then
-			task.defer(function()
-				local model = Npc.create(extra.name, { skin = extra.skin, shirt = extra.shirt, pants = extra.pants }, folder)
-				Npc.sit(model, desk.seat)
-				Npc.setStatus(model, "⌨️")
-			end)
+			table.insert(extraDesks, { desk = desk, name = extra.name, look = { skin = extra.skin, shirt = extra.shirt, pants = extra.pants } })
 		end
 	end
 
@@ -173,7 +171,8 @@ function Floor.build(B, folder: Folder, company, helpers, C)
 		B:part(Vector3.new(2.6, 1.8, 0.3), v(BX + dx / S, 3.9, BZ + 0.5), { Color = Color3.fromRGB(25, 25, 30) }) -- 모니터 2대
 	end
 	if Meshes.ready("RChair") then
-		Meshes.place(B, "RChair", v(BX + 4.5, 0, BZ + 4.6), 150, { colors = { Seat = M.navy, Back = M.navy } })
+		-- 부장님 의자: 책상 바로 뒤, 책상을 보고 (수면제 커피를 마시면 여기 앉아 자요)
+		Meshes.place(B, "RChair", v(BX, 0, BZ + 2.3), 180, { colors = { Seat = M.navy, Back = M.navy } })
 	end
 
 	-- 복합기 · 책장 · 화분
@@ -362,8 +361,10 @@ function Floor.build(B, folder: Folder, company, helpers, C)
 
 	return {
 		desks = desks,
+		extraDesks = extraDesks,
 		setClock = setClock,
 		bossStand = v(BX, 0, BZ + 3.6),
+		bossChair = v(BX, 0, BZ + 2.3), -- 부장님 의자 자리
 		-- 🏢 사무실 방이 예전 큰 홀보다 좁아진 만큼 부장님 시야 거리와 걸음을 조금 줄여요
 		bossScale = { range = 0.85, walkSpeed = 0.92 },
 		entrance = v(-HX + 5, 0, CORRIDOR_Z), -- 엘리베이터 앞 (부장님·손님이 드나드는 곳)

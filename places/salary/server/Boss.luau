@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local Npc = require(script.Parent.Npc)
+local Meshes = require(script.Parent.Meshes)
 local Walker = require(script.Parent.Walker)
 
 local Boss = {}
@@ -163,6 +164,9 @@ end
 -- 길찾기로 target까지 걸어가기 (도중에 다른 행동으로 끊기면 false)
 --   👀 가다가 누굴 노려보게 되면 멈췄다가, 다 보고 나서 다시 걸어가요
 function Boss:walkTo(target: Vector3, token: number): boolean
+	if self.sleeping and self.token == token then
+		self:standUp() -- (자다가 다른 일정이 시작됐어요)
+	end
 	while true do
 		self:holdStare(token)
 		if self.token ~= token then
@@ -333,12 +337,14 @@ function Boss:applyMood(weekday)
 end
 
 function Boss:appearAt(position: Vector3)
+	self:standUp() -- (자던 중이면 일어나요)
 	self.model.Parent = self.office.folder
 	self.model:PivotTo(CFrame.lookAt(position + Vector3.new(0, 3, 0), position + Vector3.new(0, 3, 0) + self.office.bossLook))
 	self.root:SetNetworkOwner(nil) -- 서버가 직접 움직여요
 end
 
 function Boss:startDay(weekday)
+	self.awayToday = false -- ✈️ 출장 쿠폰은 그날 하루만
 	self.token += 1
 	self.scolding = false
 	self:applyMood(weekday)
@@ -370,7 +376,8 @@ function Boss:goTrip()
 	self.scolding = false
 	self.watching = false
 	self:status("✈️")
-	self:say("뭐? 급한 출장이라고? …금방 다녀오지!", 4)
+	self.awayToday = true
+	self:say("뭐? 급한 출장이라고? …오늘은 못 돌아오겠군!", 4)
 	task.spawn(function()
 		self:walkTo(self.office.entrance, token)
 		if self.token == token then
@@ -379,7 +386,81 @@ function Boss:goTrip()
 	end)
 end
 
+-- 😴 수면제 커피: 자리로 걸어가 의자에 앉아 자요 (감시 안 함). 깨울 땐 Boss:wake()
+function Boss:sleep()
+	self.token += 1
+	local token = self.token
+	self.active = false
+	self.scolding = false
+	self.watching = false
+	self:status("🥱")
+	self:say("하암… 커피를 마셨는데 왜 이렇게 졸리지…", 4)
+	task.spawn(function()
+		self:walkTo(self.office.bossStand, token)
+		if self.token ~= token then
+			return
+		end
+		-- 부장님 의자에 앉혀요 (의자는 사무실을 지을 때 책상 뒤에 놓여 있어요. 앉는 자리만 처음 한 번 만들어요)
+		if not self.sleepSeat then
+			local chair = self.office.bossChair or (self.office.bossStand + Vector3.new(0, 0, 1.6))
+			local seat = Instance.new("Seat")
+			seat.Name = "BossSleepSeat"
+			seat.Anchored = true
+			seat.CanCollide = false
+			seat.Transparency = 1
+			seat.Size = Vector3.new(2, 0.4, 2)
+			seat.CFrame = CFrame.lookAt(chair + Vector3.new(0, 1.5, 0), chair + Vector3.new(0, 1.5, 0) + self.office.bossLook)
+			seat.Disabled = true -- (플레이어는 못 앉아요. 부장님만 서버가 앉혀요)
+			seat.Parent = self.office.folder
+			self.sleepSeat = seat
+		end
+		self.sleepSeat.Disabled = false
+		Npc.sit(self.model, self.sleepSeat)
+		self.sleepSeat.Disabled = true
+		self.sleeping = true
+		self:status("💤")
+		while self.token == token and self.sleeping do
+			self:say("Zzz…", 2)
+			task.wait(6)
+		end
+	end)
+end
+
+-- 자던 부장님을 일으켜 세워요 (다른 일정이 시작될 때도 불러요)
+function Boss:standUp()
+	if not self.sleeping then
+		return
+	end
+	self.sleeping = false
+	local humanoid = self.model:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		local seat = humanoid.SeatPart
+		if seat then
+			for _, child in seat:GetChildren() do
+				if child:IsA("Weld") and child.Name == "SeatWeld" then
+					child:Destroy()
+				end
+			end
+		end
+		humanoid.Sit = false
+	end
+	Npc.setSitPose(self.model, false)
+end
+
+function Boss:wake()
+	self:standUp()
+	self.token += 1
+	self.scolding = false
+	self:appearAt(self.office.bossStand)
+	self.active = true
+	self:status("😠")
+	self:say("헉! 내가 잤나?! …누가 내 커피에 뭘 탔어?!", 4)
+end
+
 function Boss:backFromLunch()
+	if self.awayToday then
+		return -- ✈️ 오늘은 하루 종일 출장이에요
+	end
 	self.token += 1
 	self.scolding = false
 	self:appearAt(self.office.entrance)
@@ -388,6 +469,7 @@ function Boss:backFromLunch()
 end
 
 function Boss:leaveWork()
+	self:standUp()
 	self.token += 1
 	self.active = false
 	self.scolding = false
@@ -469,6 +551,15 @@ end
 function Boss:resume()
 	if self.model.Parent == nil then
 		return -- (점심·퇴근 중이면 원래 일정대로 돌아와요)
+	end
+	if self.awayToday then
+		-- ✈️ 훈련·워크숍 때문에 잠깐 들렀다가 다시 출장을 떠나요
+		self.token += 1
+		self.active = false
+		self.scolding = false
+		self.watching = false
+		self.model.Parent = nil
+		return
 	end
 	self.token += 1
 	self.scolding = false

@@ -30,6 +30,7 @@ export type Coworker = {
 	slacking: boolean,
 	chatting: boolean,
 	removed: boolean,
+	extra: boolean, -- 🧑‍💼 플레이어 자리가 아닌 책상의 직원 (딴짓·심부름을 조금 덜 해요: 사무실이 너무 어수선하지 않게)
 	borrowed: boolean, -- 🌸 워크숍·🍻 회식에 불려 가 있는 중 (평소 AI 멈춤)
 	auditor: boolean, -- 🕶️ 오늘 몰래 감사관 (감사 기간)
 	accusePrompt: ProximityPrompt, -- [R] "감사팀이죠?"
@@ -68,6 +69,12 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 	local list: { [number]: Coworker } = {}
 	local api: any = {}
 	api.onAccuse = nil :: ((Player, Coworker) -> ())? -- 🕶️ Employees가 채워 줘요
+	api.onScolded = nil :: ((Coworker) -> ())? -- 📊 Review가 채워 줘요
+	api.onHold = nil :: ((Player, Coworker) -> boolean)? -- 🍪 Review가 채워 줘요
+	local auditMode = false -- 🕶️ 감사 기간 (말 걸기 메뉴에 "감사팀이죠?"가 생겨요)
+	function api.auditMode(): boolean
+		return auditMode
+	end
 
 	local function setState(c: Coworker, pose: string, emoji: string)
 		c.model:SetAttribute("Pose", pose)
@@ -187,7 +194,8 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 				continue
 			end
 
-			local roll = math.random()
+			-- (직원이 늘어서, 추가 직원은 딴짓·심부름을 덜 해요 → 부장님이 혼내는 횟수가 예전과 비슷하게)
+			local roll = math.random() * (if c.extra then 2 else 1)
 			if roll < 0.35 then
 				-- 몰래 농땡이 (부장에게 들키면 혼나요)
 				local slack = pick(SLACK_POSES)
@@ -203,20 +211,14 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 		end
 	end
 
-	-- 동료 만들기
-	for i, desk in office.desks do
-		-- 이름은 5개인데 책상은 6개라, 예전엔 여섯 번째 동료가 "이대리"로 한 명 더 생겼어요.
-		-- 수다 횟수·친밀도·수다 주제가 모두 이름 기준이라 둘이 한 사람처럼 취급됐어요 → 이름 수만큼만 만들어요.
-		if i > #SalaryConfig.CoworkerNames then
-			break
-		end
-		local name = SalaryConfig.CoworkerNames[i]
-		local model = Npc.create(name, randomLook(), office.folder)
+	-- 동료 만들기 (index = 자리 번호. 플레이어 자리가 아닌 책상의 직원은 100번대라 자리를 내줄 일이 없어요)
+	local function makeCoworker(i: number, name: string, desk: any, look: any, extra: boolean)
+		local model = Npc.create(name, look, office.folder)
 		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
 		root:SetNetworkOwner(nil)
 
 		local prompt = Instance.new("ProximityPrompt")
-		prompt.ActionText = "수다 떨기"
+		prompt.ActionText = "말 걸기" -- (수다·간식·신고·감사팀 지목을 한 버튼으로: 여러 개면 고르는 창이 떠요)
 		prompt.ObjectText = name
 		prompt.MaxActivationDistance = 6
 		prompt.RequiresLineOfSight = false
@@ -244,6 +246,7 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 			desk = desk,
 			prompt = prompt,
 			atDesk = true,
+			extra = extra,
 			slacking = false,
 			chatting = false,
 			removed = false,
@@ -256,16 +259,33 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 				api.onAccuse(player, c)
 			end
 		end)
+		Npc.stopForPrompt(prompt, c.humanoid, root, 8) -- ✋ 말 거는 동안(고르는 창이 떠 있는 동안) 걸어가다가도 멈춰 서요
 		prompt.Triggered:Connect(function(player)
-			if c.atDesk and not c.chatting then
+			if api.onHold and api.onHold(player, c) then
+				return -- 🍪 고자질하러 가는 동료를 붙잡았어요
+			end
+			if (c.atDesk and not c.chatting) or (not c.atDesk and not c.borrowed) then -- (돌아다니는 중에도 말을 걸 수 있어요)
 				onChat(player, c)
 			end
 		end)
 
+		model:PivotTo(desk.seat.CFrame + Vector3.new(0, 3, 0))
 		Npc.sit(model, desk.seat)
 		setState(c, "work", "⌨️")
 		list[i] = c
 		task.spawn(runAi, c)
+	end
+	for i, desk in office.desks do
+		-- 이름은 5개인데 책상은 6개라, 예전엔 여섯 번째 동료가 "이대리"로 한 명 더 생겼어요.
+		-- 수다 횟수·친밀도·수다 주제가 모두 이름 기준이라 둘이 한 사람처럼 취급됐어요 → 이름 수만큼만 만들어요.
+		if i > #SalaryConfig.CoworkerNames then
+			break
+		end
+		makeCoworker(i, SalaryConfig.CoworkerNames[i], desk, randomLook(), false)
+	end
+	-- 🧑‍💼 플레이어 자리가 아닌 책상의 직원들도 똑같은 동료예요 (예전엔 말을 걸 수 없는 배경이었어요)
+	for i, spot in office.extraDesks or {} do
+		task.defer(makeCoworker, 100 + i, spot.name, spot.desk, spot.look, true)
 	end
 
 	-- 안전장치: 걷다가 넘어지거나 기울어진 동료를 1초마다 바로 세워요
@@ -293,6 +313,9 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 					setState(c, "work", "😰")
 					local line = string.gsub(pick(SalaryConfig.BossLines.scoldCoworker), "{name}", c.name)
 					boss:scold(c.model, line)
+					if api.onScolded then
+						api.onScolded(c) -- 📊 인사평가: 혼난 동료는 점수가 깎여요
+					end
 					for _, player in Players:GetPlayers() do
 						local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 						if root and office.insideOffice(root.Position) then -- 사무실 밖이면 몰라요
@@ -406,8 +429,9 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 
 	-- [R] "감사팀이죠?" 켜기/끄기 (감사 기간에만)
 	function api.setAuditMode(on: boolean)
+		auditMode = on
 		for _, c in list do
-			c.accusePrompt.Enabled = on
+			c.accusePrompt.Enabled = false -- (따로 뜨던 [R]은 없앴어요 → [E] 말 걸기 메뉴에서 골라요)
 			if not on then
 				c.auditor = false
 			end

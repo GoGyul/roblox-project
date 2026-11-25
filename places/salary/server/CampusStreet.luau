@@ -1,6 +1,6 @@
 -- 🏙️ 눈치 스트리트 (회사 단지 남쪽 가게 거리): 가게 9칸 + 위층 건물
---   들어갈 수 있는 가게 4곳: ☕ 눈치 커피 · 🍰 달콤 디저트 · 🧸 뽑기 천국 · 🕹️ 오락실
---   구경만 되는 가게 5곳: 꽃집 · 서점 · 미용실 · 약국 · 문구점 (유리창 안 진열만 보여요)
+--   들어갈 수 있는 가게 5곳: ☕ 눈치 커피 · 🍰 달콤 디저트 · 🧸 뽑기 천국 · 🕹️ 오락실 · 💊 눈치 약국
+--   구경만 되는 가게 4곳: 꽃집 · 서점 · 미용실 · 문구점 (유리창 안 진열만 보여요)
 --   가구는 street_shops_set 메시예요 (tools/blender/street_shops_set.py). 메시를 못 불러오면 상자 모양으로 대신 지어요.
 --
 --   가게 한 칸: 단지 좌표로 가운데 x, 유리 앞면 z 109, 뒷벽 z 127 (안쪽 폭 47 · 깊이 18 · 천장 13.5).
@@ -125,7 +125,7 @@ function CampusStreet.build(folder: Instance, ORIGIN: Vector3, F: any, HALF_X: n
 		{ name = "🧸 뽑기 천국", accent = M.yellow, id = "claw", wall = Color3.fromRGB(236, 232, 222), wainscot = M.yellow, floor = M.cakeCream, tile = true },
 		{ name = "🕹️ 오락실", accent = M.lilac, id = "arcade", wall = M.arcade, floor = M.ink, dark = true },
 		{ name = "미용실", accent = M.yellow },
-		{ name = "약국", accent = M.sky },
+		{ name = "💊 눈치 약국", accent = M.pharm, id = "pharmacy", wall = Color3.fromRGB(244, 246, 242), wainscot = M.pharmSoft, floor = Color3.fromRGB(232, 236, 232), tile = true },
 		{ name = "문구점", accent = M.coral },
 	}
 	local shopGlass = { Color = Color3.fromRGB(176, 206, 214), Material = Enum.Material.Glass, Transparency = 0.5 }
@@ -199,6 +199,9 @@ function CampusStreet.build(folder: Instance, ORIGIN: Vector3, F: any, HALF_X: n
 			P(Vector3.new(6, 2.4, 1.5), Vector3.new(x + dx, 1.2, 106.9), { Transparency = 1 })
 		end
 		mesh("ABoard", x + 15.5, 105.4, 195)
+		if shop.id == "pharmacy" then
+			mesh("PharmCross", x + 21.2, 108.3, 180, nil, 9.2) -- 가게 앞 유리 옆 초록 십자
+		end
 	end
 
 	---------------------------------------------------------------- ☕ 눈치 커피
@@ -264,7 +267,7 @@ function CampusStreet.build(folder: Instance, ORIGIN: Vector3, F: any, HALF_X: n
 			s.put("CafeChair", xz[1] + 2.3, xz[2], 90, pinkChair)
 		end
 		s.put("Plant", 9.5, -7.4, 0, { scale = 1.8 })
-		s.lamps({ { -7.5, -5.5 }, { -4.5, -5.5 }, { -1.5, -5.5 }, { 4.2, -5.5 }, { 18.2, -4.5 }, { 18.2, 1.5 }, { -14.5, -1.0 }, { -10.0, 2.5 } }, Color3.fromRGB(255, 232, 226))
+		s.lamps({ { -7.5, -5.5 }, { -4.5, -5.5 }, { -1.5, -5.5 }, { 4.2, -5.5 }, { 18.2, -4.5 }, { 18.2, 1.5 }, { -14.5, -1.0 }, { -10.0, 2.5 } }, Color3.fromRGB(255, 232, 226), 0.45) -- (벽·가구가 밝은 색이라 하얗게 날아가서 0.75 → 0.45)
 		F.shops.dessert = { counter = dessertCounter, clerkSpot = s.world(4.2, 0, -7.9), clerkLook = s.look }
 	end
 
@@ -360,6 +363,30 @@ function CampusStreet.build(folder: Instance, ORIGIN: Vector3, F: any, HALF_X: n
 		F.arcade = arcade
 	end
 
+	---------------------------------------------------------------- 💊 눈치 약국: 조제대 · 약 진열장 · 대기 의자 · 큰 약병 · 혈압계 (pharmacy_set 메시)
+	do
+		local s = sceneOf(shopX.pharmacy)
+		s.put("PharmCounter", 0, -5.6)
+		local pharmCounter = s.proxy("ShopCounter", "PharmCounter", Vector3.new(10.4, 3.6, 2.7), 0, 1.8, -5.6, M.cakeCream)
+		for _, lx in { -17, -10.5, 10.5, 17 } do
+			s.put("MedShelf", lx, -8.1, 0, nil, 0, Vector3.new(6, 9, 1.6))
+		end
+		s.put("PharmCross", 0, -8.95, 0, nil, 10.2)
+		local sign = s.deco(Vector3.new(9, 1.3, 0.2), 0, 7.6, -8.85, M.pharm)
+		Build.surfaceText(sign, Enum.NormalId.Back, "처방 · 조제 · 상담", { Font = Enum.Font.GothamBold, TextColor3 = Color3.new(1, 1, 1) })
+		-- 왼쪽: 대기 의자 두 줄 / 오른쪽: 혈압계와 큰 약병
+		for _, lz in { -2.5, 4.0 } do
+			s.put("WaitBench", -21.6, lz, -90, nil, 0, Vector3.new(6, 3, 1.8))
+		end
+		s.put("BpMachine", 20.6, -3.0, 90, nil, 0, Vector3.new(3, 4, 2.2))
+		s.put("PillBottle", 15.5, 4.2, 0, nil, 0, Vector3.new(2.8, 4.6, 2.8))
+		s.put("Plant", -14, 6.8, 0, { scale = 1.6 })
+		s.put("Plant", 21.6, 6.8, 0, { scale = 1.4 })
+		s.rug(-13, 1, 5.5, M.pharmSoft)
+		s.lamps({ { -4, -5 }, { 4, -5 }, { -14, 0 }, { 14, 0 }, { 0, 3 } }, Color3.fromRGB(240, 250, 244))
+		F.shops.pharmacy = { counter = pharmCounter, clerkSpot = s.world(0, 0, -7.7), clerkLook = s.look }
+	end
+
 	---------------------------------------------------------------- 구경만 되는 가게의 유리창 진열 (단지 좌표, 유리 바로 뒤 z 111~114)
 	do
 		local function shopAt(index: number): number
@@ -385,12 +412,6 @@ function CampusStreet.build(folder: Instance, ORIGIN: Vector3, F: any, HALF_X: n
 			mesh("WallShelf", x - 12 + i * 12, 115.2, 180, nil, 6.5)
 		end
 		mesh("Plant", x + 19, 112.6, 0, { scale = 1.8 })
-		-- 약국: 진열대와 계산대
-		x = shopAt(8)
-		mesh("StoreShelf", x - 14, 114.2, 180)
-		mesh("StoreShelf", x - 6, 114.2, 180)
-		mesh("StoreCounter", x + 8, 113.2, 180)
-		mesh("Plant", x + 18, 112.6, 0, { scale = 1.6 })
 		-- 문구점: 책장과 인형 선반
 		x = shopAt(9)
 		mesh("Bookshelf", x - 15, 114.2, 180)

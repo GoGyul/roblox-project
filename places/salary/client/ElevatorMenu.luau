@@ -56,6 +56,20 @@ function ElevatorMenu.start()
 			close()
 		end
 	end
+	-- 오른쪽 위 X 닫기 (아무것도 안 고르고 창만 닫아요)
+	local closeButton = Ui.make("TextButton", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 8, 0, -8),
+		Size = UDim2.fromOffset(30, 30),
+		BackgroundColor3 = Theme.Color.coralSoft,
+		Text = "X",
+		TextColor3 = Theme.Color.navy,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 16,
+		ZIndex = 63,
+		Parent = frame,
+	}, { Ui.corner(15) })
+	closeButton.Activated:Connect(close)
 	for i = 1, #KEYS do
 		local button = Ui.button({
 			Position = UDim2.fromOffset(0, 32 + (i - 1) * 46),

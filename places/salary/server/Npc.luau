@@ -299,6 +299,73 @@ function Npc.create(name: string, look: Look, parent: Instance): Model
 	return model
 end
 
+---------------------------------------------------------------------------
+-- ✋ 말 거는 동안 멈춰 서기
+--   플레이어가 [E]를 누르고 있거나 고르는 창이 떠 있는 동안 NPC가 걸어가 버리지 않게 해요.
+--   Walker.walkTo가 PauseUntil 속성을 보고 멈췄다가, 끝나면 가던 길을 이어 가요.
+--   (계속 눌러서 NPC를 영영 세워 두지 못하게: 한 번 세운 뒤엔 PAUSE_COOLDOWN초 동안 다시 못 세워요)
+---------------------------------------------------------------------------
+local PAUSE_COOLDOWN = 12
+
+-- seconds 동안(그리고 플레이어가 range 안에 있는 동안만) 멈춰요. 이미 멈춰 있으면 시간을 이어 가요.
+--   (humanoid 자리에는 속성을 달 수 있는 것이면 돼요: 사람 NPC는 Humanoid, 🐱 고양이는 몸통 파트)
+function Npc.pause(humanoid: Instance, root: BasePart, player: Player, seconds: number, range: number)
+	local now = os.clock()
+	local blockKey = `PauseBlock{player.UserId}`
+	local paused = (humanoid:GetAttribute("PauseUntil") or 0) > now
+	if not paused and (humanoid:GetAttribute(blockKey) or 0) > now then
+		return
+	end
+	local token = (humanoid:GetAttribute("PauseToken") or 0) + 1
+	humanoid:SetAttribute("PauseToken", token)
+	humanoid:SetAttribute("PauseUntil", now + 0.4)
+	task.spawn(function()
+		local finish = now + seconds
+		while os.clock() < finish and humanoid:GetAttribute("PauseToken") == token and player.Parent and humanoid.Parent do
+			local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if not playerRoot or (playerRoot.Position - root.Position).Magnitude > range then
+				break -- 자리를 떠났어요
+			end
+			humanoid:SetAttribute("PauseUntil", os.clock() + 0.4)
+			task.wait(0.15)
+		end
+		if humanoid:GetAttribute("PauseToken") == token then
+			humanoid:SetAttribute("PauseUntil", 0)
+			humanoid:SetAttribute(blockKey, os.clock() + PAUSE_COOLDOWN)
+		end
+	end)
+end
+
+-- 이야기가 끝났어요 → 바로 다시 움직여요
+function Npc.resume(humanoid: Instance, player: Player?)
+	humanoid:SetAttribute("PauseToken", (humanoid:GetAttribute("PauseToken") or 0) + 1)
+	humanoid:SetAttribute("PauseUntil", 0)
+	if player then
+		humanoid:SetAttribute(`PauseBlock{player.UserId}`, os.clock() + PAUSE_COOLDOWN)
+	end
+end
+
+-- 이 [E] 안내를 누르는 동안(꾹 누르기) 멈추고, 눌러서 창이 뜨면 talkSeconds 동안 더 멈춰 있어요
+function Npc.stopForPrompt(prompt: ProximityPrompt, humanoid: Instance, root: BasePart, talkSeconds: number)
+	local range = prompt.MaxActivationDistance + 6
+	local triggeredAt: { [Player]: number } = {}
+	prompt.PromptButtonHoldBegan:Connect(function(player)
+		Npc.pause(humanoid, root, player, 6, range)
+	end)
+	prompt.Triggered:Connect(function(player)
+		triggeredAt[player] = os.clock()
+		Npc.pause(humanoid, root, player, talkSeconds, range)
+	end)
+	prompt.PromptButtonHoldEnded:Connect(function(player)
+		task.delay(0.15, function()
+			-- (끝까지 눌러서 상호작용이 된 거면 위에서 이어서 멈춰 있어요. 중간에 손을 뗀 것만 풀어 줘요)
+			if os.clock() - (triggeredAt[player] or -math.huge) > 0.5 then
+				Npc.resume(humanoid, player)
+			end
+		end)
+	end)
+end
+
 -- 머리 위 이모지 바꾸기
 function Npc.setStatus(model: Model, emoji: string)
 	local bubble = model:FindFirstChild("Bubble", true)

@@ -40,6 +40,7 @@ require(script.StockPanel).start()
 require(script.ElevatorMenu).start() -- 🚪 엘리베이터 층 고르기 창
 require(script.Sprint).start() -- 🏃 [Shift] 달리기
 require(script.Guide).start() -- 🧭 출근길 안내 선
+require(script.GiveMenu).start() -- 👔 부장님께 드릴 것 고르기
 require(script.Weather).start() -- 🌧️🌸 단지 날씨 (비 · 벚꽃 꽃잎)
 local Panels = require(script.Panels)
 Panels.showWelcome()

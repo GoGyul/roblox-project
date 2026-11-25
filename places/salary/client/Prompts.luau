@@ -16,14 +16,13 @@ local Prompts = {}
 
 local player = Players.LocalPlayer
 
--- 🤝 "수다 떨기 · 이대리" 옆에 친밀도 ❤️ (서버가 Friendship 속성으로 알려 줘요)
+-- 🤝 "수다 떨기 · 이대리" 옆에 친밀도 점수 (서버가 Friendship 속성으로 알려 줘요)
 local function friendText(name: string): string
 	local points = 0
 	pcall(function()
 		points = HttpService:JSONDecode(player:GetAttribute("Friendship") or "{}")[name] or 0
 	end)
-	local level = SalaryConfig.friendLevel(points)
-	return if level > 0 then " " .. string.rep("❤️", level) else ""
+	return ` ({SalaryConfig.friendText(points)})`
 end
 
 local function makeCustom(instance: Instance)
@@ -69,10 +68,10 @@ function Prompts.start()
 		board.Adornee = adornee
 		board.AlwaysOnTop = true
 		board.Active = true -- 폰에서 눌러지도록
-		local isChat = prompt.ActionText == "수다 떨기"
+		local isChat = prompt.ActionText == "말 걸기"
 		board.Size = UDim2.fromOffset(if isChat then 210 else 170, 30)
 		-- 같은 대상에 [E]·[R] 두 개가 뜨면 겹치지 않게 [E]가 아닌 건 위로
-		board.StudsOffsetWorldSpace = Vector3.new(0, if prompt.KeyboardKeyCode == Enum.KeyCode.E then 2.2 else 3.6, 0)
+		board.StudsOffsetWorldSpace = Vector3.new(0, if prompt.KeyboardKeyCode == Enum.KeyCode.E then 2.2 elseif prompt.KeyboardKeyCode == Enum.KeyCode.F then 3.6 else 5, 0)
 		board.Parent = playerGui
 
 		local pill = Ui.make("TextButton", {
@@ -100,7 +99,11 @@ function Prompts.start()
 			BorderSizePixel = 0,
 			Parent = pill,
 		}, { Ui.corner(15) })
-		Ui.make("TextLabel", {
+		local function promptText(): string
+			return (if prompt.ObjectText ~= "" then `{prompt.ActionText} · {prompt.ObjectText}` else prompt.ActionText)
+				.. (if prompt.ActionText == "말 걸기" then friendText(prompt.ObjectText) else "")
+		end
+		local textLabel = Ui.make("TextLabel", {
 			Position = UDim2.fromOffset(32, 0),
 			Size = UDim2.new(1, -38, 1, 0),
 			BackgroundTransparency = 1,
@@ -109,8 +112,7 @@ function Prompts.start()
 			TextSize = 13,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextTruncate = Enum.TextTruncate.AtEnd,
-			Text = (if prompt.ObjectText ~= "" then `{prompt.ActionText} · {prompt.ObjectText}` else prompt.ActionText)
-				.. (if isChat then friendText(prompt.ObjectText) else ""),
+			Text = promptText(),
 			Parent = pill,
 		})
 		local _ = keyBox
@@ -120,6 +122,10 @@ function Prompts.start()
 		local holding = false
 		local holdStart = 0
 		local connections = {}
+		-- (동료의 [F]처럼 상황에 따라 글자가 바뀌는 안내는 떠 있는 동안에도 따라 바꿔요)
+		table.insert(connections, prompt:GetPropertyChangedSignal("ActionText"):Connect(function()
+			textLabel.Text = promptText()
+		end))
 		table.insert(connections, prompt.PromptButtonHoldBegan:Connect(function()
 			holding, holdStart = true, os.clock()
 		end))

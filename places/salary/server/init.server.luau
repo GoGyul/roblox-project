@@ -110,6 +110,10 @@ local coworkers = Coworkers.start(office, boss, dayCycle, Remotes, function(play
 	if Employees.hooks and Employees.hooks.coworker and Employees.hooks.coworker(player, coworker) then
 		return
 	end
+	-- 간식 주기·신고·감사팀 지목처럼 고를 게 여러 개면 창을 띄워요 (수다뿐이면 바로 수다)
+	if Employees.coworkerMenu and Employees.coworkerMenu(player, coworker) then
+		return
+	end
 	Employees.startChat(player, coworker)
 end)
 local events = Events.new(office, boss, dayCycle, Remotes, coworkers) -- 🎲 돌발 이벤트

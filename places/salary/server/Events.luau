@@ -291,7 +291,7 @@ function Events:startAudit(token: number)
 		}
 		self.coworkers.setAuditMode(true)
 		self:notify(
-			"🔍 감사 기간! 감사관이 동료 중 한 명으로 위장했대요… 📸 농땡이를 찍히면 안 돼요! (수상한 동료에게 [R]) 대신 농땡이 수입 ×2!"
+			"🔍 감사 기간! 감사관이 동료 중 한 명으로 위장했대요… 📸 농땡이를 찍히면 안 돼요! (수상한 동료에게 [E] 말 걸기 → 감사팀이죠?) 대신 농땡이 수입 ×2!"
 		)
 		return
 	end

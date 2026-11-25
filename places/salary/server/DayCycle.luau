@@ -16,6 +16,7 @@ function DayCycle.new()
 		started = false, -- 첫 플레이어가 들어와 날짜를 불러오면 true
 		extraOffwork = 0, -- 퇴근 후 추가 시간 (회식)
 		waiting = false, -- 🏢 출근하기 버튼을 기다리는 중
+		earlyStart = false, -- 🚏 오늘 누군가 걸어서 출근해요 → 8시 30분에 시작 (Employees가 정해요)
 		readyGate = nil :: (() -> ())?, -- 출근해도 되는지 기다리는 함수 (Employees가 채워요)
 		minute = SalaryConfig.START_MINUTE,
 		phase = "offwork" :: Phase,
@@ -51,10 +52,10 @@ end
 function DayCycle:run()
 	task.spawn(function()
 		while true do
-			-- 🏢 출근 대기: 다들 [출근하기]를 누를 때까지 08:50에 멈춰 있어요
+			-- 🏢 출근 대기: 다들 [출근하기]를 누를 때까지 08:20에 멈춰 있어요
 			if self.readyGate then
 				self.waiting = true
-				self.minute = SalaryConfig.START_MINUTE - 10
+				self.minute = SalaryConfig.COMMUTE_START - 10 -- (08:20에 멈춰 있어요)
 				ReplicatedStorage:SetAttribute("SalaryWaiting", true)
 				self:publish()
 				self.readyGate()
@@ -63,16 +64,19 @@ function DayCycle:run()
 			end
 
 			self.day += 1
-			self.minute = SalaryConfig.START_MINUTE
+			-- 🚏 걸어서 출근하는 사람이 있으면 8시 30분부터 (출근길 30분만큼 하루가 조금 길어져요. 시계 빠르기는 같아요)
+			local startMinute = if self.earlyStart then SalaryConfig.COMMUTE_START else SalaryConfig.START_MINUTE
+			local daySeconds = SalaryConfig.DAY_SECONDS + SalaryConfig.gameMinutesToSeconds(SalaryConfig.START_MINUTE - startMinute)
+			self.minute = startMinute
 			self.phase = "work"
 			self:publish()
 			self:emit("dayStart", self:weekday())
 
 			local elapsed = 0
-			while elapsed < SalaryConfig.DAY_SECONDS do
+			while elapsed < daySeconds do
 				elapsed += task.wait(0.25)
-				local progress = math.min(elapsed / SalaryConfig.DAY_SECONDS, 1)
-				self.minute = SalaryConfig.START_MINUTE + (SalaryConfig.END_MINUTE - SalaryConfig.START_MINUTE) * progress
+				local progress = math.min(elapsed / daySeconds, 1)
+				self.minute = startMinute + (SalaryConfig.END_MINUTE - startMinute) * progress
 
 				local isLunch = self.minute >= SalaryConfig.LUNCH_START and self.minute < SalaryConfig.LUNCH_END
 				if isLunch and self.phase == "work" then

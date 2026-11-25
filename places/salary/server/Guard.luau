@@ -355,6 +355,7 @@ function Guard.new(opts)
 	prompt.MaxActivationDistance = 8
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = root
+	Npc.stopForPrompt(prompt, humanoid, root, 10) -- ✋ 선물 창이 떠 있는 동안 멈춰 서요 (자리를 뜨면 바로 풀려요)
 	prompt.Triggered:Connect(function(player)
 		-- 🗣️ 이야기하는 동안(최대 GUARD_TALK_SECONDS초, 가까이 있을 때만)은 의심도가 안 올라요
 		--   ([E]를 계속 눌러 영원히 봐주게 하는 꼼수 막기: 한 번 이야기하면 1분 뒤에 다시 봐줘요)

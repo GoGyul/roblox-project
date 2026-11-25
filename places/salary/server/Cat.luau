@@ -128,6 +128,9 @@ function Cat.start(office, boss, dayCycle, remotes, hooks)
 				return true
 			end
 			local dt = RunService.Heartbeat:Wait()
+			if (body:GetAttribute("PauseUntil") or 0) > os.clock() then
+				continue -- ✋ 누가 쓰다듬으려고 [E]를 누르는 중이면 그 자리에 멈춰 있어요
+			end
 			local step = math.min(flat.Magnitude, SPEED * dt)
 			local nextPos = Vector3.new(from.X, target.Y, from.Z) + flat.Unit * step
 			-- 머리(-Z)가 가는 방향을 보게 + 통통 튀는 걸음
@@ -206,6 +209,7 @@ function Cat.start(office, boss, dayCycle, remotes, hooks)
 		prompt.MaxActivationDistance = 7
 		prompt.RequiresLineOfSight = false
 		prompt.Parent = body
+		require(script.Parent.Npc).stopForPrompt(prompt, body, body, 2) -- ✋ 쓰다듬는 동안 멈춰 서요
 		prompt.Triggered:Connect(function(player)
 			if not hooks.pet(player) then
 				return

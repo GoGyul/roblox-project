@@ -66,6 +66,7 @@ function Lee.new(office, dayCycle)
 	prompt.MaxActivationDistance = 7
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = self.root
+	Npc.stopForPrompt(prompt, self.humanoid, self.root, 1.5) -- ✋ [E]를 누르는 동안 멈춰 서요
 	prompt.Triggered:Connect(function(player)
 		if self.active and self.onBribe and self.onBribe(player) then
 			self:say(pick(LINES.bribed), 3)

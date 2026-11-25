@@ -115,19 +115,40 @@ SalaryConfig.CHAT_REACT_BONUS = 200 -- 🗣️ 좋은 맞장구 하나마다 이
 SalaryConfig.CHATTERBOX_TOPICS = 30 -- 🗣️ 사내 수다왕 업적: 수다 주제 몇 개 수집 (주제가 100개 넘게 늘어서 15 → 30)
 
 -- 🤝 동료 친밀도 (동료 이름마다 점수, 저장돼요)
-SalaryConfig.FRIEND_LEVELS = { 6, 16, 30, 50 } -- ❤️ 1~4개가 되는 점수
-SalaryConfig.FRIEND_MAX = 60 -- 점수 최대
-SalaryConfig.FRIEND_TOPIC = 2 -- 수다 주제를 끝까지 하면 +
+--   -100 ~ +100점, 0점에서 시작해요. 화면에는 점수 하나만 보여요 (플러스 초록 / 마이너스 빨강).
+--   점수가 낮으면 그 동료가 인사평가 때 나를 견제하고(고자질), 높으면 도와줘요.
+SalaryConfig.FRIEND_MIN = -100
+SalaryConfig.FRIEND_MAX = 100
+SalaryConfig.FRIEND_LEVELS = { 20, 40, 65, 85 } -- 혜택이 하나씩 풀리는 점수
+SalaryConfig.FRIEND_PERKS = { -- (FRIEND_LEVELS와 같은 순서)
+	"수다 보너스 +10% · 나를 고자질하지 않아요",
+	"수다 보너스 +20% · 인사평가 때 내 편",
+	"부장님이 오면 귓속말 · 수다 보너스 +30%",
+	"결재 도장 2개 몫 · 고자질꾼을 막아 줘요 · 수다 보너스 +40%",
+}
+SalaryConfig.FRIEND_HOSTILE = -20 -- 이 점수 아래면 견제 (가끔 고자질)
+SalaryConfig.FRIEND_ENEMY = -60 -- 이 점수 아래면 앙숙 (자주 고자질 · 공 가로채기)
+SalaryConfig.FRIEND_TOPIC = 3 -- 수다 주제를 끝까지 하면 +
 SalaryConfig.FRIEND_GOOD = 1 -- 좋은 맞장구 +
-SalaryConfig.FRIEND_BAD = 3 -- 눈치 없는 맞장구 - (삐져요)
-SalaryConfig.FRIEND_BONUS_PER_LEVEL = 0.1 -- ❤️ 하나마다 수다 보너스 +10%
-SalaryConfig.FRIEND_WHISPER_LEVEL = 3 -- ❤️❤️❤️부터 "쉿! 부장님 와요" 귓속말
+SalaryConfig.FRIEND_BAD = 4 -- 눈치 없는 맞장구 - (삐져요)
+SalaryConfig.FRIEND_CHAT_DAILY = 8 -- 한 동료에게 하루에 수다로 올릴 수 있는 점수 (하루 만에 단짝이 되지 않게)
+SalaryConfig.FRIEND_GIFT = 6 -- 🎁 간식·커피 선물: 들고 있는 간식이나 🎒 포장 커피가 있어야 줄 수 있어요 (동료마다 하루 한 번 · 목요일엔 2배)
+SalaryConfig.FRIEND_HELP = 10 -- 🙏 업무 도와주기
+SalaryConfig.FRIEND_REPORT = -25 -- 📢 내가 그 동료를 부장님께 신고
+SalaryConfig.FRIEND_REPORT_REVENGE = -10 -- 📢 나를 먼저 고자질한 동료를 신고 (당할 만했지)
+SalaryConfig.FRIEND_WITNESS = -5 -- 📢 신고 장면을 본 다른 동료들 (보복 신고면 0)
+SalaryConfig.FRIEND_FALSE_TATTLE = -5 -- 허위 고자질로 망신당한 동료가 삐져요
+SalaryConfig.FRIEND_HOLD = 8 -- 🍪 고자질하러 가는 동료를 간식으로 붙잡기 (역시 가진 간식·커피를 써요)
+SalaryConfig.FRIEND_DECAY_FROM = 65 -- 이 점수 이상은 유지비가 있어요:
+SalaryConfig.FRIEND_DECAY_DAYS = 3 -- 이만큼(근무일) 말도 선물도 없으면 하루 1점씩 줄어요
+SalaryConfig.FRIEND_BONUS_PER_LEVEL = 0.1 -- 혜택 단계마다 수다 보너스 +10%
+SalaryConfig.FRIEND_WHISPER_LEVEL = 3 -- 65점부터 "쉿! 부장님 와요" 귓속말
 SalaryConfig.FRIEND_WHISPER_BOSS = 30 -- 부장님이 내게서 이 거리 안으로 다가오면
 SalaryConfig.FRIEND_WHISPER_NEAR = 16 -- 친한 동료가 내 근처(이 거리 안)에 있을 때만
 SalaryConfig.FRIEND_WHISPER_COOLDOWN = 45 -- 귓속말 쿨타임 (초)
-SalaryConfig.FRIEND_STAMP_LEVEL = 4 -- ❤️❤️❤️❤️ 단짝: 결재 도장 2개 몫
+SalaryConfig.FRIEND_STAMP_LEVEL = 4 -- 85점부터 단짝: 결재 도장 2개 몫
 
--- 친밀도 점수 → ❤️ 개수 (0~4)
+-- 친밀도 점수 → 풀린 혜택 단계 (0~4, 화면에는 안 보여요)
 function SalaryConfig.friendLevel(points: number?): number
 	local level = 0
 	for i, need in SalaryConfig.FRIEND_LEVELS do
@@ -138,11 +159,118 @@ function SalaryConfig.friendLevel(points: number?): number
 	return level
 end
 
--- ❤️❤️🖤🖤 모양
-function SalaryConfig.friendHearts(points: number?): string
-	local level = SalaryConfig.friendLevel(points)
-	return string.rep("❤️", level) .. string.rep("🖤", #SalaryConfig.FRIEND_LEVELS - level)
+-- 화면에 보여 줄 점수 글자: "+42" / "-15" / "0"
+function SalaryConfig.friendText(points: number?): string
+	local value = math.floor((points or 0) + 0.5)
+	return if value > 0 then `+{value}` else tostring(value)
 end
+
+-- 다음 혜택 안내: "+65점부터 부장님이 오면 귓속말 (23점 남음)" (다 풀렸으면 nil)
+function SalaryConfig.friendNext(points: number?): string?
+	local value = points or 0
+	for i, need in SalaryConfig.FRIEND_LEVELS do
+		if value < need then
+			return `+{need}점부터 {SalaryConfig.FRIEND_PERKS[i]} ({math.ceil(need - value)}점 남음)`
+		end
+	end
+	return nil
+end
+
+-- 예전 0~60점(❤️ 0~4개) 저장 값을 새 점수로 바꿔요 (❤️ 개수가 그대로 이어지게)
+function SalaryConfig.friendMigrate(old: number): number
+	local from = { 0, 6, 16, 30, 50, 60 }
+	local to = { 0, 20, 40, 65, 85, 100 }
+	local value = math.clamp(old, 0, 60)
+	for i = 1, #from - 1 do
+		if value <= from[i + 1] then
+			local t = (value - from[i]) / (from[i + 1] - from[i])
+			return math.floor(to[i] + (to[i + 1] - to[i]) * t + 0.5)
+		end
+	end
+	return 100
+end
+
+---------------------------------------------------------------------------
+-- 📊 인사평가 (주간): 동료 NPC 3명과 점수로 경쟁해요. 금요일 퇴근 때 발표.
+--   내 점수 = 실적 40 + 근태 20 + 태도 20 (하루하루의 평균) + 동료평가 20 (금요일의 친밀도)
+--   경쟁자는 성격마다 하루 점수가 달라요. 딴짓하다 부장님께 혼나거나 신고당하면 깎여요.
+---------------------------------------------------------------------------
+-- 💳 법인카드 (과장부터): 하루 한 번, 카페·디저트·분식·푸드트럭에서 처음 사는 것이 무료
+SalaryConfig.CORP_CARD_RANK = 5
+SalaryConfig.CORP_CARD_SHOPS = { cafe = true, dessert = true, cafe1f = true, bunsik = true, truck = true }
+-- 📄 업무 떠넘기기 (차장부터): 친밀도 DELEGATE_FRIEND점 이상인 동료에게 하루 한 번, 오늘 업무 할당량의 일부를 맡겨요 (그 동료 친밀도는 조금 떨어져요)
+SalaryConfig.DELEGATE_RANK = 6
+SalaryConfig.DELEGATE_FRIEND = 40
+SalaryConfig.DELEGATE_SHARE = 0.25 -- 맡기는 양 = 오늘 업무 할당량의 25%
+SalaryConfig.DELEGATE_FRIEND_COST = -6
+SalaryConfig.REVIEW_RIVALS = 3 -- 한 주의 경쟁자 수
+SalaryConfig.REVIEW_MIN_RANK = 5 -- 📊 과장부터 인사평가 대상이에요 (그 아래 직급은 순위 경쟁·고자질 없이 친밀도만 쌓아요)
+SalaryConfig.REVIEW_MIN_DAYS = 3 -- 이만큼은 근무해야 순위에 들어요 (주 중간에 들어오면 평가 제외)
+-- 성격: base = 하루 평균 점수, swing = 기복(±), grow = 날마다 오르는 점수, bossAway = 부장님이 자리를 비운 날 보정
+SalaryConfig.ReviewTypes = {
+	steady = { label = "성실형", base = 79, swing = 3, grow = 0, bossAway = 0, tattle = 1 },
+	rival = { label = "견제형", base = 77, swing = 5, grow = 0, bossAway = 0, tattle = 1.4 },
+	flatter = { label = "아부형", base = 77, swing = 5, grow = 0, bossAway = -8, tattle = 1 },
+	slacker = { label = "농땡이형", base = 70, swing = 11, grow = 0, bossAway = 4, tattle = 0.6 },
+	newbie = { label = "열정형", base = 65, swing = 7, grow = 2.5, bossAway = 0, tattle = 0.5 },
+}
+SalaryConfig.ReviewPeople = {
+	["이대리"] = "flatter", ["박사원"] = "slacker", ["최주임"] = "steady", ["정과장"] = "rival", ["한인턴"] = "newbie",
+	["서차장"] = "steady", ["문대리"] = "flatter", ["강주임"] = "rival", ["윤사원"] = "slacker", -- 눈치물산
+	["오차장"] = "steady", ["유사원"] = "newbie", -- 대충상사
+}
+-- 내 하루 점수
+SalaryConfig.REVIEW_PERF_AT_TARGET = 16 -- 실적 목표를 딱 채우면 (40점 만점)
+SalaryConfig.REVIEW_PERF_FULL = 2 -- 목표의 몇 배를 벌면 만점
+SalaryConfig.REVIEW_LATE = 6 -- 근태: 지각
+SalaryConfig.REVIEW_LUNCH_LATE = 5 -- 근태: 점심 지각
+SalaryConfig.REVIEW_QUOTA_FAIL = 8 -- 근태: 업무 시간 미달
+SalaryConfig.REVIEW_CAUGHT = 6 -- 태도: 적발 1번
+SalaryConfig.REVIEW_TATTLED = 3 -- 태도: 고자질당함
+SalaryConfig.REVIEW_BOSS_COFFEE = 2 -- 태도: 부장님께 커피 (20점까지만)
+SalaryConfig.REVIEW_HELP_COST = 2 -- 실적: 동료 업무를 도와준 날
+-- 동료평가 (사무실 동료 모두가 친밀도에 따라 한 표씩 → 평균을 내서 -5 ~ 20점)
+function SalaryConfig.reviewVote(points: number?): number
+	local value = points or 0
+	if value >= 40 then
+		return 4
+	elseif value >= 20 then
+		return 3
+	elseif value > SalaryConfig.FRIEND_HOSTILE then
+		return 2
+	elseif value > SalaryConfig.FRIEND_ENEMY then
+		return 0.5
+	end
+	return -1
+end
+-- 경쟁자 점수가 깎이는 일
+SalaryConfig.REVIEW_RIVAL_SCOLDED = 3 -- 딴짓하다 부장님께 혼남 (하루 한 번만 반영)
+SalaryConfig.REVIEW_RIVAL_REPORTED = 6 -- 📢 내가 신고함
+SalaryConfig.REVIEW_RIVAL_FALSE = 5 -- 허위 고자질로 망신
+SalaryConfig.REVIEW_STEAL = 3 -- 🗡️ 앙숙이 내 실적을 가로챔 (한 주에 한 번, 내 점수 - / 그 동료 +)
+SalaryConfig.REVIEW_STEAL_CHANCE = 0.35
+SalaryConfig.REVIEW_SHARE = 2 -- 🤝 단짝 경쟁자가 금요일에 실적을 나눠 줌 (+)
+-- 🙊 NPC가 먼저 거는 일은 하루 2번까지 (고자질 1 · 도움 요청 1), 서로 1시간(게임) 이상 떨어져요
+SalaryConfig.REVIEW_REPORT_DAILY = 1 -- 📢 내 신고도 하루 한 번
+SalaryConfig.REVIEW_TATTLE_CHANCE = { enemy = 0.75, hostile = 0.5, neutral = 0.3 } -- 그날 고자질할 확률 (neutral은 내가 1~2등일 때만)
+SalaryConfig.REVIEW_TATTLE_LEE_DAY = 0.5 -- 이과장이 출근한 날은 확률을 절반으로 (고자질이 겹치지 않게)
+SalaryConfig.REVIEW_TATTLE_FROM = 10 * 60 -- 이 시각 뒤에만 (10:00)
+SalaryConfig.REVIEW_TATTLE_UNTIL = 17 * 60 -- 이 시각이 지나면 그날은 안 해요 (17:00)
+SalaryConfig.REVIEW_TATTLE_WARN = 3 -- 👀가 뜨고 걸어가기까지 (초)
+SalaryConfig.REVIEW_TATTLE_RANGE = 45 -- 이 거리 안에서 딴짓해야 봐요
+SalaryConfig.REVIEW_TATTLE_AWAY = 50 -- 또는 자리 부재 게이지가 이만큼 찼을 때 (빈자리를 봄)
+SalaryConfig.REVIEW_TATTLE_SUSPICION = 30 -- 고자질 성공 → 의심도 +
+SalaryConfig.REVIEW_TATTLE_DELTA = 0.10 -- 고자질 성공 → 오늘의 의심도 속도 +
+SalaryConfig.REVIEW_BLOCK_CHANCE = 0.5 -- 단짝(85점)이 고자질꾼을 막아 줄 확률
+SalaryConfig.REVIEW_HELP_CHANCE = 0.35 -- 그날 누군가 도움을 청할 확률
+SalaryConfig.REVIEW_HELP_SECONDS = 45 -- 도움 요청이 열려 있는 시간
+-- 🏆 순위 보상 (기본급의 몇 배): 성과급 / 승진 경험치 추가 / 다음 주 월요일 의심도 속도
+SalaryConfig.ReviewRewards = {
+	{ pay = 2, xp = 2, speed = -0.10, label = "🏆 인사평가 1등" },
+	{ pay = 1, xp = 0, speed = 0, label = "🥈 인사평가 2등" },
+	{ pay = 0, xp = 0, speed = 0, label = "인사평가 3등" },
+	{ pay = -1, xp = 0, speed = 0.15, label = "📉 인사평가 꼴찌" },
+}
 SalaryConfig.SUSPICION_DECAY = 8 -- 들키지 않을 때 의심도가 초당 줄어드는 양
 
 ---------------------------------------------------------------------------
@@ -909,7 +1037,7 @@ SalaryConfig.Achievements = {
 	{ id = "lee_bribe", emoji = "☕", name = "커피 외교", description = "이과장에게 커피를 상납해서 고자질 막기" },
 	{ id = "lee_dodge", emoji = "🙈", name = "눈치 싸움 승리", description = "이과장의 ❗를 보고 들키기 전에 일하는 척하기" },
 	{ id = "chatterbox", emoji = "🗣️", name = "사내 수다왕", description = "수다 주제 30개 수집하기" },
-	{ id = "bestie", emoji = "🤝", name = "사내 단짝", description = "동료 한 명과 친밀도 ❤️ 4개 달성" },
+	{ id = "bestie", emoji = "🤝", name = "사내 단짝", description = "동료 한 명과 친밀도 85점 달성" },
 	{ id = "near_miss", emoji = "😅", name = "아슬아슬 입문", description = "처음으로 아슬아슬 보너스 받기" },
 	{ id = "combo_max", emoji = "🔥", name = "곡예사", description = "아슬아슬 콤보 x5 달성" },
 	{ id = "caught", emoji = "📝", name = "시말서 데뷔", description = "처음으로 적발되기" },
@@ -969,6 +1097,19 @@ SalaryConfig.BossLines = {
 }
 
 SalaryConfig.CoworkerNames = { "이대리", "박사원", "최주임", "정과장", "한인턴" }
+-- 🧑‍💼 회사마다 더 있는 직원 (예전엔 말을 걸 수 없는 배경 직원이었어요 → 이제 똑같이 수다·친밀도·인사평가가 돼요)
+SalaryConfig.ExtraCoworkers = {
+	nunchi = { "서차장", "문대리", "강주임", "윤사원" },
+	daechung = { "오차장", "유사원" },
+} :: { [string]: { string } }
+-- 이 회사 사무실의 동료 이름 전부 (기본 5명 + 회사별 직원)
+function SalaryConfig.coworkerNames(companyId: string?): { string }
+	local names = table.clone(SalaryConfig.CoworkerNames)
+	for _, name in SalaryConfig.ExtraCoworkers[companyId or ""] or {} do
+		table.insert(names, name)
+	end
+	return names
+end
 
 ---------------------------------------------------------------------------
 -- 🎲 돌발 이벤트 (하루에 최대 1개)
@@ -1064,10 +1205,11 @@ SalaryConfig.Companies = {
 	},
 } :: { CompanyInfo }
 
-SalaryConfig.TEST_MONEY = 0 -- 🧪 스튜디오에서 통장을 최소 이만큼 채워 줘요 (가게·인형뽑기 테스트용, 실제 게임엔 영향 없음)
-SalaryConfig.TEST_RANK = 4 -- 🧪 스튜디오에서 직급을 최소 이만큼으로 (2 = 사원, 0이면 끔. 저장이 꺼져 있을 때만)
+SalaryConfig.TEST_MONEY = 100000 -- 🧪 스튜디오에서 통장을 최소 이만큼 채워 줘요 (가게·인형뽑기 테스트용, 실제 게임엔 영향 없음)
+SalaryConfig.TEST_RANK = 5 -- (5 = 과장: 인사평가를 시험하려고 올려 뒀어요) 🧪 스튜디오에서 직급을 최소 이만큼으로 (2 = 사원, 0이면 끔. 저장이 꺼져 있을 때만)
 SalaryConfig.TEST_CAMPUS_EVENT = "" -- 🧪 스튜디오에서 "rain" · "blossom" · "flea"를 넣으면 그 단지 행사를 바로 볼 수 있어요
-SalaryConfig.TEST_COMPANY = "daechung" -- 🧪 스튜디오에서 "nunchi"를 넣으면 눈치물산 사무실로 시작 (실제 게임엔 영향 없음)
+SalaryConfig.TEST_REVIEW = true -- 🧪 스튜디오에서 인사평가를 바로 시험: 매일 9시 25분쯤 경쟁자가 고자질하러 오고, 10시 10분쯤 도움 요청이 와요
+SalaryConfig.TEST_COMPANY = "nunchi" -- 🧪 스튜디오에서 "nunchi"를 넣으면 눈치물산 사무실로 시작 (실제 게임엔 영향 없음)
 SalaryConfig.TEST_DELIVERY = false -- 🧪 true면 스튜디오에서 들어오자마자 📦 택배 하나가 도착해 있어요 (🔔 알림 테스트, 실제 게임엔 영향 없음)
 
 function SalaryConfig.getCompany(companyId: string): CompanyInfo
@@ -1126,8 +1268,8 @@ end
 --   buff: 사면 바로 마시고 오늘 하루 효과 (같은 음료는 하루 한 번)
 --   snack: 들고 가서 자리에서 [8] 몰래 먹기 (간식 시스템과 같아요)
 ---------------------------------------------------------------------------
-export type StreetItem = { id: string, emoji: string, name: string, price: number, description: string, snack: string?, gift: boolean?, food: boolean?, days: { string }? } -- food = 마시는 게 아니라 먹는 것 (버튼·문구가 "먹기"로 나와요)
-export type StreetShop = { id: string, name: string, clerk: string, items: { StreetItem }, lunchOnly: boolean? }
+export type StreetItem = { id: string, emoji: string, name: string, price: number, description: string, snack: string?, gift: boolean?, food: boolean?, days: { string }?, bag: string?, minRank: number? } -- minRank = 이 직급부터 살 수 있어요 -- bag = 🎒 소지품에 넣는 물건 종류 (coffee · pill) -- food = 마시는 게 아니라 먹는 것 (버튼·문구가 "먹기"로 나와요)
+export type StreetShop = { id: string, name: string, clerk: string, items: { StreetItem }, lunchOnly: boolean?, minRank: number? } -- minRank = 이 직급부터 이용
 
 SalaryConfig.StreetShops = {
 	-- 🏪 사내 매점 (두 회사 모두 사무실 안에 있어요): 부장님께 드릴 선물
@@ -1149,6 +1291,7 @@ SalaryConfig.StreetShops = {
 			{ id = "americano", emoji = "☕", name = "아메리카노", price = 1500, description = "오늘 하루 업무 시간이 1.3배 빨리 채워져요" },
 			{ id = "latte", emoji = "🥛", name = "바닐라 라떼", price = 2000, description = "오늘 하루 의심도가 25% 더 빨리 줄어요" },
 			{ id = "smoothie", emoji = "🍹", name = "에너지 스무디", price = 3000, description = "오늘 하루 자리 부재 게이지가 30% 천천히 차요" },
+			{ id = "takeout", emoji = "🥤", name = "포장 커피", price = 1000, bag = "coffee", description = "🎒에 넣어 가요. 부장님께 드리면 오늘의 의심도 속도 -0.05 (하루 한 번)" },
 		},
 	},
 	dessert = {
@@ -1170,6 +1313,7 @@ SalaryConfig.StreetShops = {
 			{ id = "mixcoffee", emoji = "☕", name = "믹스커피", price = 500, description = "오늘 하루 업무 시간이 1.15배 빨리 채워져요" },
 			{ id = "yuja", emoji = "🍵", name = "유자차", price = 700, description = "오늘 하루 의심도가 12% 더 빨리 줄어요" },
 			{ id = "vitamin", emoji = "🧃", name = "비타민 음료", price = 900, description = "오늘 하루 자리 부재 게이지가 15% 천천히 차요" },
+			{ id = "takeout", emoji = "🥤", name = "포장 커피", price = 700, bag = "coffee", description = "🎒에 넣어 가요. 부장님께 드리면 오늘의 의심도 속도 -0.05 (하루 한 번)" },
 		},
 	},
 	-- 🍢 대충 분식 (대충상사 건물 1층): 탕비실 공짜 간식보다 많이 남지만, 먹는 동안 들키기 쉬워요
@@ -1183,12 +1327,23 @@ SalaryConfig.StreetShops = {
 			{ id = "rabokki", emoji = "🍜", name = "라볶이 세트", price = 1800, snack = "rabokki", description = "자리에서 몰래 다 먹으면 +3,400원 (18초)" },
 		},
 	},
+	-- 💊 눈치 약국 (눈치 스트리트): 수면제 하나만 팔아요
+	pharmacy = {
+		id = "pharmacy",
+		name = "💊 눈치 약국",
+		clerk = "약사 선생님",
+		items = {
+			{ id = "sleeping", emoji = "💊", name = "수면제", price = 5000, bag = "pill", minRank = 4, -- 🔒 대리부터 (부장님을 재우는 강한 수단이라 초반엔 못 사요)
+			 description = "🎒에서 포장 커피와 합치면 수면제 커피! 부장님이 마시면 2시간 동안 자리에서 자요" },
+		},
+	},
 	-- 🚚 푸드트럭 (눈치물산 타워 앞 광장): 점심시간에만 열어요. 커피 효과와 겹쳐서 받을 수 있어요
 	truck = {
 		id = "truck",
 		name = "🚚 푸드트럭",
 		clerk = "푸드트럭 사장님",
 		lunchOnly = true,
+		minRank = 3, -- 🔒 주임부터 (버프 음식이 한꺼번에 열리지 않게)
 		items = {
 			-- days: 이 요일에만 팔아요 (요일마다 두 가지씩)
 			{ id = "taco", emoji = "🌮", name = "든든 타코", price = 800, food = true, days = { "월요일", "수요일" }, description = "든든한 점심! 오늘 남은 하루 농땡이 수입 +25%" },
@@ -1201,6 +1356,18 @@ SalaryConfig.StreetShops = {
 } :: { [string]: StreetShop }
 
 SalaryConfig.TACO_INCOME = 1.25 -- 🌮 타코: 농땡이 수입 배율
+-- 🎒 소지품 (포장 커피 · 수면제 · 수면제 커피): 종류마다 BAG_MAX개까지
+SalaryConfig.BagItems = {
+	coffee = { emoji = "🥤", name = "포장 커피", description = "부장님께 [E]로 드려요 (오늘의 의심도 속도 -0.05, 하루 한 번)" },
+	pill = { emoji = "💊", name = "수면제", description = "포장 커피와 합쳐서 수면제 커피로 만들어요" },
+	sleepCoffee = { emoji = "😴", name = "수면제 커피", description = "부장님께 [E]로 드리면 2시간 동안 자리에서 자요 (가끔 눈치채요!)" },
+}
+SalaryConfig.BAG_MAX = 3
+SalaryConfig.BOSS_COFFEE_DELTA = -0.05 -- ☕ 그냥 커피를 드리면: 오늘의 의심도 속도
+SalaryConfig.SLEEP_MINUTES = 120 -- 😴 수면제 커피: 부장님이 자는 시간 (게임 시계 2시간 = 실제 약 93초). 서버 전체가 하루 한 번
+SalaryConfig.SLEEP_FAIL_CHANCE = 0.15 -- 부장님이 맛이 이상하다고 눈치챌 확률
+SalaryConfig.SLEEP_FAIL_SUSPICION = 40 -- 눈치채면: 의심도 +
+SalaryConfig.SLEEP_WAKE_DELTA = 0.1 -- 자고 일어난 부장님이 커피 준 사람을 수상하게 봐요: 오늘의 의심도 속도 +
 SalaryConfig.CUPBAP_WORK = 1.5 -- 🍚 컵밥: 업무 시간 배율
 SalaryConfig.HOTDOG_AWAY = 0.8 -- 🌭 핫도그: 자리 부재 게이지 속도 배율
 SalaryConfig.BURGER_SUSPICION = 30 -- 🍔 버거: 먹는 순간 의심도 -
@@ -1221,8 +1388,9 @@ SalaryConfig.FLEA_PRIZES = { -- { 풍선 다트 경품 id, 비중 }
 }
 
 -- 🚏 출근 시간: 아침마다 단지 버스 정류장에서 시작해 내 자리까지 가요 (시각은 게임 속 분)
-SalaryConfig.COMMUTE_EARLY = 9 * 60 + 40 -- 이때까지 앉으면 칼출근 보너스
-SalaryConfig.COMMUTE_LATE = 9 * 60 + 50 -- 이때까지 못 앉으면 지각
+SalaryConfig.COMMUTE_START = 8 * 60 + 30 -- 🚏 누군가 걸어서 출근하는 날은 하루가 8시 30분에 시작해요 (출근길 30분이 앞에 붙어요. 퇴근은 그대로 18시)
+SalaryConfig.COMMUTE_EARLY = 9 * 60 + 10 -- 이때까지 앉으면 칼출근 보너스 (8시 30분 출발 기준, 걷는 시간은 예전과 같은 40분)
+SalaryConfig.COMMUTE_LATE = 9 * 60 + 20 -- 이때까지 못 앉으면 지각 (예전과 같은 50분)
 SalaryConfig.COMMUTE_BONUS = 0.25 -- 칼출근 보너스 = 기본급의 25%
 SalaryConfig.COMMUTE_EARLY_DELTA = -0.05 -- 칼출근: 오늘의 의심도 속도
 SalaryConfig.COMMUTE_LATE_DELTA = 0.15 -- 지각: 오늘의 의심도 속도
@@ -2119,10 +2287,11 @@ function SalaryConfig.getCertificate(certId: string): any
 end
 
 -- 🎟️ 특수 쿠폰 (🏪 사내 매점 🎟️ 쿠폰 탭): 사자마자 바로 써요
-SalaryConfig.TRIP_SECONDS = 60
+SalaryConfig.TRIP_SECONDS = 60 -- (예전 값. 지금은 그날 퇴근까지 출장이에요)
 SalaryConfig.Coupons = {
 	{ id = "pardon", emoji = "📜", name = "시말서 면제권", price = 50000, description = "경고 1개를 지워요 (하루 1장)" },
-	{ id = "trip", emoji = "✈️", name = "부장님 출장 보내기", price = 30000, description = "부장님이 60초 동안 사무실을 비워요 (사무실 모두에게 좋아요!)" },
+	{ id = "trip", emoji = "✈️", name = "부장님 출장 보내기", price = 30000, minRank = 5, -- 🔒 과장부터 (하루 종일 부장님을 없애는 가장 강한 쿠폰)
+		 description = "부장님이 오늘 하루 종일 출장! 퇴근 때까지 사무실에 없어요 (모두에게 좋아요. 경비원은 그대로예요)" },
 	{ id = "halfday", emoji = "🏖️", name = "반차권", price = 40000, description = "오늘 남은 시간은 쉬어요: 안 들켜요 · 업무·실적 목표 통과 (농땡이 수입은 없어요)" },
 	{ id = "coffee_pass", emoji = "☕", name = "커피 정기권", price = 10000, description = "오늘 하루 이과장이 몇 번이든 눈감아 줘요" },
 }

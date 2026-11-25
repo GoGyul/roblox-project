@@ -40,6 +40,26 @@ function Walker.walkTo(humanoid: Humanoid, root: BasePart, target: Vector3, isCa
 		local stuckSince = os.clock()
 		while not done and os.clock() < giveUp and not isCancelled() do
 			task.wait(0.05)
+			-- ✋ 플레이어가 말을 거는 중이면 그 자리에 멈춰 서 있다가, 끝나면 가던 길을 다시 가요 (Npc.pause)
+			if (humanoid:GetAttribute("PauseUntil") or 0) > os.clock() then
+				connection:Disconnect()
+				humanoid:MoveTo(root.Position)
+				while (humanoid:GetAttribute("PauseUntil") or 0) > os.clock() and not isCancelled() do
+					task.wait(0.05)
+				end
+				if isCancelled() then
+					return false
+				end
+				done = false
+				connection = humanoid.MoveToFinished:Once(function()
+					done = true
+				end)
+				humanoid:MoveTo(point)
+				giveUp = os.clock() + 3
+				lastPosition = root.Position
+				stuckSince = os.clock()
+				continue
+			end
 			-- 1초 넘게 거의 못 움직였으면 끼인 거예요 → 가려던 쪽으로 살짝 밀어서 빠져나와요 (NPC는 점프 금지)
 			if (root.Position - lastPosition).Magnitude > 0.3 then
 				lastPosition = root.Position

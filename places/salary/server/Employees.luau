@@ -25,6 +25,7 @@ local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 local Teleport = require(ReplicatedStorage.Shared.Teleport)
 local Npc = require(script.Parent.Npc)
 local Profiles = require(script.Parent.Profiles)
+local Review = require(script.Parent.Review)
 local Snacks = require(script.Parent.Snacks)
 local StockMarket = require(script.Parent.StockMarket)
 
@@ -712,6 +713,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 	end
 
+	-- 🎒 포장 커피 · 수면제 · 수면제 커피 개수
+	local function publishBag(player: Player, d: EmployeeData)
+		d.profile.bag = d.profile.bag or {}
+		player:SetAttribute("Bag", HttpService:JSONEncode(d.profile.bag))
+	end
 	-- 🎁 🎒 경비원 선물 개수
 	local function publishGuardGifts(player: Player, d: EmployeeData)
 		player:SetAttribute("GuardGifts", HttpService:JSONEncode(d.profile.guardGifts))
@@ -864,6 +870,14 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if not player.Parent then
 			return -- 불러오는 동안 나가 버림
 		end
+		-- 🤝 친밀도가 0~60점(❤️)에서 -100~+100점으로 바뀌었어요 → 예전 저장 값은 한 번만 환산
+		if (profile :: any).friendVersion ~= 2 then
+			for name, points in profile.friendship do
+				profile.friendship[name] = SalaryConfig.friendMigrate(points)
+			end
+			local anyProfile = profile :: any
+			anyProfile.friendVersion = 2
+		end
 		local desk = assignDesk(player)
 		if not desk then
 			remotes.Notify:FireClient(player, "사무실 자리가 꽉 찼어요!")
@@ -958,6 +972,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 		publish(player, d)
 		publishGuardGifts(player, d) -- 🎁 🎒 경비원 선물
+		publishBag(player, d) -- 🎒 포장 커피 · 수면제
 		publishSeeds(player, d) -- 🌱 🎒 씨앗
 		publishPigeonSnacks(player, d) -- 🍪 🎒 비둘기 과자
 		publishFlowers(player, d) -- 🌷 🎒 꽃씨 · 🧪 거름
@@ -1547,25 +1562,49 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	local function friendPoints(d: EmployeeData, name: string): number
 		return (d.profile.friendship or {})[name] or 0
 	end
-	local function addFriendship(player: Player, d: EmployeeData, name: string, delta: number)
-		d.profile.friendship = d.profile.friendship or {}
+	local reviewApi: any = nil -- 📊 인사평가 (아래에서 만들어요)
+	-- source: "chat" = 수다 (한 동료에게 하루 FRIEND_CHAT_DAILY점까지만 올라요) / "quiet" = 알림 없이 / 그 밖 = 그대로
+	local function addFriendship(player: Player, d: EmployeeData, name: string, delta: number, source: string?): number
+		local profile = d.profile :: any
+		profile.friendship = profile.friendship or {}
 		local before = friendPoints(d, name)
-		local after = math.clamp(before + delta, 0, SalaryConfig.FRIEND_MAX)
-		d.profile.friendship[name] = after
+		if source == "chat" and delta > 0 then
+			local today = daily(d)
+			today.chatFriend = if typeof(today.chatFriend) == "table" then today.chatFriend else {}
+			local room = SalaryConfig.FRIEND_CHAT_DAILY - (today.chatFriend[name] or 0)
+			delta = math.clamp(delta, 0, math.max(0, room))
+			today.chatFriend[name] = (today.chatFriend[name] or 0) + delta
+		end
+		local after = math.clamp(before + delta, SalaryConfig.FRIEND_MIN, SalaryConfig.FRIEND_MAX)
+		if after == before then
+			return 0
+		end
+		profile.friendship[name] = after
+		if delta > 0 then
+			profile.friendDay = if typeof(profile.friendDay) == "table" then profile.friendDay else {}
+			profile.friendDay[name] = profile.stats.days -- (65점 이상은 사흘 넘게 안 챙기면 줄어요)
+		end
 		local oldLevel, newLevel = SalaryConfig.friendLevel(before), SalaryConfig.friendLevel(after)
-		if newLevel > oldLevel then
-			local perk = if newLevel == SalaryConfig.FRIEND_STAMP_LEVEL
-				then " · 단짝! 도장 2배"
-				elseif newLevel == SalaryConfig.FRIEND_WHISPER_LEVEL then " · 🤫 부장님 오면 귓속말"
-				else ` · 수다 보너스 +{math.floor(newLevel * SalaryConfig.FRIEND_BONUS_PER_LEVEL * 100 + 0.5)}%`
-			remotes.Notify:FireClient(player, `🤝 {name} 친밀도 UP! {SalaryConfig.friendHearts(after)}{perk}`)
-			if newLevel >= #SalaryConfig.FRIEND_LEVELS then
-				unlockAchievement(player, d, "bestie")
+		if source ~= "quiet" then
+			local change = `{if after > before then "+" else ""}{after - before}`
+			if newLevel > oldLevel then
+				remotes.Notify:FireClient(player, `🤝 {name} 친밀도 {change} → {SalaryConfig.friendText(after)} · 새 혜택: {SalaryConfig.FRIEND_PERKS[newLevel]}`, 4)
+			elseif newLevel < oldLevel then
+				remotes.Notify:FireClient(player, `💔 {name} 친밀도 {change} → {SalaryConfig.friendText(after)} · 혜택이 하나 사라졌어요`, 4)
+			elseif before > SalaryConfig.FRIEND_HOSTILE and after <= SalaryConfig.FRIEND_HOSTILE then
+				remotes.Notify:FireClient(player, `💢 {name} 친밀도 {SalaryConfig.friendText(after)} · 이제 나를 견제해요 (고자질 주의)`, 4)
+			elseif source == "decay" then
+				remotes.Notify:FireClient(player, `🤝 {name}과(와) 요즘 뜸했어요. 친밀도 {change} → {SalaryConfig.friendText(after)}`, 3)
 			end
-		elseif newLevel < oldLevel then
-			remotes.Notify:FireClient(player, `💔 {name} 친밀도 DOWN {SalaryConfig.friendHearts(after)}`)
+		end
+		if newLevel >= #SalaryConfig.FRIEND_LEVELS then
+			unlockAchievement(player, d, "bestie")
 		end
 		publishCollection(player, d)
+		if reviewApi then
+			reviewApi.publish(player) -- (동료평가 점수가 친밀도에서 나와요)
+		end
+		return after - before
 	end
 
 	-- 💬 동료와 수다 (동료 NPC의 "수다 떨기"를 누르면 Coworkers가 여기로 알려 줘요)
@@ -1669,14 +1708,14 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 					elseif result == "good" then
 						goodCount += 1
 						themSay(line.yay or pick(ChatTopics.GoodReplies), SalaryConfig.CHAT_LINE_SECONDS)
-						chatLine("sys", `🗣️ 찰떡 맞장구! 보너스 +{SalaryConfig.CHAT_REACT_BONUS}원 · 🤝 친밀도 +{SalaryConfig.FRIEND_GOOD}`)
-						addFriendship(player, d, coworker.name, SalaryConfig.FRIEND_GOOD) -- (❤️가 늘면 그 알림이 위 알림을 덮어요)
+						chatLine("sys", `🗣️ 찰떡 맞장구! 보너스 +{SalaryConfig.CHAT_REACT_BONUS}원`)
+						addFriendship(player, d, coworker.name, SalaryConfig.FRIEND_GOOD, "chat") -- (❤️가 늘면 그 알림이 위 알림을 덮어요)
 					elseif result == "bad" then
 						-- 😤 눈치 없는 대답 → 동료가 삐져서 수다 끝 (이번 주제 보너스 없음)
 						themSay(line.sulk or pick(ChatTopics.SulkLines), 3)
 						Npc.setStatus(coworker.model, "😤")
-						addFriendship(player, d, coworker.name, -SalaryConfig.FRIEND_BAD)
-						remotes.Notify:FireClient(player, `😤 {coworker.name} 삐짐! 수다 끝 · 🤝 -{SalaryConfig.FRIEND_BAD}`, 3)
+						addFriendship(player, d, coworker.name, -SalaryConfig.FRIEND_BAD, "quiet")
+						remotes.Notify:FireClient(player, `😤 {coworker.name} 삐짐! 수다 끝 · 친밀도 -{SalaryConfig.FRIEND_BAD}`, 3)
 						chatLine("end", `😤 {coworker.name}이(가) 삐졌어요… 오늘 대화 끝`)
 						task.wait(1.5)
 						if stillChatting() then
@@ -1713,7 +1752,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			if collected >= SalaryConfig.CHATTERBOX_TOPICS then
 				unlockAchievement(player, d, "chatterbox")
 			end
-			addFriendship(player, d, coworker.name, SalaryConfig.FRIEND_TOPIC) -- (안에서 도감도 다시 보내요)
+			addFriendship(player, d, coworker.name, SalaryConfig.FRIEND_TOPIC, "chat") -- (안에서 도감도 다시 보내요)
 			remotes.Bonus:FireClient(player, `💬 수다 성공! "{topic.title}"`, bonus)
 			chatLine("sys", `💬 수다 성공! "{topic.title}" +{bonus}원`)
 			task.wait(1.5)
@@ -1742,7 +1781,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		endActivity(employee)
 		employee.activity = { kind = "chat", coworker = coworker }
 		coworkers.setChatting(coworker, true)
-		remotes.Notify:FireClient(player, `💬 {coworker.name} 수다 시작! {SalaryConfig.friendHearts(friendPoints(employee, coworker.name))}`, SalaryConfig.CHAT_LINE_SECONDS)
+		remotes.Notify:FireClient(player, `💬 {coworker.name} 수다 시작! (친밀도 {SalaryConfig.friendText(friendPoints(employee, coworker.name))})`, SalaryConfig.CHAT_LINE_SECONDS)
 		task.spawn(runConversation, player, employee, coworker)
 	end
 	Employees.startChat = startChat
@@ -1877,6 +1916,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 
 	---------------------------------------------------------------- 🎟️ 특수 쿠폰 (사자마자 바로 써요)
 	local tripToken = 0
+	local sleepDay, sleepToken = -1, 0 -- 😴 수면제 커피 (서버 전체가 하루 한 번)
 	remotes.BuyCoupon.OnServerInvoke = function(player: Player, couponId: any)
 		local d = data[player]
 		if not allowBuy(player) then
@@ -1885,6 +1925,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local coupon = d and SalaryConfig.getCoupon(if typeof(couponId) == "string" then couponId else "")
 		if not d or not coupon or d.fired then
 			return { ok = false, message = "지금은 쓸 수 없어요." }
+		end
+		if d.profile.rank < (coupon.minRank or 1) then
+			return { ok = false, message = `🔒 {Ranks[coupon.minRank].name}부터 살 수 있어요.` }
 		end
 		if d.profile.money < coupon.price then
 			broke(player, coupon.price)
@@ -1905,25 +1948,13 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			if dayCycle.phase ~= "work" or not boss.active then
 				return { ok = false, message = "✈️ 부장님이 지금 사무실에 없어요." }
 			end
-			tripToken += 1
-			local myToken = tripToken
-			boss:goTrip()
-			local bossToken = boss.token -- (그사이 소방 훈련·워크숍·점심이 시작되면 부장님 일정이 바뀌어요)
+			boss:goTrip() -- ✈️ 그날 퇴근까지 돌아오지 않아요 (boss.awayToday)
 			unlockAchievement(player, d, "coupon_trip")
 			publishCollection(player, d)
 			for other in data do
-				remotes.Notify:FireClient(other, `✈️ {player.DisplayName} 님 덕분에 부장님이 {SalaryConfig.TRIP_SECONDS}초 동안 출장! 지금이 기회~`)
+				remotes.Notify:FireClient(other, `✈️ {player.DisplayName} 님 덕분에 부장님이 오늘 하루 종일 출장! 퇴근까지 사무실에 없어요~ (경비원은 조심)`, 4)
 			end
-			task.delay(SalaryConfig.TRIP_SECONDS, function()
-				-- (그사이 점심·퇴근이 됐으면 원래 일정대로)
-				if tripToken == myToken and boss.token == bossToken and dayCycle.phase == "work" and not boss.active then -- (훈련·워크숍·점심이면 boss.token이 바뀌어 있어요)
-					boss:backFromLunch()
-					for other in data do
-						remotes.Notify:FireClient(other, "✈️ 부장님이 출장에서 돌아왔어요! 일하는 척!")
-					end
-				end
-			end)
-			message = "✈️ 부장님 출장 출발!"
+			message = "✈️ 부장님 출장 출발! 오늘은 안 돌아와요"
 		elseif coupon.id == "halfday" then
 			if dayCycle.phase == "offwork" then
 				return { ok = false, message = "🏖️ 벌써 퇴근 시간이에요." }
@@ -1997,7 +2028,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		return { ok = ok, message = message }
 	end
 
-	---------------------------------------------------------------- 🕶️ [R] "감사팀이죠?"
+	---------------------------------------------------------------- 🕶️ [E] 말 걸기 → "감사팀이죠?"
 	coworkers.onAccuse = function(player: Player, coworker)
 		local d = data[player]
 		if not d or d.fired or not events:is("audit") or events.auditRevealed then
@@ -2588,6 +2619,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			elseif dayCycle.minute > SalaryConfig.COMMUTE_LATE then
 				d.commute = nil
 				adjustSpeed(player, d, "late", true, SalaryConfig.COMMUTE_LATE_DELTA, "⏰ 지각")
+				local todayRecord = d.today :: any
+				todayRecord.reviewLate = true -- 📊 인사평가 근태
 				remotes.Notify:FireClient(player, `⏰ 지각! 부장님이 벼르고 있어요. 오늘의 의심도 속도 +{SalaryConfig.COMMUTE_LATE_DELTA} (이제 자리 부재 게이지도 차요)`)
 			end
 		end
@@ -2605,6 +2638,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			local onRoof = Employees.hooks.onRoof ~= nil and Employees.hooks.onRoof(root.Position)
 			if (onCampus or onRoof) and not onHalfDay and boss.active then
 				d.suspicion = math.min(99, d.suspicion + SalaryConfig.LUNCH_LATE_SUSPICION)
+				local todayRecord = d.today :: any
+				todayRecord.reviewLunchLate = true -- 📊 인사평가 근태
 				remotes.Notify:FireClient(player, `⏰ 점심 지각! 부장님이 빈자리를 봤어요. 의심도 +{SalaryConfig.LUNCH_LATE_SUSPICION}`)
 			end
 		end
@@ -3076,6 +3111,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 		end
 		ReplicatedStorage:SetAttribute("ClockInLeft", -1)
+		-- 🚏 한 명이라도 걸어서 출근하면 오늘은 8시 30분에 시작해요 (바로 자리로 간 사람은 9시까지 여유 있게 앉아 있어요)
+		local anyWalk = false
+		for _, d in data do
+			anyWalk = anyWalk or d.commuteWalk == true
+		end
+		dayCycle.earlyStart = anyWalk and office.commuteSpawn ~= nil
 	end
 	remotes.ClockIn.OnServerEvent:Connect(function(player, mode)
 		local d = data[player]
@@ -3119,6 +3160,28 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	end
 
 	---------------------------------------------------------------- 🏙️ 눈치 스트리트 가게에서 사기 (Street 모듈이 불러요)
+	-- 🎒 수면제 커피 만들기: 포장 커피 1 + 수면제 1 → 수면제 커피 1
+	remotes.Craft.OnServerInvoke = function(player: Player, recipe: any): (boolean, string)
+		local d = data[player]
+		if not d or d.fired or recipe ~= "sleepCoffee" then
+			return false, "지금은 만들 수 없어요."
+		end
+		local bag = d.profile.bag or {}
+		d.profile.bag = bag
+		if (bag.coffee or 0) < 1 or (bag.pill or 0) < 1 then
+			return false, "🥤 포장 커피 1개와 💊 수면제 1개가 필요해요."
+		end
+		if (bag.sleepCoffee or 0) >= SalaryConfig.BAG_MAX then
+			return false, `😴 수면제 커피는 {SalaryConfig.BAG_MAX}개까지만 들고 다닐 수 있어요!`
+		end
+		bag.coffee = if bag.coffee > 1 then bag.coffee - 1 else nil
+		bag.pill = if bag.pill > 1 then bag.pill - 1 else nil
+		bag.sleepCoffee = (bag.sleepCoffee or 0) + 1
+		publishBag(player, d)
+		task.spawn(save, player, d)
+		return true, "😴 수면제 커피 완성! 부장님께 [E]로 드려 보세요…"
+	end
+
 	function Employees.buyStreet(player: Player, shopId: string, itemId: string): (boolean, string)
 		local d = data[player]
 		local item = SalaryConfig.getStreetItem(shopId, itemId)
@@ -3131,11 +3194,26 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if SalaryConfig.StreetShops[shopId].lunchOnly and dayCycle.phase ~= "lunch" then
 			return false, "🚚 점심시간(12시~1시)에만 팔아요!"
 		end
-		if d.profile.money < item.price then
-			broke(player, item.price)
-			return false, `통장 잔고가 부족해요. 😢 ({item.price}원 필요)`
+		-- 🔒 직급 제한 (가게 전체 또는 물건 하나)
+		local needRank = math.max(SalaryConfig.StreetShops[shopId].minRank or 1, item.minRank or 1)
+		if d.profile.rank < needRank then
+			return false, `🔒 {Ranks[needRank].name}부터 살 수 있어요.`
 		end
-		if item.gift then
+		-- 💳 법인카드 (과장부터): 오늘 카페·식당에서 처음 사는 것은 회사 돈으로
+		local corpCard = d.profile.rank >= SalaryConfig.CORP_CARD_RANK and SalaryConfig.CORP_CARD_SHOPS[shopId] == true and not daily(d).corpCard
+		local price = if corpCard then 0 else item.price
+		if d.profile.money < price then
+			broke(player, price)
+			return false, `통장 잔고가 부족해요. 😢 ({price}원 필요)`
+		end
+		if item.bag then
+			d.profile.bag = d.profile.bag or {}
+			if (d.profile.bag[item.bag] or 0) >= SalaryConfig.BAG_MAX then
+				return false, `{item.emoji} {item.name}은(는) {SalaryConfig.BAG_MAX}개까지만 들고 다닐 수 있어요!`
+			end
+			d.profile.bag[item.bag] = (d.profile.bag[item.bag] or 0) + 1
+			publishBag(player, d)
+		elseif item.gift then
 			if d.heldGift then
 				return false, "🎁 선물은 한 번에 하나만!"
 			end
@@ -3156,9 +3234,19 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			unlockAchievement(player, d, "street_cafe")
 			publishCollection(player, d)
 		end
-		d.profile.money -= item.price
+		d.profile.money -= price
+		if corpCard then
+			daily(d).corpCard = true
+			player:SetAttribute("CorpCard", false)
+		end
 		publish(player, d)
 		task.spawn(save, player, d)
+		if corpCard then
+			return true, `💳 법인카드로 결제! {item.emoji} {item.name} 무료 (오늘 한 번)`
+		end
+		if item.bag then
+			return true, `{item.emoji} {item.name} 구매! 🎒 소지품에 넣었어요`
+		end
 		if item.gift then
 			return true, `{item.emoji} {item.name} 포장 완료! 부장님께 [E]`
 		end
@@ -4208,6 +4296,86 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			task.spawn(save, player, d)
 			return text
 		end,
+		-- 👔 부장님께 드릴 수 있는 것 목록 ({ id, name }): 들고 있는 선물 · 포장 커피 · 수면제 커피
+		giveOptions = function(player: Player): { { id: string, name: string } }
+			local d = data[player]
+			local options = {}
+			if not d then
+				return options
+			end
+			if d.heldGift then
+				local gift = SalaryConfig.getStreetItem("store", d.heldGift)
+				table.insert(options, { id = "gift", name = if gift then `{gift.emoji} {gift.name}` else "🥬 직접 기른 채소" })
+			end
+			local bag = d.profile.bag or {}
+			if (bag.coffee or 0) > 0 then
+				table.insert(options, { id = "coffee", name = "🥤 포장 커피" })
+			end
+			if (bag.sleepCoffee or 0) > 0 then
+				table.insert(options, { id = "sleepCoffee", name = "😴 수면제 커피" })
+			end
+			return options
+		end,
+		-- 🥤 포장 커피 / 😴 수면제 커피 드리기 → (드렸는지, 부장님 대사, 안내 문구)
+		giveBag = function(player: Player, itemId: string): (boolean, string, string)
+			local d = data[player]
+			local bag = d and d.profile.bag
+			if not d or not bag or (bag[itemId] or 0) <= 0 then
+				return false, "", ""
+			end
+			local function take()
+				bag[itemId] = if bag[itemId] > 1 then bag[itemId] - 1 else nil
+				publishBag(player, d)
+				task.spawn(save, player, d)
+			end
+			if itemId == "coffee" then
+				if daily(d).bossCoffee then
+					return false, "커피는 아까 마셨네~ 고맙지만 내일 주게.", "🥤 커피는 하루에 한 번만 통해요."
+				end
+				daily(d).bossCoffee = true
+				take()
+				adjustSpeed(player, d, "bossCoffee", false, SalaryConfig.BOSS_COFFEE_DELTA, "🥤 부장님께 커피")
+				publish(player, d)
+				return true, "오, 커피? 센스 있구만~ ☕", `🥤 오늘의 의심도 속도 {SalaryConfig.BOSS_COFFEE_DELTA}`
+			elseif itemId == "sleepCoffee" then
+				if dayCycle.phase ~= "work" or not boss.active or events:is("drill") or events:is("workshop") then
+					return false, "", "😴 지금은 드릴 수 없어요. (근무 중인 부장님께만)"
+				end
+				if sleepDay == dayCycle.day then
+					return false, "커피? 아까 마시고 속이 좀 안 좋아서… 됐네.", "😴 수면제 커피는 하루에 한 번만 통해요. (서버 전체)"
+				end
+				take()
+				-- 가끔은 맛이 이상하다고 눈치채요
+				if math.random() < SalaryConfig.SLEEP_FAIL_CHANCE then
+					d.suspicion = math.min(99, d.suspicion + SalaryConfig.SLEEP_FAIL_SUSPICION)
+					publish(player, d)
+					return true, "…이 커피, 맛이 왜 이래? 자네 뭘 탄 건가?! 🤨", `😱 들켰어요! 의심도 +{SalaryConfig.SLEEP_FAIL_SUSPICION} (수면제 커피는 사라졌어요)`
+				end
+				sleepDay = dayCycle.day
+				sleepToken += 1
+				local myToken = sleepToken
+				boss:sleep()
+				local bossToken = boss.token -- (그사이 점심·훈련·워크숍이 시작되면 부장님 일정이 바뀌어요)
+				local seconds = SalaryConfig.gameMinutesToSeconds(SalaryConfig.SLEEP_MINUTES)
+				for other in data do
+					remotes.Notify:FireClient(other, `😴 {player.DisplayName} 님이 드린 커피를 마신 부장님이 꾸벅꾸벅… 2시간 동안 자요! 지금이 기회~`, 4)
+				end
+				task.delay(seconds, function()
+					if sleepToken == myToken and boss.token == bossToken and dayCycle.phase == "work" and not boss.active then
+						boss:wake()
+						for other in data do
+							remotes.Notify:FireClient(other, "😠 부장님이 깼어요! 일하는 척!")
+						end
+						local giver = data[player]
+						if giver and player.Parent then
+							adjustSpeed(player, giver, "sleepWake", false, SalaryConfig.SLEEP_WAKE_DELTA, "😠 커피 준 사람을 수상하게 보는 부장님")
+						end
+					end
+				end)
+				return true, "", `😴 성공! 부장님이 {math.floor(seconds)}초 동안 자요. (깨면 오늘의 의심도 속도 +{SalaryConfig.SLEEP_WAKE_DELTA})`
+			end
+			return false, "", ""
+		end,
 		-- 🎁 들고 있는 선물을 부장님께 드리기 → (드렸는지, 부장님 대사, 안내 문구)
 		giveGift = function(player: Player): (boolean, string, string)
 			local d = data[player]
@@ -4335,6 +4503,87 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 	end
 
+	---------------------------------------------------------------- 📊 인사평가 + 🙊 동료 고자질 (Review 모듈)
+	reviewApi = Review.start({
+		office = office,
+		boss = boss,
+		dayCycle = dayCycle,
+		remotes = remotes,
+		coworkers = coworkers,
+		data = data,
+		friendPoints = friendPoints,
+		addFriendship = addFriendship,
+		daily = daily,
+		pushNotice = pushNotice,
+		charge = function(player: Player, price: number): boolean
+			return (Employees.chargeClaw(player, price))
+		end,
+		-- 🎒 가방에서 하나 꺼내기 (없으면 false)
+		takeBag = function(player: Player, d: EmployeeData, itemId: string): boolean
+			local bag = d.profile.bag
+			if not bag or (bag[itemId] or 0) <= 0 then
+				return false
+			end
+			bag[itemId] = if bag[itemId] > 1 then bag[itemId] - 1 else nil
+			publishBag(player, d)
+			return true
+		end,
+		-- 🎁 동료에게 줄 것 꺼내기: 들고 있는 간식 먼저, 없으면 🎒 포장 커피 → 준 물건 이름 (없으면 nil)
+		takeGift = function(player: Player, d: EmployeeData): string?
+			local held = d.heldSnack
+			if held then
+				local snack = SalaryConfig.getSnack(held.id)
+				d.heldSnack = nil
+				if d.deskAction == "snack" then
+					d.deskAction = "work" -- (먹으려던 간식을 줬으니 먹기는 취소)
+				end
+				publish(player, d)
+				return if snack then `{snack.emoji} {snack.name}` else "🍪 간식"
+			end
+			local bag = d.profile.bag
+			if bag and (bag.coffee or 0) > 0 then
+				bag.coffee = if bag.coffee > 1 then bag.coffee - 1 else nil
+				publishBag(player, d)
+				return "🥤 포장 커피"
+			end
+			return nil
+		end,
+		-- 📄 업무 떠넘기기: 오늘 업무 할당량의 일부를 채워 줘요 → 채운 초
+		delegate = function(player: Player, d: EmployeeData): number
+			local seconds = math.floor(quotaOf(d) * SalaryConfig.DELEGATE_SHARE)
+			d.workSeconds += seconds
+			publish(player, d)
+			return seconds
+		end,
+		hasGift = function(d: EmployeeData): boolean
+			return d.heldSnack ~= nil or (d.profile.bag ~= nil and (d.profile.bag.coffee or 0) > 0)
+		end,
+		chat = function(player: Player, coworker)
+			Employees.startChat(player, coworker)
+		end,
+		isWorking = function(player: Player, d: EmployeeData): boolean
+			return isSeated(player, d) and d.state == "work"
+		end,
+		onHalfDay = function(d: EmployeeData): boolean
+			return daily(d).halfday == true
+		end,
+		eventBusy = function(): boolean
+			return Employees.hooks.eventBusy ~= nil and Employees.hooks.eventBusy()
+		end,
+		-- 🙊 동료가 부장님께 일렀어요 → 의심도가 오르고 부장님이 와요
+		tattled = function(player: Player, d: EmployeeData, name: string)
+			d.suspicion = math.min(95, d.suspicion + SalaryConfig.REVIEW_TATTLE_SUSPICION)
+			adjustSpeed(player, d, "npcTattle", false, SalaryConfig.REVIEW_TATTLE_DELTA, `🙊 {name} 고자질`)
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if root then
+				boss:callTo(root.Position)
+			end
+			publish(player, d)
+		end,
+	})
+
+	Employees.coworkerMenu = reviewApi.menu -- 💬 동료 [E] 말 걸기: 고를 게 여러 개면 창을 띄워요
+
 	---------------------------------------------------------------- 하루 일정
 	local commuteCount = 0
 	dayCycle:on("dayStart", function(weekday)
@@ -4421,13 +4670,15 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 						d.commute = true -- (정류장에 선 뒤부터 출근길이에요: 어제 앉아 있던 자리 때문에 바로 "출근 완료"가 되지 않게)
 					end
 				end)
-				remotes.Notify:FireClient(player, `🚏 {weekday.name} 출근길! 9시 40분까지 자리에 앉으면 칼출근 보너스, 9시 50분을 넘기면 지각! (부장님은 "{weekday.mood}")`)
+				remotes.Notify:FireClient(player, `🚏 {weekday.name} 출근길! 지금은 8시 30분. 9시 10분까지 자리에 앉으면 칼출근 보너스, 9시 20분을 넘기면 지각! (부장님은 "{weekday.mood}")`)
 			else
 				d.commute = nil
 				task.spawn(seatPlayer, player, d)
 				remotes.Notify:FireClient(player, `🏢 {weekday.name} 출근! 오늘 부장님은 "{weekday.mood}"`)
 			end
 			arriveOrders(player, d) -- 🚚 어제 주문한 택배 도착
+			reviewApi.dayStart(player, d, weekday) -- 📊 인사평가: 오늘 동료들이 걸 일 정하기
+			player:SetAttribute("CorpCard", d.profile.rank >= SalaryConfig.CORP_CARD_RANK and not daily(d).corpCard) -- 💳 오늘 법인카드가 남았나
 
 		end
 	end)
@@ -4516,12 +4767,26 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				end
 			end
 
+			-- 📊 인사평가: 오늘 점수 (금요일이면 순위 발표 → 성과급·감봉 줄이 붙어요)
+			local reviewLines, reviewXp, reviewNote = reviewApi.settle(player, d, {
+				earned = earned,
+				target = target,
+				basePay = rank.basePay,
+				quotaOk = quotaOk,
+				halfday = daily(d).halfday == true,
+				audit = auditReported(d),
+				bossAway = boss.awayToday == true or sleepDay == dayCycle.day,
+			})
+			for _, line in reviewLines do
+				table.insert(lines, line)
+			end
+
 			local dayTotal = 0
 			for _, line in lines do
 				dayTotal += line.amount
 			end
 			profile.money = math.max(0, profile.money + dayTotal)
-			profile.xp += math.max(0, dayTotal)
+			profile.xp += math.max(0, dayTotal) + reviewXp
 			d.today.settled = true
 			local ripened = growGarden(d) -- 🌱 오늘 물 준 화분이 자라요
 			if ripened > 0 then
@@ -4601,6 +4866,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				fired = fired,
 				stockProfit = math.floor(d.today.stockProfit),
 				promotedTo = promotedTo,
+				reviewNote = reviewNote, -- 📊 인사평가 발표 (금요일)
 				-- 🏢 새 직급이면 더 큰 회사에서 스카우트 제의가 와요
 				moveTo = if not fired and SalaryConfig.companyForRank(profile.rank).id ~= office.companyId
 					then SalaryConfig.companyForRank(profile.rank).name

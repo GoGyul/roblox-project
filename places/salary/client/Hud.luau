@@ -189,7 +189,7 @@ local clockInHint = text({
 	TextSize = 13,
 	TextColor3 = Theme.Color.muted,
 	TextXAlignment = Enum.TextXAlignment.Center,
-	Text = "걸어서 출근하면 9시 40분까지 앉을 때 칼출근 보너스! (9시 50분 넘으면 지각)",
+	Text = "걸어서 출근하면 8시 30분에 출발! 9시 10분까지 앉으면 칼출근 보너스 (9시 20분 넘으면 지각)",
 	ZIndex = 21,
 	Parent = clockIn,
 })
@@ -799,6 +799,23 @@ text({
 	ZIndex = 21,
 	Parent = phonePicker,
 })
+-- 오른쪽 위 X 닫기 (게임을 안 고르고 창만 닫아요)
+local phonePickerClose = Ui.make("TextButton", {
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, 8, 0, -8),
+	Size = UDim2.fromOffset(24, 24),
+	BackgroundColor3 = Theme.Color.coralSoft,
+	Text = "X",
+	TextColor3 = Theme.Color.navy,
+	Font = Enum.Font.GothamBlack,
+	TextSize = 13,
+	ZIndex = 22,
+	Parent = phonePicker,
+}, { Ui.corner(12) })
+phonePickerClose.Activated:Connect(function()
+	phonePicker.Visible = false
+	hoveredPhoneGame = nil
+end)
 for i, phoneGame in SalaryConfig.PhoneGames do
 	local pick = Ui.button({
 		Position = UDim2.fromOffset(6 + (i - 1) * (PICK_SIZE + 6), 24),
@@ -1160,7 +1177,7 @@ local function updateEvent()
 
 	local message, color = nil, COLORS.warn
 	if eventId == "audit" and stage == "active" then
-		message = `🔍 감사 기간 · 동료 중에 위장 감사관이! 📸 조심 · 수상하면 [R] · 농땡이 수입 ×{SalaryConfig.AUDIT_INCOME}`
+		message = `🔍 감사 기간 · 동료 중에 위장 감사관이! 📸 조심 · 수상하면 [E] 말 걸기 · 농땡이 수입 ×{SalaryConfig.AUDIT_INCOME}`
 		if changed then
 			Sounds.play("bass", 0.5, 1.2)
 			Hud.popup("🔍 오늘은 감사 기간!", COLORS.warn, 3)
@@ -1254,6 +1271,10 @@ local function updateMission()
 	end
 	local step = player:GetAttribute("MissionStep") or 1
 	local left = math.max(0, math.ceil((player:GetAttribute("MissionEndsAt") or 0) - workspace:GetServerTimeNow()))
+	local frozenLeft = player:GetAttribute("MissionFrozenLeft")
+	if typeof(frozenLeft) == "number" then
+		left = frozenLeft -- ⏸️ 점심·이벤트로 시간이 멈춘 동안은 숫자가 움직이지 않아요
+	end
 	missionTitle.Text = `📋 {mission.emoji} {mission.name}`
 	if status == "success" then
 		missionTime.Text = "✅ 성공!"
@@ -1577,6 +1598,56 @@ function Hud.popup(message: string, color: Color3, seconds: number)
 	end)
 end
 
+-- 🛍️ 샀어요!: 화면 가운데에 크게 (창 아래 작은 초록 글씨만으로는 놓치기 쉬워요. "돈이 모자라요"와 같은 자리·같은 모양)
+local boughtBanner: Frame? = nil
+function Hud.bought(text: string)
+	Sounds.play("ping", 0.6, 1.25)
+	if boughtBanner then
+		boughtBanner:Destroy()
+	end
+	local banner = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.3),
+		Size = UDim2.fromOffset(460, 76),
+		BackgroundColor3 = Color3.fromRGB(22, 58, 40),
+		BackgroundTransparency = 0.08,
+		ZIndex = 300,
+		Parent = gui,
+	}, { Ui.corner(14), Ui.stroke(Theme.Color.mint, 2) })
+	boughtBanner = banner
+	Ui.make("TextLabel", {
+		Position = UDim2.fromOffset(0, 8),
+		Size = UDim2.new(1, 0, 0, 30),
+		BackgroundTransparency = 1,
+		Text = "🛍️ 구매 완료!",
+		TextColor3 = Color3.fromRGB(224, 255, 236),
+		Font = Enum.Font.GothamBlack,
+		TextSize = 23,
+		ZIndex = 301,
+		Parent = banner,
+	})
+	Ui.make("TextLabel", {
+		Position = UDim2.fromOffset(12, 40),
+		Size = UDim2.new(1, -24, 0, 26),
+		BackgroundTransparency = 1,
+		Text = text,
+		TextColor3 = Color3.fromRGB(190, 240, 210),
+		Font = Enum.Font.GothamBold,
+		TextSize = 16,
+		TextScaled = true, -- (긴 문구는 한 줄에 맞게 줄여요)
+		ZIndex = 301,
+		Parent = banner,
+	}, { Ui.make("UITextSizeConstraint", { MaxTextSize = 16, MinTextSize = 10 }) })
+	local scale = Ui.make("UIScale", { Scale = 0.8, Parent = banner })
+	TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	task.delay(2.2, function()
+		if boughtBanner == banner then
+			boughtBanner = nil
+		end
+		banner:Destroy()
+	end)
+end
+
 -- 💸 돈이 모자라요: 화면 가운데에 크게, 통장 금액도 빨갛게 깜빡 (창 안의 작은 글씨만으로는 놓치기 쉬워요)
 local brokeBanner: Frame? = nil
 Remotes:WaitForChild("Broke").OnClientEvent:Connect(function(need: number?)
@@ -1682,7 +1753,7 @@ Remotes:WaitForChild("AuditPhoto").OnClientEvent:Connect(function(kind: string, 
 		if count < max then
 			Ui.toast(
 				(if kind == "empty" then `🪑 빈자리 사진 {count}/{max}` else `📸 농땡이 사진 {count}/{max}`)
-					.. ` · {max}장이면 퇴근 때 감봉 + 경고! 누가 찍었는지 찾아서 [R]`
+					.. ` · {max}장이면 퇴근 때 감봉 + 경고! 누가 찍었는지 찾아서 [E] 말 걸기`
 			)
 		end
 	elseif kind == "miss" then

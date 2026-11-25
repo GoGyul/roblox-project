@@ -81,6 +81,8 @@ Theme.Mesh = {
 	cakeCream = Color3.fromRGB(246, 236, 220),
 	berry = Color3.fromRGB(206, 70, 90),
 	choco = Color3.fromRGB(104, 70, 52),
+	pharm = Color3.fromRGB(58, 148, 112), -- 약국 초록
+	pharmSoft = Color3.fromRGB(196, 226, 210),
 	rubber = Color3.fromRGB(58, 96, 150), -- 파란 플라스틱 의자
 	tub = Color3.fromRGB(150, 60, 52), -- 빨간 고무 대야
 }

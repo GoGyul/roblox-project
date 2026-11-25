@@ -12,6 +12,7 @@ local RunService = game:GetService("RunService")
 
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
 local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
+local Npc = require(script.Parent.Npc)
 
 local Missions = {}
 
@@ -103,6 +104,8 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 		player:SetAttribute("MissionId", if state.mission then state.mission.id else "")
 		player:SetAttribute("MissionStep", state.step or 0)
 		player:SetAttribute("MissionEndsAt", state.endsAt or 0)
+		-- ⏸️ 시간이 멈춘 동안은 남은 초를 고정해서 알려 줘요 (화면이 끝나는 시각으로 계산하면 65↔64로 깜빡여요)
+		player:SetAttribute("MissionFrozenLeft", if state.paused then state.frozenLeft else nil)
 		player:SetAttribute("MissionProgress", state.progressText or "")
 		player:SetAttribute("MissionStatus", state.status or "")
 	end
@@ -339,12 +342,29 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 	end
 
 	-- 👔 부장님께 말 걸기: 제출 / 선물
+	-- 🎁 부장님께 하나 드리기 (선물 / 포장 커피 / 수면제 커피)
+	local function give(player: Player, choice: string)
+		local gave, line, text
+		if choice == "gift" then
+			gave, line, text = api.giveGift(player)
+		else
+			gave, line, text = api.giveBag(player, choice)
+		end
+		if line ~= "" then
+			boss:say(line, 3)
+		end
+		if text ~= "" then
+			remotes.Notify:FireClient(player, text, 4)
+		end
+		local _ = gave
+	end
 	local bossPrompt = Instance.new("ProximityPrompt")
-	bossPrompt.ActionText = "말 걸기 (제출·선물)"
+	bossPrompt.ActionText = "말 걸기 (제출·드리기)"
 	bossPrompt.ObjectText = "👔 김부장"
 	bossPrompt.MaxActivationDistance = TALK_RANGE
 	bossPrompt.RequiresLineOfSight = false
 	bossPrompt.Parent = boss.root
+	Npc.stopForPrompt(bossPrompt, boss.humanoid, boss.root, 2) -- ✋ 말 거는 동안 부장님이 멈춰 서요
 	bossPrompt.Triggered:Connect(function(player)
 		if not boss.active then
 			return
@@ -355,15 +375,32 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 			advance(player, state)
 			return
 		end
-		local gave, line, text = api.giveGift(player)
-		if line ~= "" then
-			boss:say(line, 3)
-		end
-		if text ~= "" then
-			remotes.Notify:FireClient(player, text)
-		end
-		if not gave and line == "" then
+		-- 드릴 수 있는 것: 들고 있는 선물 · 포장 커피 · 수면제 커피. 하나면 바로, 여러 개면 고르기 창
+		local options = api.giveOptions(player)
+		if #options == 0 then
 			boss:say(pick(IDLE_LINES), 2)
+		elseif #options == 1 then
+			give(player, options[1].id)
+		else
+			remotes.GiveMenu:FireClient(player, "boss", options)
+			Npc.pause(boss.humanoid, boss.root, player, 8, TALK_RANGE + 6) -- ✋ 고르는 창이 떠 있는 동안
+		end
+	end)
+	remotes.GiveChoose.OnServerEvent:Connect(function(player, choice)
+		Npc.resume(boss.humanoid, player) -- ✋ 골랐으니 부장님은 다시 움직여요
+		if typeof(choice) ~= "string" or not boss.active then
+			return
+		end
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root or (root.Position - boss.root.Position).Magnitude > TALK_RANGE + 6 then
+			remotes.Notify:FireClient(player, "👔 부장님 가까이에서 드려야 해요!")
+			return
+		end
+		for _, option in api.giveOptions(player) do
+			if option.id == choice then
+				give(player, choice)
+				return
+			end
 		end
 	end)
 
@@ -568,13 +605,26 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 					-- 사무실 안에 있을 때만 시작해요 (단지·옥상에 있으면 전화를 받을 수도, 제출할 수도 없어요)
 					-- 너무 늦은 시각이면 오늘은 건너뛰어요 (퇴근 전에 끝낼 수 없어요)
 					local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-					if dayCycle.minute > SalaryConfig.MISSION_LAST_START then
+					if dayCycle.minute > SalaryConfig.MISSION_LAST_START or boss.awayToday then -- (✈️ 부장님이 하루 종일 출장이면 제출할 사람이 없어요)
 						state.startMinute = nil
 					elseif root and office.insideOffice(root.Position) then
 						startMission(player, state)
 					end
 				end
 				if state.status ~= "active" then
+					continue
+				end
+				if state.status == "active" and boss.awayToday then
+					-- ✈️ 하던 프로젝트는 부장님이 출장을 가 버리면 벌 없이 취소돼요
+					state.status = ""
+					state.startMinute = nil
+					clearBoxes(player)
+					if state.slowed then
+						setSpeed(player, SalaryConfig.walkSpeed(player, 16)) -- (택배를 들고 느려져 있었으면 원래 속도로)
+						state.slowed = false
+					end
+					remotes.Notify:FireClient(player, "📋 부장님이 출장을 가서 긴급 프로젝트가 취소됐어요. (벌 없음)")
+					publish(player, state)
 					continue
 				end
 				if busy or dayCycle.phase == "lunch" then
@@ -584,12 +634,16 @@ function Missions.start(office, boss, dayCycle, remotes, api, hooks, coworkers)
 						state.ringUntil += dt
 					end
 					state.progressText = if busy then "⏸️ 이벤트 중 (시간 멈춤)" else "⏸️ 점심시간 (시간 멈춤)"
+					if not state.paused then
+						state.frozenLeft = math.max(0, math.ceil(state.endsAt - dt - workspace:GetServerTimeNow())) -- 멈춘 순간의 남은 초
+					end
 					state.paused = true
 					publish(player, state)
 					continue
 				elseif state.paused then
 					state.paused = nil
 					state.progressText = "" -- (멈춤 표시 지우기)
+					publish(player, state) -- (고정해 둔 남은 초를 풀고 다시 흐르게)
 				end
 				local now = workspace:GetServerTimeNow()
 				if now > state.endsAt then

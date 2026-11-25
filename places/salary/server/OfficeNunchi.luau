@@ -163,7 +163,9 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 	return {
 		folder = folder,
 		desks = desks,
+		extraDesks = F.extraDesks,
 		bossStand = F.bossStand,
+		bossChair = F.bossChair,
 		bossScale = F.bossScale,
 		bossLook = Vector3.new(0, 0, -1),
 		entrance = F.entrance,

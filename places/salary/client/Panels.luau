@@ -182,12 +182,14 @@ end
 
 -- ❓ 자세한 설명은 이 작은 버튼 뒤에 숨겨 둬요: 누르면 창 안에 설명 팝업이 떴다가, 다시 누르면(팝업·X·❓) 닫혀요
 --   body는 글자 또는 (열 때마다 새로 만드는) 함수 / window = 팝업을 띄울 창 (없으면 parent)
+-- ❓ 버튼을 창 오른쪽 위 X 버튼 바로 왼쪽에, 같은 높이·같은 크기로 (모든 창 공통)
+local HELP_BY_CLOSE = UDim2.new(1, -70, 0, -10)
 local function helpButton(parent: GuiObject, position: UDim2, title: string, body: string | () -> string, window: GuiObject?): TextButton
 	local host = window or parent
 	local popup: GuiObject? = nil
 	local b = Ui.button({
 		Position = position,
-		Size = UDim2.fromOffset(34, 34),
+		Size = if position == HELP_BY_CLOSE then UDim2.fromOffset(36, 36) else UDim2.fromOffset(34, 34),
 		Text = "❓",
 		TextSize = 18,
 		BackgroundColor3 = Color3.fromRGB(225, 232, 248),
@@ -256,7 +258,12 @@ local function helpButton(parent: GuiObject, position: UDim2, title: string, bod
 			RichText = true,
 			TextColor3 = INK,
 			Font = Enum.Font.GothamMedium,
-			TextSize = 21, -- (설명서 글씨를 크게: 16 → 21)
+			-- (설명서 글씨를 크게: 16 → 21. 창이 화면에 맞춰 줄어든 만큼 글씨를 더 키워서, 실제로 보이는 크기가 작아지지 않게 해요)
+			TextSize = (function(): number
+				local uiScale = host:FindFirstChildOfClass("UIScale")
+				local shrink = if uiScale then math.clamp(uiScale.Scale, 0.5, 1) else 1
+				return math.clamp(math.floor(23 / shrink), 21, 30)
+			end)(),
 			LineHeight = 1.3,
 			TextWrapped = true,
 			TextXAlignment = Enum.TextXAlignment.Left,
@@ -377,6 +384,9 @@ Remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
 	end
 	if slip.targetOk == false then
 		status ..= `\n💰 실적 미달! ({comma(slip.earned)}/{comma(slip.target)}원) 경고 +1`
+	end
+	if slip.reviewNote then
+		status ..= `\n{slip.reviewNote}`
 	end
 	if slip.fired then
 		status ..= `\n📦 경고 누적으로 해고… 통장 0원, {slip.rankName}(으)로 강등돼 재입사해요.`
@@ -567,6 +577,9 @@ function Panels.showShop(startTab: string?)
 			local ok, result = Remotes.BuyItem:InvokeServer(item.id)
 			message.Text = result
 			message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
+			if ok then
+				Hud.bought(result) -- 🛍️ 화면 가운데에 크게 알려요
+			end
 		end)
 		rows[item.id] = buy
 	end
@@ -581,6 +594,9 @@ function Panels.showShop(startTab: string?)
 			message.Text = result
 			message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
 			if ok then
+				Hud.bought(result) -- 🛍️ 화면 가운데에 크게 알려요
+			end
+			if ok then
 				Sounds.play("ping", 0.6, 1.2)
 			end
 		end)
@@ -589,11 +605,14 @@ function Panels.showShop(startTab: string?)
 	local couponPage = page("coupons")
 	for i, coupon in coupons do
 		local buy = row(couponPage, i, `{coupon.emoji} {coupon.name} · {comma(coupon.price)}원`, coupon.description, Color3.fromRGB(250, 244, 226))
-		buy.Text = "사서 쓰기"
+		buy.Text = if (player:GetAttribute("Rank") or 1) < (coupon.minRank or 1) then `🔒 {SalaryConfig.Ranks[coupon.minRank].name}부터` else "사서 쓰기"
 		buy.Activated:Connect(function()
 			local result = Remotes.BuyCoupon:InvokeServer(coupon.id)
 			message.Text = result.message
 			message.TextColor3 = if result.ok then Color3.fromRGB(40, 140, 70) else RED
+			if result.ok then
+				Hud.bought(result.message) -- 🛍️ 화면 가운데에 크게 알려요
+			end
 			Sounds.play(if result.ok then "ping" else "bass", 0.6, 1.2)
 		end)
 	end
@@ -606,6 +625,9 @@ function Panels.showShop(startTab: string?)
 			local ok, result = Remotes.BuyGuardGift:InvokeServer(gift.id)
 			message.Text = result
 			message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
+			if ok then
+				Hud.bought(result) -- 🛍️ 화면 가운데에 크게 알려요
+			end
 			Sounds.play(if ok then "ping" else "bass", 0.6, 1.2)
 		end)
 	end
@@ -690,6 +712,9 @@ function Panels.showShop(startTab: string?)
 		local ok, result = Remotes.BuyFlower:InvokeServer(itemId, count)
 		message.Text = result
 		message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
+		if ok then
+			Hud.bought(result) -- 🛍️ 화면 가운데에 크게 알려요
+		end
 		Sounds.play(if ok then "ping" else "bass", 0.6, 1.2)
 	end
 	for i, flower in SalaryConfig.ParkFlowers do
@@ -738,6 +763,9 @@ function Panels.showShop(startTab: string?)
 				local ok, result = Remotes.BuySeed:InvokeServer(seed.id, pair[2])
 				message.Text = result
 				message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
+				if ok then
+					Hud.bought(result) -- 🛍️ 화면 가운데에 크게 알려요
+				end
 				Sounds.play(if ok then "ping" else "bass", 0.6, 1.2)
 			end)
 		end
@@ -765,6 +793,9 @@ function Panels.showShop(startTab: string?)
 				local ok, result = Remotes.BuyPigeonSnack:InvokeServer(snack.id, amount)
 				message.Text = result
 				message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
+				if ok then
+					Hud.bought(result) -- 🛍️ 화면 가운데에 크게 알려요
+				end
 				Sounds.play(if ok then "ping" else "bass", 0.6, 1.2)
 			end)
 		end
@@ -868,7 +899,7 @@ function Panels.showBag()
 	local frame = sheet(600, 560)
 	closeOnOutside(frame)
 	line(frame, 0, 32, "🎒 내 소지품", { Font = Enum.Font.GothamBlack, TextSize = 26 })
-	helpButton(frame, UDim2.new(1, -70, 0, 2), "소지품", "🧰 사무용품은 <b>사면 바로 효과</b>가 켜져요\n🪑 [책상에 놓기]/[서랍에 넣기]는 꾸미기예요 (치워도 효과는 그대로)\n🧍 단, 인형은 <b>의자에 앉혀 둬야</b> 효과가 있어요\n⏳ 사무용품은 기한이 지나면 사라져요 · 🏪 매점에서 연장\n⚡ 소모품(에너지 드링크)은 여기서 바로 써요")
+	helpButton(frame, HELP_BY_CLOSE, "소지품", "🧰 사무용품은 <b>사면 바로 효과</b>가 켜져요\n🪑 [책상에 놓기]/[서랍에 넣기]는 꾸미기예요 (치워도 효과는 그대로)\n🧍 단, 인형은 <b>의자에 앉혀 둬야</b> 효과가 있어요\n⏳ 사무용품은 기한이 지나면 사라져요 · 🏪 매점에서 연장\n⚡ 소모품(에너지 드링크)은 여기서 바로 써요")
 	local list = Ui.make("ScrollingFrame", {
 		Position = UDim2.fromOffset(0, 40),
 		Size = UDim2.new(1, 0, 1, -100),
@@ -1031,6 +1062,33 @@ function Panels.showBag()
 	end
 	if not anySnack then
 		entry("🍪 비둘기 과자 없음", "🏪 매점 [🐦 비둘기] 탭", false)
+	end
+
+	-- 👔 부장님께 드릴 것: 포장 커피 · 수면제 · 수면제 커피 (포장 커피 + 수면제 → 수면제 커피 만들기)
+	header("👔 부장님께 드릴 것")
+	local okCarry, carry = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute("Bag") or "{}")
+	end)
+	carry = if okCarry and typeof(carry) == "table" then carry else {}
+	local anyCarry = false
+	for _, id in { "coffee", "pill", "sleepCoffee" } do
+		local info = SalaryConfig.BagItems[id]
+		local n = carry[id] or 0
+		if n > 0 then
+			anyCarry = true
+			entry(`{info.emoji} {info.name} x{n}`, info.description, true)
+		end
+	end
+	if (carry.coffee or 0) > 0 and (carry.pill or 0) > 0 then
+		entry("🧪 수면제 커피 만들기", "🥤 포장 커피 1 + 💊 수면제 1 → 😴 수면제 커피 1", true, "만들기", function()
+			local ok, message = Remotes.Craft:InvokeServer("sleepCoffee")
+			Sounds.play(if ok then "ping" else "bass", 0.6, 1.2)
+			Ui.toast(message)
+			task.wait(0.15) -- (개수 속성이 바뀐 뒤에 다시 그려요)
+			Panels.showBag()
+		end)
+	elseif not anyCarry then
+		entry("🥤 드릴 것 없음", "카페에서 포장 커피, 💊 눈치 약국에서 수면제를 사요", false)
 	end
 
 	header("🖐️ 쓰는 물건")
@@ -1333,6 +1391,9 @@ function Panels.showDecor(startTab: string?)
 		local result = Remotes.Decor:InvokeServer(action, id)
 		message.Text = result.message
 		message.TextColor3 = if result.ok then Color3.fromRGB(40, 140, 70) else RED
+		if result.ok and action == "buy" then
+			Hud.bought(result.message) -- 🛍️ 화면 가운데에 크게 알려요
+		end
 		if result.ok then
 			Sounds.play("ping", 0.6, 1.2)
 		end
@@ -1362,6 +1423,9 @@ function Panels.showDecor(startTab: string?)
 					local result = Remotes.DeskUpgrade:InvokeServer(upgrade.id)
 					message.Text = result.message
 					message.TextColor3 = if result.ok then Color3.fromRGB(40, 140, 70) else RED
+					if result.ok then
+						Hud.bought(result.message) -- 🛍️ 화면 가운데에 크게 알려요
+					end
 					Sounds.play(if result.ok then "ping" else "bass", 0.6, 1.2)
 					task.wait(0.15)
 					if current == frame and selected == "gear" then
@@ -1685,21 +1749,16 @@ function Panels.showCollection()
 	found += heardTopics
 	total += #ChatTopics.Topics
 	line(left, 286, 22, `💬 수다 주제 {heardTopics}/{#ChatTopics.Topics}`, { Font = Enum.Font.GothamBold, TextSize = 16 })
-	-- 🤝 친한 동료 (❤️ 개수)
+	-- 🤝 동료 친밀도 (점수)
 	local friendship = {}
 	pcall(function()
 		friendship = HttpService:JSONDecode(player:GetAttribute("Friendship") or "{}")
 	end)
 	local friends = {}
-	for _, name in SalaryConfig.CoworkerNames do
-		local level = SalaryConfig.friendLevel(friendship[name])
-		if level > 0 then
-			table.insert(friends, `{name} {string.rep("❤️", level)}`)
-		end
+	for _, name in SalaryConfig.coworkerNames(ReplicatedStorage:GetAttribute("SalaryCompany")) do
+		table.insert(friends, `{name} {SalaryConfig.friendText(friendship[name])}`)
 	end
-	line(left, 312, 44, if #friends > 0
-		then "🤝 " .. table.concat(friends, " · ")
-		else "🤝 수다를 끝까지 하고 맞장구를 잘 치면 동료와 친해져요 (❤️ 4개까지)", { TextSize = 13, TextColor3 = MUTED })
+	line(left, 312, 44, "🤝 " .. table.concat(friends, " · ") .. "\n(자세한 건 📊 인사평가 창에서)", { TextSize = 13, TextColor3 = MUTED })
 
 	title.Text = `📖 농땡이 도감 ({found}/{total})`
 	button(frame, 0, "닫기", close)
@@ -1714,6 +1773,7 @@ local TOOL_TIPS = {
 	["🪑"] = "🪑 내 자리 꾸미기 · 산 물건 장착, 칭호 (새 물건은 🛒 온라인 쇼핑 중에 주문 → 다음 날 📦)",
 	["🎒"] = "🎒 내 소지품 · 사무용품, 경비원 선물, 간식, 체력 스탯",
 	["🧸"] = "🧸 내 인형 · 눌러서 책상에 진열 (최대 3개)",
+	["📊"] = "📊 인사평가 · 이번 주 순위표, 동료 친밀도",
 	["💪"] = "💪 체력 스탯 · 레벨과 효과, 오늘 운동 횟수",
 	["👔"] = "👔 출근룩 · 옷 사고 입기",
 }
@@ -1749,6 +1809,9 @@ local function hideToolTip(button: GuiObject)
 	end
 end
 
+-- (메뉴 버튼으로 접었다 펴는 아이콘들: toolButton보다 먼저 선언해야 그 안에서 쓸 수 있어요)
+local toolsOpen = false
+local foldedTools: { TextButton } = {}
 local function toolButton(label: string, width: number, onClick: () -> (), tip: string?): TextButton
 	local b = Ui.button({
 		Size = UDim2.fromOffset(width, 36),
@@ -1764,6 +1827,8 @@ local function toolButton(label: string, width: number, onClick: () -> (), tip: 
 		hideToolTip(b)
 		onClick()
 	end)
+	table.insert(foldedTools, b)
+	b.Visible = toolsOpen
 	local tipText = tip or TOOL_TIPS[label]
 	if tipText then
 		b.MouseEnter:Connect(function()
@@ -1776,12 +1841,40 @@ local function toolButton(label: string, width: number, onClick: () -> (), tip: 
 	return b
 end
 
+-- 메뉴 버튼: 아이콘이 많아져서 평소엔 접어 두고, 누르면 펼쳐져요 (⚡ 에너지 드링크만 항상 보여요)
+local menuToggle = Ui.button({
+	Size = UDim2.fromOffset(76, 36),
+	Text = "메뉴 +",
+	TextSize = 15,
+	BackgroundColor3 = Theme.Color.surface,
+	TextColor3 = Theme.Color.navy,
+	Parent = Hud.toolbar,
+})
+local function applyTools()
+	menuToggle.Text = if toolsOpen then "메뉴 –" else "메뉴 +" -- (다른 창의 접기 버튼과 같은 +/– 표시)
+	for _, b in foldedTools do
+		b.Visible = toolsOpen
+	end
+end
+menuToggle.Activated:Connect(function()
+	toolsOpen = not toolsOpen
+	Sounds.play("click", 0.4)
+	applyTools()
+end)
+
 -- (🛒 매점 버튼은 없앴어요: 사무실의 🏪 사내 매점 계산대에서 [E]로 사요)
 toolButton("📖 도감", 76, function()
 	if current then
 		close()
 	else
 		Panels.showCollection()
+	end
+end)
+toolButton("📊", 46, function()
+	if current then
+		close()
+	else
+		Panels.showReview()
 	end
 end)
 toolButton("🪑", 46, function()
@@ -1824,6 +1917,7 @@ end
 local energyButton = toolButton("⚡ 0", 86, function()
 	Remotes.UseEnergy:FireServer()
 end, "⚡ 에너지 드링크 마시기 · 오늘 하루 일하는 척 복귀 시간 절반")
+table.remove(foldedTools, table.find(foldedTools, energyButton) :: number) -- (드링크는 접어도 보여요: 아래에서 따로 켜고 꺼요)
 task.spawn(function()
 	while true do
 		local count = player:GetAttribute("Energy") or 0
@@ -1873,6 +1967,153 @@ local function showCard(person: Person)
 	end
 	button(frame, 0, "알겠어요", close)
 	Sounds.play("swoosh", 0.4)
+end
+
+-- 📊 인사평가: 이번 주 순위표 + 내 점수 내역 + 동료 친밀도
+function Panels.showReview()
+	local review: any = {}
+	local friendship: any = {}
+	pcall(function()
+		review = HttpService:JSONDecode(player:GetAttribute("Review") or "{}")
+		friendship = HttpService:JSONDecode(player:GetAttribute("Friendship") or "{}")
+	end)
+	local GREEN = Color3.fromRGB(34, 140, 84)
+	local function friendColor(points: number): Color3
+		return if points >= SalaryConfig.FRIEND_LEVELS[1] then GREEN elseif points <= SalaryConfig.FRIEND_HOSTILE then RED else MUTED
+	end
+	local rivals = if typeof(review.rivals) == "table" then review.rivals else {}
+	local news = if typeof(review.news) == "table" then review.news else {}
+	local last = review.last
+	local lastRows = if typeof(last) == "table" and typeof(last.board) == "table" then 1 else (if typeof(last) == "table" then 1 else 0)
+	local coworkerNames = SalaryConfig.coworkerNames(ReplicatedStorage:GetAttribute("SalaryCompany"))
+	-- (내용에 딱 맞는 높이: 창이 쓸데없이 길면 화면에 맞추느라 전체가 작아져요)
+	local height = 290 + (#rivals + (if review.score ~= nil then 1 else 0)) * 40 + #news * 26 + (if #news > 0 then 38 else 0) + math.ceil(#coworkerNames / 2) * 54 + lastRows * 36
+	local frame = sheet(820, height)
+	closeOnOutside(frame)
+	local weekdayName = SalaryConfig.Weekdays[review.weekday or 1].name
+	line(frame, 0, 34, `📊 인사평가 · {weekdayName}`, { Font = Enum.Font.GothamBlack, TextSize = 27 })
+	helpButton(frame, HELP_BY_CLOSE, "📊 인사평가", table.concat({
+		"한 주(월~금) 동안 동료 3명과 점수로 겨뤄요. <b>금요일 퇴근 때 발표!</b>",
+		"",
+		"<b>내 점수 (100점)</b>",
+		"· 실적 40: 하루 실적 목표를 넘긴 만큼 (2배면 만점)",
+		"· 근태 20: 지각·점심 지각·업무 미달이면 감점",
+		"· 태도 20: 적발되거나 고자질당하면 감점",
+		"· 동료평가 20: 금요일에 동료들이 친밀도만큼 표를 줘요",
+		"",
+		"<b>보상</b> (기본급 기준)",
+		"· 1등: 성과급 2배 + 승진 경험치 · 2등: 성과급 1배",
+		"· 꼴찌: 감봉 1배 + 다음 근무일 의심도 속도 증가",
+		"",
+		"<b>동료에게 [E] 말 걸기</b>",
+		"· 🎁 간식 주기: 가진 간식·포장 커피로 친밀도 +6 (목요일 2배)",
+		"· 📢 신고: 딴짓하는 경쟁자 -6점, 대신 친밀도 -25 (하루 한 번)",
+		"",
+		"친밀도 -20 아래인 경쟁자는 나를 고자질해요. 👀가 뜨면",
+		"자리에 앉아 일하세요(허위 신고가 돼요). 간식으로 붙잡아도 돼요.",
+	}, "\n"), frame)
+
+	local y = 48
+	if review.locked then
+		line(frame, y, 26, `🔒 인사평가는 {review.minRank}부터 시작돼요. 지금은 동료들과 친밀도를 쌓아 두세요!`, { Font = Enum.Font.GothamBold, TextSize = 18 })
+		y += 34
+		line(frame, y, 24, "과장이 되면 동료 3명과 순위를 겨루고, 사이가 나쁜 동료는 나를 고자질해요.", { TextColor3 = MUTED, TextSize = 16 })
+		y += 34
+	elseif review.days == nil then
+		line(frame, y, 24, "아직 평가 정보가 없어요. 출근하면 시작돼요.", { TextColor3 = MUTED, TextSize = 18 })
+		y += 30
+	elseif review.score == nil then
+		line(frame, y, 24, "오늘 퇴근하면 첫 점수가 나와요. (아래는 경쟁자들의 평소 실력)", { TextColor3 = MUTED, TextSize = 18 })
+		y += 30
+	else
+		line(frame, y, 24, `지금 {review.rank}등 / {review.count}명 · {review.days}일 반영` .. (if review.days < SalaryConfig.REVIEW_MIN_DAYS then ` (최소 {SalaryConfig.REVIEW_MIN_DAYS}일 일해야 순위에 들어요)` else ""), { Font = Enum.Font.GothamBold, TextSize = 19 })
+		y += 30
+	end
+
+	-- 순위표
+	local rows = {}
+	if review.score ~= nil then
+		table.insert(rows, { name = `{player.DisplayName} (나)`, score = review.score, me = true })
+	end
+	for _, rv in rivals do
+		table.insert(rows, { name = `{rv.name} · {rv.kind}`, score = rv.score, me = false, who = rv.name, tattled = rv.tattled })
+	end
+	table.sort(rows, function(a, b)
+		return a.score > b.score
+	end)
+	for i, row in rows do
+		local bar = Ui.make("Frame", {
+			Position = UDim2.fromOffset(0, y),
+			Size = UDim2.new(1, 0, 0, 36),
+			BackgroundColor3 = if row.me then Color3.fromRGB(255, 236, 170) else Color3.fromRGB(240, 242, 248),
+			ZIndex = 31,
+			Parent = frame,
+		}, { Ui.corner(8) })
+		line(bar, 7, 24, `  {i}등   {row.name}` .. (if row.tattled then "  🗡️" else ""), { Font = Enum.Font.GothamBold, TextSize = 18, ZIndex = 32 })
+		if row.who then
+			local points = friendship[row.who] or 0
+			line(bar, 7, 24, `친밀도 {SalaryConfig.friendText(points)}`, { TextSize = 17, TextColor3 = friendColor(points), TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, -120, 0, 24), ZIndex = 32 })
+		end
+		line(bar, 7, 24, `{string.format("%.1f", row.score)}점  `, { Font = Enum.Font.GothamBlack, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 32 })
+		y += 40
+	end
+
+	-- 내 점수 내역
+	if review.locked then
+		y -= 70 -- (점수 내역 줄이 없어요)
+	elseif review.score ~= nil then
+		line(frame, y + 6, 26, `실적 {review.perf}/40 · 근태 {review.attend}/20 · 태도 {review.attitude}/20 · 동료평가 {review.peer}/20`
+			.. (if (review.mod or 0) ~= 0 then ` · 보정 +{review.mod}` else ""), { TextSize = 17 })
+	else
+		line(frame, y + 6, 26, `동료평가 예상 {review.peer or 10}/20 (친밀도가 오르면 같이 올라요)`, { TextSize = 17 })
+	end
+	local _ = review.locked or line(frame, y + 34, 24, if review.reported then "📢 오늘 신고는 이미 했어요" else "📢 오늘 신고 1번 남음 · 🗡️ = 나를 고자질한 동료", { TextSize = 16, TextColor3 = MUTED })
+	y += 70
+
+	-- 이번 주 소식
+	if #news > 0 then
+		line(frame, y, 22, "이번 주 소식", { Font = Enum.Font.GothamBold, TextSize = 18 })
+		y += 28
+		for _, text in news do
+			line(frame, y, 24, text, { TextSize = 16, TextColor3 = MUTED, TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false })
+			y += 26
+		end
+		y += 10
+	end
+
+	-- 동료 친밀도
+	line(frame, y, 22, "동료 친밀도 (-100 ~ +100)", { Font = Enum.Font.GothamBold, TextSize = 18 })
+	y += 32
+	-- (동료가 많아서 두 줄로 나눠 보여 줘요)
+	for i, name in coworkerNames do
+		local points = friendship[name] or 0
+		local column = (i - 1) % 2
+		local rowY = y + math.floor((i - 1) / 2) * 54
+		local cell = Ui.make("Frame", {
+			Position = UDim2.new(column * 0.5, if column == 1 then 6 else 0, 0, rowY),
+			Size = UDim2.new(0.5, -6, 0, 50),
+			BackgroundTransparency = 1,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		line(cell, 0, 24, name, { Font = Enum.Font.GothamBold, TextSize = 18 })
+		line(cell, 0, 24, SalaryConfig.friendText(points), { Font = Enum.Font.GothamBlack, TextSize = 19, TextColor3 = friendColor(points), Position = UDim2.fromOffset(86, 0) })
+		local hint = if points <= SalaryConfig.FRIEND_ENEMY
+			then "앙숙: 자주 고자질하고 실적을 가로채요"
+			elseif points <= SalaryConfig.FRIEND_HOSTILE then "견제 중: 경쟁자가 되면 고자질해요"
+			else (SalaryConfig.friendNext(points) or "모든 혜택이 풀렸어요")
+		line(cell, 25, 22, hint, { TextSize = 15, TextColor3 = MUTED, TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false })
+	end
+	y += math.ceil(#coworkerNames / 2) * 54
+
+	-- 지난주 결과
+	if typeof(last) == "table" then
+		local text = if last.excluded
+			then "지난 평가: 근무일이 모자라 평가에서 빠졌어요"
+			else `지난 평가: {last.rank}등 / {last.count}명` .. (if (last.pay or 0) ~= 0 then ` · {if last.pay > 0 then "성과급 +" else "감봉 "}{comma(last.pay)}원` else "") .. (if (last.xp or 0) > 0 then ` · 경험치 +{comma(last.xp)}` else "")
+		line(frame, y, 22, text, { TextSize = 17, Font = Enum.Font.GothamBold })
+	end
+	button(frame, 0, "닫기", close)
 end
 
 function Panels.showPerson(personId: string)
@@ -1944,7 +2185,7 @@ local function auditPerson(): Person
 			`📷 농땡이를 보면 카메라를 들어요 → {SalaryConfig.AUDIT_PHOTO_WINDUP}초 안에 일하기! (도망가면 🪑 빈자리가 찍혀요)`,
 			"📸 찍히는 곳: 내 자리 · 🚽 화장실 · 📊 회의실 · 💬 수다 (어슬렁·탕비실은 OK)",
 			`⚖️ 농땡이 사진 {SalaryConfig.AUDIT_REPORT_AT}장 또는 🪑 빈자리 {SalaryConfig.AUDIT_EMPTY_REPORT_AT}장 → 퇴근 때 감봉 + 경고 1개 (한 번만)`,
-			`[R] "감사팀이죠?" 맞히면 감사 끝 · 모두의 사진 폐기 · +{comma(SalaryConfig.AUDIT_REVEAL_BONUS)}원`,
+			`[E] 말 걸기 → "감사팀이죠?" 맞히면 감사 끝 · 모두의 사진 폐기 · +{comma(SalaryConfig.AUDIT_REVEAL_BONUS)}원`,
 			`😠 틀리면 의심도 +{SalaryConfig.AUDIT_WRONG_SUSPICION} · 의심도 속도 +{string.format("%.2f", SalaryConfig.SpeedFactors.accuseWrong.delta)}`,
 			`💰 대신 오늘 농땡이 수입 ×{SalaryConfig.AUDIT_INCOME}!`,
 		},
@@ -2676,7 +2917,7 @@ function Panels.showGarden(station: any)
 	frame.Position = UDim2.new(1, -20, 0.5, 0)
 	line(frame, 0, 30, "🌱 직장인 텃밭", { Font = Enum.Font.GothamBlack, TextSize = 24 })
 	line(frame, 32, 20, "💧 매일 물 주기 · 퇴근하면 자라요", { TextSize = 13, TextColor3 = MUTED })
-	helpButton(frame, UDim2.new(1, -70, 0, 1), "텃밭 규칙", "🏪 사내 매점 <b>[🌱 씨앗]</b> 탭에서 씨앗을 사면 🎒에 들어와요\n🌱 빈 화분에서 <b>[씨앗 심기]</b>\n💧 하루 한 번 물을 주고 퇴근하면 하루만큼 자라요\n🥀 하루 안 주면 시들고, <font color=\"#c83228\">이틀 안 주면 💀 말라 죽어요</font> (예민한 식물은 하루만 걸러도 💀)\n🧺 다 자라면 💰 팔거나 🎁 부장님 선물로 챙겨요\n⚡ 쾌속 식물은 물 주면 바로 자라요 · 🌵 선인장은 물이 필요 없어요")
+	helpButton(frame, HELP_BY_CLOSE, "텃밭 규칙", "🏪 사내 매점 <b>[🌱 씨앗]</b> 탭에서 씨앗을 사면 🎒에 들어와요\n🌱 빈 화분에서 <b>[씨앗 심기]</b>\n💧 하루 한 번 물을 주고 퇴근하면 하루만큼 자라요\n🥀 하루 안 주면 시들고, <font color=\"#c83228\">이틀 안 주면 💀 말라 죽어요</font> (예민한 식물은 하루만 걸러도 💀)\n🧺 다 자라면 💰 팔거나 🎁 부장님 선물로 챙겨요\n⚡ 쾌속 식물은 물 주면 바로 자라요 · 🌵 선인장은 물이 필요 없어요")
 	local message = line(frame, 0, 24, "", {
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 0, 1, 0),
@@ -3198,7 +3439,7 @@ function Panels.showParkBed(index: number, station: any)
 	frame.Position = UDim2.new(1, -20, 0.5, 0)
 	line(frame, 0, 28, `🌷 내 공원 화단 {index}`, { Font = Enum.Font.GothamBlack, TextSize = 22 })
 	line(frame, 32, 20, "💧 매일 물 · 🧪 봉오리 땐 거름 · 활짝 피면 매일 수당", { TextSize = 13, TextColor3 = MUTED })
-	helpButton(frame, UDim2.new(1, -70, 0, 0), "공원 화단 규칙", `🏪 사내 매점 <b>[🌱 씨앗] → [🌷 꽃씨·거름]</b>에서 꽃씨·🧪 거름을 사요\n🌷 화단 하나에 꽃 한 종류를 가득 피워요\n💧 매일 물을 주고 퇴근하면 한 단계 자라요 (🌿 꽃봉오리 땐 🧪 거름도 줘야 해요)\n😌 안 줘도 죽지 않고, 활짝 피면 영원히 안 시들어요\n💰 활짝 핀 화단마다 퇴근할 때 +{SalaryConfig.PARK_BED_BONUS}원\n🌈 {SalaryConfig.PARK_BEDS}곳 모두 활짝 + 꽃 {SalaryConfig.PARK_FULL_KINDS}종 이상이면 +{SalaryConfig.PARK_FULL_BONUS}원 더 (오늘 핀 꽃도 바로 쳐 줘요)`)
+	helpButton(frame, HELP_BY_CLOSE, "공원 화단 규칙", `🏪 사내 매점 <b>[🌱 씨앗] → [🌷 꽃씨·거름]</b>에서 꽃씨·🧪 거름을 사요\n🌷 화단 하나에 꽃 한 종류를 가득 피워요\n💧 매일 물을 주고 퇴근하면 한 단계 자라요 (🌿 꽃봉오리 땐 🧪 거름도 줘야 해요)\n😌 안 줘도 죽지 않고, 활짝 피면 영원히 안 시들어요\n💰 활짝 핀 화단마다 퇴근할 때 +{SalaryConfig.PARK_BED_BONUS}원\n🌈 {SalaryConfig.PARK_BEDS}곳 모두 활짝 + 꽃 {SalaryConfig.PARK_FULL_KINDS}종 이상이면 +{SalaryConfig.PARK_FULL_BONUS}원 더 (오늘 핀 꽃도 바로 쳐 줘요)`)
 	local message = line(frame, 0, 24, "", {
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 0, 1, 0),
@@ -4233,6 +4474,9 @@ function Panels.showOutfit(slotIndex: number?)
 		end
 		message.Text = result.message
 		message.TextColor3 = if result.ok then Color3.fromRGB(40, 140, 70) else RED
+		if result.ok and action == "buy" then
+			Hud.bought(result.message) -- 🛍️ 화면 가운데에 크게 알려요
+		end
 		Sounds.play(if result.ok then "ping" else "bass", 0.4, 1.2)
 		task.wait(0.15) -- (속성이 바뀔 때까지 잠깐)
 		if current == frame then
@@ -4466,7 +4710,7 @@ Remotes:WaitForChild("PigeonBook").OnClientEvent:Connect(function(station)
 	line(frame, 38, 22, `💕 {level.name} · {feeds}점` .. (if nextLevel then ` (다음까지 {nextLevel.feeds - feeds}점)` else " 🏆") .. (if chance > 0 then ` · 🎁 {chance}%` else ""), { TextSize = 16, TextColor3 = MUTED })
 	helpButton(
 		frame,
-		UDim2.new(1, -70, 0, 2),
+		HELP_BY_CLOSE,
 		"비둘기 친밀도",
 		`🍪 옥상 모이 통 [E]에서 과자를 뿌리면 💕 친밀도가 올라요\n🐦 지금 단계: <b>{level.name}</b> · 한 번에 {level.flock}마리` .. (if nextLevel then ` · 다음 단계까지 {nextLevel.feeds - feeds}점` else " · 최고 단계!") .. "\n" .. (if chance > 0
 			then `🎁 과자를 주면 {chance}% 확률로 선물을 물어 와요 (좋은 과자일수록 +) · 하루 {SalaryConfig.PIGEON_GIFT_DAILY}번까지`
@@ -4785,6 +5029,7 @@ local function showStreetShop(shopId: string)
 		end
 	end
 	items = todays
+	local myRank = player:GetAttribute("Rank") or 1
 	local frame = sheet(560, 130 + #items * 64)
 	line(frame, 0, 30, shop.name, { Font = Enum.Font.GothamBlack, TextSize = 24 })
 	local balance = line(frame, 0, 30, "", {
@@ -4792,7 +5037,9 @@ local function showStreetShop(shopId: string)
 		Font = Enum.Font.GothamBold,
 		Size = UDim2.new(1, -44, 0, 30),
 	})
-	local message = line(frame, 30 + #items * 64 + 14, 22, if shopId == "store" then "🎁 산 선물은 부장님께 다가가 [E] 말 걸기로 드려요" else "근무 중이라면 빨리 사서 돌아가요! 🖥️ 자리 부재 게이지가 차고 있어요", { TextSize = 15, TextColor3 = MUTED })
+	local message = line(frame, 30 + #items * 64 + 14, 22, if shopId == "store" then "🎁 산 선물은 부장님께 다가가 [E] 말 걸기로 드려요"
+		elseif player:GetAttribute("CorpCard") == true and SalaryConfig.CORP_CARD_SHOPS[shopId] then "💳 법인카드: 오늘 처음 사는 것 하나는 무료예요!"
+		else "근무 중이라면 빨리 사서 돌아가요! 🖥️ 자리 부재 게이지가 차고 있어요", { TextSize = 15, TextColor3 = MUTED })
 	for i, item in items do
 		local y = 40 + (i - 1) * 64
 		line(frame, y, 22, `{item.emoji} {item.name} · {comma(item.price)}원`, { Font = Enum.Font.GothamBold })
@@ -4801,7 +5048,12 @@ local function showStreetShop(shopId: string)
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, 0, 0, y + 8),
 			Size = UDim2.fromOffset(110, 40),
-			Text = if item.gift then "사기" elseif item.snack then "포장하기" elseif item.food then "먹기" else "마시기",
+			Text = if myRank < math.max(shop.minRank or 1, item.minRank or 1)
+				then `🔒 {SalaryConfig.Ranks[math.max(shop.minRank or 1, item.minRank or 1)].name}부터`
+				elseif item.gift or item.bag then "사기"
+				elseif item.snack then "포장하기"
+				elseif item.food then "먹기"
+				else "마시기",
 			TextSize = 16,
 			ZIndex = 31,
 			Parent = frame,
@@ -4810,6 +5062,9 @@ local function showStreetShop(shopId: string)
 			local ok, result = Remotes.BuyStreet:InvokeServer(shopId, item.id)
 			message.Text = result
 			message.TextColor3 = if ok then Color3.fromRGB(40, 140, 70) else RED
+			if ok then
+				Hud.bought(result) -- 🛍️ 화면 가운데에 크게 알려요
+			end
 			if ok then
 				Sounds.play("ping", 0.6, 1.2)
 			end
@@ -4848,7 +5103,7 @@ local function showClaw()
 		TextSize = 16,
 		TextColor3 = MUTED,
 	})
-	helpButton(frame, UDim2.new(1, -70, 0, 2), "인형뽑기", "① 집게가 좌우로 움직일 때 <b>[멈춤]</b>\n② 앞뒤로 움직일 때 <b>[내리기]</b>\n🎯 인형 정중앙을 노려야 잘 잡혀요\n✨ 희귀한 인형일수록 미끄러워요 😅")
+	helpButton(frame, HELP_BY_CLOSE, "인형뽑기", "① 집게가 좌우로 움직일 때 <b>[멈춤]</b>\n② 앞뒤로 움직일 때 <b>[내리기]</b>\n🎯 인형 정중앙을 노려야 잘 잡혀요\n✨ 희귀한 인형일수록 미끄러워요 😅")
 	local box = Ui.make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 82),
@@ -5756,7 +6011,7 @@ local function showDart()
 		TextSize = 14,
 		TextColor3 = MUTED,
 	})
-	helpButton(frame, UDim2.new(1, -70, 0, 0), "풍선 다트", "🖱️ 판을 누른 채 <b>아래로 끌었다 놓으면</b> 다트가 날아가요 (많이 당길수록 세게)\n🎈 맞힌 풍선에 써 있는 경품을 받아요\n🧸 인형 풍선은 가끔 전설 인형!\n🔁 닫았다 열어도 같은 풍선 벽이에요")
+	helpButton(frame, HELP_BY_CLOSE, "풍선 다트", "🖱️ 판을 누른 채 <b>아래로 끌었다 놓으면</b> 다트가 날아가요 (많이 당길수록 세게)\n🎈 맞힌 풍선에 써 있는 경품을 받아요\n🧸 인형 풍선은 가끔 전설 인형!\n🔁 닫았다 열어도 같은 풍선 벽이에요")
 	-- 풍선 벽 (하늘색 판, 넘어가는 다트는 잘려 보여요)
 	local field = Ui.make("Frame", {
 		Position = UDim2.fromOffset(0, 62),
@@ -7533,7 +7788,7 @@ Remotes:WaitForChild("GuardBribeOpen").OnClientEvent:Connect(function(guardId: s
 	local frame = sheet(400, 200 + count * 58) -- (아래 안내 문구가 버튼과 안 겹치게 여유)
 	line(frame, 0, 30, "🎁 경비원에게 선물", { Font = Enum.Font.GothamBlack, TextSize = 22 })
 	line(frame, 32, 20, `👮 {guardName} · 하루 한 번`, { TextSize = 14, TextColor3 = MUTED })
-	helpButton(frame, UDim2.new(1, -70, 0, 0), "경비원 선물", "🏪 사내 매점 <b>[👮 경비원]</b> 탭에서 선물을 사면 🎒에 보관돼요\n🎁 선물을 받은 경비원은 그동안 <b>못 본 척</b> (의심도가 안 올라요)\n⏳ 좋은 선물일수록 오래가요\n📅 경비원마다 하루 한 번만 받아요")
+	helpButton(frame, HELP_BY_CLOSE, "경비원 선물", "🏪 사내 매점 <b>[👮 경비원]</b> 탭에서 선물을 사면 🎒에 보관돼요\n🎁 선물을 받은 경비원은 그동안 <b>못 본 척</b> (의심도가 안 올라요)\n⏳ 좋은 선물일수록 오래가요\n📅 경비원마다 하루 한 번만 받아요")
 	local message = line(frame, 0, 22, "", {
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 0, 1, -50),

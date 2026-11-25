@@ -151,20 +151,17 @@ function OfficeDaechung.build(B, folder: Folder, company, helpers)
 		index += 1
 		table.insert(spareDesks, helpers.buildDesk(B, index, LAYOUT.spareColumn * S, z * S)) -- 게임 판정에는 안 쓰는 자리
 	end
-	-- 🧑‍💼 배경 직원: 빈자리에 앉아 일만 하는 사람들 (말을 걸 수 없어요). 사무실이 비어 보이지 않게 해요.
+	-- 🧑‍💼 플레이어 자리가 아닌 책상에 앉는 직원들
 	local EXTRAS = {
 		{ name = "오차장", skin = Color3.fromRGB(226, 194, 164), shirt = Color3.fromRGB(214, 222, 232), pants = Color3.fromRGB(52, 56, 66) },
 		{ name = "유사원", skin = Color3.fromRGB(238, 208, 182), shirt = Color3.fromRGB(196, 178, 160), pants = Color3.fromRGB(70, 66, 62) },
 	}
+	-- (Coworkers가 이 자리에 동료를 만들어요: 다른 동료처럼 말 걸기·친밀도·인사평가가 돼요)
+	local extraDesks = {}
 	for i, desk in spareDesks do
 		local extra = EXTRAS[i]
 		if extra then
-			task.defer(function()
-				local model = Npc.create(extra.name, { skin = extra.skin, shirt = extra.shirt, pants = extra.pants }, folder)
-				model:PivotTo(desk.seat.CFrame + Vector3.new(0, 3, 0))
-				Npc.sit(model, desk.seat)
-				Npc.setStatus(model, "⌨️")
-			end)
+			table.insert(extraDesks, { desk = desk, name = extra.name, look = { skin = extra.skin, shirt = extra.shirt, pants = extra.pants } })
 		end
 	end
 
@@ -180,7 +177,8 @@ function OfficeDaechung.build(B, folder: Folder, company, helpers)
 	Build.surfaceText(nameplate, Enum.NormalId.Front, "부장 김부장", { Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(230, 190, 90) })
 	B:part(Vector3.new(2.6, 1.8, 0.3), v(BX + 2.6, 3.9, BZ + 0.6), { Color = COLORS.monitor })
 	if Meshes.ready("Chair") then
-		Meshes.place(B, "Chair", v(BX + 4.5, 0, BZ + 5), 150, { colors = { Seat = M.navy, Back = M.navy } }) -- 부장 의자 (장식, 통과돼요)
+		-- 부장님 의자: 책상 바로 뒤, 책상을 보고 (수면제 커피를 마시면 여기 앉아 자요)
+		Meshes.place(B, if Meshes.ready("RChair") then "RChair" else "Chair", v(BX, 0, BZ + 2.3), 180, { colors = { Seat = M.navy, Back = M.navy } })
 	end
 
 	-- 복합기 · 락커 · 정수기 · 화분 · 게시판
@@ -380,7 +378,9 @@ function OfficeDaechung.build(B, folder: Folder, company, helpers)
 	return {
 		folder = folder,
 		desks = desks,
+		extraDesks = extraDesks,
 		bossStand = v(BX, 0, BZ + 3.6),
+		bossChair = v(BX, 0, BZ + 2.3), -- 부장님 의자 자리
 		bossLook = Vector3.new(0, 0, -1),
 		-- 🏢 사무실이 좁아진 만큼 부장님의 시야 거리와 걸음을 줄여, 다가오는 데 걸리는 시간을 예전과 비슷하게 맞춰요
 		bossScale = { range = 0.8, walkSpeed = 0.9 }, -- (평면을 1.25배로 넓히면서 0.7 / 0.85 에서 조금 풀었어요)

@@ -464,6 +464,65 @@ return {
 			LeavesLight = { id = "rbxassetid://117189573731398", size = Vector3.new(1.461, 2.232, 1.121), center = Vector3.new(0.023, 2.216, -0.004), color = "grassLight", material = "SmoothPlastic" },
 		},
 	},
+	PharmCounter = {
+		flip = true,
+		parts = {
+			Body = { id = "rbxassetid://72411943743217", size = Vector3.new(10, 3.2, 2.2), center = Vector3.new(0, 1.6, -0.1), color = "cakeCream", material = "SmoothPlastic" },
+			Band = { id = "rbxassetid://75663185442216", size = Vector3.new(10.1, 3, 2.3), center = Vector3.new(0, 1.5, -0.1), color = "pharm", material = "SmoothPlastic" },
+			Top = { id = "rbxassetid://131029783361980", size = Vector3.new(10.4, 0.24, 2.7), center = Vector3.new(0, 3.4, -0), color = "stone", material = "SmoothPlastic" },
+			Glass = { id = "rbxassetid://135820618874473", size = Vector3.new(4.6, 1.6, 0.2), center = Vector3.new(-2.3, 1.5, 1.02), color = "glass", material = "Glass" },
+			Boxes = { id = "rbxassetid://99718737530729", size = Vector3.new(4.1, 0.9, 0.4), center = Vector3.new(-2.3, 1.4, 0.7), color = "pharmSoft", material = "SmoothPlastic" },
+			Cross = { id = "rbxassetid://107009136996965", size = Vector3.new(0.9, 0.9, 0.08), center = Vector3.new(3, 1.6, 1.02), color = "pharm", material = "SmoothPlastic" },
+			Register = { id = "rbxassetid://137868380694946", size = Vector3.new(1.3, 1.288, 1), center = Vector3.new(3.6, 4.144, -0.1), color = "ink", material = "SmoothPlastic" },
+			Bags = { id = "rbxassetid://125129765867226", size = Vector3.new(3, 1.018, 0.422), center = Vector3.new(-2.1, 4, 0.2), color = "surface", material = "SmoothPlastic" },
+		},
+	},
+	MedShelf = {
+		flip = true,
+		parts = {
+			Frame = { id = "rbxassetid://77348057801670", size = Vector3.new(6, 9, 1.45), center = Vector3.new(0, 4.5, -0.025), color = "cakeCream", material = "SmoothPlastic" },
+			Drawers = { id = "rbxassetid://90351531805616", size = Vector3.new(5.7, 2.4, 1.3), center = Vector3.new(0, 1.25, -0), color = "pharmSoft", material = "SmoothPlastic" },
+			Handles = { id = "rbxassetid://77071478582399", size = Vector3.new(4.6, 1.12, 0.1), center = Vector3.new(0, 1.25, 0.68), color = "pharm", material = "SmoothPlastic" },
+			BoxesA = { id = "rbxassetid://72953475546180", size = Vector3.new(5.3, 5.25, 0.5), center = Vector3.new(0, 5.3, 0.1), color = "pharmSoft", material = "SmoothPlastic" },
+			BoxesB = { id = "rbxassetid://108193827174233", size = Vector3.new(5.3, 5.45, 0.5), center = Vector3.new(0, 5.4, 0.1), color = "surface", material = "SmoothPlastic" },
+			Bottles = { id = "rbxassetid://135762496319318", size = Vector3.new(5.12, 5.3, 0.52), center = Vector3.new(0, 5.32, 0.1), color = "woodDark", material = "SmoothPlastic" },
+			Caps = { id = "rbxassetid://128198535860482", size = Vector3.new(5, 4.68, 0.4), center = Vector3.new(0, 5.81, 0.1), color = "cakeCream", material = "SmoothPlastic" },
+		},
+	},
+	PharmCross = {
+		flip = true,
+		parts = {
+			Plate = { id = "rbxassetid://113259783017601", size = Vector3.new(3.4, 3.4, 0.2), center = Vector3.new(0, 0, 0.1), color = "cakeCream", material = "SmoothPlastic" },
+			Cross = { id = "rbxassetid://87035515076438", size = Vector3.new(2.6, 2.6, 0.16), center = Vector3.new(0, 0, 0.26), color = "pharm", material = "Neon" },
+		},
+	},
+	WaitBench = {
+		flip = true,
+		parts = {
+			Seats = { id = "rbxassetid://116380931468077", size = Vector3.new(5.7, 1.693, 1.833), center = Vector3.new(0, 2.347, -0.066), color = "pharm", material = "SmoothPlastic" },
+			Frame = { id = "rbxassetid://115731294558692", size = Vector3.new(6, 3.028, 1.878), center = Vector3.new(0, 1.545, -0.07), color = "metal", material = "Metal" },
+		},
+	},
+	PillBottle = {
+		flip = true,
+		parts = {
+			Bottle = { id = "rbxassetid://85194083528602", size = Vector3.new(2.6, 3.6, 2.6), center = Vector3.new(0, 1.8, -0), color = "woodDark", material = "SmoothPlastic" },
+			Cap = { id = "rbxassetid://99100561198061", size = Vector3.new(1.9, 0.9, 1.9), center = Vector3.new(0, 4.05, -0), color = "cakeCream", material = "SmoothPlastic" },
+			Label = { id = "rbxassetid://100838175415789", size = Vector3.new(2.72, 1.6, 2.72), center = Vector3.new(0, 1.7, -0), color = "surface", material = "SmoothPlastic" },
+			Mark = { id = "rbxassetid://72160183346560", size = Vector3.new(0.9, 0.9, 0.1), center = Vector3.new(0, 1.7, 1.36), color = "pharm", material = "SmoothPlastic" },
+			PillsA = { id = "rbxassetid://125154315930795", size = Vector3.new(0.907, 0.36, 2.207), center = Vector3.new(1.981, 0.18, -0.231), color = "blush", material = "SmoothPlastic" },
+			PillsB = { id = "rbxassetid://128439861396184", size = Vector3.new(5.433, 0.36, 1.781), center = Vector3.new(0.272, 0.18, 0.235), color = "sky", material = "SmoothPlastic" },
+		},
+	},
+	BpMachine = {
+		flip = true,
+		parts = {
+			Table = { id = "rbxassetid://104123606494024", size = Vector3.new(3, 2.72, 2.2), center = Vector3.new(0, 1.34, -0), color = "cakeCream", material = "SmoothPlastic" },
+			Body = { id = "rbxassetid://137533465449800", size = Vector3.new(1.6, 1.3, 1.6), center = Vector3.new(-0.4, 3.35, -0.1), color = "surface", material = "SmoothPlastic" },
+			Cuff = { id = "rbxassetid://116423559289975", size = Vector3.new(1, 1, 1.7), center = Vector3.new(-0.4, 3.3, -0.1), color = "ink", material = "SmoothPlastic" },
+			Screen = { id = "rbxassetid://111782861034376", size = Vector3.new(0.9, 0.533, 0.35), center = Vector3.new(0.9, 3.2, 0.2), color = "neonCyan", material = "Neon" },
+		},
+	},
 	FoodTruck = {
 		flip = true,
 		parts = {
