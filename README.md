@@ -15,6 +15,12 @@
 
 > 연습용으로 만든 오비 게임은 `main` 브랜치의 첫 커밋에 남아 있어요.
 
+### 💼 월급루팡 (단독 게임)
+같은 저장소에 있지만 고결게임즈와 **다른 Roblox 게임**으로 따로 게시하는 단독 게임이에요. 광장 포탈이 없고, 접속하면 바로 사무실이에요.
+- Rojo 설정: `salary.project.json` (코드: `places/salary/`, 설정: `shared/SalaryConfig.luau`)
+- 게시한 뒤 `shared/Places.luau`의 `Places.SALARY`에 새 장소 ID를 적어요.
+- 저장(DataStore)은 게임 단위라서, 고결게임즈 안에 있던 예전 월급루팡 저장과는 이어지지 않아요.
+
 ## 처음 한 번만: 준비하기
 
 1. **Roblox Studio** 설치

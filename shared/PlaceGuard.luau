@@ -1,6 +1,6 @@
 -- 🛡️ 장소 확인 안전장치 (서버에서 사용)
 --
--- 세 장소(광장, 시계탑, 월급루팡)는 스크립트 폴더 이름이 같아서,
+-- 세 장소(광장, 시계탑, 그리고 단독 게임인 월급루팡)는 스크립트 폴더 이름이 같아서,
 -- Rojo를 엉뚱한 스튜디오 창에 연결하고 게시하면 다른 장소가 덮어써질 수 있어요.
 -- (예: 광장 창에 월급루팡 코드를 넣고 게시 → 게임에 들어가면 바로 사무실이 나옴)
 --
@@ -18,6 +18,9 @@ local PlaceGuard = {}
 local function placeName(placeId: number): string
 	if placeId == Places.LOBBY then
 		return "🏛️ 광장"
+	end
+	if placeId == Places.SALARY and placeId ~= 0 then
+		return "💼 월급루팡"
 	end
 	for _, info in Places.Games do
 		if info.placeId == placeId then
@@ -49,7 +52,14 @@ end
 function PlaceGuard.check(codeName: string)
 	local expectedId = Places.LOBBY
 	local codeLabel = "🏛️ 광장"
-	if codeName ~= "lobby" then
+	if codeName == "salary" then
+		-- 💼 단독 게임: 장소 ID를 아직 안 적었어도(0) 광장·시계탑 창에 잘못 연결한 건 잡아요
+		expectedId = Places.SALARY
+		codeLabel = "💼 월급루팡"
+		if expectedId == 0 and game.PlaceId ~= 0 and placeName(game.PlaceId) ~= "알 수 없는 장소" then
+			expectedId = -1
+		end
+	elseif codeName ~= "lobby" then
 		for _, info in Places.Games do
 			if info.id == codeName then
 				expectedId = info.placeId

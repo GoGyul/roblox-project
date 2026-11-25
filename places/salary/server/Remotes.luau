@@ -21,7 +21,6 @@ end
 
 local Remotes = {
 	SetAction = event("SetAction"), -- 클라 → 서버: 자리에서 할 행동 고르기 (일하기/멍때리기/...)
-	ReturnToLobby = event("ReturnToLobby"), -- 클라 → 서버: 광장으로
 	ClockIn = event("ClockIn"), -- 클라 → 서버: 🏢 출근하기 버튼
 	MissionPuzzle = func("MissionPuzzle"),
 	Decor = func("Decor"),

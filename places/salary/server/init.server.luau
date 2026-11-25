@@ -35,9 +35,6 @@ local SeatPrompts = require(script.SeatPrompts)
 local PhoneGames = require(script.PhoneGames)
 local Profiles = require(script.Profiles)
 local SalaryConfig = require(ReplicatedStorage.Shared.SalaryConfig)
-local Places = require(ReplicatedStorage.Shared.Places)
-local Teleport = require(ReplicatedStorage.Shared.Teleport)
-local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
 
 -- 사무실 조명 (너무 밝으면 캐릭터가 하얗게 빛나 보여요)
 Lighting.ClockTime = 13.5
@@ -93,10 +90,17 @@ end
 local firstPlayer = Players:GetPlayers()[1] or Players.PlayerAdded:Wait()
 local firstProfile = Profiles.load(firstPlayer)
 local company = SalaryConfig.companyForRank(firstProfile.rank)
+-- (회사 배정으로 새로 열린 서버라면 그 회사 사무실로: 누가 먼저 도착하든 같아요)
+local Matchmaking = require(script.Matchmaking)
+local reservedCompany = Matchmaking.reservedCompany()
+if reservedCompany then
+	company = SalaryConfig.getCompany(reservedCompany)
+end
 if RunService:IsStudio() and SalaryConfig.TEST_COMPANY ~= "" then
 	company = SalaryConfig.getCompany(SalaryConfig.TEST_COMPANY)
 end
 ReplicatedStorage:SetAttribute("SalaryCompany", company.id)
+Matchmaking.start(company.id) -- 🏢 "이 회사 서버에 자리 있어요"를 알리기 시작해요
 print(`🏢 오늘의 사무실: {company.name}`)
 
 local office = OfficeBuilder.build(company.id)
@@ -254,18 +258,6 @@ task.spawn(function()
 		local minute = dayCycle.minute
 		office.setClock(math.floor(minute / 60), math.floor(minute % 60))
 		task.wait(0.5)
-	end
-end)
-
--- 광장으로 돌아가기
-local allowReturn = RateLimit.new(5) -- 순간이동 요청 연타 방지
-Remotes.ReturnToLobby.OnServerEvent:Connect(function(player)
-	if not allowReturn(player) then
-		return
-	end
-	local ok, message = Teleport.send(Places.LOBBY, { player }, false)
-	if not ok and message then
-		Remotes.Notify:FireClient(player, message)
 	end
 end)
 

@@ -22,7 +22,7 @@ local videoDeck = Deck.new(function()
 end)
 local ChatTopics = require(ReplicatedStorage.Shared.ChatTopics)
 local RateLimit = require(ReplicatedStorage.Shared.RateLimit)
-local Teleport = require(ReplicatedStorage.Shared.Teleport)
+local Matchmaking = require(script.Parent.Matchmaking)
 local Npc = require(script.Parent.Npc)
 local Profiles = require(script.Parent.Profiles)
 local Review = require(script.Parent.Review)
@@ -865,6 +865,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		return nil
 	end
 
+	local moveCompany: (player: Player, d: EmployeeData) -> boolean -- (아래 "회사 이동"에서 채워요)
 	local function onPlayerAdded(player: Player)
 		local profile, canSave = Profiles.load(player)
 		if not player.Parent then
@@ -952,7 +953,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 
 		-- 첫 플레이어가 들어오면, 그 사람이 마지막으로 일한 다음 날부터 하루를 시작해요
-		-- (광장에 다녀와도 다시 월요일이 되지 않게)
+		-- (나갔다 들어와도 다시 월요일이 되지 않게)
 		if not dayCycle.started then
 			dayCycle.started = true
 			dayCycle.day = profile.stats.days
@@ -1009,7 +1010,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		-- 🏢 회사 확인: 이 서버 사무실과 내 직급의 회사가 다르면 알려 줘요
 		local here = SalaryConfig.getCompany(office.companyId)
 		local mine = SalaryConfig.companyForRank(profile.rank)
-		if here.id == "nunchi" then
+		-- 🏢 모르는 사람 서버에 배정됐는데 회사가 다르면 → 내 회사 서버로 보내 줘요 (친구를 따라온 경우는 그대로 같이 일해요)
+		local rerouting = mine.id ~= here.id and Matchmaking.shouldRoute(player)
+		if here.id == "nunchi" and not rerouting then
 			unlockAchievement(player, d, "company_nunchi")
 			publishCollection(player, d)
 		end
@@ -1032,7 +1035,14 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				end)
 			end
 		end
-		if mine.id ~= here.id then
+		if rerouting then
+			task.delay(2, function()
+				if player.Parent and data[player] == d and not moveCompany(player, d) then
+					-- 이동이 안 되면 오늘은 여기서 일해요
+					remotes.Notify:FireClient(player, `🏢 오늘은 {here.name} 사무실로 출근해요. (내 회사: {mine.name})`)
+				end
+			end)
+		elseif mine.id ~= here.id then
 			task.delay(4, function()
 				if player.Parent then
 					remotes.Notify:FireClient(player, `🏢 오늘은 같이 온 동료를 따라 {here.name} 사무실로 출근했어요. (내 회사: {mine.name})`)
@@ -3051,7 +3061,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		)
 	end)
 
-	local function moveCompany(player: Player, d: EmployeeData): boolean
+	function moveCompany(player: Player, d: EmployeeData): boolean
 		local target = SalaryConfig.companyForRank(d.profile.rank)
 		if target.id == office.companyId or d.moving then
 			return false
@@ -3059,8 +3069,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		d.moving = true
 		remotes.Notify:FireClient(player, `📦 {target.name}(으)로 짐 싸서 이동 중…`)
 		save(player, d) -- 이동하기 전에 꼭 저장 (새 서버가 이 저장을 읽어서 사무실을 정해요)
-		-- 같은 게임(월급루팡)의 새 전용 서버로 → 들어가면 내 직급에 맞는 사무실이 지어져요
-		local ok, message = Teleport.send(game.PlaceId, { player }, true)
+		-- 그 회사 사무실 서버로 (자리가 있는 서버가 있으면 거기로, 없으면 새 서버를 열어요)
+		local ok, message = Matchmaking.send(player, target.id)
 		if ok then
 			-- 텔레포트가 나중에 실패하면 (서버 혼잡 등) 다시 출근할 수 있게 풀어 줘요
 			task.delay(20, function()

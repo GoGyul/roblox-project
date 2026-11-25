@@ -9,7 +9,7 @@ local Teleport = {}
 -- 반환값: 성공 여부, 실패했을 때 보여 줄 메시지
 function Teleport.send(placeId: number, players: { Player }, reserve: boolean?): (boolean, string?)
 	if placeId == 0 then
-		return false, "장소 ID가 아직 설정되지 않았어요. (shared/Places.luau)"
+		return false, "장소 ID가 아직 설정되지 않았어요."
 	end
 	if RunService:IsStudio() then
 		return false, "스튜디오 테스트에서는 텔레포트가 동작하지 않아요. Publish한 게임에서 확인해 주세요!"

@@ -8,7 +8,7 @@ pcall(function()
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 end)
 
--- 광장에서 텔레포트해 왔다면, 로딩 화면을 잠깐 보여 주다가 사라지게 해요
+-- 이직으로 다른 사무실 서버에서 넘어왔다면, 로딩 화면을 잠깐 보여 주다가 사라지게 해요
 local arrivingGui = TeleportService:GetArrivingTeleportGui()
 if arrivingGui then
 	arrivingGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")

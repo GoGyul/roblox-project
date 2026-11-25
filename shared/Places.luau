@@ -19,6 +19,11 @@ local Places = {}
 
 Places.LOBBY = 74293322423189 -- 🏛️ 고결게임즈 메인 광장 (시작 장소)
 
+-- 💼 월급루팡은 고결게임즈에서 독립한 단독 게임이에요 (광장 포탈 없음, 다른 Roblox 게임으로 따로 게시)
+--   새 게임으로 게시한 뒤 Creator Hub에서 장소 ID를 확인해서 0 대신 적어 주세요.
+--   (0이면 "다른 장소에 잘못 게시" 경고가 광장·시계탑만 걸러요. 예전 고결게임즈 안의 월급루팡 장소: 131519518238691)
+Places.SALARY = 0
+
 Places.Games = {
 	{
 		id = "clocktower",
@@ -27,14 +32,6 @@ Places.Games = {
 		placeId = 135673855098330,
 		maxPlayers = 4,
 		color = Color3.fromRGB(255, 190, 90),
-	},
-	{
-		id = "salary",
-		name = "월급루팡",
-		emoji = "💼",
-		placeId = 131519518238691,
-		maxPlayers = 4, -- 최대 4명이 같은 사무실에 입사 (남는 책상엔 동료 NPC)
-		color = Color3.fromRGB(120, 200, 255),
 	},
 	-- 새 게임 예시:
 	-- {

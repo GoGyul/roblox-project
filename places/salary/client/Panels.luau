@@ -276,10 +276,6 @@ local function helpButton(parent: GuiObject, position: UDim2, title: string, bod
 	return b
 end
 
-local function goLobby()
-	Remotes.ReturnToLobby:FireServer()
-end
-
 ---------------------------------------------------------------------------
 -- 입사 안내
 ---------------------------------------------------------------------------
@@ -441,8 +437,7 @@ Remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
 		end)
 	end
 
-	button(frame, -95, "🏛️ 광장으로", goLobby)
-	button(frame, 95, "닫기 (출근 준비)", close)
+	button(frame, 0, "닫기 (출근 준비)", close)
 end)
 
 ---------------------------------------------------------------------------
@@ -459,8 +454,7 @@ Remotes:WaitForChild("Fired").OnClientEvent:Connect(function(bossLine: string, r
 		`김부장: "{bossLine}"\n\n경고 {SalaryConfig.MAX_WARNINGS}회 누적으로 해고되었습니다.\n짐 싸서 나가… 오늘은 더 이상 돈을 벌 수 없어요.\n\n내일 아침 통장 0원, {rankName}(으)로 재입사해요.\n(산 아이템과 도감은 그대로예요)`,
 		{ TextXAlignment = Enum.TextXAlignment.Center }
 	)
-	button(frame, -95, "🏛️ 광장으로", goLobby)
-	button(frame, 95, "닫기", close)
+	button(frame, 0, "닫기", close)
 end)
 
 ---------------------------------------------------------------------------
