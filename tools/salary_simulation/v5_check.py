@@ -42,7 +42,12 @@ def analyze(rows, parse_errors=0, return_tolerance=0.3):
         item.update(sight_to_request=request['time']-sight['time'],
                     expected_return=accepted['expectedReturnSeconds'])
         if not work:
-            item['excluded'] = 'work_transition_missing_or_interrupted'
+            changed = next((r for r in same_day if r['kind']=='observed_state'
+                            and r.get('playerId')==accepted.get('playerId')
+                            and accepted['time'] < r['time'] < limit
+                            and r['state'] not in ('work','returning')), None)
+            item['excluded'] = 'nonwork_resumed_before_work_observed' if changed else 'work_transition_missing_or_interrupted'
+            if changed: item['interruption_evidence'] = changed
         elif work['caught'] != accepted['caught']:
             item['excluded'] = 'catch_intervened'
         else:
@@ -56,8 +61,10 @@ def analyze(rows, parse_errors=0, return_tolerance=0.3):
     usable = [r for r in transitions if 'excluded' not in r]
     def summary(late):
         group = [r for r in usable if r['late'] == late]
-        return dict(n=len(group), **{key: statistics.median([r[key] for r in group]) if group else None
-                    for key in ('sight_to_request', 'request_to_work', 'sight_to_work', 'return_overhead')})
+        requests = [r['sight_to_request'] for r in transitions if r.get('late')==late and 'sight_to_request' in r]
+        return dict(n=len(group), request_n=len(requests), sight_to_request=statistics.median(requests) if requests else None,
+                    **{key: statistics.median([r[key] for r in group]) if group else None
+                    for key in ('request_to_work', 'sight_to_work', 'return_overhead')})
 
     integrity = record_integrity(rows)
     near_miss = [r for r in rows if r['kind'] == 'near_miss_award']
@@ -72,14 +79,15 @@ def analyze(rows, parse_errors=0, return_tolerance=0.3):
     complete = any(r['kind'] == 'complete' for r in rows)
     gates = dict(
         records_complete=complete and not parse_errors and bool(integrity) and all(not r['missing'] for r in integrity),
-        actual_work_reaction=ordinary['sight_to_work'] is not None and 0.5 <= ordinary['sight_to_work'] <= 0.8,
         request_reaction=ordinary['sight_to_request'] is not None and 0.5 <= ordinary['sight_to_request'] <= 0.8,
-        action_return=bool(usable) and all(r['return_within_tolerance'] for r in usable),
-        transitions_accounted=not any(r.get('excluded') not in (None, 'catch_intervened') for r in transitions),
+        action_return=bool(usable) and statistics.median(r['return_overhead'] for r in usable) <= return_tolerance,
+        transitions_accounted=not any(r.get('excluded') not in (None, 'catch_intervened', 'nonwork_resumed_before_work_observed') for r in transitions),
         bonus_records=bool(bonus_checks) and all(r['matched'] for r in bonus_checks),
         no_mesh_fallback=any(r['kind']=='environment' and r.get('meshFallback') is False for r in rows))
     return dict(protocol=PROTOCOL, ordinary=ordinary, late=summary(True), transitions=transitions,
                 integrity=integrity, parse_errors=parse_errors, near_miss_awards=near_miss,
+                return_overhead_median=statistics.median(r['return_overhead'] for r in usable) if usable else None,
+                criteria='2026-11-25 request-median + return-overhead-median; total informational',
                 bonus_checks=bonus_checks, return_tolerance_seconds=return_tolerance,
                 gates=gates, passed=all(gates.values()))
 

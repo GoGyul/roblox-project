@@ -20,6 +20,10 @@ remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
 	slip.kind = "payslip"; slip.source = "studio_measured"
 	Log.write(slip)
 end)
+if S.outside then
+ require(script.Parent.SimulationOutside).run(S, player, remotes, Log)
+ return
+end
 local wasVisible, reactAt, chooseAt = false, math.huge, 0
 local lastAction = ""
 local sightAt, reactionId, reactionLate, reactionSent = 0, 0, false, false

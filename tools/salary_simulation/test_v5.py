@@ -49,13 +49,13 @@ class V5Tests(unittest.TestCase):
         self.assertEqual(len(record_integrity([dict(kind='complete', requestedDays=5)])), 5)
         self.assertTrue(all(len(r['missing'])==4 for r in record_integrity([dict(kind='complete', requestedDays=5)])))
 
-    def test_separate_timings_keep_original_failure(self):
+    def test_separate_timings_new_criteria(self):
         result = analyze(fixture())
         self.assertTrue(result['gates']['request_reaction'])
         self.assertTrue(result['gates']['action_return'])
         self.assertAlmostEqual(result['ordinary']['sight_to_work'], 1.7)
-        self.assertFalse(result['gates']['actual_work_reaction'])
-        self.assertFalse(result['passed'])
+        self.assertNotIn('actual_work_reaction', result['gates'])
+        self.assertTrue(result['passed'])
 
     def test_item_modifier_and_slow_return(self):
         self.assertTrue(analyze(fixture(.25))['gates']['action_return'])
@@ -72,6 +72,33 @@ class V5Tests(unittest.TestCase):
         rows = fixture(); rows[10]['amount'] = 200
         self.assertFalse(analyze(rows)['gates']['bonus_records'])
         self.assertFalse(analyze(fixture(), parse_errors=1)['gates']['records_complete'])
+
+    def test_return_gate_uses_median_not_max(self):
+        rows = fixture()
+        for day, overhead in ((2, .15), (3, .7)):
+            extra = fixture(overhead=overhead)
+            for row in extra:
+                row['day'] = day
+                if 'time' in row: row['time'] += day * 100
+                if 'reactionId' in row: row['reactionId'] = day
+            rows.extend(r for r in extra if r['kind'] not in ('session', 'complete'))
+        rows = sorted(rows, key=lambda r: r.get('time', 0))
+        # Session must be the first record for protocol verification.
+        rows = [r for r in rows if r['kind']=='session'] + [r for r in rows if r['kind']!='session']
+        result = analyze(rows)
+        self.assertTrue(result['gates']['action_return'])
+        self.assertAlmostEqual(result['return_overhead_median'], .15)
+        self.assertTrue(any(not r['return_within_tolerance'] for r in result['transitions']))
+
+    def test_action_interruption_is_explicit_and_not_zero_latency(self):
+        rows = fixture(); rows[6].update(state='phone', action='phone')
+        rows[5]['action']='shopping'; rows[4]['previousAction']='shopping'
+        result = analyze(rows)
+        self.assertEqual(result['transitions'][0]['excluded'], 'nonwork_resumed_before_work_observed')
+        self.assertEqual(result['ordinary']['request_n'], 1)
+        self.assertEqual(result['ordinary']['n'], 0)
+        self.assertIsNone(result['ordinary']['request_to_work'])
+        self.assertFalse(result['gates']['action_return'])
 
     def test_old_protocol_rejected(self):
         rows = fixture(); rows[0]['settings']['protocol'] = 'v4-fast-sight-validity'

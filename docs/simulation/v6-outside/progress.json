@@ -1,0 +1,1131 @@
+[
+  {
+    "session": "studio_01.jsonl",
+    "day": 1,
+    "conditions": {
+      "time": 1795613822.395535,
+      "company": "nunchi",
+      "source": "studio_measured",
+      "minute": 541.0231714285619,
+      "day": 1,
+      "strategy": "outside_roof",
+      "eventToday": "",
+      "xp": 6000,
+      "scenario": "natural",
+      "meshFallback": false,
+      "weekday": "월요일",
+      "warnings": 0,
+      "speed": 1.1,
+      "kind": "day_conditions",
+      "bank": 0,
+      "rank": 2
+    },
+    "validity": {
+      "reasons": [],
+      "source": "studio_measured",
+      "eventSeconds": 0,
+      "workSamples": 358,
+      "eventToday": "",
+      "strategy": "outside_roof",
+      "company": "nunchi",
+      "minute": 1080,
+      "time": 1795614242.662538,
+      "day": 1,
+      "valid": true,
+      "validityPolicy": "intentional_outside; navigation failures assessed separately",
+      "kind": "day_validity",
+      "unseatedWorkSeconds": 249
+    },
+    "payslip": {
+      "lines": [
+        {
+          "label": "기본급 (사원)",
+          "amount": 1600
+        },
+        {
+          "label": "성실 근무 수당 (140분)",
+          "amount": 218
+        },
+        {
+          "label": "옥상 바람 수당 (96분)",
+          "amount": 773
+        },
+        {
+          "label": "단지 산책 수당 (24분)",
+          "amount": 226
+        },
+        {
+          "label": "일광욕 수당 (94분)",
+          "amount": 1263
+        },
+        {
+          "label": "아슬아슬 보너스",
+          "amount": 200
+        }
+      ],
+      "source": "studio_measured",
+      "workSeconds": 109,
+      "stockProfit": 0,
+      "day": 1,
+      "fired": false,
+      "earned": 2682,
+      "quotaOk": true,
+      "quota": 85,
+      "total": 4280,
+      "targetOk": true,
+      "rankName": "사원",
+      "moveTo": "(주)대충상사",
+      "weekday": "월요일",
+      "warnings": 0,
+      "kind": "payslip",
+      "dayTotal": 4280,
+      "target": 1150
+    },
+    "summary": {
+      "action": "work",
+      "workSeconds": 109.47185481153429,
+      "today": {
+        "seconds": {
+          "rooftop": 74.73095092969015,
+          "work": 109.47185481153429,
+          "lounger": 73.26144615840167,
+          "roam": 132.6233809615951,
+          "street": 19.149925768375397
+        },
+        "photos": 0,
+        "accuseWrong": 0,
+        "nearMiss": 200,
+        "nearMissCount": 1,
+        "snackBonus": 0,
+        "stockProfit": 0,
+        "chatTopics": 0,
+        "snacksEaten": 0,
+        "eventBonus": 0,
+        "emptyPhotos": 0,
+        "earned": {
+          "rooftop": 773.4653421222924,
+          "work": 218.94370962306857,
+          "lounger": 1263.7599462324288,
+          "roam": 0,
+          "street": 226.76431098558936
+        },
+        "caught": 0,
+        "chatBonus": 0,
+        "settled": true
+      },
+      "strategy": "outside_roof",
+      "suspicion": 0,
+      "time": 1795614242.66186,
+      "fired": false,
+      "earned": 2682.933308963379,
+      "caught": 0,
+      "bank": 4280,
+      "company": "nunchi",
+      "minute": 1080,
+      "xp": 10280,
+      "day": 1,
+      "state": "roam",
+      "source": "studio_measured",
+      "nearMiss": 200,
+      "warnings": 0,
+      "review": "{\"locked\":true,\"weekday\":1,\"minRank\":\"과장\"}",
+      "kind": "day_summary",
+      "speed": 1,
+      "rank": 2
+    },
+    "location_seconds": {
+      "office": 191.3,
+      "ground": 19.3,
+      "cabin": 50.6,
+      "roof": 147.7
+    },
+    "departures": 4,
+    "completed_trips": 3,
+    "navigation_failures": [
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613821.445417,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613821.712718,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613821.979358,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613822.246398,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613822.512435,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613822.779372,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613823.045975,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613823.312734,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613823.582887,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613823.845733,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613824.112696,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613824.38043,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613824.645544,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613824.896965,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613825.16369,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613825.428533,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613825.696268,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613825.963027,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613826.229556,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613826.49679,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613826.762097,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613827.029226,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613827.295665,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613827.562773,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613827.830099,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613828.095382,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613828.363092,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613828.62959,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613828.895467,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613829.162556,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613829.429422,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613829.696189,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613829.964083,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613830.228654,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613830.495883,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613830.761768,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613831.029762,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613831.29592,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613831.562844,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613831.828319,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613832.094939,
+        "source": "studio_measured"
+      },
+      {
+        "trip": 0,
+        "strategy": "outside_roof",
+        "floor": "missing",
+        "label": "elevator_missing",
+        "day": 1,
+        "kind": "outside_navigation_failed",
+        "time": 1795613832.362442,
+        "source": "studio_measured"
+      },
+      {
+        "seconds": 4.335217083338648,
+        "source": "studio_measured",
+        "label": "desk",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "outside_roof",
+        "trip": 0,
+        "day": 1,
+        "reached": false,
+        "position": [
+          19.874780654907227,
+          3.9633450508117676,
+          787.9822998046875
+        ],
+        "target": [
+          -34.125,
+          3.541825532913208,
+          -5.449999809265137
+        ],
+        "kind": "outside_navigation",
+        "time": 1795613836.977943,
+        "moved": 825.7216186523438
+      },
+      {
+        "seconds": 0.1323336666682735,
+        "source": "studio_measured",
+        "label": "desk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "outside_roof",
+        "trip": 0,
+        "day": 1,
+        "reached": false,
+        "position": [
+          19.874780654907227,
+          3.9633450508117676,
+          787.9822998046875
+        ],
+        "target": [
+          -38.125,
+          3.9633450508117676,
+          -9.449999809265137
+        ],
+        "kind": "outside_navigation",
+        "time": 1795613837.110399,
+        "moved": 0
+      },
+      {
+        "seconds": 0.08339641662314534,
+        "source": "studio_measured",
+        "label": "desk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "outside_roof",
+        "trip": 0,
+        "day": 1,
+        "reached": false,
+        "position": [
+          19.874780654907227,
+          3.9633450508117676,
+          787.9822998046875
+        ],
+        "target": [
+          -38.125,
+          3.9633450508117676,
+          -1.4499998092651367
+        ],
+        "kind": "outside_navigation",
+        "time": 1795613837.19394,
+        "moved": 0
+      },
+      {
+        "seconds": 0.09989345842041075,
+        "source": "studio_measured",
+        "label": "desk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "outside_roof",
+        "trip": 0,
+        "day": 1,
+        "reached": false,
+        "position": [
+          19.874780654907227,
+          3.9633450508117676,
+          787.9822998046875
+        ],
+        "target": [
+          -42.125,
+          3.9633450508117676,
+          -5.449999809265137
+        ],
+        "kind": "outside_navigation",
+        "time": 1795613837.293997,
+        "moved": 0
+      },
+      {
+        "trip": 0,
+        "source": "studio_measured",
+        "label": "desk",
+        "strategy": "outside_roof",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795613837.294137
+      },
+      {
+        "seconds": 12.026099083363079,
+        "source": "studio_measured",
+        "label": "elevator_office",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "outside_roof",
+        "trip": 0,
+        "day": 1,
+        "reached": false,
+        "position": [
+          161.60733032226562,
+          4.203344345092773,
+          844.1119384765625
+        ],
+        "target": [
+          191.1999969482422,
+          3.9633450508117676,
+          832
+        ],
+        "kind": "outside_navigation",
+        "time": 1795613849.577167,
+        "moved": 152.44247436523438
+      },
+      {
+        "seconds": 4.758047750103287,
+        "source": "studio_measured",
+        "label": "elevator_roof",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "outside_roof",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -34.048038482666016,
+          4.003344535827637,
+          -0.38211631774902344
+        ],
+        "target": [
+          -65.37999725341797,
+          6.281999588012695,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795614027.456272,
+        "moved": 6.894890308380127
+      },
+      {
+        "seconds": 3.592922708252445,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "outside_roof",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -13.482358932495117,
+          4.003345489501953,
+          17.218610763549805
+        ],
+        "target": [
+          -42.125,
+          4.003344535827637,
+          -5.449999809265137
+        ],
+        "kind": "outside_navigation",
+        "time": 1795614241.701203,
+        "moved": 52.53996276855469
+      },
+      {
+        "seconds": 0.09304083336610347,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "outside_roof",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -13.476651191711426,
+          4.003345489501953,
+          17.218088150024414
+        ],
+        "target": [
+          -38.125,
+          4.003345489501953,
+          -1.4499998092651367
+        ],
+        "kind": "outside_navigation",
+        "time": 1795614241.794523,
+        "moved": 0.005731616634875536
+      },
+      {
+        "seconds": 0.09947658330202103,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "outside_roof",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -13.476651191711426,
+          4.003345489501953,
+          17.218088150024414
+        ],
+        "target": [
+          -38.125,
+          4.003345489501953,
+          -9.449999809265137
+        ],
+        "kind": "outside_navigation",
+        "time": 1795614241.894194,
+        "moved": 0
+      },
+      {
+        "seconds": 0.09988574997987598,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "outside_roof",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -13.476651191711426,
+          4.003345489501953,
+          17.218088150024414
+        ],
+        "target": [
+          -34.125,
+          4.003345489501953,
+          -5.449999809265137
+        ],
+        "kind": "outside_navigation",
+        "time": 1795614241.994306,
+        "moved": 0
+      },
+      {
+        "trip": 4,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "outside_roof",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795614241.99451
+      }
+    ],
+    "last": {
+      "missionStatus": "done",
+      "workSeconds": 109.47185481153429,
+      "day": 1,
+      "earned": 2682.933308963379,
+      "bank": 4280,
+      "awayGauge": 26,
+      "heartbeatMax": 0.019803250208497047,
+      "memoryMb": 8555.2724609375,
+      "event": "",
+      "state": "roam",
+      "position": [
+        -13.476768493652344,
+        4.00347900390625,
+        17.218036651611328
+      ],
+      "workshopStatus": "",
+      "kind": "sample",
+      "mission": "",
+      "action": "work",
+      "nearMiss": 200,
+      "strategy": "outside_roof",
+      "suspicion": 0,
+      "time": 1795614256.996344,
+      "fired": false,
+      "caught": 0,
+      "eventStage": "",
+      "company": "nunchi",
+      "minute": 500,
+      "waiting": true,
+      "phase": "offwork",
+      "distance": 15.318251609802246,
+      "source": "studio_measured",
+      "heartbeatMean": 0.016660525075470407,
+      "review": "{\"locked\":true,\"weekday\":1,\"minRank\":\"과장\"}",
+      "speed": 1,
+      "workQuota": 85,
+      "warnings": 0,
+      "seated": false,
+      "xp": 10280,
+      "bossVisible": false,
+      "rank": 2
+    }
+  },
+  {
+    "session": "studio_01.jsonl",
+    "day": 2,
+    "conditions": {
+      "time": 1795614258.212025,
+      "company": "nunchi",
+      "source": "studio_measured",
+      "minute": 541.0228301785891,
+      "day": 2,
+      "strategy": "outside_park",
+      "eventToday": "",
+      "xp": 10280,
+      "scenario": "natural",
+      "meshFallback": false,
+      "weekday": "화요일",
+      "warnings": 0,
+      "speed": 1,
+      "kind": "day_conditions",
+      "bank": 4280,
+      "rank": 2
+    },
+    "validity": {
+      "reasons": [
+        "fired"
+      ],
+      "source": "studio_measured",
+      "eventSeconds": 0,
+      "workSamples": 368,
+      "eventToday": "",
+      "strategy": "outside_park",
+      "company": "nunchi",
+      "minute": 1080,
+      "time": 1795614678.415383,
+      "day": 2,
+      "valid": false,
+      "validityPolicy": "intentional_outside; navigation failures assessed separately",
+      "kind": "day_validity",
+      "unseatedWorkSeconds": 207
+    },
+    "payslip": null,
+    "summary": {
+      "action": "work",
+      "workSeconds": 85.19860276533291,
+      "today": {
+        "reviewLunchLate": true,
+        "seconds": {
+          "work": 85.19860276533291,
+          "roam": 11.44797145621851,
+          "street": 246.3215613674838
+        },
+        "photos": 0,
+        "accuseWrong": 0,
+        "nearMiss": 0,
+        "nearMissCount": 0,
+        "snackBonus": 0,
+        "stockProfit": 0,
+        "chatTopics": 0,
+        "snacksEaten": 0,
+        "eventBonus": 0,
+        "emptyPhotos": 0,
+        "earned": {
+          "work": 170.39720553066581,
+          "roam": 0,
+          "street": 2211.7211806170308
+        },
+        "caught": 3,
+        "chatBonus": 0,
+        "settled": true
+      },
+      "strategy": "outside_park",
+      "suspicion": 0,
+      "time": 1795614678.414055,
+      "fired": true,
+      "earned": -617.8816138523034,
+      "caught": 3,
+      "bank": 0,
+      "company": "nunchi",
+      "minute": 1080,
+      "xp": 0,
+      "day": 2,
+      "state": "fired",
+      "source": "studio_measured",
+      "nearMiss": 0,
+      "warnings": 0,
+      "review": "{\"locked\":true,\"weekday\":2,\"minRank\":\"과장\"}",
+      "kind": "day_summary",
+      "speed": 1.45,
+      "rank": 1
+    },
+    "location_seconds": {
+      "office": 96.1,
+      "ground": 323.9
+    },
+    "departures": 1,
+    "completed_trips": 0,
+    "navigation_failures": [
+      {
+        "seconds": 18.079040625016205,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614411.27138,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      },
+      {
+        "seconds": 18.10833991668187,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614429.638733,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      },
+      {
+        "seconds": 18.122049833415076,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614448.025773,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      },
+      {
+        "seconds": 18.118838958325796,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614466.419739,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      },
+      {
+        "seconds": 18.191335458424874,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614484.876833,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      },
+      {
+        "seconds": 18.15035166661255,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614503.301598,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      },
+      {
+        "seconds": 18.110017666593194,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614521.669364,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      },
+      {
+        "seconds": 18.136800958309323,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614540.085257,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      },
+      {
+        "seconds": 18.0917725416366,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614558.450144,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      },
+      {
+        "seconds": 18.06782699993346,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614576.78183,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      },
+      {
+        "seconds": 18.188686291570775,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614595.23098,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      },
+      {
+        "seconds": 4.711385249975137,
+        "source": "studio_measured",
+        "strategy": "outside_park",
+        "time": 1795614600.213695,
+        "trip": 1,
+        "success": false,
+        "kind": "outside_arrival",
+        "day": 2,
+        "destination": "office"
+      }
+    ],
+    "last": {
+      "missionStatus": "",
+      "workSeconds": 85.19860276533291,
+      "day": 2,
+      "earned": -617.8816138523034,
+      "bank": 0,
+      "awayGauge": 0,
+      "heartbeatMax": 0.022229541093111038,
+      "memoryMb": 8550.2099609375,
+      "event": "",
+      "state": "fired",
+      "position": [
+        189.53414916992188,
+        4.203189373016357,
+        832.6845703125
+      ],
+      "workshopStatus": "",
+      "kind": "sample",
+      "mission": "",
+      "action": "work",
+      "nearMiss": 0,
+      "strategy": "outside_park",
+      "suspicion": 0,
+      "time": 1795614677.981583,
+      "fired": true,
+      "caught": 3,
+      "eventStage": "",
+      "company": "nunchi",
+      "minute": 1080,
+      "waiting": false,
+      "phase": "offwork",
+      "distance": 827.5000610351562,
+      "source": "studio_measured",
+      "heartbeatMean": 0.01666701735618214,
+      "review": "{\"locked\":true,\"weekday\":2,\"minRank\":\"과장\"}",
+      "speed": 1.45,
+      "workQuota": 75,
+      "warnings": 0,
+      "seated": false,
+      "xp": 0,
+      "bossVisible": false,
+      "rank": 1
+    }
+  }
+]

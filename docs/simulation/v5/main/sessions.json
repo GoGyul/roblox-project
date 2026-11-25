@@ -1,0 +1,194 @@
+[
+  {
+    "session": 1,
+    "initial_rank": 2,
+    "strategy": "cautious",
+    "replicate": 1,
+    "status": "complete",
+    "file": "session_01.jsonl",
+    "start_time": 1795601846.722556,
+    "record_integrity": {
+      "days": [
+        {
+          "day": 1,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 2,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 3,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 4,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 5,
+          "ended": true,
+          "missing": []
+        }
+      ],
+      "parse_errors": 0
+    },
+    "last": {
+      "day": 5,
+      "minute": 1080,
+      "rank": 3,
+      "event": "",
+      "state": "work",
+      "caught": 0,
+      "fired": false
+    }
+  },
+  {
+    "session": 2,
+    "initial_rank": 2,
+    "strategy": "cautious",
+    "replicate": 2,
+    "status": "complete",
+    "file": "session_02.jsonl",
+    "start_time": 1795604153.40111,
+    "record_integrity": {
+      "days": [
+        {
+          "day": 1,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 2,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 3,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 4,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 5,
+          "ended": true,
+          "missing": []
+        }
+      ],
+      "parse_errors": 0
+    },
+    "last": {
+      "day": 5,
+      "minute": 1080,
+      "rank": 3,
+      "event": "",
+      "state": "work",
+      "caught": 0,
+      "fired": false
+    }
+  },
+  {
+    "session": 3,
+    "initial_rank": 2,
+    "strategy": "normal",
+    "replicate": 1,
+    "status": "complete",
+    "file": "session_03.jsonl",
+    "start_time": 1795606466.625879,
+    "record_integrity": {
+      "days": [
+        {
+          "day": 1,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 2,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 3,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 4,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 5,
+          "ended": true,
+          "missing": []
+        }
+      ],
+      "parse_errors": 0
+    },
+    "last": {
+      "day": 5,
+      "minute": 1080,
+      "rank": 3,
+      "event": "",
+      "state": "webtoon",
+      "caught": 1,
+      "fired": false
+    }
+  },
+  {
+    "session": 4,
+    "initial_rank": 2,
+    "strategy": "normal",
+    "replicate": 2,
+    "status": "complete",
+    "file": "session_04.jsonl",
+    "start_time": 1795608926.600878,
+    "record_integrity": {
+      "days": [
+        {
+          "day": 1,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 2,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 3,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 4,
+          "ended": true,
+          "missing": []
+        },
+        {
+          "day": 5,
+          "ended": true,
+          "missing": []
+        }
+      ],
+      "parse_errors": 0
+    },
+    "last": {
+      "day": 5,
+      "minute": 1080,
+      "rank": 3,
+      "event": "",
+      "state": "work",
+      "caught": 0,
+      "fired": false
+    }
+  }
+]

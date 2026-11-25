@@ -1,0 +1,50 @@
+[
+  {
+    "initial_rank": 2,
+    "actual_rank": 2,
+    "weekday": "월요일",
+    "eventToday": "",
+    "strategy_a": "cautious",
+    "strategy_b": "normal",
+    "n_a": 2,
+    "n_b": 2,
+    "net_mean_a": 5987,
+    "net_mean_b": 6414
+  },
+  {
+    "initial_rank": 2,
+    "actual_rank": 2,
+    "weekday": "화요일",
+    "eventToday": "",
+    "strategy_a": "cautious",
+    "strategy_b": "normal",
+    "n_a": 2,
+    "n_b": 1,
+    "net_mean_a": 6149,
+    "net_mean_b": 6899
+  },
+  {
+    "initial_rank": 2,
+    "actual_rank": 3,
+    "weekday": "금요일",
+    "eventToday": "",
+    "strategy_a": "cautious",
+    "strategy_b": "normal",
+    "n_a": 2,
+    "n_b": 2,
+    "net_mean_a": 6347.5,
+    "net_mean_b": 5563.5
+  },
+  {
+    "initial_rank": 2,
+    "actual_rank": 3,
+    "weekday": "목요일",
+    "eventToday": "blackout",
+    "strategy_a": "cautious",
+    "strategy_b": "normal",
+    "n_a": 1,
+    "n_b": 1,
+    "net_mean_a": 6689,
+    "net_mean_b": 7575
+  }
+]

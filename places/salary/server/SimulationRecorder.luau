@@ -62,13 +62,14 @@ function Recorder.start(office, boss, cycle, employees)
 				local t = tally[player] or { workSamples = 0, unseated = 0, eventSamples = 0 }
 				local reasons = {}
 				if snapshot.fired then table.insert(reasons, "fired") end
-				if t.unseated > 30 then table.insert(reasons, "unseated_over_30s") end
+				if t.unseated > 30 and not S.outside then table.insert(reasons, "unseated_over_30s") end
 				if workspace:GetAttribute("SalaryMeshFallback") == true then table.insert(reasons, "mesh_fallback") end
 				if S.scenario ~= "natural" then table.insert(reasons, "forced_scenario") end
 				if t.workSamples < 200 then table.insert(reasons, "short_day") end
 				emit("day_validity", {
 					valid = #reasons == 0, reasons = reasons, eventToday = RS:GetAttribute("SalaryEvent") or "",
-					workSamples = t.workSamples, unseatedWorkSeconds = t.unseated, eventSeconds = t.eventSamples,
+					validityPolicy = if S.outside then "intentional_outside; navigation failures assessed separately" else "desk",
+                    workSamples = t.workSamples, unseatedWorkSeconds = t.unseated, eventSeconds = t.eventSamples,
 				})
 			end
 		end
@@ -111,7 +112,9 @@ function Recorder.start(office, boss, cycle, employees)
 				if row and player.Character then
 					local seen, distance = boss:canSee(player.Character)
 					local root = player.Character:FindFirstChild("HumanoidRootPart")
-					row.bossVisible = seen
+					row.awayGauge = player:GetAttribute("AwayGauge")
+                    row.workQuota = player:GetAttribute("WorkQuota")
+                    row.bossVisible = seen
 					row.distance = if root then (root.Position - boss.root.Position).Magnitude else nil
 					row.phase = cycle.phase
 					row.seated = player:GetAttribute("Seated")

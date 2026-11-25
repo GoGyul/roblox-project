@@ -1,0 +1,4022 @@
+[
+  {
+    "session": "studio_01.jsonl",
+    "day": 1,
+    "conditions": {
+      "time": 1795618985.499914,
+      "company": "nunchi",
+      "source": "studio_measured",
+      "minute": 540.9995684464375,
+      "day": 1,
+      "strategy": "park_elevator",
+      "eventToday": "",
+      "xp": 6000,
+      "scenario": "natural",
+      "meshFallback": false,
+      "weekday": "월요일",
+      "warnings": 0,
+      "speed": 1.1,
+      "kind": "day_conditions",
+      "bank": 0,
+      "rank": 2
+    },
+    "validity": null,
+    "payslip": null,
+    "summary": null,
+    "location_seconds": {
+      "office": 163.0
+    },
+    "departures": 12,
+    "completed_trips": 11,
+    "navigation_failures": [
+      {
+        "seconds": 0.26689770829398185,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619070.915187,
+        "moved": 0
+      },
+      {
+        "seconds": 0.16582833335269243,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619071.481808,
+        "moved": 0
+      },
+      {
+        "seconds": 0.18337225005961955,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619072.081623,
+        "moved": 0
+      },
+      {
+        "seconds": 0.08276037499308586,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619072.581059,
+        "moved": 0
+      },
+      {
+        "trip": 1,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619072.581187
+      },
+      {
+        "trip": 1,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619076.297883
+      },
+      {
+        "seconds": 0.1331032500602305,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619077.781373,
+        "moved": 0
+      },
+      {
+        "seconds": 0.19955800008028746,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619078.382254,
+        "moved": 0
+      },
+      {
+        "seconds": 0.19922487495932728,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619078.998806,
+        "moved": 0
+      },
+      {
+        "seconds": 0.06593629159033298,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619079.481509,
+        "moved": 0
+      },
+      {
+        "trip": 2,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619079.481639
+      },
+      {
+        "trip": 2,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619083.215614
+      },
+      {
+        "seconds": 0.13331387506332248,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619084.698414,
+        "moved": 0
+      },
+      {
+        "seconds": 0.19985341664869338,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619085.298672,
+        "moved": 0
+      },
+      {
+        "seconds": 0.18355004163458943,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619085.898984,
+        "moved": 0
+      },
+      {
+        "seconds": 0.08275458333082497,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619086.397898,
+        "moved": 0
+      },
+      {
+        "trip": 3,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619086.398043
+      },
+      {
+        "trip": 3,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619090.115222
+      },
+      {
+        "seconds": 0.1502933333395049,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619091.598926,
+        "moved": 0
+      },
+      {
+        "seconds": 0.18414633336942643,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619092.199098,
+        "moved": 0
+      },
+      {
+        "seconds": 0.183497833320871,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619092.798208,
+        "moved": 0
+      },
+      {
+        "seconds": 0.08256716665346175,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619093.297583,
+        "moved": 0
+      },
+      {
+        "trip": 4,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619093.297746
+      },
+      {
+        "trip": 4,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619097.014752
+      },
+      {
+        "seconds": 0.15010841668117791,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619098.498359,
+        "moved": 0
+      },
+      {
+        "seconds": 0.19886204169597477,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619099.098246,
+        "moved": 0
+      },
+      {
+        "seconds": 0.18294620828237385,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619099.698141,
+        "moved": 0
+      },
+      {
+        "seconds": 0.09843070828355849,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619100.197176,
+        "moved": 0
+      },
+      {
+        "trip": 5,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619100.197328
+      },
+      {
+        "trip": 5,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619103.914428
+      },
+      {
+        "seconds": 0.1332731667207554,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 6,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619105.397855,
+        "moved": 0
+      },
+      {
+        "seconds": 0.1833121250383556,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 6,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619105.997405,
+        "moved": 0
+      },
+      {
+        "seconds": 0.1998595834011212,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 6,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619106.597774,
+        "moved": 0
+      },
+      {
+        "seconds": 0.0987454584101215,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 6,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619107.097054,
+        "moved": 0
+      },
+      {
+        "trip": 6,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619107.097183
+      },
+      {
+        "trip": 6,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619110.814236
+      },
+      {
+        "seconds": 0.21673029172234237,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 7,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619112.39735,
+        "moved": 0
+      },
+      {
+        "seconds": 0.1999295416753739,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 7,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619112.998022,
+        "moved": 0
+      },
+      {
+        "seconds": 0.18386387499049306,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 7,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619113.597804,
+        "moved": 0
+      },
+      {
+        "seconds": 0.08253641671035439,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 7,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619114.096495,
+        "moved": 0
+      },
+      {
+        "trip": 7,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619114.096611
+      },
+      {
+        "trip": 7,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619117.831693
+      },
+      {
+        "seconds": 0.2164817500161007,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 8,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619119.398586,
+        "moved": 0
+      },
+      {
+        "seconds": 0.18314374994952232,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 8,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619119.998728,
+        "moved": 0
+      },
+      {
+        "seconds": 0.18364970828406513,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 8,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619120.598548,
+        "moved": 0
+      },
+      {
+        "seconds": 0.08271083340514451,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 8,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619121.097384,
+        "moved": 0
+      },
+      {
+        "trip": 8,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619121.097541
+      },
+      {
+        "trip": 8,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619124.814819
+      },
+      {
+        "seconds": 0.13339541666209698,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 9,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619126.297946,
+        "moved": 0
+      },
+      {
+        "seconds": 0.20024008327163756,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 9,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619126.898471,
+        "moved": 0
+      },
+      {
+        "seconds": 0.1834752499125898,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 9,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619127.498021,
+        "moved": 0
+      },
+      {
+        "seconds": 0.09832195832859725,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 9,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619127.99753,
+        "moved": 0
+      },
+      {
+        "trip": 9,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619127.997691
+      },
+      {
+        "trip": 9,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619131.714747
+      },
+      {
+        "seconds": 0.21682650002185255,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 10,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619133.29791,
+        "moved": 0
+      },
+      {
+        "seconds": 0.18323800002690405,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 10,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619133.898084,
+        "moved": 0
+      },
+      {
+        "seconds": 0.1830312500242144,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 10,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619134.497758,
+        "moved": 0
+      },
+      {
+        "seconds": 0.08294745837338269,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 10,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619134.996992,
+        "moved": 0
+      },
+      {
+        "trip": 10,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619134.997112
+      },
+      {
+        "trip": 10,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619138.713987
+      },
+      {
+        "seconds": 0.13283808331470937,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 11,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619140.197782,
+        "moved": 0
+      },
+      {
+        "seconds": 0.18258137500379235,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 11,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619140.797207,
+        "moved": 0
+      },
+      {
+        "seconds": 0.20016716665122658,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 11,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619141.39758,
+        "moved": 0
+      },
+      {
+        "seconds": 0.082579291658476,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 11,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619141.896539,
+        "moved": 0
+      },
+      {
+        "trip": 11,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619141.896683
+      },
+      {
+        "trip": 11,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619145.597696
+      },
+      {
+        "seconds": 0.1334832499269396,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 12,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -66.37999725341797,
+          4.20081901550293,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619147.097368,
+        "moved": 0
+      },
+      {
+        "seconds": 0.1835395833477378,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 12,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -69.37999725341797,
+          4.20081901550293,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619147.697512,
+        "moved": 0
+      }
+    ],
+    "last": {
+      "missionStatus": "",
+      "workSeconds": 163.12726011453196,
+      "day": 1,
+      "earned": 326.2545202290639,
+      "bank": 0,
+      "awayGauge": 0,
+      "heartbeatMax": 0.01728525012731552,
+      "memoryMb": 8700.1171875,
+      "event": "",
+      "state": "work",
+      "position": [
+        -38.125,
+        4.20081901550293,
+        -5.449999809265137
+      ],
+      "workshopStatus": "",
+      "kind": "sample",
+      "mission": "",
+      "action": "work",
+      "nearMiss": 0,
+      "strategy": "park_elevator",
+      "suspicion": 0,
+      "time": 1795619147.664303,
+      "fired": false,
+      "caught": 0,
+      "eventStage": "",
+      "company": "nunchi",
+      "minute": 749.592427285704,
+      "waiting": false,
+      "phase": "lunch",
+      "distance": 34.50797653198242,
+      "source": "studio_measured",
+      "heartbeatMean": 0.016674630404984365,
+      "review": "{\"locked\":true,\"weekday\":1,\"minRank\":\"과장\"}",
+      "speed": 1.1,
+      "workQuota": 85,
+      "warnings": 0,
+      "seated": true,
+      "xp": 6000,
+      "bossVisible": false,
+      "rank": 2
+    },
+    "transport_arrivals": [],
+    "prompt_diagnostics": [
+      {
+        "enabled": false,
+        "source": "studio_measured",
+        "shown": false,
+        "distance": 1.6508190631866455,
+        "trip": 0,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795618985.666123
+      }
+    ],
+    "session_assessment": {
+      "status": "failed_smoke",
+      "reason": "Seated character never left office; 11 outside_trip_done events are false positives and excluded. Interrupted before end of day.",
+      "gameplay_seconds": 163
+    },
+    "eligible_for_comparison": false
+  },
+  {
+    "session": "studio_02.jsonl",
+    "day": 1,
+    "conditions": {
+      "time": 1795619192.597095,
+      "company": "nunchi",
+      "source": "studio_measured",
+      "minute": 541.0014902678502,
+      "day": 1,
+      "strategy": "park_elevator",
+      "eventToday": "",
+      "xp": 6000,
+      "scenario": "natural",
+      "meshFallback": false,
+      "weekday": "월요일",
+      "warnings": 0,
+      "speed": 1.1,
+      "kind": "day_conditions",
+      "bank": 0,
+      "rank": 2
+    },
+    "validity": null,
+    "payslip": null,
+    "summary": null,
+    "location_seconds": {
+      "office": 204.7,
+      "ground": 67.9,
+      "cabin": 5.1
+    },
+    "departures": 6,
+    "completed_trips": 1,
+    "navigation_failures": [
+      {
+        "seconds": 4.424266624962911,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.43824768066406,
+          5.491900444030762,
+          -5.935484886169434
+        ],
+        "target": [
+          -66.37999725341797,
+          5.8282952308654785,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619282.379301,
+        "moved": 0.6345888376235962
+      },
+      {
+        "seconds": 4.300161374965683,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.822601318359375,
+          5.446685314178467,
+          -5.945475101470947
+        ],
+        "target": [
+          -69.37999725341797,
+          5.491900444030762,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619286.67965,
+        "moved": 0.3871329724788666
+      },
+      {
+        "seconds": 0.06646016670856625,
+        "source": "studio_measured",
+        "label": "park_walk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          178,
+          4.203344345092773,
+          838
+        ],
+        "target": [
+          64,
+          4,
+          822
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619307.661963,
+        "moved": 0
+      },
+      {
+        "seconds": 0.11617074999958277,
+        "source": "studio_measured",
+        "label": "park_walk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          178,
+          4.203344345092773,
+          838
+        ],
+        "target": [
+          64,
+          4,
+          822
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619313.74486,
+        "moved": 0
+      },
+      {
+        "seconds": 0.08175291668158025,
+        "source": "studio_measured",
+        "label": "park_walk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          178,
+          4.203344345092773,
+          838
+        ],
+        "target": [
+          64,
+          4,
+          822
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619319.745159,
+        "moved": 0
+      },
+      {
+        "seconds": 0.033005541656166315,
+        "source": "studio_measured",
+        "label": "park_walk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          178,
+          4.203344345092773,
+          838
+        ],
+        "target": [
+          64,
+          4,
+          822
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619325.744591,
+        "moved": 0
+      },
+      {
+        "seconds": 0.11638445837888867,
+        "source": "studio_measured",
+        "label": "park_walk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          178,
+          4.203344345092773,
+          838
+        ],
+        "target": [
+          64,
+          4,
+          822
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619331.844284,
+        "moved": 0
+      },
+      {
+        "seconds": 0.04984150000382215,
+        "source": "studio_measured",
+        "label": "park_walk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          178,
+          4.203344345092773,
+          838
+        ],
+        "target": [
+          64,
+          4,
+          822
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619337.844115,
+        "moved": 0
+      },
+      {
+        "seconds": 0.033216250012628734,
+        "source": "studio_measured",
+        "label": "park_walk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          178,
+          4.203344345092773,
+          838
+        ],
+        "target": [
+          64,
+          4,
+          822
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619343.844127,
+        "moved": 0
+      },
+      {
+        "seconds": 0.06635645835194737,
+        "source": "studio_measured",
+        "label": "park_walk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          178,
+          4.203344345092773,
+          838
+        ],
+        "target": [
+          64,
+          4,
+          822
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619349.944673,
+        "moved": 0
+      },
+      {
+        "seconds": 0.10024225001689047,
+        "source": "studio_measured",
+        "label": "park_walk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          178,
+          4.203344345092773,
+          838
+        ],
+        "target": [
+          64,
+          4,
+          822
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619356.244762,
+        "moved": 0
+      },
+      {
+        "seconds": 0.09930104168597609,
+        "source": "studio_measured",
+        "label": "park_walk",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          178,
+          4.203344345092773,
+          838
+        ],
+        "target": [
+          64,
+          4,
+          822
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619362.343829,
+        "moved": 0
+      },
+      {
+        "seconds": 4.3600246666464955,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.48478698730469,
+          5.533950328826904,
+          -5.933875560760498
+        ],
+        "target": [
+          -66.37999725341797,
+          5.82834005355835,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619401.061423,
+        "moved": 0.645337700843811
+      },
+      {
+        "seconds": 4.382568666595034,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.70021438598633,
+          5.4612860679626465,
+          -5.945030212402344
+        ],
+        "target": [
+          -69.37999725341797,
+          5.533950328826904,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619405.444144,
+        "moved": 0.2276257574558258
+      },
+      {
+        "seconds": 4.366545166703872,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -39.03948211669922,
+          5.32374382019043,
+          -5.935406684875488
+        ],
+        "target": [
+          -69.37999725341797,
+          5.4612860679626465,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619409.810816,
+        "moved": 0.3662145137786865
+      },
+      {
+        "seconds": 0.03229837503749877,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -39.04884719848633,
+          5.222292900085449,
+          -5.918486595153809
+        ],
+        "target": [
+          -72.37999725341797,
+          5.32374382019043,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619409.843235,
+        "moved": 0.10327769815921783
+      },
+      {
+        "trip": 2,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619409.843363
+      },
+      {
+        "seconds": 4.3458729583071545,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.48303985595703,
+          5.525814056396484,
+          -5.933891296386719
+        ],
+        "target": [
+          -66.37999725341797,
+          5.828308582305908,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619417.227791,
+        "moved": 0.6479811072349548
+      },
+      {
+        "seconds": 4.416009083273821,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.695194244384766,
+          5.461437225341797,
+          -5.9451165199279785
+        ],
+        "target": [
+          -69.37999725341797,
+          5.525814056396484,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619421.64395,
+        "moved": 0.2219906896352768
+      },
+      {
+        "seconds": 4.315096000093035,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.99512481689453,
+          5.348698616027832,
+          -5.944414138793945
+        ],
+        "target": [
+          -69.37999725341797,
+          5.461437225341797,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619425.960636,
+        "moved": 0.3204197883605957
+      },
+      {
+        "seconds": 0.08281154173891991,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          5.348698616027832,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619426.043587,
+        "moved": 1.5228887796401978
+      },
+      {
+        "trip": 3,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619426.043715
+      },
+      {
+        "seconds": 4.376785708358511,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.443851470947266,
+          5.517536640167236,
+          -5.93839693069458
+        ],
+        "target": [
+          -66.37999725341797,
+          5.823794841766357,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619433.727178,
+        "moved": 0.6244680285453796
+      },
+      {
+        "seconds": 4.349779124953784,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.638572692871094,
+          5.462770938873291,
+          -5.945315837860107
+        ],
+        "target": [
+          -69.37999725341797,
+          5.517536640167236,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619438.077097,
+        "moved": 0.20239444077014923
+      },
+      {
+        "seconds": 4.349145166692324,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.93757247924805,
+          5.354341983795166,
+          -5.9444193840026855
+        ],
+        "target": [
+          -69.37999725341797,
+          5.462770938873291,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619442.426387,
+        "moved": 0.3180542588233948
+      },
+      {
+        "seconds": 0.1162452083081007,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "target": [
+          -72.37999725341797,
+          5.354341983795166,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619442.542777,
+        "moved": 1.4951053857803345
+      },
+      {
+        "trip": 4,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619442.542937
+      },
+      {
+        "seconds": 4.412548583350144,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.451297760009766,
+          5.502725601196289,
+          -5.930816173553467
+        ],
+        "target": [
+          -66.37999725341797,
+          5.823980808258057,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619449.960526,
+        "moved": 0.6298302412033081
+      },
+      {
+        "seconds": 4.365616333321668,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.67331314086914,
+          5.485630512237549,
+          -5.944937705993652
+        ],
+        "target": [
+          -69.37999725341797,
+          5.502725601196289,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619454.326318,
+        "moved": 0.22311989963054657
+      },
+      {
+        "seconds": 4.432723583304323,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.98447799682617,
+          5.3507490158081055,
+          -5.944453239440918
+        ],
+        "target": [
+          -69.37999725341797,
+          5.485630512237549,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619458.759175,
+        "moved": 0.339141309261322
+      },
+      {
+        "seconds": 0.0828554582549259,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.99248504638672,
+          5.064498424530029,
+          -5.922748565673828
+        ],
+        "target": [
+          -72.37999725341797,
+          5.3507490158081055,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619458.84218,
+        "moved": 0.2871839106082916
+      },
+      {
+        "trip": 5,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619458.842307
+      },
+      {
+        "seconds": 4.395471708266996,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 6,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.45130157470703,
+          5.5027174949646,
+          -5.9307684898376465
+        ],
+        "target": [
+          -66.37999725341797,
+          5.823858737945557,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619466.260156,
+        "moved": 0.6300292015075684
+      }
+    ],
+    "last": {
+      "missionStatus": "done",
+      "workSeconds": 102.71629692520946,
+      "day": 1,
+      "earned": 771.3530862815301,
+      "bank": 0,
+      "awayGauge": 11,
+      "heartbeatMax": 0.06474299728870392,
+      "memoryMb": 8780.1953125,
+      "event": "",
+      "state": "roam",
+      "position": [
+        -38.603126525878906,
+        5.487388610839844,
+        -5.939543724060059
+      ],
+      "workshopStatus": "",
+      "kind": "sample",
+      "mission": "",
+      "action": "work",
+      "nearMiss": 0,
+      "strategy": "park_elevator",
+      "suspicion": 0,
+      "time": 1795619469.508916,
+      "fired": false,
+      "caught": 0,
+      "eventStage": "",
+      "company": "nunchi",
+      "minute": 897.2781565709115,
+      "waiting": false,
+      "phase": "work",
+      "distance": 27.776935577392578,
+      "source": "studio_measured",
+      "heartbeatMean": 0.018634103061187835,
+      "review": "{\"locked\":true,\"weekday\":1,\"minRank\":\"과장\"}",
+      "speed": 1.2,
+      "workQuota": 85,
+      "warnings": 0,
+      "seated": false,
+      "xp": 6000,
+      "bossVisible": false,
+      "rank": 2
+    },
+    "transport_arrivals": [
+      {
+        "seconds": 2.816895750002004,
+        "route": "elevator",
+        "attempt": 1,
+        "strategy": "park_elevator",
+        "inputSent": true,
+        "trip": 1,
+        "day": 1,
+        "success": true,
+        "time": 1795619301.578298,
+        "menuReceived": true,
+        "destination": "lobby",
+        "source": "studio_measured",
+        "kind": "outside_arrival"
+      },
+      {
+        "seconds": 4.866903166635893,
+        "route": "elevator",
+        "attempt": 1,
+        "strategy": "park_elevator",
+        "inputSent": true,
+        "trip": 1,
+        "day": 1,
+        "success": true,
+        "time": 1795619374.444095,
+        "menuReceived": true,
+        "destination": "office",
+        "source": "studio_measured",
+        "kind": "outside_arrival"
+      }
+    ],
+    "prompt_diagnostics": [
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.2783448696136475,
+        "trip": 0,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -38.125,
+          5.828344821929932,
+          -5.449960231781006
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619192.380596
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.145120620727539,
+        "trip": 1,
+        "serviceEnabled": true,
+        "maxDistance": 8,
+        "object": "🚪 엘리베이터",
+        "position": [
+          -67.85513305664062,
+          4.003344535827637,
+          21.31383514404297
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619298.861646
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.471254825592041,
+        "trip": 1,
+        "serviceEnabled": true,
+        "maxDistance": 9,
+        "object": "엘리베이터",
+        "position": [
+          191.86679077148438,
+          4.20334529876709,
+          831.7921752929688
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619369.677974
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 2.9713339805603027,
+        "trip": 1,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -38.478267669677734,
+          5.460395336151123,
+          -5.933349132537842
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619392.161874
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.278428077697754,
+        "trip": 2,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -38.12632751464844,
+          5.828308582305908,
+          -5.477941036224365
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619410.677006
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.2783589363098145,
+        "trip": 3,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -38.12490463256836,
+          5.828331470489502,
+          -5.463411808013916
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619426.877846
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.278358221054077,
+        "trip": 4,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -38.12489318847656,
+          5.828319549560547,
+          -5.465912342071533
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619443.360124
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.278306484222412,
+        "trip": 5,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -38.125,
+          5.828303813934326,
+          -5.454097270965576
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619459.659722
+      }
+    ],
+    "session_assessment": {
+      "status": "failed_smoke",
+      "reason": "One verified lobby/office roundtrip; park cover navigation NoPath and repeated desk departure failures. Interrupted; no daily pay comparison."
+    },
+    "eligible_for_comparison": false
+  },
+  {
+    "session": "studio_03.jsonl",
+    "day": 1,
+    "conditions": {
+      "time": 1795619509.927133,
+      "company": "nunchi",
+      "source": "studio_measured",
+      "minute": 541.0225048928488,
+      "day": 1,
+      "strategy": "park_elevator",
+      "eventToday": "",
+      "xp": 6000,
+      "scenario": "natural",
+      "meshFallback": false,
+      "weekday": "월요일",
+      "warnings": 0,
+      "speed": 1.1,
+      "kind": "day_conditions",
+      "bank": 0,
+      "rank": 2
+    },
+    "validity": null,
+    "payslip": null,
+    "summary": null,
+    "location_seconds": {
+      "office": 172.2,
+      "ground": 2.2
+    },
+    "departures": 4,
+    "completed_trips": 0,
+    "navigation_failures": [
+      {
+        "seconds": 4.443307166569866,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.332847595214844,
+          5.462735176086426,
+          -5.9324493408203125
+        ],
+        "target": [
+          -66.37999725341797,
+          5.580456733703613,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619599.87527,
+        "moved": 0.1255977600812912
+      },
+      {
+        "seconds": 4.2990719167282805,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.38881301879883,
+          5.667871952056885,
+          -5.935336112976074
+        ],
+        "target": [
+          -69.37999725341797,
+          5.462735176086426,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619604.174489,
+        "moved": 0.21265360713005066
+      },
+      {
+        "seconds": 4.333146708318964,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.48093032836914,
+          5.825748920440674,
+          -5.945505619049072
+        ],
+        "target": [
+          -69.37999725341797,
+          5.667871952056885,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619608.507769,
+        "moved": 0.18306870758533478
+      },
+      {
+        "seconds": 0.06590175000019372,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.481361389160156,
+          5.825795650482178,
+          -5.945602893829346
+        ],
+        "target": [
+          -72.37999725341797,
+          5.825748920440674,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619608.57381,
+        "moved": 0.0004443641228135675
+      },
+      {
+        "trip": 1,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619608.573973
+      },
+      {
+        "seconds": 4.428937666700222,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.306156158447266,
+          5.4625067710876465,
+          -5.933524131774902
+        ],
+        "target": [
+          -66.37999725341797,
+          5.613693714141846,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619616.075041,
+        "moved": 0.1572151780128479
+      },
+      {
+        "seconds": 4.367188999895006,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.36054611206055,
+          5.6670098304748535,
+          -5.934262275695801
+        ],
+        "target": [
+          -69.37999725341797,
+          5.4625067710876465,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619620.44238,
+        "moved": 0.21161359548568726
+      },
+      {
+        "seconds": 4.317235958413221,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.44544219970703,
+          5.825706958770752,
+          -5.94550895690918
+        ],
+        "target": [
+          -69.37999725341797,
+          5.6670098304748535,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619624.759761,
+        "moved": 0.18032918870449066
+      },
+      {
+        "seconds": 0.06375791667960584,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -38.444419860839844,
+          5.827095985412598,
+          -5.945758819580078
+        ],
+        "target": [
+          -72.37999725341797,
+          5.825706958770752,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619624.824071,
+        "moved": 0.0017426999984309077
+      },
+      {
+        "trip": 2,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619624.824254
+      },
+      {
+        "seconds": 10.69429066660814,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -46.30462646484375,
+          4.002747058868408,
+          18.361005783081055
+        ],
+        "target": [
+          -66.37999725341797,
+          4.003345489501953,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619639.146063,
+        "moved": 21.080162048339844
+      },
+      {
+        "seconds": 4.277950416668318,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -46.308467864990234,
+          4.002691745758057,
+          18.361896514892578
+        ],
+        "target": [
+          -69.37999725341797,
+          4.002747058868408,
+          15.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619643.424234,
+        "moved": 0.003943705931305885
+      },
+      {
+        "seconds": 4.316718749934807,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -46.309295654296875,
+          4.003085613250732,
+          18.362865447998047
+        ],
+        "target": [
+          -69.37999725341797,
+          4.002691745758057,
+          21.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619647.741123,
+        "moved": 0.0013338658027350903
+      },
+      {
+        "seconds": 0.0821922916220501,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -46.302616119384766,
+          4.0026140213012695,
+          18.362655639648438
+        ],
+        "target": [
+          -72.37999725341797,
+          4.003085613250732,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619647.823474,
+        "moved": 0.006699448451399803
+      },
+      {
+        "trip": 3,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_elevator",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619647.823694
+      },
+      {
+        "seconds": 4.326419083401561,
+        "source": "studio_measured",
+        "label": "desk_return",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -45.28956604003906,
+          4.003344535827637,
+          17.48638916015625
+        ],
+        "target": [
+          -38.125,
+          4.003344535827637,
+          -2.4499998092651367
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619652.408769,
+        "moved": 1.3392235040664673
+      },
+      {
+        "seconds": 4.443265041685663,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_elevator",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -37.93684387207031,
+          5.462887763977051,
+          -5.932943344116211
+        ],
+        "target": [
+          -66.37999725341797,
+          5.613149642944336,
+          18.75
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619669.158166,
+        "moved": 0.15483003854751587
+      }
+    ],
+    "last": {
+      "missionStatus": "",
+      "workSeconds": 92.28181781433523,
+      "day": 1,
+      "earned": 206.16581314586102,
+      "bank": 0,
+      "awayGauge": 4,
+      "heartbeatMax": 0.0792718306183815,
+      "memoryMb": 8735.8515625,
+      "event": "",
+      "state": "street",
+      "position": [
+        178.00271606445312,
+        4.203189373016357,
+        837.9971313476562
+      ],
+      "workshopStatus": "",
+      "kind": "sample",
+      "mission": "",
+      "action": "work",
+      "nearMiss": 0,
+      "strategy": "park_elevator",
+      "suspicion": 0,
+      "time": 1795619683.482489,
+      "fired": false,
+      "caught": 0,
+      "eventStage": "",
+      "company": "nunchi",
+      "minute": 763.906522339212,
+      "waiting": false,
+      "phase": "lunch",
+      "distance": 854.1610717773438,
+      "source": "studio_measured",
+      "heartbeatMean": 0.01825576452896572,
+      "review": "{\"locked\":true,\"weekday\":1,\"minRank\":\"과장\"}",
+      "speed": 1.1,
+      "workQuota": 85,
+      "warnings": 0,
+      "seated": false,
+      "xp": 6000,
+      "bossVisible": false,
+      "rank": 2
+    },
+    "transport_arrivals": [
+      {
+        "seconds": 2.8334116250043735,
+        "route": "elevator",
+        "attempt": 1,
+        "strategy": "park_elevator",
+        "inputSent": true,
+        "trip": 4,
+        "day": 1,
+        "success": true,
+        "time": 1795619680.790161,
+        "menuReceived": true,
+        "destination": "lobby",
+        "source": "studio_measured",
+        "kind": "outside_arrival"
+      }
+    ],
+    "prompt_diagnostics": [
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.3344998359680176,
+        "trip": 1,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -38.4809684753418,
+          5.8281402587890625,
+          -5.945956230163574
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619608.94143
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.330777645111084,
+        "trip": 2,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -38.4443359375,
+          5.82813024520874,
+          -5.945949554443359
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619625.193335
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 4.187439918518066,
+        "trip": 3,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -42.05174255371094,
+          4.003343105316162,
+          -5.5060248374938965
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619660.174907
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.349224805831909,
+        "trip": 4,
+        "serviceEnabled": true,
+        "maxDistance": 8,
+        "object": "🚪 엘리베이터",
+        "position": [
+          -68.17525482177734,
+          4.003344535827637,
+          15.788146018981934
+        ],
+        "strategy": "park_elevator",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619678.05697
+      }
+    ],
+    "session_assessment": {
+      "status": "failed_smoke",
+      "revision": "Walk backwards from chair; elevated cover target with nearby alternatives.",
+      "reason": "Repeated office navigation failures: path Success but physically blocked near (-46.31,4.00,18.36). Interrupted; no daily comparison."
+    },
+    "eligible_for_comparison": false
+  },
+  {
+    "session": "studio_04.jsonl",
+    "day": 1,
+    "conditions": {
+      "time": 1795619734.490144,
+      "company": "daechung",
+      "source": "studio_measured",
+      "minute": 541.0009269642926,
+      "day": 1,
+      "strategy": "park_stairs",
+      "eventToday": "",
+      "xp": 6000,
+      "scenario": "natural",
+      "meshFallback": false,
+      "weekday": "월요일",
+      "warnings": 0,
+      "speed": 1.1,
+      "kind": "day_conditions",
+      "bank": 0,
+      "rank": 2
+    },
+    "validity": null,
+    "payslip": null,
+    "summary": null,
+    "location_seconds": {
+      "office": 147.0
+    },
+    "departures": 10,
+    "completed_trips": 0,
+    "navigation_failures": [
+      {
+        "seconds": 4.1426129166502506,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_stairs",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.900156021118164,
+          5.751436710357666,
+          -8.988866806030273
+        ],
+        "target": [
+          -56.380001068115234,
+          5.613385200500488,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619824.12212,
+        "moved": 0.5961922407150269
+      },
+      {
+        "seconds": 0.09880229167174548,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.901665687561035,
+          5.757140159606934,
+          -8.983227729797363
+        ],
+        "target": [
+          -59.380001068115234,
+          5.751436710357666,
+          19.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619824.221062,
+        "moved": 0.008161348290741444
+      },
+      {
+        "seconds": 0.09986554167699069,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.901679992675781,
+          5.757338523864746,
+          -8.983192443847656
+        ],
+        "target": [
+          -59.380001068115234,
+          5.757140159606934,
+          25.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619824.321072,
+        "moved": 0.00020198542915750295
+      },
+      {
+        "seconds": 0.08351316663902253,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 1,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.901679992675781,
+          5.757344722747803,
+          -8.983192443847656
+        ],
+        "target": [
+          -62.380001068115234,
+          5.757338523864746,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619824.404751,
+        "moved": 6.198883056640625e-06
+      },
+      {
+        "trip": 1,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_stairs",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619824.404888
+      },
+      {
+        "seconds": 4.213462125044316,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_stairs",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.664886474609375,
+          5.709773063659668,
+          -8.996149063110352
+        ],
+        "target": [
+          -56.380001068115234,
+          5.552458763122559,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619830.705532,
+        "moved": 0.6147105097770691
+      },
+      {
+        "seconds": 0.09905291663017124,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.666662216186523,
+          5.754021167755127,
+          -8.98880672454834
+        ],
+        "target": [
+          -59.380001068115234,
+          5.709773063659668,
+          19.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619830.80474,
+        "moved": 0.04488828033208847
+      },
+      {
+        "seconds": 0.11685616662725806,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.666654586791992,
+          5.7573018074035645,
+          -8.988725662231445
+        ],
+        "target": [
+          -59.380001068115234,
+          5.754021167755127,
+          25.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619830.921753,
+        "moved": 0.003281649900600314
+      },
+      {
+        "seconds": 0.09961137501522899,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 2,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.666654586791992,
+          5.7573442459106445,
+          -8.988725662231445
+        ],
+        "target": [
+          -62.380001068115234,
+          5.7573018074035645,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619831.021503,
+        "moved": 4.2438507080078125e-05
+      },
+      {
+        "trip": 2,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_stairs",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619831.021657
+      },
+      {
+        "seconds": 4.112341375090182,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_stairs",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.92741584777832,
+          5.756512641906738,
+          -8.990731239318848
+        ],
+        "target": [
+          -56.380001068115234,
+          5.613739967346191,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619837.205189,
+        "moved": 0.5938977003097534
+      },
+      {
+        "seconds": 0.11558774998411536,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.928872108459473,
+          5.756076812744141,
+          -8.982728004455566
+        ],
+        "target": [
+          -59.380001068115234,
+          5.756512641906738,
+          19.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619837.320907,
+        "moved": 0.008146313019096851
+      },
+      {
+        "seconds": 0.09992499998770654,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.928875923156738,
+          5.757314205169678,
+          -8.982706069946289
+        ],
+        "target": [
+          -59.380001068115234,
+          5.756076812744141,
+          25.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619837.420994,
+        "moved": 0.0012375926598906517
+      },
+      {
+        "seconds": 0.0996860833838582,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 3,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.928875923156738,
+          5.757344722747803,
+          -8.982706069946289
+        ],
+        "target": [
+          -62.380001068115234,
+          5.757314205169678,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619837.520834,
+        "moved": 3.0517578125e-05
+      },
+      {
+        "trip": 3,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_stairs",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619837.52099
+      },
+      {
+        "seconds": 4.163353333249688,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_stairs",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.878650665283203,
+          5.753206253051758,
+          -8.98381519317627
+        ],
+        "target": [
+          -56.380001068115234,
+          5.544661045074463,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619844.304834,
+        "moved": 0.6098822951316833
+      },
+      {
+        "seconds": 0.11524075001943856,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.879772186279297,
+          5.757279396057129,
+          -8.978668212890625
+        ],
+        "target": [
+          -59.380001068115234,
+          5.753206253051758,
+          19.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619844.420248,
+        "moved": 0.006658806931227446
+      },
+      {
+        "seconds": 0.09996883326675743,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.879783630371094,
+          5.757341384887695,
+          -8.978350639343262
+        ],
+        "target": [
+          -59.380001068115234,
+          5.757279396057129,
+          25.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619844.52038,
+        "moved": 0.0003237692581024021
+      },
+      {
+        "seconds": 0.1002773332875222,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 4,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.879783630371094,
+          5.757344722747803,
+          -8.978350639343262
+        ],
+        "target": [
+          -62.380001068115234,
+          5.757341384887695,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619844.6208,
+        "moved": 3.337860107421875e-06
+      },
+      {
+        "trip": 4,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_stairs",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619844.620952
+      },
+      {
+        "seconds": 4.095841499976814,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_stairs",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.63326644897461,
+          5.711411952972412,
+          -8.986784934997559
+        ],
+        "target": [
+          -56.380001068115234,
+          5.6002349853515625,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619851.322595,
+        "moved": 0.5910040736198425
+      },
+      {
+        "seconds": 0.09876320837065578,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.63412094116211,
+          5.754298210144043,
+          -8.981522560119629
+        ],
+        "target": [
+          -59.380001068115234,
+          5.711411952972412,
+          19.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619851.421527,
+        "moved": 0.04321635887026787
+      },
+      {
+        "seconds": 0.09939337498508394,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.634122848510742,
+          5.757271766662598,
+          -8.981496810913086
+        ],
+        "target": [
+          -59.380001068115234,
+          5.754298210144043,
+          25.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619851.521105,
+        "moved": 0.002973668510094285
+      },
+      {
+        "seconds": 0.10070104175247252,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 5,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.634122848510742,
+          5.757343292236328,
+          -8.981496810913086
+        ],
+        "target": [
+          -62.380001068115234,
+          5.757271766662598,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619851.621964,
+        "moved": 7.152557373046875e-05
+      },
+      {
+        "trip": 5,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_stairs",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619851.622112
+      },
+      {
+        "seconds": 4.080304916715249,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_stairs",
+        "trip": 6,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.859845161437988,
+          5.7562689781188965,
+          -8.992802619934082
+        ],
+        "target": [
+          -56.380001068115234,
+          5.567534446716309,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619858.055147,
+        "moved": 0.6214882731437683
+      },
+      {
+        "seconds": 0.06615562504157424,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 6,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.861017227172852,
+          5.747354507446289,
+          -8.98478889465332
+        ],
+        "target": [
+          -59.380001068115234,
+          5.7562689781188965,
+          19.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619858.12145,
+        "moved": 0.012044140137732029
+      },
+      {
+        "seconds": 0.09933445835486054,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 6,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.861146926879883,
+          5.757053852081299,
+          -8.983036041259766
+        ],
+        "target": [
+          -59.380001068115234,
+          5.747354507446289,
+          25.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619858.220929,
+        "moved": 0.009857311844825745
+      },
+      {
+        "seconds": 0.1007058332907036,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 6,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.861175537109375,
+          5.757332801818848,
+          -8.982399940490723
+        ],
+        "target": [
+          -62.380001068115234,
+          5.757053852081299,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619858.321779,
+        "moved": 0.0006951659452170134
+      },
+      {
+        "trip": 6,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_stairs",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619858.321915
+      },
+      {
+        "seconds": 4.144645166699775,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_stairs",
+        "trip": 7,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.882585525512695,
+          5.711967468261719,
+          -8.985291481018066
+        ],
+        "target": [
+          -56.380001068115234,
+          5.569397449493408,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619864.821901,
+        "moved": 0.5927051305770874
+      },
+      {
+        "seconds": 0.0991647916380316,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 7,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.882987976074219,
+          5.754546165466309,
+          -8.983128547668457
+        ],
+        "target": [
+          -59.380001068115234,
+          5.711967468261719,
+          19.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619864.921197,
+        "moved": 0.04263549670577049
+      },
+      {
+        "seconds": 0.08330212510190904,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 7,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.882981300354004,
+          5.757254123687744,
+          -8.983107566833496
+        ],
+        "target": [
+          -59.380001068115234,
+          5.754546165466309,
+          25.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619865.004636,
+        "moved": 0.00270804762840271
+      },
+      {
+        "seconds": 0.11648037494160235,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 7,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.882981300354004,
+          5.757343769073486,
+          -8.983107566833496
+        ],
+        "target": [
+          -62.380001068115234,
+          5.757254123687744,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619865.121253,
+        "moved": 8.96453857421875e-05
+      },
+      {
+        "trip": 7,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_stairs",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619865.121401
+      },
+      {
+        "seconds": 4.113533625029959,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_stairs",
+        "trip": 8,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.65619659423828,
+          5.736181735992432,
+          -8.992501258850098
+        ],
+        "target": [
+          -56.380001068115234,
+          5.535600185394287,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619871.854696,
+        "moved": 0.6238036155700684
+      },
+      {
+        "seconds": 0.06559812498744577,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 8,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.656463623046875,
+          5.751869201660156,
+          -8.98531436920166
+        ],
+        "target": [
+          -59.380001068115234,
+          5.736181735992432,
+          19.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619871.920394,
+        "moved": 0.017257440835237503
+      },
+      {
+        "seconds": 0.10013375000562519,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 8,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.65654945373535,
+          5.757186412811279,
+          -8.982770919799805
+        ],
+        "target": [
+          -59.380001068115234,
+          5.751869201660156,
+          25.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619872.020682,
+        "moved": 0.005894848145544529
+      },
+      {
+        "seconds": 0.09984341671224684,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 8,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -16.65656852722168,
+          5.757335662841797,
+          -8.982135772705078
+        ],
+        "target": [
+          -62.380001068115234,
+          5.757186412811279,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619872.120667,
+        "moved": 0.0006527259829454124
+      },
+      {
+        "trip": 8,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_stairs",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619872.1208
+      },
+      {
+        "seconds": 4.177788958419114,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.Success",
+        "strategy": "park_stairs",
+        "trip": 9,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.861553192138672,
+          5.7517409324646,
+          -8.987349510192871
+        ],
+        "target": [
+          -56.380001068115234,
+          5.56527042388916,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619878.887976,
+        "moved": 0.615088164806366
+      },
+      {
+        "seconds": 0.03207079158164561,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 9,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.862238883972168,
+          5.7531514167785645,
+          -8.986165046691895
+        ],
+        "target": [
+          -59.380001068115234,
+          5.7517409324646,
+          19.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619878.920213,
+        "moved": 0.001965348143130541
+      },
+      {
+        "seconds": 0.10045604163315147,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 9,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.861847877502441,
+          5.757176399230957,
+          -8.982991218566895
+        ],
+        "target": [
+          -59.380001068115234,
+          5.7531514167785645,
+          25.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619879.020813,
+        "moved": 0.005140676628798246
+      },
+      {
+        "seconds": 0.09915241657290608,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "pathStatus": "Enum.PathStatus.NoPath",
+        "strategy": "park_stairs",
+        "trip": 9,
+        "day": 1,
+        "reached": false,
+        "position": [
+          -15.861847877502441,
+          5.757340908050537,
+          -8.982989311218262
+        ],
+        "target": [
+          -62.380001068115234,
+          5.757176399230957,
+          22.5
+        ],
+        "kind": "outside_navigation",
+        "time": 1795619879.120105,
+        "moved": 0.00016451987903565168
+      },
+      {
+        "trip": 9,
+        "source": "studio_measured",
+        "label": "elevator_lobby",
+        "strategy": "park_stairs",
+        "kind": "outside_navigation_failed",
+        "day": 1,
+        "time": 1795619879.120226
+      }
+    ],
+    "last": {
+      "missionStatus": "active",
+      "workSeconds": 92.34719744417816,
+      "day": 1,
+      "earned": 184.69439488835633,
+      "bank": 0,
+      "awayGauge": 1,
+      "heartbeatMax": 0.06024162471294403,
+      "memoryMb": 8745.3828125,
+      "event": "",
+      "state": "roam",
+      "position": [
+        -16.089113235473633,
+        5.625085830688477,
+        -8.436652183532715
+      ],
+      "workshopStatus": "",
+      "kind": "sample",
+      "mission": "excel",
+      "action": "work",
+      "nearMiss": 0,
+      "strategy": "park_stairs",
+      "suspicion": 0,
+      "time": 1795619881.109512,
+      "fired": false,
+      "caught": 0,
+      "eventStage": "",
+      "company": "daechung",
+      "minute": 729.3570451603405,
+      "waiting": false,
+      "phase": "lunch",
+      "distance": 30.72970962524414,
+      "source": "studio_measured",
+      "heartbeatMean": 0.017312733850513514,
+      "review": "{\"locked\":true,\"weekday\":1,\"minRank\":\"과장\"}",
+      "speed": 1.1,
+      "workQuota": 85,
+      "warnings": 0,
+      "seated": false,
+      "xp": 6000,
+      "bossVisible": false,
+      "rank": 2
+    },
+    "transport_arrivals": [],
+    "prompt_diagnostics": [
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.387605905532837,
+        "trip": 1,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -15.901679992675781,
+          5.757344722747803,
+          -8.983192443847656
+        ],
+        "strategy": "park_stairs",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619824.772071
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.397000789642334,
+        "trip": 2,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -16.666654586791992,
+          5.757344722747803,
+          -8.988725662231445
+        ],
+        "strategy": "park_stairs",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619831.389325
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.3847694396972656,
+        "trip": 3,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -15.928875923156738,
+          5.757344722747803,
+          -8.982706069946289
+        ],
+        "strategy": "park_stairs",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619837.888392
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.3884549140930176,
+        "trip": 4,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -15.879783630371094,
+          5.757344722747803,
+          -8.978350639343262
+        ],
+        "strategy": "park_stairs",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619844.987742
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.390958070755005,
+        "trip": 5,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -16.634122848510742,
+          5.757344722747803,
+          -8.981496810913086
+        ],
+        "strategy": "park_stairs",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619851.988588
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.3917672634124756,
+        "trip": 6,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -15.861175537109375,
+          5.757344722747803,
+          -8.98239517211914
+        ],
+        "strategy": "park_stairs",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619858.704956
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.3895537853240967,
+        "trip": 7,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -15.882981300354004,
+          5.757344722747803,
+          -8.983107566833496
+        ],
+        "strategy": "park_stairs",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619865.488354
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.393766164779663,
+        "trip": 8,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -16.65656852722168,
+          5.757344722747803,
+          -8.982129096984863
+        ],
+        "strategy": "park_stairs",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619872.488388
+      },
+      {
+        "enabled": true,
+        "source": "studio_measured",
+        "shown": true,
+        "distance": 3.391871213912964,
+        "trip": 9,
+        "serviceEnabled": true,
+        "maxDistance": 6,
+        "object": "🪑 내 자리",
+        "position": [
+          -15.861847877502441,
+          5.757344722747803,
+          -8.982989311218262
+        ],
+        "strategy": "park_stairs",
+        "kind": "outside_prompt",
+        "day": 1,
+        "time": 1795619879.487865
+      }
+    ],
+    "session_assessment": {
+      "status": "failed_smoke",
+      "revision": "Same bot as session 03; daechung, return via stairs.",
+      "reason": "Repeated desk departure failures; stairs never reached. Interrupted, stairs return unverified."
+    },
+    "eligible_for_comparison": false
+  }
+]

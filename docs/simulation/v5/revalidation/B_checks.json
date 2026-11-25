@@ -1,0 +1,317 @@
+[
+  {
+    "file": "studio_02.jsonl",
+    "case": "timeout",
+    "outcome": "timeout",
+    "return_seconds": 9.398151874542236,
+    "caught": 0,
+    "nav_stuck": 0,
+    "navigation": [
+      {
+        "seated": true,
+        "seatDistance": 1.6508190631866455,
+        "attempt": 1,
+        "time": 1795598030.175801,
+        "day": 1,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "source": "studio_measured",
+        "kind": "navigation",
+        "secondsAway": 2.546772833331488,
+        "pathStatus": "Enum.PathStatus.Success"
+      },
+      {
+        "seconds": 4.562278124969453,
+        "source": "studio_measured",
+        "time": 1795598032.191302,
+        "kind": "navigation_done",
+        "day": 1,
+        "attempts": 1
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "studio_03.jsonl",
+    "case": "timeout",
+    "outcome": "timeout",
+    "return_seconds": 7.964579820632935,
+    "caught": 0,
+    "nav_stuck": 0,
+    "navigation": [
+      {
+        "seated": true,
+        "seatDistance": 1.6508190631866455,
+        "attempt": 1,
+        "time": 1795598223.113783,
+        "day": 1,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "source": "studio_measured",
+        "kind": "navigation",
+        "secondsAway": 2.5626808332744986,
+        "pathStatus": "Enum.PathStatus.Success"
+      },
+      {
+        "seconds": 4.5788746665930375,
+        "source": "studio_measured",
+        "time": 1795598225.129969,
+        "kind": "navigation_done",
+        "day": 1,
+        "attempts": 1
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "studio_04.jsonl",
+    "case": "timeout",
+    "outcome": "timeout",
+    "return_seconds": 8.880825996398926,
+    "caught": 0,
+    "nav_stuck": 0,
+    "navigation": [
+      {
+        "seated": false,
+        "seatDistance": 1.6508190631866455,
+        "attempt": 1,
+        "time": 1795598363.955497,
+        "day": 1,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "source": "studio_measured",
+        "kind": "navigation",
+        "secondsAway": 2.5293057915987447,
+        "pathStatus": "Enum.PathStatus.Success"
+      },
+      {
+        "seconds": 4.545184333343059,
+        "source": "studio_measured",
+        "time": 1795598365.971368,
+        "kind": "navigation_done",
+        "day": 1,
+        "attempts": 1
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "studio_05.jsonl",
+    "case": "out",
+    "outcome": "out",
+    "return_seconds": 7.2153730392456055,
+    "caught": 0,
+    "nav_stuck": 0,
+    "navigation": [
+      {
+        "seated": false,
+        "seatDistance": 1.6508190631866455,
+        "attempt": 1,
+        "time": 1795598457.815578,
+        "day": 1,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "source": "studio_measured",
+        "kind": "navigation",
+        "secondsAway": 2.5961408333387226,
+        "pathStatus": "Enum.PathStatus.Success"
+      },
+      {
+        "seconds": 4.596518666599877,
+        "source": "studio_measured",
+        "time": 1795598459.815951,
+        "kind": "navigation_done",
+        "day": 1,
+        "attempts": 1
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "studio_06.jsonl",
+    "case": "out",
+    "outcome": "out",
+    "return_seconds": 8.830952167510986,
+    "caught": 0,
+    "nav_stuck": 0,
+    "navigation": [
+      {
+        "seated": false,
+        "seatDistance": 1.6508190631866455,
+        "attempt": 1,
+        "time": 1795598587.858525,
+        "day": 1,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "source": "studio_measured",
+        "kind": "navigation",
+        "secondsAway": 2.595973916584626,
+        "pathStatus": "Enum.PathStatus.Success"
+      },
+      {
+        "seconds": 4.611770666670054,
+        "source": "studio_measured",
+        "time": 1795598589.874318,
+        "kind": "navigation_done",
+        "day": 1,
+        "attempts": 1
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "studio_07.jsonl",
+    "case": "out",
+    "outcome": "out",
+    "return_seconds": 6.764873027801514,
+    "caught": 0,
+    "nav_stuck": 0,
+    "navigation": [
+      {
+        "seated": false,
+        "seatDistance": 1.6508190631866455,
+        "attempt": 1,
+        "time": 1795598735.732414,
+        "day": 1,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "source": "studio_measured",
+        "kind": "navigation",
+        "secondsAway": 2.5437064999714494,
+        "pathStatus": "Enum.PathStatus.Success"
+      },
+      {
+        "seconds": 4.544147458276711,
+        "source": "studio_measured",
+        "time": 1795598737.732849,
+        "kind": "navigation_done",
+        "day": 1,
+        "attempts": 1
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "studio_08.jsonl",
+    "case": "finish",
+    "outcome": "finished",
+    "return_seconds": 10.181350946426392,
+    "caught": 0,
+    "nav_stuck": 0,
+    "navigation": [
+      {
+        "seated": true,
+        "seatDistance": 1.6508190631866455,
+        "attempt": 1,
+        "time": 1795598963.486942,
+        "day": 1,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "source": "studio_measured",
+        "kind": "navigation",
+        "secondsAway": 4.179277416667901,
+        "pathStatus": "Enum.PathStatus.Success"
+      },
+      {
+        "seconds": 6.196067333337851,
+        "source": "studio_measured",
+        "time": 1795598965.503726,
+        "kind": "navigation_done",
+        "day": 1,
+        "attempts": 1
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "studio_09.jsonl",
+    "case": "finish",
+    "outcome": "finished",
+    "return_seconds": 8.5156991481781,
+    "caught": 0,
+    "nav_stuck": 0,
+    "navigation": [
+      {
+        "seated": true,
+        "seatDistance": 1.6508190631866455,
+        "attempt": 1,
+        "time": 1795599185.679361,
+        "day": 1,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "source": "studio_measured",
+        "kind": "navigation",
+        "secondsAway": 4.078448458341882,
+        "pathStatus": "Enum.PathStatus.Success"
+      },
+      {
+        "seconds": 6.095146541716531,
+        "source": "studio_measured",
+        "time": 1795599187.696053,
+        "kind": "navigation_done",
+        "day": 1,
+        "attempts": 1
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "studio_10.jsonl",
+    "case": "finish",
+    "outcome": "finished",
+    "return_seconds": 10.616164922714233,
+    "caught": 0,
+    "nav_stuck": 0,
+    "navigation": [
+      {
+        "seated": true,
+        "seatDistance": 1.6508190631866455,
+        "attempt": 1,
+        "time": 1795599389.189565,
+        "day": 1,
+        "position": [
+          -38.125,
+          4.20081901550293,
+          -5.449999809265137
+        ],
+        "source": "studio_measured",
+        "kind": "navigation",
+        "secondsAway": 4.179923958377913,
+        "pathStatus": "Enum.PathStatus.Success"
+      },
+      {
+        "seconds": 6.196053416701034,
+        "source": "studio_measured",
+        "time": 1795599391.205693,
+        "kind": "navigation_done",
+        "day": 1,
+        "attempts": 1
+      }
+    ],
+    "passed": true
+  }
+]

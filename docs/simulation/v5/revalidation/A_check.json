@@ -1,0 +1,20 @@
+{
+  "warning": false,
+  "records": false,
+  "connection": "salary.project.json localhost:34872 confirmed in Studio",
+  "passed": true,
+  "enabled": false,
+  "simulationReady": null,
+  "day": 0,
+  "position_before": [
+    20,
+    3.9633450508117676,
+    788
+  ],
+  "position_after": [
+    20,
+    3.9633450508117676,
+    788
+  ],
+  "observation_interval_seconds": 15
+}

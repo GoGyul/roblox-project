@@ -1,0 +1,21 @@
+{
+  "studio_01.jsonl": {
+    "status": "failed_smoke",
+    "reason": "Seated character never left office; 11 outside_trip_done events are false positives and excluded. Interrupted before end of day.",
+    "gameplay_seconds": 163
+  },
+  "studio_02.jsonl": {
+    "status": "failed_smoke",
+    "reason": "One verified lobby/office roundtrip; park cover navigation NoPath and repeated desk departure failures. Interrupted; no daily pay comparison."
+  },
+  "studio_03.jsonl": {
+    "status": "failed_smoke",
+    "revision": "Walk backwards from chair; elevated cover target with nearby alternatives.",
+    "reason": "Repeated office navigation failures: path Success but physically blocked near (-46.31,4.00,18.36). Interrupted; no daily comparison."
+  },
+  "studio_04.jsonl": {
+    "status": "failed_smoke",
+    "revision": "Same bot as session 03; daechung, return via stairs.",
+    "reason": "Repeated desk departure failures; stairs never reached. Interrupted, stairs return unverified."
+  }
+}

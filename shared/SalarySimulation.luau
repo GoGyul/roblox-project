@@ -13,4 +13,14 @@ if S.enabled() then
 		S.strategies = table.create(S.days, strategy)
 	end
 end
+-- Separate exploratory protocol: intentional outdoor time is not a navigation failure.
+S.outside = S.enabled() and workspace:GetAttribute("SalarySimulationOutside") == true
+if S.outside then
+ S.protocol = "v7-outside-recovery"
+ S.playerType = "outside"
+ S.days = 1
+ S.company = if workspace:GetAttribute("SalarySimulationRoute") == "stairs" then "daechung" else "nunchi"
+ S.outsideRoute = workspace:GetAttribute("SalarySimulationRoute") or "elevator"
+ S.strategies = { "park_" .. S.outsideRoute }
+end
 return S

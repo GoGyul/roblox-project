@@ -1,0 +1,198 @@
+[
+  {
+    "session": 1,
+    "initial_rank": 2,
+    "strategy": "cautious",
+    "replicate": 1,
+    "status": "complete",
+    "file": "session_01.jsonl",
+    "start_time": 1795601846.722556
+  },
+  {
+    "session": 2,
+    "initial_rank": 2,
+    "strategy": "cautious",
+    "replicate": 2,
+    "status": "complete",
+    "file": "session_02.jsonl",
+    "start_time": 1795604153.40111
+  },
+  {
+    "session": 3,
+    "initial_rank": 2,
+    "strategy": "normal",
+    "replicate": 1,
+    "status": "complete",
+    "file": "session_03.jsonl",
+    "start_time": 1795606466.625879
+  },
+  {
+    "session": 4,
+    "initial_rank": 2,
+    "strategy": "normal",
+    "replicate": 2,
+    "status": "complete",
+    "file": "session_04.jsonl",
+    "start_time": 1795608926.600878
+  },
+  {
+    "session": 5,
+    "initial_rank": 2,
+    "strategy": "greedy",
+    "replicate": 1,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 6,
+    "initial_rank": 2,
+    "strategy": "greedy",
+    "replicate": 2,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 7,
+    "initial_rank": 2,
+    "strategy": "novice",
+    "replicate": 1,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 8,
+    "initial_rank": 2,
+    "strategy": "novice",
+    "replicate": 2,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 9,
+    "initial_rank": 4,
+    "strategy": "cautious",
+    "replicate": 1,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 10,
+    "initial_rank": 4,
+    "strategy": "cautious",
+    "replicate": 2,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 11,
+    "initial_rank": 4,
+    "strategy": "normal",
+    "replicate": 1,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 12,
+    "initial_rank": 4,
+    "strategy": "normal",
+    "replicate": 2,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 13,
+    "initial_rank": 4,
+    "strategy": "greedy",
+    "replicate": 1,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 14,
+    "initial_rank": 4,
+    "strategy": "greedy",
+    "replicate": 2,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 15,
+    "initial_rank": 4,
+    "strategy": "novice",
+    "replicate": 1,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 16,
+    "initial_rank": 4,
+    "strategy": "novice",
+    "replicate": 2,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 17,
+    "initial_rank": 5,
+    "strategy": "cautious",
+    "replicate": 1,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 18,
+    "initial_rank": 5,
+    "strategy": "cautious",
+    "replicate": 2,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 19,
+    "initial_rank": 5,
+    "strategy": "normal",
+    "replicate": 1,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 20,
+    "initial_rank": 5,
+    "strategy": "normal",
+    "replicate": 2,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 21,
+    "initial_rank": 5,
+    "strategy": "greedy",
+    "replicate": 1,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 22,
+    "initial_rank": 5,
+    "strategy": "greedy",
+    "replicate": 2,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 23,
+    "initial_rank": 5,
+    "strategy": "novice",
+    "replicate": 1,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  },
+  {
+    "session": 24,
+    "initial_rank": 5,
+    "strategy": "novice",
+    "replicate": 2,
+    "status": "cancelled_by_user",
+    "note": "사용자 요청: 본 실측 4번째 세션까지만 완료"
+  }
+]

@@ -25,3 +25,12 @@ __pycache__/
 # 실측 진단 로그 (계정 번호·내 컴퓨터 경로가 들어 있어요)
 /docs/simulation/**/*_diagnostics.log
 /docs/simulation/v5/transport_smoke.json
+# v5부터 원본 로그에 계정 번호(playerId)가 찍혀요: 원본은 컴퓨터에만 두고 요약·보고서만 올려요
+/docs/simulation/v5/main/raw/
+/docs/simulation/v5/revalidation/raw/
+/docs/simulation/v6-outside/raw/
+/docs/simulation/v7-outside/raw/
+/docs/simulation/**/cleanup.log
+/docs/simulation/v5/revalidation/A_output.log
+/docs/simulation/v5/revalidation/C_check.json
+/docs/simulation/v5/revalidation/hook_smoke.json

@@ -1,0 +1,8 @@
+{
+  "shared/SalarySimulation.luau": "c85f3d55c6d29af6e7c4b360e1e875c1313eb538f205f83e0fcbcda73396534b",
+  "places/salary/client/SimulationAuto.client.luau": "1d0e57f68a383775c78b94548b5042102891841c038cd73621571aa14989ee66",
+  "places/salary/client/SimulationOutside.luau": "ab62bf543b8e126f7983ef387482a766bb7e56a29688ce4302d84b6cb546fe63",
+  "places/salary/server/SimulationRecorder.luau": "01325f69e113b932c3606460e078bfbc78fa1511a5f195ca11062dc0a7d0fa7c",
+  "salary.simulation.outside.project.json": "875b26adb68485e6e9506a7154d93c536fea506cc5f44abc8fa0efc5a6de9b64",
+  "tools/salary_simulation/outside_progress.py": "a75fcd87028335d55c41205effe3bd6353fcfe90b1903787358d7e15a5d2837c"
+}
