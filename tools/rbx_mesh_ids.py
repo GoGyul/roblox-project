@@ -13,13 +13,55 @@ def unzstd(blob):
     return subprocess.run(["zstd", "-d", "-c"], input=blob, capture_output=True, check=True).stdout
 
 
+def unlz4(blob, raw_size):
+    """LZ4 블록 풀기 (모델만 저장한 .rbxm은 zstd 대신 LZ4로 압축돼 있어요)."""
+    out = bytearray()
+    i, n = 0, len(blob)
+    while i < n:
+        token = blob[i]
+        i += 1
+        length = token >> 4
+        if length == 15:
+            while True:
+                extra = blob[i]
+                i += 1
+                length += extra
+                if extra != 255:
+                    break
+        out += blob[i:i + length]
+        i += length
+        if i >= n:
+            break
+        offset = blob[i] | (blob[i + 1] << 8)
+        i += 2
+        length = token & 15
+        if length == 15:
+            while True:
+                extra = blob[i]
+                i += 1
+                length += extra
+                if extra != 255:
+                    break
+        length += 4
+        start = len(out) - offset
+        for k in range(length):
+            out.append(out[start + k])
+    assert len(out) == raw_size, (len(out), raw_size)
+    return bytes(out)
+
+
 def chunks(data):
     o = 32
     while o < len(data):
         name = data[o:o + 4]
         comp, raw, _ = struct.unpack("<III", data[o + 4:o + 16])
         body = data[o + 16:o + 16 + (comp or raw)]
-        yield name, (unzstd(body) if comp else body)
+        if not comp:
+            yield name, body
+        elif body[:4] == b"\x28\xb5\x2f\xfd":
+            yield name, unzstd(body)
+        else:
+            yield name, unlz4(body, raw)
         o += 16 + (comp or raw)
 
 

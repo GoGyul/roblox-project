@@ -1,0 +1,774 @@
+{
+ "ExecPanel": [
+  {
+   "name": "ExecPanel_Back",
+   "color": "choco",
+   "material": "Wood",
+   "size": [
+    4.875,
+    10.0,
+    0.1
+   ],
+   "center": [
+    0.0,
+    5.0,
+    0.05
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "ExecPanel_Frame",
+   "color": "espresso",
+   "material": "Wood",
+   "size": [
+    4.875,
+    10.0,
+    0.36
+   ],
+   "center": [
+    0.0,
+    5.0,
+    0.18
+   ],
+   "triangles": 940
+  },
+  {
+   "name": "ExecPanel_Insets",
+   "color": "woodDark",
+   "material": "Wood",
+   "size": [
+    3.3,
+    7.75,
+    0.14
+   ],
+   "center": [
+    0.0,
+    5.125,
+    0.12
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "ExecPanel_Line",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    4.815,
+    0.08,
+    0.4
+   ],
+   "center": [
+    0.0,
+    4.47,
+    0.2
+   ],
+   "triangles": 188
+  }
+ ],
+ "ExecShelf": [
+  {
+   "name": "ExecShelf_Board",
+   "color": "espresso",
+   "material": "Wood",
+   "size": [
+    6.0,
+    0.3,
+    1.1
+   ],
+   "center": [
+    0.0,
+    6.0,
+    0.55
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "ExecShelf_Trophies",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    5.08,
+    2.98,
+    0.99
+   ],
+   "center": [
+    -0.0,
+    6.84,
+    0.55
+   ],
+   "triangles": 4444
+  },
+  {
+   "name": "ExecShelf_Bases",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    4.4,
+    0.18,
+    0.8
+   ],
+   "center": [
+    0.0,
+    6.24,
+    0.55
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "ExecShelf_Frames",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    5.0,
+    1.5,
+    0.12
+   ],
+   "center": [
+    0.0,
+    9.6,
+    0.08
+   ],
+   "triangles": 376
+  },
+  {
+   "name": "ExecShelf_Awards",
+   "color": "cakeCream",
+   "material": "SmoothPlastic",
+   "size": [
+    4.7,
+    1.2,
+    0.05
+   ],
+   "center": [
+    0.0,
+    9.6,
+    0.15
+   ],
+   "triangles": 376
+  }
+ ],
+ "ExecPicture": [
+  {
+   "name": "ExecPicture_Frame",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    4.4,
+    3.2,
+    0.16
+   ],
+   "center": [
+    0.0,
+    7.6,
+    0.08
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "ExecPicture_Canvas",
+   "color": "navy",
+   "material": "SmoothPlastic",
+   "size": [
+    3.8,
+    2.6,
+    0.06
+   ],
+   "center": [
+    0.0,
+    7.6,
+    0.17
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "ExecPicture_Hills",
+   "color": "mint",
+   "material": "SmoothPlastic",
+   "size": [
+    3.5,
+    1.36,
+    0.05
+   ],
+   "center": [
+    -0.05,
+    7.01,
+    0.2
+   ],
+   "triangles": 1316
+  },
+  {
+   "name": "ExecPicture_Sun",
+   "color": "yellow",
+   "material": "SmoothPlastic",
+   "size": [
+    0.8,
+    0.8,
+    0.05
+   ],
+   "center": [
+    1.1,
+    8.3,
+    0.2
+   ],
+   "triangles": 108
+  }
+ ],
+ "ExecLamp": [
+  {
+   "name": "ExecLamp_Stand",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    1.6,
+    5.98,
+    1.6
+   ],
+   "center": [
+    0.0,
+    2.99,
+    -0.0
+   ],
+   "triangles": 924
+  },
+  {
+   "name": "ExecLamp_Shade",
+   "color": "cakeCream",
+   "material": "Fabric",
+   "size": [
+    2.3,
+    1.7,
+    2.3
+   ],
+   "center": [
+    0.0,
+    6.45,
+    -0.0
+   ],
+   "triangles": 168
+  },
+  {
+   "name": "ExecLamp_Glow",
+   "color": "yellowSoft",
+   "material": "Neon",
+   "size": [
+    0.6,
+    0.6,
+    0.6
+   ],
+   "center": [
+    0.0,
+    6.1,
+    -0.0
+   ],
+   "triangles": 528
+  }
+ ],
+ "ExecFridge": [
+  {
+   "name": "ExecFridge_Body",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    2.6,
+    4.2,
+    2.55
+   ],
+   "center": [
+    0.0,
+    2.2,
+    -0.025
+   ],
+   "triangles": 940
+  },
+  {
+   "name": "ExecFridge_Shelves",
+   "color": "metal",
+   "material": "Metal",
+   "size": [
+    2.05,
+    2.08,
+    0.3
+   ],
+   "center": [
+    0.0,
+    2.0,
+    1.05
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "ExecFridge_CansA",
+   "color": "cakeCream",
+   "material": "SmoothPlastic",
+   "size": [
+    1.771,
+    2.62,
+    0.34
+   ],
+   "center": [
+    0.0,
+    2.36,
+    1.06
+   ],
+   "triangles": 312
+  },
+  {
+   "name": "ExecFridge_CansB",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    1.771,
+    2.62,
+    0.34
+   ],
+   "center": [
+    0.0,
+    2.36,
+    1.06
+   ],
+   "triangles": 312
+  },
+  {
+   "name": "ExecFridge_Glass",
+   "color": "glass",
+   "material": "Glass",
+   "size": [
+    2.05,
+    3.3,
+    0.08
+   ],
+   "center": [
+    0.0,
+    2.25,
+    1.24
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "ExecFridge_Handle",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    0.12,
+    1.42,
+    0.12
+   ],
+   "center": [
+    0.82,
+    2.25,
+    1.36
+   ],
+   "triangles": 480
+  },
+  {
+   "name": "ExecFridge_Machine",
+   "color": "metal",
+   "material": "Metal",
+   "size": [
+    2.0,
+    0.855,
+    1.2
+   ],
+   "center": [
+    -0.05,
+    4.727,
+    -0.2
+   ],
+   "triangles": 632
+  }
+ ],
+ "ExecDesk": [
+  {
+   "name": "ExecDesk_Top",
+   "color": "espresso",
+   "material": "Wood",
+   "size": [
+    9.4,
+    0.32,
+    4.3
+   ],
+   "center": [
+    0.0,
+    3.34,
+    -0.0
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "ExecDesk_Body",
+   "color": "choco",
+   "material": "Wood",
+   "size": [
+    9.1,
+    3.1,
+    3.8
+   ],
+   "center": [
+    0.0,
+    1.6,
+    -0.0
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "ExecDesk_Inset",
+   "color": "espresso",
+   "material": "Wood",
+   "size": [
+    8.5,
+    2.3,
+    0.18
+   ],
+   "center": [
+    0.0,
+    1.7,
+    1.88
+   ],
+   "triangles": 564
+  },
+  {
+   "name": "ExecDesk_Trim",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    9.42,
+    2.495,
+    4.32
+   ],
+   "center": [
+    0.0,
+    1.948,
+    -0.0
+   ],
+   "triangles": 1316
+  },
+  {
+   "name": "ExecDesk_Drawers",
+   "color": "espresso",
+   "material": "Wood",
+   "size": [
+    8.7,
+    2.7,
+    0.08
+   ],
+   "center": [
+    0.0,
+    1.7,
+    -1.9
+   ],
+   "triangles": 1128
+  },
+  {
+   "name": "ExecDesk_Pad",
+   "color": "leather",
+   "material": "Leather",
+   "size": [
+    3.8,
+    0.06,
+    2.2
+   ],
+   "center": [
+    0.0,
+    3.53,
+    -0.7
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "ExecDesk_Plate",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    5.2,
+    1.06,
+    1.488
+   ],
+   "center": [
+    -1.3,
+    4.03,
+    0.944
+   ],
+   "triangles": 776
+  },
+  {
+   "name": "ExecDesk_Shade",
+   "color": "pharm",
+   "material": "SmoothPlastic",
+   "size": [
+    1.5,
+    0.45,
+    0.7
+   ],
+   "center": [
+    -3.5,
+    4.6,
+    0.75
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "ExecDesk_Gear",
+   "color": "ink",
+   "material": "SmoothPlastic",
+   "size": [
+    3.8,
+    1.183,
+    2.39
+   ],
+   "center": [
+    1.95,
+    4.092,
+    -0.055
+   ],
+   "triangles": 672
+  },
+  {
+   "name": "ExecDesk_Paper",
+   "color": "cakeCream",
+   "material": "SmoothPlastic",
+   "size": [
+    1.581,
+    0.09,
+    1.933
+   ],
+   "center": [
+    -1.47,
+    3.55,
+    -0.664
+   ],
+   "triangles": 376
+  }
+ ],
+ "ExecChair": [
+  {
+   "name": "ExecChair_Base",
+   "color": "metal",
+   "material": "Metal",
+   "size": [
+    3.16,
+    2.85,
+    2.767
+   ],
+   "center": [
+    0.0,
+    1.505,
+    -0.0
+   ],
+   "triangles": 3468
+  },
+  {
+   "name": "ExecChair_Seat",
+   "color": "leather",
+   "material": "Leather",
+   "size": [
+    3.36,
+    4.14,
+    3.0
+   ],
+   "center": [
+    0.0,
+    3.67,
+    -0.1
+   ],
+   "triangles": 752
+  },
+  {
+   "name": "ExecChair_Buttons",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    1.56,
+    1.96,
+    0.34
+   ],
+   "center": [
+    0.0,
+    4.3,
+    -0.91
+   ],
+   "triangles": 4752
+  }
+ ],
+ "ExecSofa": [
+  {
+   "name": "ExecSofa_Frame",
+   "color": "leather",
+   "material": "Leather",
+   "size": [
+    8.4,
+    3.2,
+    3.1
+   ],
+   "center": [
+    0.0,
+    1.9,
+    -0.0
+   ],
+   "triangles": 752
+  },
+  {
+   "name": "ExecSofa_Cushions",
+   "color": "choco",
+   "material": "Leather",
+   "size": [
+    6.55,
+    2.1,
+    2.374
+   ],
+   "center": [
+    0.0,
+    2.3,
+    0.213
+   ],
+   "triangles": 1128
+  },
+  {
+   "name": "ExecSofa_Feet",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    7.52,
+    0.32,
+    2.72
+   ],
+   "center": [
+    0.0,
+    0.16,
+    -0.0
+   ],
+   "triangles": 432
+  },
+  {
+   "name": "ExecSofa_Pillow",
+   "color": "wine",
+   "material": "Fabric",
+   "size": [
+    1.2,
+    1.186,
+    0.64
+   ],
+   "center": [
+    -2.5,
+    2.4,
+    0.15
+   ],
+   "triangles": 188
+  }
+ ],
+ "ExecTable": [
+  {
+   "name": "ExecTable_Top",
+   "color": "espresso",
+   "material": "Wood",
+   "size": [
+    4.4,
+    0.22,
+    2.6
+   ],
+   "center": [
+    0.0,
+    1.2,
+    -0.0
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "ExecTable_Shelf",
+   "color": "choco",
+   "material": "Wood",
+   "size": [
+    3.8,
+    0.12,
+    2.0
+   ],
+   "center": [
+    0.0,
+    0.45,
+    -0.0
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "ExecTable_Legs",
+   "color": "gold",
+   "material": "Metal",
+   "size": [
+    4.06,
+    1.415,
+    2.26
+   ],
+   "center": [
+    0.0,
+    0.678,
+    -0.0
+   ],
+   "triangles": 2108
+  },
+  {
+   "name": "ExecTable_Cups",
+   "color": "cakeCream",
+   "material": "SmoothPlastic",
+   "size": [
+    3.195,
+    0.3,
+    0.876
+   ],
+   "center": [
+    0.097,
+    1.53,
+    0.25
+   ],
+   "triangles": 1076
+  },
+  {
+   "name": "ExecTable_Book",
+   "color": "wine",
+   "material": "SmoothPlastic",
+   "size": [
+    1.355,
+    0.26,
+    1.101
+   ],
+   "center": [
+    1.1,
+    1.44,
+    0.2
+   ],
+   "triangles": 188
+  }
+ ],
+ "ExecRug": [
+  {
+   "name": "ExecRug_Base",
+   "color": "wine",
+   "material": "Fabric",
+   "size": [
+    11.0,
+    0.1,
+    8.0
+   ],
+   "center": [
+    0.0,
+    0.05,
+    -0.0
+   ],
+   "triangles": 188
+  },
+  {
+   "name": "ExecRug_Border",
+   "color": "gold",
+   "material": "Fabric",
+   "size": [
+    10.781,
+    0.032,
+    7.781
+   ],
+   "center": [
+    0.0,
+    0.111,
+    -0.0
+   ],
+   "triangles": 1692
+  }
+ ]
+}

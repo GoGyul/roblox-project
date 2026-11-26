@@ -10,7 +10,7 @@
 --   ├──────────────────────────[유리문 x 6]───────┘                   │ z 10
 --   │🚪엘리베이터  안내 데스크      복 도 (📦 택배)          🏪 매점   │
 --   ├──[x -46]──┬─────[x -22]─────┬────[x 6]──────┬─────[x 38]───────┤ z 20
---   │ 🚻 화장실  │ 🛋️ 휴게 라운지   │ 폰부스        │ 창고             │
+--   │ 🚻 화장실  │ 🛋️ 휴게 라운지   │ 폰부스        │ 창고 │[x 40] 👔 임원실 │
 --   └───────────┴──[x -16 🏋️]─────┴───────────────┴──────────────────┘ z 34
 --                │ 🏋️ 체력 단련실 (별관) │
 --
@@ -46,9 +46,10 @@ local LAYOUT = {
 		{ "Z", -HX - 0.4, -HZ, 10, "out" }, -- 서: 사무실 쪽 통유리
 		{ "Z", -HX - 0.4, 10, HZ, "wall" }, -- 서: 복도·화장실 쪽
 		{ "Z", HX + 0.4, -HZ, HZ, "wall" }, -- 동
-		{ "X", HZ + 0.4, -HX - 1, HX + 1, "wall", { -16, 8 } }, -- 남 (🏋️ 체력 단련실 문, 실제 x -20)
+		{ "X", HZ + 0.4, -HX - 1, HX + 1, "wall", { -16, 8 }, { 48.2, 12 } }, -- 남 (🏋️ 체력 단련실 문, 실제 x -20 · 👔 임원 접견실 ↔ 집무실)
 		{ "X", 10, -HX, 20, "wall", { 6, 10 } }, -- 사무실 ↔ 복도
-		{ "X", 20, -HX, HX, "wall", { -46, 7 }, { -22, 8 }, { 6, 8 }, { 38, 7 } }, -- 화장실 · 라운지 · 폰부스 · 창고
+		{ "X", 20, -HX, HX, "wall", { -46, 7 }, { -22, 8 }, { 6, 8 }, { 35, 6 }, { 48, 7 } }, -- 화장실 · 라운지 · 폰부스 · 창고 · 👔 임원실
+		{ "Z", 40, 20.4, HZ, "wall" }, -- 창고 ↔ 임원실
 		{ "Z", -36, 20.4, HZ, "wall" },
 		{ "Z", -8, 20.4, HZ, "wall" },
 		{ "Z", 20, 20.4, HZ, "wall" },
@@ -295,12 +296,176 @@ function Floor.build(B, folder: Folder, company, helpers, C)
 		B:part(Vector3.new(3.6, 7, 0.2), v(x, 4.2, 30 - 2.7 / S), { Color = Color3.fromRGB(200, 222, 232), Material = Enum.Material.Glass, Transparency = 0.3, CanCollide = false })
 	end
 	sign("PHONE BOOTH", Vector3.new(5, 1.2, 0.2), v(6, DOOR_H + 1.5, 19.45), Enum.NormalId.Front)
-	prop("StoreShelf", 50, 33, 180, Vector3.new(6, 6, 1.6))
+	prop("StoreShelf", 35, 33, 180, Vector3.new(6, 6, 1.6))
 	prop("Locker", 26, 33, 180, Vector3.new(1.6, 6, 1.6))
 	prop("Locker", 26 + 1.7 / S, 33, 180, Vector3.new(1.6, 6, 1.6))
-	prop("CardboardBox", 42, 30, 12, Vector3.new(2.4, 2, 2.4))
-	prop("CardboardBox", 38, 31.5, 0, Vector3.new(2.4, 2, 2.4))
-	sign("창고", Vector3.new(3, 1.2, 0.2), v(38, DOOR_H + 1.5, 19.45), Enum.NormalId.Front)
+	prop("CardboardBox", 30, 30, 12, Vector3.new(2.4, 2, 2.4))
+	prop("CardboardBox", 27, 31.5, 0, Vector3.new(2.4, 2, 2.4))
+	sign("창고", Vector3.new(3, 1.2, 0.2), v(35, DOOR_H + 1.5, 19.45), Enum.NormalId.Front)
+
+	---------------------------------------------------------------- 👔 임원실 (이사부터)
+	--   접견실(창고의 동쪽 절반) + 남쪽 별관의 집무실. 접견실 남쪽 벽의 넓은 문으로 이어져요. (넓이는 예전의 5배쯤)
+	--   들어오는 것 막기 · 자리 부재 절반 · 냉장고 커피는 Employees가 맡아요 (여기는 방과 가구만)
+	--   가구·벽 패널은 메시(exec_room_set). 메시를 못 불러왔으면 상자 가구가 보여요. 부딪히는 건 안 보이는 상자가 맡아요.
+	--   ⚠️ 여기 좌표는 전부 실제 좌표(rv)예요.
+	local EX = { x0 = 26.5, x1 = 70, z0 = HZ * S + 1, z1 = HZ * S + 1 + 34 } -- 집무실 안쪽
+	local RX = { x0 = 40 * S + 0.5, x1 = 56.4 * S - 0.5, z0 = 20 * S + 0.5, z1 = 34.4 * S - 0.5 } -- 접견실 안쪽
+	local GATE = { a = 48.2 * S - 6, b = 48.2 * S + 6 } -- 접견실 ↔ 집무실 문 (남쪽 벽)
+	local darkWood = { Color = Color3.fromRGB(96, 66, 46), Material = Enum.Material.Wood }
+	local leather = { Color = Color3.fromRGB(70, 46, 38), Material = Enum.Material.Leather }
+	local woodFloor = { Color = Color3.fromRGB(132, 94, 62), Material = Enum.Material.WoodPlanks, CanCollide = false, CanQuery = false }
+	local function execPiece(kind: string, x: number, z: number, yaw: number, options: any?, build: () -> { BasePart })
+		local parts = build()
+		if Meshes.ready(kind) then
+			for _, part in parts do
+				part.Transparency = 1
+			end
+			Meshes.place(B, kind, rv(x, 0, z), yaw, options)
+		end
+	end
+	-- 앉을 수 있는 자리 (SeatPrompts가 [E] 앉기를 붙여요). facing: 앉은 사람이 보는 방향(도, 0 = 북쪽)
+	local function execSeat(name: string, promptText: string, x: number, y: number, z: number, facing: number)
+		local seat = B:part(Vector3.new(1.9, 0.3, 1.9), nil, { ClassName = "Seat", Name = name, Transparency = 1, CFrame = CFrame.new(rv(x, y, z)) * CFrame.Angles(0, math.rad(facing), 0) })
+		seat:SetAttribute("PromptText", promptText)
+		return seat
+	end
+	local function sofa(x: number, z: number, yaw: number)
+		-- yaw 90 = 동쪽을 봐요, -90 = 서쪽을 봐요
+		local side = if yaw > 0 then 1 else -1
+		execPiece("ExecSofa", x, z, yaw, nil, function()
+			return { B:part(Vector3.new(3, 1.5, 8), rv(x, 0.75, z), leather), B:part(Vector3.new(0.8, 3.6, 8), rv(x - side * 1.2, 1.8, z), leather) }
+		end)
+		for i = -1, 1 do
+			execSeat("SofaSeat", "🛋️ 소파", x + side * 0.3, 1.75, z + i * 2.2, -yaw)
+		end
+	end
+	local function ceilingLight(x: number, z: number, length: number): BasePart
+		local part = B:part(Vector3.new(length, 0.3, 0.9), rv(x, H - 0.2, z), { Color = Color3.fromRGB(255, 236, 200), Material = Enum.Material.Neon, CanCollide = false })
+		local light = Instance.new("PointLight")
+		light.Range = 34
+		light.Brightness = 0.35
+		light.Color = Color3.fromRGB(255, 238, 210)
+		light.Parent = part
+		return part
+	end
+
+	-- 집무실 별관: 바닥 · 천장 · 벽 (북쪽은 건물 남쪽 벽이에요)
+	local exW, exD = EX.x1 - EX.x0 + 2, EX.z1 - EX.z0 + 1.5
+	local exCx, exCz = (EX.x0 + EX.x1) / 2, (EX.z0 + EX.z1) / 2
+	B:part(Vector3.new(exW, 1, exD), Vector3.new(exCx, FLOOR_Y - 0.5, exCz + 0.25), { Color = C.rug, Material = Enum.Material.Carpet })
+	B:part(Vector3.new(exW, 1, exD), rv(exCx, H + 0.5, exCz + 0.25), { Color = C.wall })
+	B:wall("Z", EX.x0 - 0.5, EX.z0, EX.z1 + 1, FLOOR_Y, H, nil, wallProps)
+	B:wall("Z", EX.x1 + 0.5, EX.z0, EX.z1 + 1, FLOOR_Y, H, nil, wallProps)
+	B:wall("X", EX.z1 + 0.5, EX.x0 - 1, EX.x1 + 1, FLOOR_Y, H, nil, wallProps)
+	B:part(Vector3.new(EX.x1 - EX.x0, 0.12, EX.z1 - EX.z0), rv(exCx, 0.16, exCz), woodFloor)
+	B:part(Vector3.new(RX.x1 - RX.x0, 0.12, RX.z1 - RX.z0 + 1.6), rv((RX.x0 + RX.x1) / 2, 0.16, (RX.z0 + RX.z1) / 2 + 0.8), woodFloor) -- 접견실 (+ 문턱)
+	local execLamps = { ceilingLight(60.25, 34, 10), ceilingLight(38, 54, 12), ceilingLight(58, 54, 12), ceilingLight(38, 68, 12), ceilingLight(58, 68, 12) }
+
+	-- 접견실: 소파 · 탁자 · 조명 · 화분 · 액자
+	sofa(RX.x0 + 2.1, 34, 90)
+	execPiece("ExecTable", RX.x0 + 5.2, 34, 90, nil, function()
+		return { B:part(Vector3.new(2.6, 1.3, 4.4), rv(RX.x0 + 5.2, 0.65, 34), darkWood) }
+	end)
+	execPiece("ExecLamp", RX.x1 - 1.6, 27.4, 0, nil, function()
+		return { B:part(Vector3.new(1.2, 7.4, 1.2), rv(RX.x1 - 1.6, 3.7, 27.4), { Color = Color3.fromRGB(214, 176, 82), Material = Enum.Material.Metal }) }
+	end)
+	prop("Plant", (RX.x1 - 1.6) / S, 40.6 / S, 0, Vector3.new(1.8, 2, 1.8), { scale = 1.4 })
+	if Meshes.ready("ExecPicture") then
+		Meshes.place(B, "ExecPicture", rv(RX.x1 - 0.25, 0, 34), -90)
+	end
+
+	-- 집무실: 큰 책상 + 의자 (남쪽 벽 앞, 문 쪽을 봐요)
+	local deskX, deskZ = 48, EX.z1 - 9.5
+	execPiece("ExecRug", deskX, deskZ - 1.5, 0, { stretch = Vector3.new(1.7, 1, 1.5) }, function()
+		return { B:part(Vector3.new(18.7, 0.1, 12), rv(deskX, 0.26, deskZ - 1.5), { Color = Color3.fromRGB(122, 40, 52), Material = Enum.Material.Fabric, CanCollide = false, CanQuery = false }) }
+	end)
+	execPiece("ExecDesk", deskX, deskZ, 180, nil, function()
+		return {
+			B:part(Vector3.new(8.4, 3, 3.4), rv(deskX, 1.5, deskZ), darkWood),
+			B:part(Vector3.new(9.2, 0.5, 4.2), rv(deskX, 3.25, deskZ), { Color = Color3.fromRGB(64, 44, 32), Material = Enum.Material.Wood }),
+			B:part(Vector3.new(2.6, 0.5, 0.5), rv(deskX, 3.75, deskZ - 1.5), { Color = Color3.fromRGB(214, 176, 82), Material = Enum.Material.Metal, CanCollide = false }),
+		}
+	end)
+	-- 책상 위로는 못 올라가요: 보이지 않는 막이 (올라타기 막는 공통 장치와 별개로 확실하게)
+	B:part(Vector3.new(9.4, 10, 4.3), rv(deskX, 3.6 + 5, deskZ), { Name = "ExecDeskBlock", Transparency = 1, CanQuery = false, CanTouch = false, CastShadow = false })
+	-- (의자는 책상에서 넉넉히 떨어뜨려요: 앉은 다리가 책상과 겹치면 일어날 때 책상 위로 튕겨 올라가요)
+	local chairZ = deskZ + 5.2
+	execPiece("ExecChair", deskX, chairZ, 180, nil, function()
+		return { B:part(Vector3.new(2.7, 3.4, 0.6), rv(deskX, 3.9, chairZ + 1.15), leather), B:part(Vector3.new(2.6, 1.8, 2.4), rv(deskX, 0.9, chairZ), leather) }
+	end)
+	execSeat("ExecSeat", "👔 임원 의자", deskX, 1.9, chairZ - 0.1, 0) -- (너무 높으면 일어나며 뛸 때 가구 막이 위로 올라가요)
+	-- 손님 의자 둘 (책상 앞)
+	for _, dx in { -3, 3 } do
+		prop("PodChair", (deskX + dx) / S, (deskZ - 5) / S, 0, Vector3.new(4, 4.2, 4), { scale = 1.05 })
+	end
+	-- 응접 공간: 마주 보는 소파 둘 + 탁자 + 러그 (서쪽)
+	sofa(EX.x0 + 2.1, 56, 90)
+	sofa(EX.x0 + 11.5, 56, -90)
+	execPiece("ExecTable", EX.x0 + 6.8, 56, 90, nil, function()
+		return { B:part(Vector3.new(2.6, 1.3, 4.4), rv(EX.x0 + 6.8, 0.65, 56), darkWood) }
+	end)
+	execPiece("ExecRug", EX.x0 + 6.8, 56, 90, nil, function()
+		return { B:part(Vector3.new(8, 0.1, 11), rv(EX.x0 + 6.8, 0.26, 56), { Color = Color3.fromRGB(122, 40, 52), Material = Enum.Material.Fabric, CanCollide = false, CanQuery = false }) }
+	end)
+	-- 미니 냉장고 (동쪽 벽, 문 옆): 이 상자에 "커피 꺼내기"가 붙어요
+	local execFridge = B:part(Vector3.new(2.6, 5, 2.6), rv(EX.x1 - 1.7, 2.5, EX.z0 + 4), { Name = "ExecFridge", Color = Color3.fromRGB(44, 48, 56), Material = Enum.Material.Metal })
+	execPiece("ExecFridge", EX.x1 - 1.7, EX.z0 + 4, -90, nil, function()
+		return { execFridge }
+	end)
+	-- 트로피 선반 (책상 뒤 남쪽 벽) · 액자 · 스탠드 조명 · 화분
+	execPiece("ExecShelf", deskX, EX.z1 - 0.25, 180, nil, function()
+		local parts = { B:part(Vector3.new(6, 0.4, 0.9), rv(deskX, 6, EX.z1 - 0.7), { Color = Color3.fromRGB(96, 66, 46), Material = Enum.Material.Wood, CanCollide = false }) }
+		for i = 0, 2 do
+			table.insert(parts, B:part(Vector3.new(0.7, 1.4 + i * 0.3, 0.7), rv(deskX - 1.6 + i * 1.6, 6.9 + i * 0.15, EX.z1 - 0.7), { Color = Color3.fromRGB(230, 190, 70), Material = Enum.Material.Metal, CanCollide = false }))
+		end
+		return parts
+	end)
+	if Meshes.ready("ExecPicture") then
+		Meshes.place(B, "ExecPicture", rv(EX.x0 + 0.25, 0, 56), 90)
+		Meshes.place(B, "ExecPicture", rv(EX.x1 - 0.25, 0, 62), -90)
+		Meshes.place(B, "ExecPicture", rv(deskX - 12, 0, EX.z1 - 0.25), 180)
+		Meshes.place(B, "ExecPicture", rv(deskX + 12, 0, EX.z1 - 0.25), 180)
+	end
+	for _, spot in { { EX.x0 + 2, EX.z1 - 2 }, { EX.x1 - 2, EX.z1 - 2 }, { EX.x0 + 2, EX.z0 + 13 } } do
+		execPiece("ExecLamp", spot[1], spot[2], 0, nil, function()
+			return { B:part(Vector3.new(1.2, 7.4, 1.2), rv(spot[1], 3.7, spot[2]), { Color = Color3.fromRGB(214, 176, 82), Material = Enum.Material.Metal }) }
+		end)
+	end
+	for _, spot in { { EX.x0 + 2, EX.z0 + 2 }, { GATE.a - 3, EX.z0 + 2 }, { EX.x1 - 2, EX.z1 - 12 } } do
+		prop("Plant", spot[1] / S, spot[2] / S, 0, Vector3.new(1.8, 2, 1.8), { scale = 1.4 })
+	end
+	-- 벽 패널: 두 방의 벽 안쪽에 판벽을 이어 붙여요 (문 자리는 비워요). 패널 하나 = 가로 4.875칸
+	if Meshes.ready("ExecPanel") then
+		local PANEL = 4.875
+		local function run(axis: string, fixed: number, from: number, to: number, yaw: number)
+			if to - from < 1.5 then
+				return
+			end
+			local count = math.max(1, math.floor((to - from) / PANEL + 0.5))
+			local width = (to - from) / count
+			for i = 1, count do
+				local along = from + (i - 0.5) * width
+				Meshes.place(B, "ExecPanel", if axis == "X" then rv(along, 0, fixed) else rv(fixed, 0, along), yaw, { stretch = Vector3.new(width / PANEL, 1, 1) })
+			end
+		end
+		local doorA, doorB = 48 * S - 3.5, 48 * S + 3.5 -- 복도 쪽 문
+		-- 접견실
+		run("Z", RX.x0 + 0.25, RX.z0, RX.z1, 90)
+		run("Z", RX.x1 - 0.25, RX.z0, RX.z1, -90)
+		run("X", RX.z0 + 0.25, RX.x0, doorA - 0.3, 0)
+		run("X", RX.z0 + 0.25, doorB + 0.3, RX.x1, 0)
+		run("X", RX.z1 - 0.25, RX.x0, GATE.a - 0.3, 180)
+		run("X", RX.z1 - 0.25, GATE.b + 0.3, RX.x1, 180)
+		-- 집무실
+		run("X", EX.z0 + 0.25, EX.x0, GATE.a - 0.3, 0)
+		run("X", EX.z0 + 0.25, GATE.b + 0.3, EX.x1, 0)
+		run("Z", EX.x0 + 0.25, EX.z0, EX.z1, 90)
+		run("Z", EX.x1 - 0.25, EX.z0, EX.z1, -90)
+		run("X", EX.z1 - 0.25, EX.x0, EX.x1, 180)
+	end
+	sign("임원실", Vector3.new(3.4, 1.2, 0.2), v(48, DOOR_H + 1.5, 19.45), Enum.NormalId.Front)
+	local execZone = zone(B, "ExecZone", Vector3.new(RX.x1 - RX.x0 - 1, 10, RX.z1 - RX.z0 - 1), rv((RX.x0 + RX.x1) / 2, 5, (RX.z0 + RX.z1) / 2))
+	local execZone2 = zone(B, "ExecZone2", Vector3.new(EX.x1 - EX.x0, 10, EX.z1 - EX.z0 + 2), rv(exCx, 5, exCz - 1))
 
 	---------------------------------------------------------------- 🏋️ 체력 단련실 (남쪽 별관, 예전과 같은 자리)
 	local G = { cx = LAYOUT.gym.cx, hx = LAYOUT.gym.hx, hz = LAYOUT.gym.hz, cz = 0 }
@@ -342,6 +507,9 @@ function Floor.build(B, folder: Folder, company, helpers, C)
 	end
 	for _, part in gym.lamps do
 		table.insert(lamps, part)
+	end
+	for _, part in execLamps do
+		table.insert(lamps, part) -- 👔 임원실 조명도 정전 때 같이 꺼져요
 	end
 
 	-- 🔊 배경 소리 자리 (ID는 SalaryConfig.Sounds)
@@ -412,6 +580,11 @@ function Floor.build(B, folder: Folder, company, helpers, C)
 		packageBox = packageBox,
 		deliveryShelf = deliveryShelf,
 		elevator = elevator,
+		execZone = execZone, -- 👔 임원실 (이사부터)
+		execZones = { execZone, execZone2 }, -- 접견실 + 집무실
+		execRect = { x0 = EX.x0 - 1, x1 = EX.x1 + 1, z0 = EX.z0 - 1, z1 = EX.z1 + 1 }, -- 집무실 별관 (건물 안으로 쳐요)
+		execFridge = execFridge,
+		execDoor = v(48, 0, 16.5), -- 임원실 문 앞 복도 (못 들어가는 사람을 여기로 내보내요)
 		packageSpots = { v(-8, 0, -31.5), v(12, 0, -4), v(34, 0, 4), v(-30, 0, CORRIDOR_Z), v(-24, 0, 8), v(-22, 0, 23), v(18, 0, CORRIDOR_Z), v(44, 0, -12) },
 		ceiling = H,
 	}

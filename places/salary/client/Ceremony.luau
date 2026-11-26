@@ -119,6 +119,10 @@ local function changes(fromRank: number, toRank: number): { string }
 		if rank == SalaryConfig.REVIEW_MIN_RANK then
 			table.insert(lines, "📊 인사평가 대상이 돼요 (금요일 순위 발표)")
 		end
+		if rank == SalaryConfig.APPROVAL_RANK then
+			table.insert(lines, "🖋️ 결재 서류가 올라와요 (함정 서류 조심!)")
+			table.insert(lines, "👔 임원실에 들어갈 수 있어요 (눈치물산 복도 남쪽)")
+		end
 		if rank == SalaryConfig.PATROL_RANK then
 			table.insert(lines, "🔦 순찰을 나갈 수 있어요 (이제 내가 잡는 쪽!)")
 		end

@@ -27,7 +27,7 @@ pcall(function()
 	PhysicsService:CollisionGroupSetCollidable(GROUP, "SalaryCharacter", true)
 end)
 
-local JUMP_TOP = 9.5 -- 바닥에서 이 높이까지 막아요 (점프로 닿는 높이보다 조금 위)
+local JUMP_TOP = 11.5 -- 바닥에서 이 높이까지 막아요 (점프로 닿는 높이보다 위. 의자에 앉았다가 뛰면 의자 높이만큼 더 올라가서, 9.5일 땐 투명 막이 "위에" 올라설 수 있었어요)
 local LOW, HIGH = 0.9, 8.5 -- 윗면이 이 사이인 가구가 "올라탈 수 있는 것"
 local MAX_AREA = 150 -- 이보다 넓으면 바닥·무대·다리로 쳐요
 local CELL = 24
@@ -37,6 +37,7 @@ local NO_BOX = {}
 for _, kind in {
 	"PendantLamp", "MenuBoard", "WallShelf", "NeonSign", "ShopAwning", "BladeSign", "WheelFrame", "CeilingLight", "CeilingTile", "FloorTile",
 	"WallPanel", "WindowPanel", "NoticeBoard", "DoorFrame", "ShopDoor", "ElevatorDoor", "Pergola", "Stone", "FlowerBed",
+	"ExecPanel", "ExecRug", "ExecPicture", "ExecShelf", -- 👔 임원실: 벽 패널·러그·액자·선반
 	"Monitor", "RMonitor", "Lamp", "EspressoMachine", "PastryCase", "CakeStand",
 } do
 	NO_BOX[kind] = true

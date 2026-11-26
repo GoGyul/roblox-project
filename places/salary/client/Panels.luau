@@ -1951,6 +1951,176 @@ function Panels.showRetire()
 	button(frame, if canHandover or canRetire then 106 else 0, "닫기", close)
 end
 
+---------------------------------------------------------------------------
+-- 🖋️ 결재함 (이사부터): 서류를 한 장씩 처리해요. 🔍 읽어 보기(몇 초) → ✅ 승인 / ❌ 반려, 또는 🖋️ 그냥 도장
+---------------------------------------------------------------------------
+function Panels.showApprovals()
+	local ok, first = pcall(function()
+		return Remotes.Approval:InvokeServer("list")
+	end)
+	if not ok or typeof(first) ~= "table" or not first.ok then
+		Ui.toast(if ok and typeof(first) == "table" and first.message then first.message else "🖋️ 지금은 결재함을 열 수 없어요.", 3)
+		return
+	end
+	local frame = sheet(560, 430)
+	local header = line(frame, 0, 30, "🖋️ 결재함", { Font = Enum.Font.GothamBlack, TextSize = 24 })
+	local totalLabel = line(frame, 4, 24, "", { TextSize = 17, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Right })
+	local card = Ui.make("Frame", {
+		Position = UDim2.fromOffset(0, 44),
+		Size = UDim2.new(1, 0, 0, 236),
+		BackgroundColor3 = Color3.fromRGB(255, 250, 235),
+		ZIndex = 31,
+		Parent = frame,
+	}, { Ui.corner(12), Ui.stroke(Color3.fromRGB(176, 132, 40), 2), Ui.padding(14) })
+	local fromLabel = line(card, 0, 22, "", { TextSize = 16, TextColor3 = MUTED, ZIndex = 32 })
+	local titleLabel = line(card, 24, 30, "", { Font = Enum.Font.GothamBlack, TextSize = 22, ZIndex = 32 })
+	local bodyLabel = line(card, 62, 140, "", { TextSize = 18, ZIndex = 32 })
+	local readBack = Ui.make("Frame", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, 0),
+		Size = UDim2.new(1, 0, 0, 8),
+		BackgroundColor3 = Color3.fromRGB(230, 222, 200),
+		Visible = false,
+		ZIndex = 32,
+		Parent = card,
+	}, { Ui.corner(4) })
+	local readFill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Theme.Color.yellow, ZIndex = 33, Parent = readBack }, { Ui.corner(4) })
+	local resultLabel = line(frame, 288, 46, "", { Font = Enum.Font.GothamBold, TextSize = 17, TextXAlignment = Enum.TextXAlignment.Center })
+
+	local function makeButton(x: number, label: string, color: Color3): TextButton
+		return Ui.button({
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, x, 1, 0),
+			Size = UDim2.fromOffset(160, 44),
+			Text = label,
+			TextSize = 17,
+			BackgroundColor3 = color,
+			TextColor3 = INK,
+			ZIndex = 31,
+			Parent = frame,
+		})
+	end
+	local leftButton = makeButton(-170, "", Theme.Color.skySoft)
+	local midButton = makeButton(0, "", Theme.Color.yellow)
+	local closeButton = makeButton(170, "닫기", Color3.fromRGB(225, 225, 228))
+	closeButton.Activated:Connect(close)
+
+	local docs = first.docs
+	local total = first.total or 0
+	local busy = false
+	local leftAction, midAction = "", ""
+	local current = 0 -- 지금 보고 있는 서류 번호
+
+	local function render()
+		if not frame.Parent then
+			return
+		end
+		local left = 0
+		current = 0
+		for index, doc in docs do
+			if not doc.done then
+				left += 1
+				if current == 0 then
+					current = index
+				end
+			end
+		end
+		header.Text = `🖋️ 결재함 · 남은 서류 {left}건`
+		totalLabel.Text = `오늘 결재 실적 {if total >= 0 then "+" else ""}{comma(total)}원   `
+		readBack.Visible = false
+		local doc = docs[current]
+		if not doc then
+			fromLabel.Text = ""
+			titleLabel.Text = "오늘 결재 끝!"
+			bodyLabel.Text = "결재함이 비었어요. 내일 아침에 새 서류가 올라와요."
+			leftButton.Visible, midButton.Visible = false, false
+			return
+		end
+		fromLabel.Text = `올린 곳: {doc.from} · {current}/{#docs}번째`
+		titleLabel.Text = doc.title
+		leftButton.Visible, midButton.Visible = true, true
+		if doc.read then
+			bodyLabel.Text = doc.body or ""
+			bodyLabel.TextColor3 = INK
+			leftButton.Text, leftAction = "❌ 반려", "reject"
+			midButton.Text, midAction = "✅ 승인", "approve"
+		else
+			bodyLabel.Text = "(아직 읽지 않았어요. 제목만 보고 도장을 찍을 수도 있어요.)"
+			bodyLabel.TextColor3 = MUTED
+			leftButton.Text, leftAction = "🔍 읽어 보기", "read"
+			midButton.Text, midAction = "🖋️ 그냥 도장", "stamp"
+		end
+	end
+
+	local function act(action: string)
+		if busy or current == 0 or action == "" then
+			return
+		end
+		busy = true
+		Sounds.play("click", 0.4)
+		local index = current
+		local done, reply = pcall(function()
+			return Remotes.Approval:InvokeServer(action, index)
+		end)
+		if not frame.Parent then
+			return
+		end
+		if not done or typeof(reply) ~= "table" then
+			resultLabel.Text = "잠시 후 다시 시도해 주세요."
+			busy = false
+			return
+		end
+		if reply.docs then
+			docs = reply.docs
+		end
+		total = reply.total or total
+		if not reply.ok then
+			resultLabel.Text = reply.message or ""
+			resultLabel.TextColor3 = RED
+			busy = false
+			render()
+			return
+		end
+		if action == "read" then
+			-- 읽는 동안 내용은 보이지만 버튼은 잠깐 기다려요
+			resultLabel.Text = ""
+			render()
+			leftButton.Visible, midButton.Visible = false, false
+			readBack.Visible = true
+			readFill.Size = UDim2.fromScale(0, 1)
+			TweenService:Create(readFill, TweenInfo.new(SalaryConfig.APPROVAL_READ_SECONDS, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 1) }):Play()
+			task.wait(SalaryConfig.APPROVAL_READ_SECONDS)
+			busy = false
+			if frame.Parent then
+				render()
+			end
+			return
+		end
+		local result = reply.result
+		if result then
+			Sounds.play(if result.good then "ping" else "bass", 0.6, if result.good then 1.2 else 0.9)
+			resultLabel.Text = `{result.message} {if result.amount ~= 0 then `({if result.amount > 0 then "+" else ""}{comma(result.amount)}원)` else ""}`
+			resultLabel.TextColor3 = if result.good then Color3.fromRGB(34, 140, 84) else RED
+		end
+		busy = false
+		render()
+	end
+	leftButton.Activated:Connect(function()
+		act(leftAction)
+	end)
+	midButton.Activated:Connect(function()
+		act(midAction)
+	end)
+	render()
+end
+
+toolButton("🖋️", 46, function()
+	if current then
+		close()
+	else
+		Panels.showApprovals()
+	end
+end, "🖋️ 결재함 (이사부터)")
 toolButton("🔦", 46, function()
 	Remotes.Patrol:FireServer() -- 🔦 순찰 나가기 (부장부터, 하루 한 번. 안 되면 서버가 이유를 알려 줘요)
 end, "🔦 순찰 나가기 (부장부터)")

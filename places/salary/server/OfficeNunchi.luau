@@ -206,12 +206,21 @@ function OfficeNunchi.build(B, folder: Folder, company, helpers)
 		packageBox = packageBox,
 		deliveryShelf = deliveryShelf,
 		elevator = elevator,
+		execZone = F.execZone, -- 👔 임원실 (이사부터)
+		execZones = F.execZones,
+		execFridge = F.execFridge,
+		execDoor = F.execDoor,
 		insideOffice = function(position: Vector3): boolean
 			-- 건물 안만 (출입문 밖 공원·눈치 스트리트, 하늘 위 옥상은 밖)
 			if position.Y >= FLOOR_Y + 20 then
 				return false
 			end
 			if math.abs(position.X) <= HW + 1 and position.Z >= -HD - 0.5 and position.Z <= HD + 1 then
+				return true
+			end
+			-- 👔 임원 집무실 별관도 건물 안
+			local ex = F.execRect
+			if ex and position.X >= ex.x0 and position.X <= ex.x1 and position.Z >= ex.z0 and position.Z <= ex.z1 then
 				return true
 			end
 			-- 🏋️ 체력 단련실 별관도 건물 안

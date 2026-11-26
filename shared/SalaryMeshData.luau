@@ -374,6 +374,103 @@ return {
 			Bin = { id = "rbxassetid://119731033037339", size = Vector3.new(1.6, 2, 1.576), center = Vector3.new(0, 1, -0), color = "navySoft", material = "SmoothPlastic" },
 		},
 	},
+	ExecPanel = {
+		flip = true,
+		parts = {
+			Back = { id = "rbxassetid://79257869272481", size = Vector3.new(4.875, 10, 0.1), center = Vector3.new(0, 5, 0.05), color = "choco", material = "Wood" },
+			Frame = { id = "rbxassetid://136184367915080", size = Vector3.new(4.875, 10, 0.36), center = Vector3.new(0, 5, 0.18), color = "espresso", material = "Wood" },
+			Insets = { id = "rbxassetid://87231005515319", size = Vector3.new(3.3, 7.75, 0.14), center = Vector3.new(0, 5.125, 0.12), color = "woodDark", material = "Wood" },
+			Line = { id = "rbxassetid://98912687324998", size = Vector3.new(4.815, 0.08, 0.4), center = Vector3.new(0, 4.47, 0.2), color = "gold", material = "Metal" },
+		},
+	},
+	ExecShelf = {
+		flip = true,
+		parts = {
+			Board = { id = "rbxassetid://93404866381088", size = Vector3.new(6, 0.3, 1.1), center = Vector3.new(0, 6, 0.55), color = "espresso", material = "Wood" },
+			Trophies = { id = "rbxassetid://92415882647366", size = Vector3.new(5.08, 2.98, 0.99), center = Vector3.new(-0, 6.84, 0.55), color = "gold", material = "Metal" },
+			Bases = { id = "rbxassetid://122894343592634", size = Vector3.new(4.4, 0.18, 0.8), center = Vector3.new(0, 6.24, 0.55), color = "ink", material = "SmoothPlastic" },
+			Frames = { id = "rbxassetid://90534178088597", size = Vector3.new(5, 1.5, 0.12), center = Vector3.new(0, 9.6, 0.08), color = "gold", material = "Metal" },
+			Awards = { id = "rbxassetid://127400747721350", size = Vector3.new(4.7, 1.2, 0.05), center = Vector3.new(0, 9.6, 0.15), color = "cakeCream", material = "SmoothPlastic" },
+		},
+	},
+	ExecPicture = {
+		flip = true,
+		parts = {
+			Frame = { id = "rbxassetid://94710986307184", size = Vector3.new(4.4, 3.2, 0.16), center = Vector3.new(0, 7.6, 0.08), color = "gold", material = "Metal" },
+			Canvas = { id = "rbxassetid://95288347286563", size = Vector3.new(3.8, 2.6, 0.06), center = Vector3.new(0, 7.6, 0.17), color = "navy", material = "SmoothPlastic" },
+			Hills = { id = "rbxassetid://96021155518531", size = Vector3.new(3.5, 1.36, 0.05), center = Vector3.new(-0.05, 7.01, 0.2), color = "mint", material = "SmoothPlastic" },
+			Sun = { id = "rbxassetid://131896820671262", size = Vector3.new(0.8, 0.8, 0.05), center = Vector3.new(1.1, 8.3, 0.2), color = "yellow", material = "SmoothPlastic" },
+		},
+	},
+	ExecLamp = {
+		flip = true,
+		parts = {
+			Stand = { id = "rbxassetid://91494114192413", size = Vector3.new(1.6, 5.98, 1.6), center = Vector3.new(0, 2.99, -0), color = "gold", material = "Metal" },
+			Shade = { id = "rbxassetid://94626826926294", size = Vector3.new(2.3, 1.7, 2.3), center = Vector3.new(0, 6.45, -0), color = "cakeCream", material = "Fabric" },
+			Glow = { id = "rbxassetid://96282294177828", size = Vector3.new(0.6, 0.6, 0.6), center = Vector3.new(0, 6.1, -0), color = "yellowSoft", material = "Neon" },
+		},
+	},
+	ExecFridge = {
+		flip = true,
+		parts = {
+			Body = { id = "rbxassetid://73768053875339", size = Vector3.new(2.6, 4.2, 2.55), center = Vector3.new(0, 2.2, -0.025), color = "ink", material = "SmoothPlastic" },
+			Shelves = { id = "rbxassetid://134142657702067", size = Vector3.new(2.05, 2.08, 0.3), center = Vector3.new(0, 2, 1.05), color = "metal", material = "Metal" },
+			CansA = { id = "rbxassetid://132595022424670", size = Vector3.new(1.771, 2.62, 0.34), center = Vector3.new(0, 2.36, 1.06), color = "cakeCream", material = "SmoothPlastic" },
+			CansB = { id = "rbxassetid://108264533541441", size = Vector3.new(1.771, 2.62, 0.34), center = Vector3.new(0, 2.36, 1.06), color = "gold", material = "Metal" },
+			Glass = { id = "rbxassetid://73421598288258", size = Vector3.new(2.05, 3.3, 0.08), center = Vector3.new(0, 2.25, 1.24), color = "glass", material = "Glass" },
+			Handle = { id = "rbxassetid://120015649787619", size = Vector3.new(0.12, 1.42, 0.12), center = Vector3.new(0.82, 2.25, 1.36), color = "gold", material = "Metal" },
+			Machine = { id = "rbxassetid://120160613845823", size = Vector3.new(2, 0.855, 1.2), center = Vector3.new(-0.05, 4.727, -0.2), color = "metal", material = "Metal" },
+		},
+	},
+	ExecDesk = {
+		flip = true,
+		parts = {
+			Top = { id = "rbxassetid://125647604914516", size = Vector3.new(9.4, 0.32, 4.3), center = Vector3.new(0, 3.34, -0), color = "espresso", material = "Wood" },
+			Body = { id = "rbxassetid://108080381171490", size = Vector3.new(9.1, 3.1, 3.8), center = Vector3.new(0, 1.6, -0), color = "choco", material = "Wood" },
+			Inset = { id = "rbxassetid://124726731389066", size = Vector3.new(8.5, 2.3, 0.18), center = Vector3.new(0, 1.7, 1.88), color = "espresso", material = "Wood" },
+			Trim = { id = "rbxassetid://78908066158640", size = Vector3.new(9.42, 2.495, 4.32), center = Vector3.new(0, 1.948, -0), color = "gold", material = "Metal" },
+			Drawers = { id = "rbxassetid://140289676678658", size = Vector3.new(8.7, 2.7, 0.08), center = Vector3.new(0, 1.7, -1.9), color = "espresso", material = "Wood" },
+			Pad = { id = "rbxassetid://111677378210149", size = Vector3.new(3.8, 0.06, 2.2), center = Vector3.new(0, 3.53, -0.7), color = "leather", material = "Leather" },
+			Plate = { id = "rbxassetid://135560623941621", size = Vector3.new(5.2, 1.06, 1.488), center = Vector3.new(-1.3, 4.03, 0.944), color = "gold", material = "Metal" },
+			Shade = { id = "rbxassetid://85077668569792", size = Vector3.new(1.5, 0.45, 0.7), center = Vector3.new(-3.5, 4.6, 0.75), color = "pharm", material = "SmoothPlastic" },
+			Gear = { id = "rbxassetid://77047879284288", size = Vector3.new(3.8, 1.183, 2.39), center = Vector3.new(1.95, 4.092, -0.055), color = "ink", material = "SmoothPlastic" },
+			Paper = { id = "rbxassetid://120560824944897", size = Vector3.new(1.581, 0.09, 1.933), center = Vector3.new(-1.47, 3.55, -0.664), color = "cakeCream", material = "SmoothPlastic" },
+		},
+	},
+	ExecChair = {
+		flip = true,
+		parts = {
+			Base = { id = "rbxassetid://126992076976247", size = Vector3.new(3.16, 2.85, 2.767), center = Vector3.new(0, 1.505, -0), color = "metal", material = "Metal" },
+			Seat = { id = "rbxassetid://120061374094930", size = Vector3.new(3.36, 4.14, 3), center = Vector3.new(0, 3.67, -0.1), color = "leather", material = "Leather" },
+			Buttons = { id = "rbxassetid://88399872886630", size = Vector3.new(1.56, 1.96, 0.34), center = Vector3.new(0, 4.3, -0.91), color = "gold", material = "Metal" },
+		},
+	},
+	ExecSofa = {
+		flip = true,
+		parts = {
+			Frame = { id = "rbxassetid://88271298975521", size = Vector3.new(8.4, 3.2, 3.1), center = Vector3.new(0, 1.9, -0), color = "leather", material = "Leather" },
+			Cushions = { id = "rbxassetid://112938539678537", size = Vector3.new(6.55, 2.1, 2.374), center = Vector3.new(0, 2.3, 0.213), color = "choco", material = "Leather" },
+			Feet = { id = "rbxassetid://133122891926245", size = Vector3.new(7.52, 0.32, 2.72), center = Vector3.new(0, 0.16, -0), color = "gold", material = "Metal" },
+			Pillow = { id = "rbxassetid://120475402045657", size = Vector3.new(1.2, 1.186, 0.64), center = Vector3.new(-2.5, 2.4, 0.15), color = "wine", material = "Fabric" },
+		},
+	},
+	ExecTable = {
+		flip = true,
+		parts = {
+			Top = { id = "rbxassetid://93218424389562", size = Vector3.new(4.4, 0.22, 2.6), center = Vector3.new(0, 1.2, -0), color = "espresso", material = "Wood" },
+			Shelf = { id = "rbxassetid://97752033095994", size = Vector3.new(3.8, 0.12, 2), center = Vector3.new(0, 0.45, -0), color = "choco", material = "Wood" },
+			Legs = { id = "rbxassetid://81151532395119", size = Vector3.new(4.06, 1.415, 2.26), center = Vector3.new(0, 0.678, -0), color = "gold", material = "Metal" },
+			Cups = { id = "rbxassetid://95831027521464", size = Vector3.new(3.195, 0.3, 0.876), center = Vector3.new(0.097, 1.53, 0.25), color = "cakeCream", material = "SmoothPlastic" },
+			Book = { id = "rbxassetid://88829127748179", size = Vector3.new(1.355, 0.26, 1.101), center = Vector3.new(1.1, 1.44, 0.2), color = "wine", material = "SmoothPlastic" },
+		},
+	},
+	ExecRug = {
+		flip = true,
+		parts = {
+			Base = { id = "rbxassetid://102043189367345", size = Vector3.new(11, 0.1, 8), center = Vector3.new(0, 0.05, -0), color = "wine", material = "Fabric" },
+			Border = { id = "rbxassetid://120609828631204", size = Vector3.new(10.781, 0.032, 7.781), center = Vector3.new(0, 0.111, -0), color = "gold", material = "Fabric" },
+		},
+	},
 	RDesk = {
 		flip = true,
 		parts = {

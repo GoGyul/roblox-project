@@ -60,6 +60,8 @@ type DayRecord = {
 	chatTopics: number, -- 오늘 끝까지 나눈 수다 주제 수
 	snackBonus: number, -- 간식 완식 보너스 합계
 	patrolBonus: number, -- 🔦 순찰 실적 합계
+	approvalBonus: number, -- 🖋️ 결재 실적 합계 (함정 서류를 승인하면 마이너스)
+	approvalCount: number,
 	patrolCatches: number,
 	eventBonus: number, -- 돌발 이벤트 보너스 합계 (소방 훈련 대피 등)
 	snacksEaten: number,
@@ -155,7 +157,7 @@ type EmployeeData = {
 }
 
 local function newDay(): DayRecord
-	return { earned = {}, seconds = {}, nearMiss = 0, nearMissCount = 0, photos = 0, emptyPhotos = 0, accuseWrong = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, patrolBonus = 0, patrolCatches = 0, eventBonus = 0, snacksEaten = 0, stockProfit = 0, settled = false }
+	return { earned = {}, seconds = {}, nearMiss = 0, nearMissCount = 0, photos = 0, emptyPhotos = 0, accuseWrong = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, patrolBonus = 0, patrolCatches = 0, approvalBonus = 0, approvalCount = 0, eventBonus = 0, snacksEaten = 0, stockProfit = 0, settled = false }
 end
 
 local function inZone(zone: BasePart, position: Vector3): boolean
@@ -172,6 +174,16 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	function Employees.inOffice(player: Player): boolean
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		return root ~= nil and office.insideOffice(root.Position)
+	end
+	-- 👔 임원실 안인가 (임원실이 없는 사무실이면 항상 false)
+	Employees.inExecRoom = function(position: Vector3): boolean
+		for _, zonePart in office.execZones or { office.execZone } do
+			local offset = position - zonePart.Position
+			if math.abs(offset.X) <= zonePart.Size.X / 2 and math.abs(offset.Z) <= zonePart.Size.Z / 2 and math.abs(offset.Y) <= zonePart.Size.Y then
+				return true
+			end
+		end
+		return false
 	end
 	Employees.hooks = {} :: { printer: ((Player) -> boolean)?, caught: ((Player) -> ())? } -- Missions가 채워요
 	local data: { [Player]: EmployeeData } = {}
@@ -309,7 +321,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			total += amount
 		end
 		local auditReport = if auditReported(d) then SalaryConfig.caughtPenalty(d.profile.rank) else 0
-		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus + (d.today.patrolBonus or 0) + d.today.eventBonus - d.today.caught * SalaryConfig.caughtPenalty(d.profile.rank) - auditReport
+		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus + (d.today.patrolBonus or 0) + (d.today.approvalBonus or 0) + d.today.eventBonus - d.today.caught * SalaryConfig.caughtPenalty(d.profile.rank) - auditReport
 	end
 
 	local function getHumanoid(player: Player): Humanoid?
@@ -2679,7 +2691,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			local smoothie = if d.buffs.smoothie then SalaryConfig.SMOOTHIE_AWAY elseif d.buffs.vitamin then SalaryConfig.VITAMIN_AWAY else 1 -- 🍹 에너지 스무디 / 🧃 비타민 음료
 			smoothie *= if d.buffs.hotdog then SalaryConfig.HOTDOG_AWAY else 1 -- 🌭 핫도그
 			local late = if dayCycle.minute >= SalaryConfig.AWAY_LATE_FROM then SalaryConfig.AWAY_LATE_SCALE else 1 -- 🕟 4시 반 이후엔 절반 속도
-			d.away = math.min(100, d.away + 100 / awayLimit(d) * smoothie * late * dt)
+			local exec = if d.profile.rank >= SalaryConfig.EXEC_RANK and Employees.inExecRoom(root.Position) then SalaryConfig.EXEC_AWAY else 1 -- 👔 임원실에서는 절반 속도
+			d.away = math.min(100, d.away + 100 / awayLimit(d) * smoothie * late * exec * dt)
 			if late < 1 and not d.lateTipped then
 				d.lateTipped = true
 				remotes.Notify:FireClient(player, "🕟 4시 반! 다들 슬슬 풀어지는 시간이에요. 자리 부재 게이지가 절반 속도로 차요.")
@@ -3099,6 +3112,163 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 		return ok
 	end
+	---------------------------------------------------------------- 👔 임원실 (이사부터): 출입 제한 · 냉장고 커피
+	if office.execZone then
+		local lastTold: { [Player]: number } = {}
+		task.spawn(function()
+			while true do
+				task.wait(0.4)
+				for player, d in data do
+					local character = player.Character
+					local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+					if character and root and d.profile.rank < SalaryConfig.EXEC_RANK and Employees.inExecRoom(root.Position) then
+						-- 🚪 이사 미만은 문 앞 복도로 내보내요
+						character:PivotTo(CFrame.new(office.execDoor + Vector3.new(0, 3, 0)))
+						if os.clock() - (lastTold[player] or 0) > 4 then
+							lastTold[player] = os.clock()
+							remotes.Notify:FireClient(player, `🚪 임원실은 {Ranks[SalaryConfig.EXEC_RANK].name}부터 들어갈 수 있어요.`)
+						end
+					end
+				end
+			end
+		end)
+		local fridgePrompt = Instance.new("ProximityPrompt")
+		fridgePrompt.ActionText = "커피 꺼내기"
+		fridgePrompt.ObjectText = "🧊 임원 냉장고"
+		fridgePrompt.RequiresLineOfSight = false
+		fridgePrompt.MaxActivationDistance = 8
+		fridgePrompt.Parent = office.execFridge
+		fridgePrompt.Triggered:Connect(function(player)
+			local d = data[player]
+			if not d or d.fired then
+				return
+			end
+			if d.profile.rank < SalaryConfig.EXEC_RANK then
+				remotes.Notify:FireClient(player, "🧊 임원 전용 냉장고예요.")
+				return
+			end
+			if daily(d).execCoffee then
+				remotes.Notify:FireClient(player, "🧊 오늘 커피는 이미 꺼냈어요. (하루 한 번)")
+				return
+			end
+			daily(d).execCoffee = true
+			d.profile.bag = d.profile.bag or {}
+			d.profile.bag.coffee = (d.profile.bag.coffee or 0) + 1
+			publishBag(player, d)
+			remotes.Notify:FireClient(player, "🥤 포장 커피를 꺼냈어요! 동료에게 [E] 말 걸기 → 간식 주기로 줄 수 있어요. (🎒 가방)")
+		end)
+	end
+
+	---------------------------------------------------------------- 🖋️ 결재 서류 (이사부터)
+	do
+		-- 오늘의 서류 묶음 (하루에 한 번 뽑아요. 나갔다 들어와도 그대로)
+		local function docsOf(d: EmployeeData): { any }
+			local today = daily(d)
+			if typeof(today.approvals) ~= "table" then
+				local docs = {}
+				local normal, traps = {}, {}
+				local usedTitles: { [string]: boolean } = {}
+				for index, doc in SalaryConfig.ApprovalDocs do
+					table.insert(if doc.trap then traps else normal, index)
+				end
+				for _ = 1, SalaryConfig.APPROVAL_DAILY do
+					local pool = if math.random() < SalaryConfig.APPROVAL_TRAP_CHANCE and #traps > 0 then traps else normal
+					if #pool == 0 then
+						pool = if #normal > 0 then normal else traps
+					end
+					-- (같은 제목이 하루에 두 번 나오지 않게)
+					local pickAt = math.random(1, #pool)
+					for _ = 1, 12 do
+						if not usedTitles[SalaryConfig.ApprovalDocs[pool[pickAt]].title] then
+							break
+						end
+						pickAt = math.random(1, #pool)
+					end
+					local id = table.remove(pool, pickAt)
+					usedTitles[SalaryConfig.ApprovalDocs[id].title] = true
+					table.insert(docs, { id = id })
+				end
+				today.approvals = docs
+			end
+			return today.approvals
+		end
+		-- 화면에 보낼 모양 (읽기 전에는 내용을 안 보내요)
+		local function view(d: EmployeeData)
+			local rows = {}
+			for index, doc in docsOf(d) do
+				local info = SalaryConfig.ApprovalDocs[doc.id]
+				rows[index] = { title = info.title, from = info.from, read = doc.read == true, done = doc.done, body = if doc.read or doc.done then info.body else nil }
+			end
+			return rows
+		end
+		local allowApproval = RateLimit.new(0.3)
+		remotes.Approval.OnServerInvoke = function(player: Player, action: any, index: any)
+			local d = data[player]
+			if not d or d.fired or not allowApproval(player) then
+				return { ok = false, message = "잠시 후 다시 시도해 주세요." }
+			end
+			if d.profile.rank < SalaryConfig.APPROVAL_RANK then
+				return { ok = false, message = `🖋️ 결재는 {Ranks[SalaryConfig.APPROVAL_RANK].name}부터 할 수 있어요.` }
+			end
+			-- (내 자리 또는 👔 임원실 의자에 앉아서)
+			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			local onExecSeat = humanoid ~= nil and humanoid.SeatPart ~= nil and humanoid.SeatPart.Name == "ExecSeat"
+			if dayCycle.phase ~= "work" or not (isSeated(player, d) or onExecSeat) then
+				return { ok = false, message = "🖋️ 결재는 근무 시간에 내 자리나 임원실 의자에 앉아서 해요." }
+			end
+			if action == "list" then
+				return { ok = true, docs = view(d), total = d.today.approvalBonus or 0 }
+			end
+			local doc = if typeof(index) == "number" then docsOf(d)[index] else nil
+			if not doc or doc.done then
+				return { ok = false, message = "이미 처리한 서류예요.", docs = view(d) }
+			end
+			local info = SalaryConfig.ApprovalDocs[doc.id]
+			if action == "read" then
+				doc.read = true
+				doc.readAt = os.clock()
+				return { ok = true, docs = view(d), total = d.today.approvalBonus or 0 }
+			end
+			if action ~= "approve" and action ~= "reject" and action ~= "stamp" then
+				return { ok = false, message = "알 수 없는 요청이에요." }
+			end
+			if action ~= "stamp" and (not doc.read or os.clock() - (doc.readAt or 0) < SalaryConfig.APPROVAL_READ_SECONDS - 0.5) then
+				return { ok = false, message = "🔍 아직 읽는 중이에요." }
+			end
+			local target = SalaryConfig.dailyTarget(d.profile.rank)
+			local approved = action ~= "reject"
+			local amount, message, good = 0, "", true
+			if info.trap and approved then
+				amount = -math.floor(target * SalaryConfig.APPROVAL_TRAP_RATE)
+				good = false
+				message = `😱 함정 서류였어요! ({info.clue or "수상한 내용"}) 회사에 손해를 끼쳤어요.`
+				adjustSpeed(player, d, "approval", false, SalaryConfig.APPROVAL_TRAP_SPEED, "🖋️ 이상한 결재")
+			elseif info.trap then
+				amount = math.floor(target * SalaryConfig.APPROVAL_CATCH_RATE)
+				message = `🕵️ 함정 서류를 걸러 냈어요! ({info.clue or "수상한 내용"})`
+			elseif approved then
+				amount = math.floor(target * SalaryConfig.APPROVAL_OK_RATE)
+				message = if action == "stamp" then "🖋️ 쾅! 다행히 멀쩡한 서류였어요." else "✅ 문제없는 서류예요. 승인!"
+			else
+				good = false
+				message = "🤔 멀쩡한 서류를 반려했어요. 실적은 없어요."
+			end
+			doc.done = if approved then "ok" else "no"
+			d.today.approvalBonus = (d.today.approvalBonus or 0) + amount
+			d.today.approvalCount = (d.today.approvalCount or 0) + 1
+			publish(player, d)
+			return { ok = true, docs = view(d), result = { message = message, amount = amount, good = good }, total = d.today.approvalBonus }
+		end
+		-- 아침에 한 번 알려 줘요 (🔔 알림함에만: 화면을 가리지 않게)
+		dayCycle:on("dayStart", function()
+			for player, d in data do
+				if d.profile.rank >= SalaryConfig.APPROVAL_RANK and not d.fired then
+					pushNotice(player, "🖋️", `오늘의 결재 서류 {SalaryConfig.APPROVAL_DAILY}건이 올라왔어요. (메뉴 🖋️, 자리에 앉아서)`, "approval")
+				end
+			end
+		end)
+	end
+
 	---------------------------------------------------------------- 📮 사표: 🏝️ 조기 은퇴 엔딩 + 🔁 재입사
 	-- 재입사: 직급·경력·통장·경고·주식은 처음부터. 도감·꾸미기·출근룩·인형·사무용품·자격증·친밀도·체력은 그대로.
 	local function rebirth(player: Player, d: EmployeeData)
@@ -4851,6 +5021,27 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 			if (d.today.patrolBonus or 0) > 0 then
 				table.insert(lines, { label = `🔦 순찰 실적 ({d.today.patrolCatches or 0}명 지적)`, amount = d.today.patrolBonus })
+			end
+			if (d.today.approvalCount or 0) > 0 then
+				table.insert(lines, { label = `🖋️ 결재 실적 ({d.today.approvalCount}건 처리)`, amount = d.today.approvalBonus or 0 })
+			end
+			-- 🖋️ 이사부터: 퇴근 때까지 처리하지 않은 결재 서류 (반차 날은 봐줘요)
+			if profile.rank >= SalaryConfig.APPROVAL_RANK and daily(d).halfday ~= true then
+				local pending = SalaryConfig.APPROVAL_DAILY
+				local docs = daily(d).approvals
+				if typeof(docs) == "table" then
+					pending = 0
+					for _, doc in docs do
+						if not doc.done then
+							pending += 1
+						end
+					end
+				end
+				if pending > 0 then
+					local late = math.floor(SalaryConfig.dailyTarget(profile.rank) * SalaryConfig.APPROVAL_LATE_RATE) * pending
+					d.today.approvalBonus = (d.today.approvalBonus or 0) - late -- (실적 합계에도 반영)
+					table.insert(lines, { label = `🖋️ 결재 지연 ({pending}건 미처리)`, amount = -late })
+				end
 			end
 			if d.today.chatBonus > 0 then
 				table.insert(lines, { label = `수다 완주 보너스 ({d.today.chatTopics}개)`, amount = d.today.chatBonus })

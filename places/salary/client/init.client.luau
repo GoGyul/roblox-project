@@ -23,6 +23,8 @@ local function noAutoJump(character: Model)
 	local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
 	if humanoid then
 		humanoid.AutoJumpEnabled = false
+		-- 🧗 가구·선반 틈을 사다리로 알고 저절로 기어오르는 것도 막아요 (이 게임엔 사다리가 없어요)
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
 	end
 end
 if Players.LocalPlayer.Character then
