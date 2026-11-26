@@ -84,18 +84,18 @@ function Sprint.start()
 	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
 		local button = Ui.button({
 			AnchorPoint = Vector2.new(1, 1),
-			Position = UDim2.new(1, -110, 1, -96),
-			Size = UDim2.fromOffset(58, 58),
+			Position = UDim2.new(1, -106, 1, -28), -- 점프 버튼 바로 왼쪽 아래 (가운데 화면을 가리지 않게)
+			Size = UDim2.fromOffset(46, 46),
 			BackgroundColor3 = Theme.Color.surface,
 			BackgroundTransparency = 0.15,
 			TextColor3 = Theme.Color.navy,
 			Font = Enum.Font.GothamBold,
-			TextSize = 26,
+			TextSize = 22,
 			Text = "🏃",
 			ZIndex = 40,
 			Parent = Ui.gui,
 		})
-		Ui.corner(29).Parent = button
+		Ui.corner(23).Parent = button
 		button.Activated:Connect(function()
 			held = not held
 			button.BackgroundColor3 = if held then Theme.Color.mint else Theme.Color.surface

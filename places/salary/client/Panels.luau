@@ -339,6 +339,9 @@ end
 ---------------------------------------------------------------------------
 -- 월급명세서
 ---------------------------------------------------------------------------
+task.defer(function()
+	require(script.Parent.Ceremony).preview() -- 🧪 스튜디오 미리 보기 (SalaryConfig.TEST_CEREMONY)
+end)
 Remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
 	Sounds.play("swoosh", 0.5)
 	if slip.promotedTo then
@@ -404,6 +407,10 @@ Remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
 			ZIndex = 32,
 		})
 		Hud.popup(`🎉 {slip.promotedTo} 승진!`, Color3.fromRGB(255, 210, 80), 3)
+		-- 📜 승진식: 명세서 위에 사령장이 먼저 떠요 (사장 취임이면 엔딩까지)
+		task.defer(function()
+			require(script.Parent.Ceremony).show(slip)
+		end)
 	end
 
 	-- 🏢 스카우트 제의 (더 큰 회사로 이직)
@@ -1857,6 +1864,103 @@ menuToggle.Activated:Connect(function()
 end)
 
 -- (🛒 매점 버튼은 없앴어요: 사무실의 🏪 사내 매점 계산대에서 [E]로 사요)
+---------------------------------------------------------------------------
+-- 📮 사표 · 엔딩: 본 엔딩 목록, 🏝️ 조기 은퇴(통장에 은퇴 자금), 👑 사장이면 회사 물려주기 → 🔁 재입사
+---------------------------------------------------------------------------
+function Panels.showRetire()
+	local money = player:GetAttribute("TotalMoney") or 0
+	local rebirths = player:GetAttribute("Rebirths") or 0
+	local seen = string.split(player:GetAttribute("Endings") or "", ",")
+	local isTop = (player:GetAttribute("Rank") or 1) >= #Ranks
+	local canHandover = isTop and table.find(seen, "legend") ~= nil
+	local canRetire = money >= SalaryConfig.RETIRE_MONEY
+
+	local frame = sheet(470, 404)
+	line(frame, 0, 30, "📮 사표 · 엔딩", { Font = Enum.Font.GothamBlack, TextSize = 22 })
+	local bonus = math.floor((SalaryConfig.rebirthBonus(rebirths) - 1) * 100 + 0.5)
+	line(frame, 34, 22, `🔁 지금 {rebirths + 1}회차` .. (if bonus > 0 then ` · 재입사 혜택: 농땡이 수입 +{bonus}%` else ""), { TextSize = 15, TextColor3 = MUTED })
+
+	local y = 64
+	for _, ending in SalaryConfig.Endings do
+		local done = table.find(seen, ending.id) ~= nil
+		line(frame, y, 22, `{if done then "✅" else "⬜"} {ending.emoji} {ending.name}`, { Font = Enum.Font.GothamBold, TextSize = 17 })
+		line(frame, y + 22, 20, `      {ending.hint}`, { TextSize = 14, TextColor3 = MUTED })
+		y += 48
+	end
+
+	Ui.make("Frame", { Position = UDim2.fromOffset(0, y + 2), Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = INK, BackgroundTransparency = 0.8, ZIndex = 31, Parent = frame })
+	line(frame, y + 12, 22, `🏝️ 은퇴 자금: {comma(money)} / {comma(SalaryConfig.RETIRE_MONEY)}원 {if canRetire then "✅" else ""}`, {
+		Font = Enum.Font.GothamBold,
+		TextSize = 17,
+		TextColor3 = if canRetire then INK else MUTED,
+	})
+	line(frame, y + 38, 78,
+		"사표는 아침 출근 전에만 낼 수 있어요. 은퇴하면 인턴으로 재입사해요.\n"
+			.. "· 처음부터: 직급 · 경력 · 통장 · 주식 · 경고\n"
+			.. `· 그대로: 도감 · 꾸미기 · 출근룩 · 인형 · 사무용품 · 자격증 · 친밀도\n· 재입사할 때마다 농땡이 수입 +{math.floor(SalaryConfig.REBIRTH_BONUS * 100 + 0.5)}% (최대 {SalaryConfig.REBIRTH_BONUS_MAX}번)`,
+		{ TextSize = 13, TextColor3 = MUTED }
+	)
+	local status = line(frame, y + 122, 22, "", { TextSize = 14, TextColor3 = RED, TextXAlignment = Enum.TextXAlignment.Center })
+
+	-- 한 번 더 눌러야 진짜로 내요 (실수로 통장을 날리지 않게)
+	local function actionButton(x: number, label: string, action: string)
+		local armed = false
+		local b = Ui.button({
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, x, 1, 0),
+			Size = UDim2.fromOffset(200, 42),
+			Text = label,
+			TextSize = 16,
+			ZIndex = 31,
+			Parent = frame,
+		})
+		b.Activated:Connect(function()
+			Sounds.play("click", 0.4)
+			if not armed then
+				armed = true
+				b.Text = "정말요? 한 번 더!"
+				b.BackgroundColor3 = Theme.Color.coral
+				task.delay(4, function()
+					if b.Parent and armed then
+						armed = false
+						b.Text = label
+						b.BackgroundColor3 = Theme.Color.yellow
+					end
+				end)
+				return
+			end
+			armed = false
+			b.Text = "📮 내는 중…"
+			local ok, result = pcall(function()
+				return Remotes.Retire:InvokeServer(action)
+			end)
+			if ok and typeof(result) == "table" and result.ok then
+				close()
+				require(script.Parent.Ceremony).showEnding(result.ending)
+			else
+				b.Text = label
+				status.Text = if ok and typeof(result) == "table" then result.message or "실패했어요." else "잠시 후 다시 시도해 주세요."
+			end
+		end)
+	end
+	if canHandover then
+		actionButton(-106, "👑 물려주고 재입사", "handover")
+	elseif canRetire then
+		actionButton(-106, "🏝️ 사표 던지기", "retire")
+	end
+	button(frame, if canHandover or canRetire then 106 else 0, "닫기", close)
+end
+
+toolButton("🔦", 46, function()
+	Remotes.Patrol:FireServer() -- 🔦 순찰 나가기 (부장부터, 하루 한 번. 안 되면 서버가 이유를 알려 줘요)
+end, "🔦 순찰 나가기 (부장부터)")
+toolButton("📮", 46, function()
+	if current then
+		close()
+	else
+		Panels.showRetire()
+	end
+end, "📮 사표 · 엔딩")
 toolButton("📖 도감", 76, function()
 	if current then
 		close()
@@ -1981,8 +2085,15 @@ function Panels.showReview()
 	local lastRows = if typeof(last) == "table" and typeof(last.board) == "table" then 1 else (if typeof(last) == "table" then 1 else 0)
 	local coworkerNames = SalaryConfig.coworkerNames(ReplicatedStorage:GetAttribute("SalaryCompany"))
 	-- (내용에 딱 맞는 높이: 창이 쓸데없이 길면 화면에 맞추느라 전체가 작아져요)
-	local height = 290 + (#rivals + (if review.score ~= nil then 1 else 0)) * 40 + #news * 26 + (if #news > 0 then 38 else 0) + math.ceil(#coworkerNames / 2) * 54 + lastRows * 36
-	local frame = sheet(820, height)
+	-- 🐣 내 후배 (차장부터): 서버가 "Junior" 속성(JSON)으로 알려 줘요
+	local junior: any = nil
+	pcall(function()
+		local raw = player:GetAttribute("Junior")
+		junior = if typeof(raw) == "string" then HttpService:JSONDecode(raw) else nil
+	end)
+	-- 창을 좁고 낮게 잡고 내용은 스크롤해요: 창이 클수록 화면에 맞추느라 통째로 줄어들어서 글씨가 작아졌어요
+	local contentEstimate = (if junior then 132 else 0) + 300 + (#SalaryConfig.FRIEND_LEVELS + 2) * 22 + (#rivals + (if review.score ~= nil then 1 else 0)) * 46 + #news * 30 + (if #news > 0 then 42 else 0) + math.ceil(#coworkerNames / 3) * 40 + lastRows * 40
+	local frame = sheet(560, math.min(contentEstimate + 104, 600))
 	closeOnOutside(frame)
 	local weekdayName = SalaryConfig.Weekdays[review.weekday or 1].name
 	line(frame, 0, 34, `📊 인사평가 · {weekdayName}`, { Font = Enum.Font.GothamBlack, TextSize = 27 })
@@ -2003,25 +2114,82 @@ function Panels.showReview()
 		"· 🎁 간식 주기: 가진 간식·포장 커피로 친밀도 +6 (목요일 2배)",
 		"· 📢 신고: 딴짓하는 경쟁자 -6점, 대신 친밀도 -25 (하루 한 번)",
 		"",
+		"<b>🔦 순찰 (부장부터, 하루 한 번)</b>",
+		"· 딴짓하는 직원(📱·😴)을 지적하면 순찰 실적 · 그날 의심도 속도 ↓ · 태도 +2",
+		"· 경쟁자를 지적하면 그 사람 -3점 · 세 명 다 잡으면 보너스",
+		"",
+		"<b>🐣 내 후배 (차장부터)</b>",
+		"· 일 시키기: 오늘 업무를 채워 주지만 불만이 쌓여요 (100%면 일러요)",
+		"· 딴짓 눈감아 주기·간식 주기: 불만이 줄어요. 눈감아 주면 그날 망도 봐 줘요",
+		"",
 		"친밀도 -20 아래인 경쟁자는 나를 고자질해요. 👀가 뜨면",
 		"자리에 앉아 일하세요(허위 신고가 돼요). 간식으로 붙잡아도 돼요.",
 	}, "\n"), frame)
 
-	local y = 48
+	local body = Ui.make("ScrollingFrame", {
+		Position = UDim2.fromOffset(0, 44),
+		Size = UDim2.new(1, 0, 1, -44 - 54),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 6,
+		ScrollBarImageColor3 = INK,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		CanvasSize = UDim2.fromOffset(0, contentEstimate),
+		ZIndex = 31,
+		Parent = frame,
+	}, { Ui.make("UIPadding", { PaddingRight = UDim.new(0, 12) }) })
+	local y = 0
 	if review.locked then
-		line(frame, y, 26, `🔒 인사평가는 {review.minRank}부터 시작돼요. 지금은 동료들과 친밀도를 쌓아 두세요!`, { Font = Enum.Font.GothamBold, TextSize = 18 })
-		y += 34
-		line(frame, y, 24, "과장이 되면 동료 3명과 순위를 겨루고, 사이가 나쁜 동료는 나를 고자질해요.", { TextColor3 = MUTED, TextSize = 16 })
-		y += 34
+		line(body, y, 50, `🔒 인사평가는 {review.minRank}부터 시작돼요. 지금은 동료들과 친밀도를 쌓아 두세요!`, { Font = Enum.Font.GothamBold, TextSize = 20 })
+		y += 56
+		line(body, y, 46, "과장이 되면 동료 3명과 순위를 겨루고, 사이가 나쁜 동료는 나를 고자질해요.", { TextColor3 = MUTED, TextSize = 18 })
+		y += 52
 	elseif review.days == nil then
-		line(frame, y, 24, "아직 평가 정보가 없어요. 출근하면 시작돼요.", { TextColor3 = MUTED, TextSize = 18 })
+		line(body, y, 24, "아직 평가 정보가 없어요. 출근하면 시작돼요.", { TextColor3 = MUTED, TextSize = 19 })
 		y += 30
 	elseif review.score == nil then
-		line(frame, y, 24, "오늘 퇴근하면 첫 점수가 나와요. (아래는 경쟁자들의 평소 실력)", { TextColor3 = MUTED, TextSize = 18 })
+		line(body, y, 24, "오늘 퇴근하면 첫 점수가 나와요.", { TextColor3 = MUTED, TextSize = 19 })
 		y += 30
 	else
-		line(frame, y, 24, `지금 {review.rank}등 / {review.count}명 · {review.days}일 반영` .. (if review.days < SalaryConfig.REVIEW_MIN_DAYS then ` (최소 {SalaryConfig.REVIEW_MIN_DAYS}일 일해야 순위에 들어요)` else ""), { Font = Enum.Font.GothamBold, TextSize = 19 })
-		y += 30
+		line(body, y, 46, `지금 {review.rank}등 / {review.count}명 · {review.days}일 반영` .. (if review.days < SalaryConfig.REVIEW_MIN_DAYS then ` (최소 {SalaryConfig.REVIEW_MIN_DAYS}일 일해야 순위에 들어요)` else ""), { Font = Enum.Font.GothamBold, TextSize = 19 })
+		y += 52
+	end
+
+	-- 🐣 내 후배 칸: 불만 게이지 · 오늘 한 일 · 망보기
+	if junior then
+		local grudge = tonumber(junior.grudge) or 0
+		local warn = grudge >= SalaryConfig.JUNIOR_GRUDGE_WARN
+		local box = Ui.make("Frame", {
+			Position = UDim2.fromOffset(0, y),
+			Size = UDim2.new(1, 0, 0, 122),
+			BackgroundColor3 = if warn then Color3.fromRGB(255, 228, 220) else Color3.fromRGB(255, 246, 214),
+			ZIndex = 31,
+			Parent = body,
+		}, { Ui.corner(10), Ui.padding(10) })
+		line(box, 0, 24, `🐣 내 후배 · {junior.name}` .. (if warn then "  😤" else ""), { Font = Enum.Font.GothamBold, TextSize = 21, ZIndex = 32 })
+		line(box, 0, 24, `불만 {grudge}% / {SalaryConfig.JUNIOR_GRUDGE_MAX}%{if warn then " ⚠️" else ""}`, {
+			TextSize = 18,
+			TextColor3 = if warn then RED else MUTED,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			ZIndex = 32,
+		})
+		local back = Ui.make("Frame", {
+			Position = UDim2.fromOffset(0, 32),
+			Size = UDim2.new(1, 0, 0, 12),
+			BackgroundColor3 = Color3.fromRGB(226, 226, 220),
+			ZIndex = 32,
+			Parent = box,
+		}, { Ui.corner(5) })
+		Ui.make("Frame", {
+			Size = UDim2.fromScale(math.clamp(grudge / SalaryConfig.JUNIOR_GRUDGE_MAX, 0, 1), 1),
+			BackgroundColor3 = if warn then RED else Theme.Color.yellow,
+			ZIndex = 33,
+			Parent = back,
+		}, { Ui.corner(5) })
+		local lookout = if junior.lookout == "ready" then "🛡️ 망보기 대기 중" elseif junior.lookout == "used" then "🛡️ 망보기 사용함" else "🛡️ 망보기 없음 (눈감아 주면 생겨요)"
+		line(box, 52, 24, `오늘: {if junior.work then "✅" else "▢"} 일 시키기 · {if junior.cover then "✅" else "▢"} 눈감아 주기`, { TextSize = 18, ZIndex = 32 })
+		line(box, 76, 24, lookout .. (if warn then " · 100%가 되면 일러요!" else ""), { TextSize = 17, TextColor3 = if warn then RED else MUTED, ZIndex = 32 })
+		y += 132
 	end
 
 	-- 순위표
@@ -2038,75 +2206,80 @@ function Panels.showReview()
 	for i, row in rows do
 		local bar = Ui.make("Frame", {
 			Position = UDim2.fromOffset(0, y),
-			Size = UDim2.new(1, 0, 0, 36),
+			Size = UDim2.new(1, 0, 0, 42),
 			BackgroundColor3 = if row.me then Color3.fromRGB(255, 236, 170) else Color3.fromRGB(240, 242, 248),
 			ZIndex = 31,
-			Parent = frame,
+			Parent = body,
 		}, { Ui.corner(8) })
-		line(bar, 7, 24, `  {i}등   {row.name}` .. (if row.tattled then "  🗡️" else ""), { Font = Enum.Font.GothamBold, TextSize = 18, ZIndex = 32 })
+		line(bar, 8, 26, `  {i}등   {row.name}` .. (if row.tattled then "  🗡️" else ""), { Font = Enum.Font.GothamBold, TextSize = 21, ZIndex = 32 })
 		if row.who then
 			local points = friendship[row.who] or 0
-			line(bar, 7, 24, `친밀도 {SalaryConfig.friendText(points)}`, { TextSize = 17, TextColor3 = friendColor(points), TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, -120, 0, 24), ZIndex = 32 })
+			line(bar, 9, 26, `친밀도 {SalaryConfig.friendText(points)}`, { TextSize = 17, TextColor3 = friendColor(points), TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, -120, 0, 24), ZIndex = 32 })
 		end
-		line(bar, 7, 24, `{string.format("%.1f", row.score)}점  `, { Font = Enum.Font.GothamBlack, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 32 })
-		y += 40
+		line(bar, 8, 26, `{string.format("%.1f", row.score)}점  `, { Font = Enum.Font.GothamBlack, TextSize = 21, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 32 })
+		y += 46
 	end
 
 	-- 내 점수 내역
 	if review.locked then
 		y -= 70 -- (점수 내역 줄이 없어요)
 	elseif review.score ~= nil then
-		line(frame, y + 6, 26, `실적 {review.perf}/40 · 근태 {review.attend}/20 · 태도 {review.attitude}/20 · 동료평가 {review.peer}/20`
-			.. (if (review.mod or 0) ~= 0 then ` · 보정 +{review.mod}` else ""), { TextSize = 17 })
+		line(body, y + 6, 26, `실적 {review.perf}/40 · 근태 {review.attend}/20 · 태도 {review.attitude}/20 · 동료평가 {review.peer}/20`
+			.. (if (review.mod or 0) ~= 0 then ` · 보정 +{review.mod}` else ""), { TextSize = 18 })
 	else
-		line(frame, y + 6, 26, `동료평가 예상 {review.peer or 11.5}/20 (친밀도가 오르면 같이 올라요)`, { TextSize = 17 })
+		line(body, y + 6, 26, `동료평가 예상 {review.peer or 11.5}/20 (친밀도가 오르면 같이 올라요)`, { TextSize = 18 })
 	end
-	local _ = review.locked or line(frame, y + 34, 24, if review.reported then "📢 오늘 신고는 이미 했어요" else "📢 오늘 신고 1번 남음 · 🗡️ = 나를 고자질한 동료", { TextSize = 16, TextColor3 = MUTED })
-	y += 70
+	local _ = review.locked or line(body, y + 38, 26, if review.reported then "📢 오늘 신고는 이미 했어요" else "📢 오늘 신고 1번 남음 · 🗡️ = 나를 고자질한 동료", { TextSize = 18, TextColor3 = MUTED })
+	y += 78
 
 	-- 이번 주 소식
 	if #news > 0 then
-		line(frame, y, 22, "이번 주 소식", { Font = Enum.Font.GothamBold, TextSize = 18 })
-		y += 28
+		line(body, y, 24, "이번 주 소식", { Font = Enum.Font.GothamBold, TextSize = 21 })
+		y += 32
 		for _, text in news do
-			line(frame, y, 24, text, { TextSize = 16, TextColor3 = MUTED, TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false })
-			y += 26
+			line(body, y, 26, text, { TextSize = 19, TextColor3 = MUTED, TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false })
+			y += 30
 		end
 		y += 10
 	end
 
-	-- 동료 친밀도
-	line(frame, y, 22, "동료 친밀도 (-100 ~ +100)", { Font = Enum.Font.GothamBold, TextSize = 18 })
-	y += 32
-	-- (동료가 많아서 두 줄로 나눠 보여 줘요)
+	-- 동료 친밀도 (이름 + 점수만 세 칸씩. 혜택 설명은 위에 한 번만: 같은 문구가 사람마다 반복돼서 읽기 힘들었어요)
+	line(body, y, 26, "동료 친밀도 (-100 ~ +100)", { Font = Enum.Font.GothamBold, TextSize = 21 })
+	y += 30
+	for i, need in SalaryConfig.FRIEND_LEVELS do
+		line(body, y, 22, `+{need}점부터  {SalaryConfig.FRIEND_PERKS[i]}`, { TextSize = 17, TextColor3 = MUTED, TextWrapped = false })
+		y += 22
+	end
+	line(body, y, 22, `{SalaryConfig.FRIEND_HOSTILE}점 아래  견제: 경쟁자가 되면 고자질해요`, { TextSize = 17, TextColor3 = MUTED, TextWrapped = false })
+	y += 22
+	line(body, y, 22, `{SalaryConfig.FRIEND_ENEMY}점 아래  앙숙: 자주 고자질하고 실적을 가로채요`, { TextSize = 17, TextColor3 = MUTED, TextWrapped = false })
+	y += 30
 	for i, name in coworkerNames do
 		local points = friendship[name] or 0
-		local column = (i - 1) % 2
-		local rowY = y + math.floor((i - 1) / 2) * 54
+		local column = (i - 1) % 3
+		local rowY = y + math.floor((i - 1) / 3) * 40
 		local cell = Ui.make("Frame", {
-			Position = UDim2.new(column * 0.5, if column == 1 then 6 else 0, 0, rowY),
-			Size = UDim2.new(0.5, -6, 0, 50),
-			BackgroundTransparency = 1,
+			Position = UDim2.new(column / 3, if column > 0 then 4 else 0, 0, rowY),
+			Size = UDim2.new(1 / 3, -4, 0, 36),
+			BackgroundColor3 = Color3.fromRGB(240, 242, 248),
 			ZIndex = 31,
-			Parent = frame,
-		})
-		line(cell, 0, 24, name, { Font = Enum.Font.GothamBold, TextSize = 18 })
-		line(cell, 0, 24, SalaryConfig.friendText(points), { Font = Enum.Font.GothamBlack, TextSize = 19, TextColor3 = friendColor(points), Position = UDim2.fromOffset(86, 0) })
-		local hint = if points <= SalaryConfig.FRIEND_ENEMY
-			then "앙숙: 자주 고자질하고 실적을 가로채요"
-			elseif points <= SalaryConfig.FRIEND_HOSTILE then "견제 중: 경쟁자가 되면 고자질해요"
-			else (SalaryConfig.friendNext(points) or "모든 혜택이 풀렸어요")
-		line(cell, 25, 22, hint, { TextSize = 15, TextColor3 = MUTED, TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false })
+			Parent = body,
+		}, { Ui.corner(8) })
+		local state = if points <= SalaryConfig.FRIEND_ENEMY then " 앙숙" elseif points <= SalaryConfig.FRIEND_HOSTILE then " 견제" else ""
+		line(cell, 7, 24, `  {name}`, { Font = Enum.Font.GothamBold, TextSize = 18, ZIndex = 32 })
+		line(cell, 6, 24, `{SalaryConfig.friendText(points)}{state}  `, { Font = Enum.Font.GothamBlack, TextSize = 18, TextColor3 = friendColor(points), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 32 })
 	end
-	y += math.ceil(#coworkerNames / 2) * 54
+	y += math.ceil(#coworkerNames / 3) * 40 + 4
 
 	-- 지난주 결과
 	if typeof(last) == "table" then
 		local text = if last.excluded
 			then "지난 평가: 근무일이 모자라 평가에서 빠졌어요"
 			else `지난 평가: {last.rank}등 / {last.count}명` .. (if (last.pay or 0) ~= 0 then ` · {if last.pay > 0 then "성과급 +" else "감봉 "}{comma(last.pay)}원` else "") .. (if (last.xp or 0) > 0 then ` · 경험치 +{comma(last.xp)}` else "")
-		line(frame, y, 22, text, { TextSize = 17, Font = Enum.Font.GothamBold })
+		line(body, y, 46, text, { TextSize = 18, Font = Enum.Font.GothamBold })
+		y += 50
 	end
+	body.CanvasSize = UDim2.fromOffset(0, y + 30)
 	button(frame, 0, "닫기", close)
 end
 

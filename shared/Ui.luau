@@ -1,6 +1,7 @@
 -- UI를 짧게 만들기 위한 도우미
 
 local Players = game:GetService("Players")
+local TextService = game:GetService("TextService")
 
 local Ui = {}
 
@@ -97,6 +98,7 @@ local toastLabel = Ui.make("TextLabel", {
 	Parent = Ui.gui,
 }, { Ui.corner(10), Ui.padding(12) })
 local toastToken = 0
+local toastMaxWidth = 620 -- 안내 문구가 이보다 길면 줄을 바꿔요 (짧으면 띠가 글자 길이에 맞게 줄어요)
 
 -- 게임별 디자인 테마를 적용해요. ScreenGui는 공유하지만 색은 각 Place가 시작할 때 정해요.
 function Ui.setTheme(colors: { [string]: Color3 }, style: { [string]: any }?)
@@ -116,6 +118,7 @@ end
 
 -- 안내 문구 크기 바꾸기 (게임마다 원하는 크기로)
 function Ui.setToastStyle(width: number, textSize: number, padding: number?)
+	toastMaxWidth = width
 	toastLabel.Size = UDim2.fromOffset(width, 0)
 	toastLabel.TextSize = textSize
 	local pad = toastLabel:FindFirstChildOfClass("UIPadding")
@@ -137,6 +140,14 @@ function Ui.toast(text: string, seconds: number?)
 	toastToken += 1
 	local myToken = toastToken
 	toastLabel.Text = text
+	-- 띠 폭을 글자 길이에 맞춰요 (화면보다 넓어지지는 않게)
+	local pad = toastLabel:FindFirstChildOfClass("UIPadding")
+	local padX = if pad then pad.PaddingLeft.Offset + pad.PaddingRight.Offset else 0
+	local maxWidth = math.min(toastMaxWidth, math.max(160, Ui.gui.AbsoluteSize.X - 16))
+	local ok, bounds = pcall(function()
+		return TextService:GetTextSize(text, toastLabel.TextSize, toastLabel.Font, Vector2.new(maxWidth - padX, 10000))
+	end)
+	toastLabel.Size = UDim2.fromOffset(if ok then math.min(maxWidth, math.ceil(bounds.X) + padX + 10) else maxWidth, 0)
 	toastLabel.Visible = true
 	task.delay(if typeof(seconds) == "number" then seconds else 4.5, function()
 		if myToken == toastToken then

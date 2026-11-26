@@ -201,6 +201,44 @@ SalaryConfig.CORP_CARD_RANK = 5
 SalaryConfig.CORP_CARD_SHOPS = { cafe = true, dessert = true, cafe1f = true, bunsik = true, truck = true }
 -- 📄 업무 떠넘기기 (차장부터): 친밀도 DELEGATE_FRIEND점 이상인 동료에게 하루 한 번, 오늘 업무 할당량의 일부를 맡겨요 (그 동료 친밀도는 조금 떨어져요)
 SalaryConfig.DELEGATE_RANK = 6
+-- 🐣 후배 배정 (차장부터): 사무실 동료 한 명이 내 후배가 돼요. [E] 말 걸기 메뉴에서:
+--   · 일 시키기: 하루 한 번, 오늘 업무 할당량의 일부를 채워 줘요. 대신 후배의 불만이 쌓여요
+--   · 불만이 100%가 되면 그 자리에서 부장님께 일러요 (의심도·속도 ↑, 고자질과 같은 벌)
+--   · 후배가 딴짓할 때 눈감아 주면 불만이 줄고, 그날 한 번 내 농땡이를 망봐 줘요 (의심도가 높을 때 부장님 시선을 돌려요)
+--   · 간식을 주면 불만이 줄어요. 가만히 둬도 하루에 조금씩 줄어요
+--   (숫자는 임시 값이에요: 매일 시키기만 하면 닷새째에 일러요. 가끔 챙겨 주면 계속 시킬 수 있어요)
+SalaryConfig.JUNIOR_RANK = 6
+-- 🔦 순찰 (부장부터): 이제 내가 잡는 쪽! 메뉴의 🔦 버튼으로 하루 한 번 순찰을 나가요.
+--   · 순찰 중에 딴짓하는 직원에게 [E] 말 걸기 → "딴짓 지적하기" → 순찰 실적 (하루 실적 목표의 일정 비율)
+--   · 순찰 중에는 자리를 비워도 자리 부재가 쌓이지 않아요 (그래서 순찰 도는 척 놀 수도 있지만, 실적은 0이에요)
+--   · 지적당한 직원은 친밀도가 조금 내려가요 (내 후배면 불만이 올라요)
+--   (숫자는 임시 값이에요: 세 명을 다 지적하면 하루 실적 목표의 12%쯤)
+SalaryConfig.PATROL_RANK = 7
+SalaryConfig.PATROL_SECONDS = 60 -- 순찰 한 번 길이
+SalaryConfig.PATROL_DAILY = 1 -- 하루에 나갈 수 있는 횟수
+SalaryConfig.PATROL_MAX_CATCH = 3 -- 한 번 순찰에서 지적할 수 있는 인원
+SalaryConfig.PATROL_REWARD_RATE = 0.04 -- 한 명 지적 = 하루 실적 목표의 4%
+SalaryConfig.PATROL_FRIEND = -3 -- 지적당한 직원의 친밀도
+SalaryConfig.PATROL_JUNIOR_GRUDGE = 15 -- 내 후배를 지적하면 불만 +
+-- 순찰에서만 얻는 것 (임시 값)
+SalaryConfig.PATROL_SPEED_DELTA = -0.05 -- 한 명이라도 지적하면: 오늘의 의심도 속도 ("일 열심히 하는 부장"으로 보여요. ☕ 부장님께 커피와 같은 크기)
+SalaryConfig.REVIEW_PATROL = 2 -- 한 명이라도 지적하면: 그날 인사평가 태도 점수 + (20점까지만. ☕ 커피와 같은 크기)
+SalaryConfig.PATROL_RIVAL = 3 -- 인사평가 경쟁자를 지적하면 그 사람 점수 - (📢 신고의 절반)
+SalaryConfig.PATROL_FULL_BONUS_RATE = 0.04 -- 한 번 순찰에 최대 인원을 다 지적하면 추가 실적 (하루 실적 목표의 4% = 한 명 몫)
+SalaryConfig.PATROL_SLACK_MIN = 15 -- 순찰 중에 시작한 딴짓은 이만큼 길어져요 (평소 8~16초: 걸어가는 사이에 끝나 버려서)
+SalaryConfig.PATROL_SLACK_MAX = 25
+SalaryConfig.PATROL_HOLD = 10 -- 말을 걸어 고르는 동안 딴짓을 멈추지 못하는 시간
+SalaryConfig.JUNIOR_WORK_SHARE = 0.3 -- 일 시키기 = 오늘 업무 할당량의 30%
+SalaryConfig.JUNIOR_GRUDGE_WORK = 30 -- 일 시킬 때마다 불만 +
+SalaryConfig.JUNIOR_GRUDGE_MAX = 100 -- 여기에 닿으면 부장님께 일러요
+SalaryConfig.JUNIOR_GRUDGE_WARN = 70 -- 이만큼 쌓이면 머리 위 표시가 😤로 바뀌고 한숨을 쉬어요
+SalaryConfig.JUNIOR_GRUDGE_AFTER_TATTLE = 50 -- 이르고 나면 이만큼으로 내려가요
+SalaryConfig.JUNIOR_GRUDGE_COVER = 25 -- 눈감아 주면 불만 -
+SalaryConfig.JUNIOR_GRUDGE_GIFT = 30 -- 간식 주면 불만 -
+SalaryConfig.JUNIOR_GRUDGE_DAILY = 10 -- 하루 지나면 불만 -
+SalaryConfig.JUNIOR_COVER_FRIEND = 6 -- 눈감아 주면 친밀도 +
+SalaryConfig.JUNIOR_LOOKOUT_AT = 60 -- 망보기: 농땡이 중 의심도가 이만큼 차면
+SalaryConfig.JUNIOR_LOOKOUT_DROP = 25 -- 의심도를 이만큼 내려 줘요 (하루 한 번)
 SalaryConfig.DELEGATE_FRIEND = 40
 SalaryConfig.DELEGATE_SHARE = 0.25 -- 맡기는 양 = 오늘 업무 할당량의 25%
 SalaryConfig.DELEGATE_FRIEND_COST = -6
@@ -928,8 +966,41 @@ SalaryConfig.Ranks = {
 	{ name = "차장", xp = 170000, basePay = 4600, bonus = 2.0, quota = 115, penalty = 3800, quotaPenalty = 6200, target = 3450 },
 	{ name = "부장", xp = 260000, basePay = 5800, bonus = 2.3, quota = 120, penalty = 4800, quotaPenalty = 7500, target = 4300 },
 	{ name = "이사", xp = 380000, basePay = 7200, bonus = 2.7, quota = 130, penalty = 6000, quotaPenalty = 9000, target = 5150 },
-	-- 👑 사장: 3단계 엔딩에서 공개
+	-- 👑 사장: 여기까지 오면 "전설의 루팡" 엔딩 (취임식 뒤에도 계속 근무할 수 있어요)
+	--   (숫자는 이사까지의 증가 폭을 그대로 이어 붙인 임시 값이에요: 실측 전)
+	{ name = "사장", xp = 530000, basePay = 9000, bonus = 3.1, quota = 135, penalty = 7500, quotaPenalty = 11000, target = 6200 },
 }
+
+-- 👑 엔딩
+--   legend: 사장 취임. 등급은 "하루 평균 몇 번 걸렸나"로 (적게 걸릴수록 높아요)
+SalaryConfig.ENDING_GRADES = {
+	{ grade = "S", label = "아무도 몰랐다", maxCaughtPerDay = 0.2 },
+	{ grade = "A", label = "가끔 들켰지만 무사했다", maxCaughtPerDay = 0.6 },
+	{ grade = "B", label = "시말서로 쌓은 탑", maxCaughtPerDay = math.huge },
+}
+-- 🏝️ 조기 은퇴: 통장에 이만큼 모으면 직급과 상관없이 사표를 낼 수 있어요 (📮 사표 창, 아침 출근 전에만)
+--   (임시 값: 사장까지 필요한 누적 월급 53만의 절반 남짓을 안 쓰고 모아야 하는 금액)
+SalaryConfig.RETIRE_MONEY = 300000
+-- 🔁 재입사(환생): 엔딩 뒤 인턴으로 다시 시작. 회차마다 농땡이 수입이 조금씩 늘어요 (임시 값)
+SalaryConfig.REBIRTH_BONUS = 0.05 -- 한 번에 +5%
+SalaryConfig.REBIRTH_BONUS_MAX = 5 -- 5회차까지만 쌓여요 (최대 +25%)
+function SalaryConfig.rebirthBonus(rebirths: number?): number
+	return 1 + math.min(rebirths or 0, SalaryConfig.REBIRTH_BONUS_MAX) * SalaryConfig.REBIRTH_BONUS
+end
+-- 📮 사표 창에 보이는 엔딩 목록
+SalaryConfig.Endings = {
+	{ id = "legend", emoji = "👑", name = "전설의 루팡", hint = "사장까지 승진하기" },
+	{ id = "retire", emoji = "🏝️", name = "조기 은퇴", hint = "통장에 은퇴 자금을 모아 사표 내기" },
+}
+function SalaryConfig.endingGrade(days: number, caught: number): { grade: string, label: string }
+	local perDay = caught / math.max(1, days)
+	for _, row in SalaryConfig.ENDING_GRADES do
+		if perDay <= row.maxCaughtPerDay then
+			return row
+		end
+	end
+	return SalaryConfig.ENDING_GRADES[#SalaryConfig.ENDING_GRADES]
+end
 
 ---------------------------------------------------------------------------
 -- 🛒 매점 아이템
@@ -1051,6 +1122,10 @@ SalaryConfig.Achievements = {
 	{ id = "rich", emoji = "🏦", name = "통장 부자", description = "통장 잔고 10만원 달성" },
 	{ id = "rank_daeri", emoji = "🎖️", name = "대리님", description = "대리로 승진하기" },
 	{ id = "rank_isa", emoji = "🏅", name = "이사님", description = "이사로 승진하기" },
+	{ id = "ending_legend", emoji = "👑", name = "전설의 루팡", description = "사장으로 취임하기 (엔딩)" },
+	{ id = "ending_retire", emoji = "🏝️", name = "자유인", description = "은퇴 자금을 모아 사표 내기 (엔딩)" },
+	{ id = "rebirth", emoji = "🔁", name = "경력직 신입", description = "엔딩을 보고 재입사하기" },
+	{ id = "patrol_full", emoji = "🔦", name = "저승사자 부장", description = "순찰 한 번에 3명 모두 지적하기" },
 }
 
 ---------------------------------------------------------------------------
@@ -1209,8 +1284,10 @@ SalaryConfig.Companies = {
 } :: { CompanyInfo }
 
 SalaryConfig.TEST_MONEY = 100000 -- 🧪 스튜디오에서 통장을 최소 이만큼 채워 줘요 (가게·인형뽑기 테스트용, 실제 게임엔 영향 없음)
-SalaryConfig.TEST_RANK = 5 -- (5 = 과장: 인사평가를 시험하려고 올려 뒀어요) 🧪 스튜디오에서 직급을 최소 이만큼으로 (2 = 사원, 0이면 끔. 저장이 꺼져 있을 때만)
+SalaryConfig.TEST_NO_SAVE = true -- 🧪 true면 스튜디오에서는 실제 저장을 읽지도 쓰지도 않아요: 아래 TEST_RANK·TEST_MONEY가 먹히고 진짜 저장이 안 망가져요 (false면 스튜디오도 실제 저장으로 플레이). 실제 게임엔 영향 없음
+SalaryConfig.TEST_RANK = 7 -- (7 = 부장: 🔦 순찰·🐣 후배 배정·📊 인사평가를 시험하려고 올려 뒀어요) 🧪 스튜디오에서 직급을 최소 이만큼으로 (2 = 사원, 0이면 끔. 저장이 꺼져 있을 때만)
 SalaryConfig.TEST_CAMPUS_EVENT = "" -- 🧪 스튜디오에서 "rain" · "blossom" · "flea"를 넣으면 그 단지 행사를 바로 볼 수 있어요
+SalaryConfig.TEST_CEREMONY = "" -- 🧪 스튜디오에서 들어오고 8초 뒤 승진식을 미리 봐요: "promote"(사령장만) · "ending"(사장 취임 + 엔딩) · ""(끔). 실제 게임엔 영향 없음
 SalaryConfig.TEST_REVIEW = true -- 🧪 스튜디오에서 인사평가를 바로 시험: 매일 9시 25분쯤 경쟁자가 고자질하러 오고, 10시 10분쯤 도움 요청이 와요
 SalaryConfig.TEST_COMPANY = "nunchi" -- 🧪 스튜디오에서 "nunchi"를 넣으면 눈치물산 사무실로 시작 (실제 게임엔 영향 없음)
 SalaryConfig.TEST_DELIVERY = false -- 🧪 true면 스튜디오에서 들어오자마자 📦 택배 하나가 도착해 있어요 (🔔 알림 테스트, 실제 게임엔 영향 없음)
@@ -1979,6 +2056,10 @@ SalaryConfig.Titles = {
 	{ id = "wheel_20", text = "🎡 대박 인생", achievement = "wheel_20" },
 	{ id = "rank_daeri", text = "🎖️ 대리님", achievement = "rank_daeri" },
 	{ id = "rank_isa", text = "🏅 이사님", achievement = "rank_isa" },
+	{ id = "ending_legend", text = "👑 전설의 루팡", achievement = "ending_legend" },
+	{ id = "ending_retire", text = "🏝️ 자유인", achievement = "ending_retire" },
+	{ id = "rebirth", text = "🔁 경력직 신입", achievement = "rebirth" },
+	{ id = "patrol_full", text = "🔦 저승사자 부장", achievement = "patrol_full" },
 	{ id = "interior_master", text = "🏰 인테리어 장인", achievement = "interior_master" },
 	{ id = "throne", text = "👑 왕좌의 주인", achievement = "throne" },
 	{ id = "video_pro", text = "🎧 회의의 달인", achievement = "video_pro" },
@@ -2799,6 +2880,7 @@ if require(script.Parent.SalarySimulation).enabled() then
 	SalaryConfig.TEST_COMPANY = experiment.company
 	SalaryConfig.TEST_MONEY = 0
 	SalaryConfig.TEST_REVIEW = false
+	SalaryConfig.TEST_CEREMONY = ""
 	SalaryConfig.TEST_EVENT = ""
 	SalaryConfig.TEST_MISSION = ""
 	SalaryConfig.TEST_CAT = false

@@ -63,6 +63,12 @@ export type Profile = {
 	orderSeq: number, -- 🚚 주문 번호 (하나씩 늘어나요)
 	notices: { { e: string, t: string, k: string?, day: number, min: number, read: boolean? } }, -- 🔔 알림 (최근 30개)
 	stats: { days: number, nearMiss: number, caught: number, fired: number, stockProfit: number },
+	endings: { [string]: number }, -- 👑 본 엔딩 (엔딩 ID → 그때의 근무일 수)
+	rebirths: number, -- 🔁 재입사한 횟수 (회차마다 농땡이 수입 보너스)
+	junior: string, -- 🐣 내 후배 (동료 이름, 차장부터. 그 동료가 이 사무실에 없으면 새로 배정돼요)
+	juniorGrudge: number, -- 🐣 후배의 불만 (0~100)
+	juniorCompany: string, -- 🐣 위 후배가 어느 회사 사람인가
+	juniors: { [string]: { name: string, grudge: number } }, -- 🐣 회사별로 기억해 둔 후배 (회사를 옮겼다 돌아와도 그대로)
 }
 
 function Profiles.default(): Profile
@@ -118,6 +124,12 @@ function Profiles.default(): Profile
 		orderSeq = 0,
 		notices = {},
 		stats = { days = 0, nearMiss = 0, caught = 0, fired = 0, stockProfit = 0 },
+		endings = {},
+		rebirths = 0,
+		junior = "",
+		juniorGrudge = 0,
+		juniorCompany = "",
+		juniors = {},
 	}
 end
 
@@ -160,7 +172,15 @@ end
 
 -- 불러오기. 두 번째 값 canSave가 false면 저장하지 않아요
 -- (불러오기에 실패했는데 저장해 버리면 진짜 데이터를 빈 데이터로 덮어쓸 수 있어서)
+-- 🧪 스튜디오 시험 모드: 실제 저장을 읽지도 쓰지도 않아요 (TEST_RANK·TEST_MONEY 같은 시험 스위치가 먹히고, 진짜 저장이 안 망가져요)
+local function studioNoSave(): boolean
+	return game:GetService("RunService"):IsStudio() and require(game:GetService("ReplicatedStorage").Shared.SalaryConfig).TEST_NO_SAVE == true
+end
+
 function Profiles.load(player: Player): (Profile, boolean)
+	if studioNoSave() then
+		return Profiles.default(), false
+	end
 	if require(game:GetService("ReplicatedStorage").Shared.SalarySimulation).enabled() then
 		return Profiles.default(), false
 	end
@@ -184,6 +204,9 @@ function Profiles.load(player: Player): (Profile, boolean)
 end
 
 function Profiles.save(player: Player, profile: Profile): boolean
+	if studioNoSave() then
+		return false
+	end
 	if require(game:GetService("ReplicatedStorage").Shared.SalarySimulation).enabled() then
 		return false
 	end

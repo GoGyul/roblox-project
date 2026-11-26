@@ -201,9 +201,15 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 				local slack = pick(SLACK_POSES)
 				c.slacking = true
 				setState(c, slack.pose, slack.emoji)
-				waitWhile(c, math.random(8, 16), function()
+				-- 🔦 누군가 순찰 중이면 방심해서 딴짓이 길어져요 (부장님이 자리를 비웠으니까요)
+				local patrolOn = (api.patrolUntil or 0) > os.clock()
+				waitWhile(c, if patrolOn then math.random(SalaryConfig.PATROL_SLACK_MIN, SalaryConfig.PATROL_SLACK_MAX) else math.random(8, 16), function()
 					return c.slacking and not c.chatting
 				end)
+				-- 🔦 순찰 도는 사람이 말을 걸어 지적할지 고르는 중이면 그대로 굳어 있어요 (눈앞에서 걸렸는데 빠져나가지 않게)
+				while c.slacking and not c.removed and ((c :: any).holdSlackUntil or 0) > os.clock() do
+					task.wait(0.2)
+				end
 				c.slacking = false
 			elseif roll < 0.65 then
 				goErrand(c)

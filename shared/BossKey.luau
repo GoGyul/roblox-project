@@ -307,7 +307,9 @@ function BossKey.start()
 		Parent = buttonGui,
 	})
 	-- 폰에서는 오른쪽 아래가 점프 버튼 자리라서, 오른쪽 가운데 위쪽으로 옮겨요
-	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+	local touchOnly = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	if touchOnly then
+		tip.Text = "🙈 화면 숨기기" -- 📱 키보드 안내는 빼요
 		hideButton.AnchorPoint = Vector2.new(1, 0.5)
 		hideButton.Position = UDim2.new(1, -10, 0.35, 0)
 		tip.AnchorPoint = Vector2.new(1, 0.5)
@@ -347,13 +349,13 @@ function BossKey.start()
 	-- 들어오고 잠시 뒤 한 번 안내해요
 	task.delay(4, function()
 		if not hidden then
-			tip.Text = "🙈 몰래 하는 중이라면? [B] 화면 숨기기 · [Shift+B] 위장 바꾸기"
-			tip.Size = UDim2.fromOffset(420, 28)
+			tip.Text = if touchOnly then "🙈 몰래 하는 중이라면? 이 버튼으로 화면 숨기기" else "🙈 몰래 하는 중이라면? [B] 화면 숨기기 · [Shift+B] 위장 바꾸기"
+			tip.Size = UDim2.fromOffset(if touchOnly then 300 else 420, 28)
 			tip.Visible = true
 			task.wait(7)
 			tip.Visible = false
 			tip.Size = UDim2.fromOffset(240, 28)
-			tip.Text = "화면 숨기기 [B] · 위장 바꾸기 [Shift+B]"
+			tip.Text = if touchOnly then "🙈 화면 숨기기" else "화면 숨기기 [B] · 위장 바꾸기 [Shift+B]"
 		end
 	end)
 
@@ -380,7 +382,7 @@ function BossKey.start()
 				tip.Visible = true
 				task.delay(2, function()
 					tip.Visible = false
-					tip.Text = "화면 숨기기 [B] · 위장 바꾸기 [Shift+B]"
+					tip.Text = if touchOnly then "🙈 화면 숨기기" else "화면 숨기기 [B] · 위장 바꾸기 [Shift+B]"
 				end)
 			end
 		else

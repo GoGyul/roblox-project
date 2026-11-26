@@ -59,6 +59,8 @@ type DayRecord = {
 	chatBonus: number, -- 수다 완주 보너스 합계
 	chatTopics: number, -- 오늘 끝까지 나눈 수다 주제 수
 	snackBonus: number, -- 간식 완식 보너스 합계
+	patrolBonus: number, -- 🔦 순찰 실적 합계
+	patrolCatches: number,
 	eventBonus: number, -- 돌발 이벤트 보너스 합계 (소방 훈련 대피 등)
 	snacksEaten: number,
 	stockProfit: number, -- 오늘 주식으로 번(잃은) 돈 (통장에 바로 반영돼서 명세서 합계엔 안 들어가요)
@@ -153,7 +155,7 @@ type EmployeeData = {
 }
 
 local function newDay(): DayRecord
-	return { earned = {}, seconds = {}, nearMiss = 0, nearMissCount = 0, photos = 0, emptyPhotos = 0, accuseWrong = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, eventBonus = 0, snacksEaten = 0, stockProfit = 0, settled = false }
+	return { earned = {}, seconds = {}, nearMiss = 0, nearMissCount = 0, photos = 0, emptyPhotos = 0, accuseWrong = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, patrolBonus = 0, patrolCatches = 0, eventBonus = 0, snacksEaten = 0, stockProfit = 0, settled = false }
 end
 
 local function inZone(zone: BasePart, position: Vector3): boolean
@@ -307,7 +309,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			total += amount
 		end
 		local auditReport = if auditReported(d) then SalaryConfig.caughtPenalty(d.profile.rank) else 0
-		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus + d.today.eventBonus - d.today.caught * SalaryConfig.caughtPenalty(d.profile.rank) - auditReport
+		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus + (d.today.patrolBonus or 0) + d.today.eventBonus - d.today.caught * SalaryConfig.caughtPenalty(d.profile.rank) - auditReport
 	end
 
 	local function getHumanoid(player: Player): Humanoid?
@@ -404,6 +406,13 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		player:SetAttribute("Seated", isSeated(player, d))
 		player:SetAttribute("Fired", d.fired)
 		player:SetAttribute("Rank", profile.rank)
+		player:SetAttribute("Rebirths", profile.rebirths) -- 🔁 📮 사표 창
+		local seenEndings = {}
+		for endingId in profile.endings do
+			table.insert(seenEndings, endingId)
+		end
+		table.sort(seenEndings)
+		player:SetAttribute("Endings", table.concat(seenEndings, ","))
 		player:SetAttribute("XP", math.floor(profile.xp))
 		player:SetAttribute("NextXP", if nextRank then nextRank.xp else 0)
 		player:SetAttribute("Energy", profile.energy)
@@ -2471,6 +2480,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		-- 2. 돈 벌기 (농땡이는 직급 배율을 받아요)
 		local onHalfDay = daily(d).halfday == true -- 🏖️ 반차: 쉬는 중 (수입 없음, 안 들킴)
 		local multiplier = if onHalfDay then 0 elseif d.state == "work" then 1 else rankOf(d).bonus
+		if d.state ~= "work" then
+			multiplier *= SalaryConfig.rebirthBonus(d.profile.rebirths) -- 🔁 재입사 회차 보너스 (농땡이 수입)
+		end
 		if events:is("audit") and d.state ~= "work" and office.insideOffice(root.Position) then -- (감사관이 있는 사무실 안에서만: 단지·옥상은 위험이 없으니 그대로)
 			multiplier *= SalaryConfig.AUDIT_INCOME -- 🔍 감사 기간: 위험한 만큼 농땡이 수입 ×2
 		end
@@ -2663,7 +2675,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		local gaugeOn = dayCycle.phase == "work" and not events:is("drill") and not events:is("workshop") and not blackout and not onHalfDay and not commuting
 		if blackout then
 			d.away, d.awayWarned = 0, false -- 컴퓨터 꺼짐: 기록 초기화
-		elseif gaugeOn and not isSeated(player, d) then
+		elseif gaugeOn and not isSeated(player, d) and not ((d :: any).patrolUntil and now < (d :: any).patrolUntil) then -- (🔦 순찰 중에는 자리 부재가 안 쌓여요)
 			local smoothie = if d.buffs.smoothie then SalaryConfig.SMOOTHIE_AWAY elseif d.buffs.vitamin then SalaryConfig.VITAMIN_AWAY else 1 -- 🍹 에너지 스무디 / 🧃 비타민 음료
 			smoothie *= if d.buffs.hotdog then SalaryConfig.HOTDOG_AWAY else 1 -- 🌭 핫도그
 			local late = if dayCycle.minute >= SalaryConfig.AWAY_LATE_FROM then SalaryConfig.AWAY_LATE_SCALE else 1 -- 🕟 4시 반 이후엔 절반 속도
@@ -3087,6 +3099,69 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 		return ok
 	end
+	---------------------------------------------------------------- 📮 사표: 🏝️ 조기 은퇴 엔딩 + 🔁 재입사
+	-- 재입사: 직급·경력·통장·경고·주식은 처음부터. 도감·꾸미기·출근룩·인형·사무용품·자격증·친밀도·체력은 그대로.
+	local function rebirth(player: Player, d: EmployeeData)
+		local profile = d.profile
+		profile.rebirths += 1
+		profile.rank = 1
+		profile.xp = 0
+		profile.money = 0
+		profile.warnings = 0
+		profile.unsettled = 0
+		profile.stocks = {}
+		profile.stockCost = {}
+		unlockAchievement(player, d, "rebirth")
+		pushNotice(player, "🔁", `{profile.rebirths + 1}회차 인턴으로 재입사했어요. 농땡이 수입 +{math.floor((SalaryConfig.rebirthBonus(profile.rebirths) - 1) * 100 + 0.5)}%`, "ending")
+		publishCollection(player, d)
+		publish(player, d)
+		task.spawn(save, player, d)
+	end
+	local allowRetire = RateLimit.new(3)
+	remotes.Retire.OnServerInvoke = function(player: Player, action: any)
+		local d = data[player]
+		if not d or not allowRetire(player) then
+			return { ok = false, message = "잠시 후 다시 시도해 주세요." }
+		end
+		if d.fired or d.moving then
+			return { ok = false, message = "지금은 사표를 낼 수 없어요." }
+		end
+		if not dayCycle.waiting then
+			return { ok = false, message = "📮 사표는 아침 출근 전에만 낼 수 있어요. (퇴근하고 다음 날 아침에)" }
+		end
+		local profile = d.profile
+		local snapshot = {
+			id = "retire",
+			days = profile.stats.days,
+			caught = profile.stats.caught,
+			nearMiss = profile.stats.nearMiss,
+			fired = profile.stats.fired,
+			money = math.floor(profile.money),
+			rankName = Ranks[profile.rank].name,
+		}
+		if action == "retire" then
+			if profile.money < SalaryConfig.RETIRE_MONEY then
+				return { ok = false, message = `🏝️ 은퇴 자금이 모자라요. (통장 {SalaryConfig.RETIRE_MONEY}원 필요)` }
+			end
+			if not profile.endings.retire then
+				profile.endings.retire = profile.stats.days
+			end
+			unlockAchievement(player, d, "ending_retire")
+			pushNotice(player, "🏝️", "사표를 냈어요! 엔딩 \"조기 은퇴\"를 봤어요.", "ending")
+		elseif action == "handover" then
+			if profile.rank < #Ranks or not profile.endings.legend then
+				return { ok = false, message = "👑 사장이 된 뒤에만 회사를 물려줄 수 있어요." }
+			end
+			snapshot.id = "handover"
+		else
+			return { ok = false, message = "알 수 없는 요청이에요." }
+		end
+		rebirth(player, d)
+		snapshot.rebirths = profile.rebirths
+		snapshot.bonusPercent = math.floor((SalaryConfig.rebirthBonus(profile.rebirths) - 1) * 100 + 0.5)
+		return { ok = true, ending = snapshot }
+	end
+
 	remotes.MoveCompany.OnServerEvent:Connect(function(player)
 		if not allowMove(player) then
 			return
@@ -4576,8 +4651,28 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			return nil
 		end,
 		-- 📄 업무 떠넘기기: 오늘 업무 할당량의 일부를 채워 줘요 → 채운 초
-		delegate = function(player: Player, d: EmployeeData): number
-			local seconds = math.floor(quotaOf(d) * SalaryConfig.DELEGATE_SHARE)
+		-- 🔦 순찰: 시작(끝나는 시각 기록 → 자리 부재 멈춤) · 지적 한 명당 실적
+		patrolStart = function(d: EmployeeData, untilClock: number)
+			(d :: any).patrolUntil = untilClock
+		end,
+		patrolReward = function(player: Player, d: EmployeeData, amount: number, bonusOnly: boolean?)
+			d.today.patrolBonus = (d.today.patrolBonus or 0) + amount
+			if not bonusOnly then
+				d.today.patrolCatches = (d.today.patrolCatches or 0) + 1
+			end
+			remotes.Bonus:FireClient(player, if bonusOnly then "🔦 전원 적발 보너스!" else "🔦 순찰 실적!", amount)
+			publish(player, d)
+		end,
+		-- ⏩ 오늘의 의심도 속도 바꾸기 (순찰을 성실히 돌았을 때 등)
+		speed = function(player: Player, d: EmployeeData, delta: number, label: string)
+			adjustSpeed(player, d, "review", false, delta, label)
+		end,
+		unlock = function(player: Player, d: EmployeeData, achievementId: string)
+			unlockAchievement(player, d, achievementId)
+			publishCollection(player, d)
+		end,
+		delegate = function(player: Player, d: EmployeeData, share: number?): number -- (share: 🐣 후배는 몫이 달라요)
+			local seconds = math.floor(quotaOf(d) * (share or SalaryConfig.DELEGATE_SHARE))
 			d.workSeconds += seconds
 			publish(player, d)
 			return seconds
@@ -4754,6 +4849,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			if d.today.snackBonus > 0 then
 				table.insert(lines, { label = `간식 완식 보너스 ({d.today.snacksEaten}개)`, amount = d.today.snackBonus })
 			end
+			if (d.today.patrolBonus or 0) > 0 then
+				table.insert(lines, { label = `🔦 순찰 실적 ({d.today.patrolCatches or 0}명 지적)`, amount = d.today.patrolBonus })
+			end
 			if d.today.chatBonus > 0 then
 				table.insert(lines, { label = `수다 완주 보너스 ({d.today.chatTopics}개)`, amount = d.today.chatBonus })
 			end
@@ -4861,6 +4959,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			-- 해고 또는 승진
 			local fired = profile.warnings >= SalaryConfig.MAX_WARNINGS
 			local promotedTo: string? = nil
+			local rankBefore = profile.rank
+			local ending = nil -- 👑 이번 정산에서 본 엔딩
 			if fired then
 				fire(player, d)
 			else
@@ -4876,6 +4976,30 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 					end
 					if profile.rank >= 8 then
 						unlockAchievement(player, d, "rank_isa")
+					end
+					-- 👏 승진식: 사무실 동료들이 한마디씩 축하해 줘요
+					pcall(function()
+						local cheers = { "👏 승진 축하해요!", "🎉 한턱 쏘세요!", "👏👏 축하드려요!", "🥳 드디어!" }
+						for index, c in coworkers.list() do
+							Npc.say(c.model, cheers[(index - 1) % #cheers + 1], 6)
+						end
+					end)
+					-- 👑 사장 취임 = "전설의 루팡" 엔딩 (처음 한 번만. 그 뒤에도 계속 근무해요)
+					if profile.rank >= #Ranks and not profile.endings.legend then
+						profile.endings.legend = profile.stats.days
+						unlockAchievement(player, d, "ending_legend")
+						pushNotice(player, "👑", "사장 취임! 엔딩 \"전설의 루팡\"을 봤어요.", "ending")
+						local grade = SalaryConfig.endingGrade(profile.stats.days, profile.stats.caught)
+						ending = {
+							id = "legend",
+							grade = grade.grade,
+							gradeLabel = grade.label,
+							days = profile.stats.days,
+							caught = profile.stats.caught,
+							nearMiss = profile.stats.nearMiss,
+							fired = profile.stats.fired,
+							xp = math.floor(profile.xp),
+						}
 					end
 				end
 			end
@@ -4897,6 +5021,10 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				fired = fired,
 				stockProfit = math.floor(d.today.stockProfit),
 				promotedTo = promotedTo,
+				promotedFrom = if promotedTo then Ranks[rankBefore].name else nil, -- 📜 승진식 사령장용
+				promotedRank = if promotedTo then profile.rank else nil,
+				promotedFromRank = if promotedTo then rankBefore else nil,
+				ending = ending,
 				reviewNote = reviewNote, -- 📊 인사평가 발표 (금요일)
 				-- 🏢 새 직급이면 더 큰 회사에서 스카우트 제의가 와요
 				moveTo = if not fired and SalaryConfig.companyForRank(profile.rank).id ~= office.companyId

@@ -340,6 +340,9 @@ function Review.start(ctx)
 		if attitude < 20 and ctx.daily(d).bossCoffee then
 			attitude += SalaryConfig.REVIEW_BOSS_COFFEE
 		end
+		if attitude < 20 and today.reviewPatrol then
+			attitude += SalaryConfig.REVIEW_PATROL -- 🔦 순찰에서 한 명이라도 지적한 날
+		end
 		attitude = math.clamp(attitude, 0, 20)
 
 		-- 🗡️ 앙숙인 경쟁자가 내 실적을 자기 것처럼 보고해요 (한 주에 한 번)
@@ -702,6 +705,135 @@ function Review.start(ctx)
 		return true
 	end
 
+	---------------------------------------------------------------- 🐣 후배 배정 (차장부터)
+	-- 내 후배 표시: 내 화면에서만 보이게 PlayerGui에 두고, 후배 머리에 붙여요
+	local function juniorTag(player: Player, c, angry: boolean?)
+		local playerGui = player:FindFirstChildOfClass("PlayerGui")
+		local head = c and c.model:FindFirstChild("Head")
+		local tag = playerGui and playerGui:FindFirstChild("JuniorTag") :: BillboardGui?
+		if not playerGui or not head then
+			if tag then
+				tag:Destroy()
+			end
+			return
+		end
+		if not tag then
+			local newTag = Instance.new("BillboardGui")
+			newTag.Name = "JuniorTag"
+			newTag.Size = UDim2.fromOffset(130, 22)
+			newTag.StudsOffset = Vector3.new(0, 4.3, 0)
+			newTag.MaxDistance = 70
+			newTag.ResetOnSpawn = false
+			local text = Instance.new("TextLabel")
+			text.Size = UDim2.fromScale(1, 1)
+			text.BackgroundTransparency = 1
+			text.Font = Enum.Font.GothamBold
+			text.TextScaled = true
+			text.TextColor3 = Color3.fromRGB(255, 236, 150)
+			text.TextStrokeTransparency = 0.3
+			text.Text = "🐣 내 후배"
+			text.Parent = newTag
+			newTag.Parent = playerGui
+			tag = newTag
+		end
+		if (tag :: BillboardGui).Adornee ~= head then
+			(tag :: BillboardGui).Adornee = head
+		end
+		-- 😤 불만이 높으면 표시가 바뀌어요 (창을 안 열어도 위험한 걸 알 수 있게)
+		local text = (tag :: BillboardGui):FindFirstChildOfClass("TextLabel")
+		local wanted = if angry then "🐣 내 후배 😤" else "🐣 내 후배"
+		if text and text.Text ~= wanted then
+			text.Text = wanted
+			text.TextColor3 = if angry then Color3.fromRGB(255, 150, 130) else Color3.fromRGB(255, 236, 150)
+		end
+	end
+	-- 내 후배가 누구인가 (없거나 이 사무실에 없으면 새로 배정해요). 차장 미만이면 nil
+	local function juniorOf(player: Player, d)
+		local profile = d.profile
+		if profile.rank < SalaryConfig.JUNIOR_RANK or d.fired then
+			return nil
+		end
+		-- 🏢 후배는 회사별로 따로 기억해요: 회사를 옮기면 지금 후배를 적어 두고, 이 회사의 후배를 꺼내 와요
+		local companyId = game:GetService("ReplicatedStorage"):GetAttribute("SalaryCompany") or ""
+		if profile.juniorCompany ~= companyId then
+			if profile.juniorCompany ~= "" and profile.junior ~= "" then
+				profile.juniors[profile.juniorCompany] = { name = profile.junior, grudge = profile.juniorGrudge or 0 }
+			end
+			local saved = profile.juniors[companyId]
+			profile.junior = if typeof(saved) == "table" and typeof(saved.name) == "string" then saved.name else ""
+			profile.juniorGrudge = if typeof(saved) == "table" and typeof(saved.grudge) == "number" then saved.grudge else 0
+			profile.juniorCompany = companyId
+		end
+		local candidates = {}
+		for _, c in coworkers.list() do
+			if not c.removed then
+				if c.name == profile.junior then
+					return c
+				end
+				table.insert(candidates, c)
+			end
+		end
+		if #candidates == 0 then
+			return nil
+		end
+		local c = candidates[math.random(1, #candidates)]
+		local replaced = profile.junior ~= "" -- (원래 후배 자리에 다른 사람이 앉아서 대신 배정: 불만은 이어받아요)
+		profile.junior = c.name
+		if not replaced then
+			profile.juniorGrudge = 0
+		end
+		ctx.pushNotice(player, "🐣", `{c.name}이(가) 내 후배로 배정됐어요.`, "junior")
+		notify(player, `🐣 {c.name}이(가) 내 후배로 배정됐어요! [E] 말 걸기로 일을 시키거나 챙겨 줄 수 있어요.`, 6)
+		return c
+	end
+	local function juniorGrudge(d, delta: number): number
+		local value = math.clamp((d.profile.juniorGrudge or 0) + delta, 0, SalaryConfig.JUNIOR_GRUDGE_MAX)
+		d.profile.juniorGrudge = value
+		return value
+	end
+
+	---------------------------------------------------------------- 🔦 순찰 (부장부터)
+	local patrols: { [Player]: { untilTime: number, caught: { [string]: boolean }, count: number, total: number } } = {}
+	local function patrolReward(d): number
+		return math.floor(SalaryConfig.dailyTarget(d.profile.rank) * SalaryConfig.PATROL_REWARD_RATE)
+	end
+	local function endPatrol(player: Player)
+		local patrol = patrols[player]
+		patrols[player] = nil
+		if patrol and player.Parent then
+			player:SetAttribute("PatrolUntil", nil)
+			notify(player, if patrol.count > 0
+				then `🔦 순찰 끝! {patrol.count}명 지적 · 순찰 실적 +{patrol.total}원`
+				else "🔦 순찰 끝… 오늘은 다들 열심히 일하네요. (실적 없음)", 5)
+		end
+	end
+	remotes.Patrol.OnServerEvent:Connect(function(player: Player)
+		local d = data[player]
+		if not d or d.fired or patrols[player] then
+			return
+		end
+		if d.profile.rank < SalaryConfig.PATROL_RANK then
+			notify(player, `🔦 순찰은 {SalaryConfig.Ranks[SalaryConfig.PATROL_RANK].name}부터 나갈 수 있어요.`)
+			return
+		end
+		if dayCycle.phase ~= "work" or ctx.onHalfDay(d) or (ctx.eventBusy and ctx.eventBusy()) then
+			notify(player, "🔦 지금은 순찰을 나갈 수 없어요. (근무 시간에만)")
+			return
+		end
+		local daily = ctx.daily(d)
+		local used = if typeof(daily.patrols) == "number" then daily.patrols else 0
+		if used >= SalaryConfig.PATROL_DAILY then
+			notify(player, `🔦 오늘 순찰은 다 돌았어요. (하루 {SalaryConfig.PATROL_DAILY}번)`)
+			return
+		end
+		daily.patrols = used + 1
+		patrols[player] = { untilTime = os.clock() + SalaryConfig.PATROL_SECONDS, caught = {}, count = 0, total = 0 }
+		ctx.patrolStart(d, os.clock() + SalaryConfig.PATROL_SECONDS)
+		coworkers.patrolUntil = math.max(coworkers.patrolUntil or 0, os.clock() + SalaryConfig.PATROL_SECONDS) -- (순찰 중엔 직원들이 방심해요)
+		player:SetAttribute("PatrolUntil", workspace:GetServerTimeNow() + SalaryConfig.PATROL_SECONDS)
+		notify(player, `🔦 순찰 시작! {SalaryConfig.PATROL_SECONDS}초 동안 딴짓하는 직원에게 [E] 말 걸기 → 지적하기 (최대 {SalaryConfig.PATROL_MAX_CATCH}명 · 자리 부재 안 쌓여요)`, 6)
+	end)
+
 	-- 💬 동료 [E] 말 걸기 → 할 수 있는 일이 여러 개면 고르는 창을 띄워요 (수다뿐이면 바로 수다)
 	--   → true면 창을 띄웠어요 (false면 부른 쪽이 바로 수다를 시작해요)
 	local pending: { [Player]: { c: any, untilTime: number } } = {}
@@ -731,6 +863,25 @@ function Review.start(ctx)
 			and not ctx.daily(d).delegated and ctx.friendPoints(d, c.name) >= SalaryConfig.DELEGATE_FRIEND
 		then
 			table.insert(options, { id = "delegate", name = `📄 업무 떠넘기기 (친밀도 {SalaryConfig.DELEGATE_FRIEND_COST})` })
+		end
+		-- 🐣 내 후배에게만: 일 시키기 (하루 한 번) · 딴짓 눈감아 주기 (하루 한 번)
+		if juniorOf(player, d) == c and dayCycle.phase == "work" then
+			if c.atDesk and not c.chatting and not ctx.daily(d).juniorWork then
+				table.insert(options, { id = "junior_work", name = `🐣 후배에게 일 시키기 (불만 {d.profile.juniorGrudge or 0}%)` })
+			end
+			if c.slacking and not ctx.daily(d).juniorCover then
+				table.insert(options, { id = "junior_cover", name = "🙈 딴짓 눈감아 주기 (오늘 망봐 줘요)" })
+			end
+		end
+		-- 🔦 순찰 중: 딴짓하는 직원 지적하기
+		local patrol = patrols[player]
+		if patrol and c.slacking and not patrol.caught[c.name] and patrol.count < SalaryConfig.PATROL_MAX_CATCH and dayCycle.phase == "work" then
+			table.insert(options, { id = "patrol_catch", name = `🔦 딴짓 지적하기 (+{patrolReward(d)}원)` })
+			c.holdSlackUntil = os.clock() + SalaryConfig.PATROL_HOLD -- (고르는 동안 그대로 굳어 있어요)
+			patrol.untilTime = math.max(patrol.untilTime, os.clock() + SalaryConfig.PATROL_HOLD) -- (고르는 사이에 순찰이 끝나 버리지 않게)
+		elseif patrol and not patrol.caught[c.name] and patrol.count < SalaryConfig.PATROL_MAX_CATCH then
+			-- (일하는 중인 직원에게 말을 걸었을 때: 왜 "지적하기"가 없는지 알려 줘요)
+			notify(player, `🔦 {c.name}은(는) 지금 딴짓 중이 아니에요. 머리 위에 📱·😴가 뜬 직원을 찾으세요!`, 3)
 		end
 		if coworkers.auditMode() then
 			table.insert(options, { id = "accuse", name = "🕶️ 감사팀이죠?" })
@@ -782,7 +933,101 @@ function Review.start(ctx)
 			end
 		elseif choice == "gift" then
 			if not c.chatting and not c.borrowed then
+				local givenToday = ctx.daily(d).gifts
+				local hadGift = ctx.hasGift(d) and not (typeof(givenToday) == "table" and givenToday[c.name]) -- (오늘 이미 줬으면 선물이 안 나가요)
 				gift(player, d, c)
+				-- 🐣 후배를 챙겨 주면 불만이 줄어요
+				if hadGift and juniorOf(player, d) == c and (d.profile.juniorGrudge or 0) > 0 then
+					local left = juniorGrudge(d, -SalaryConfig.JUNIOR_GRUDGE_GIFT)
+					notify(player, `🐣 후배의 불만이 줄었어요. (불만 {left}%)`, 3)
+				end
+			end
+		elseif choice == "patrol_catch" then
+			local patrol = patrols[player]
+			if not patrol then
+				notify(player, "🔦 순찰 시간이 끝났어요. (지적은 순찰 중에만 할 수 있어요)")
+			elseif not patrol.caught[c.name] and patrol.count < SalaryConfig.PATROL_MAX_CATCH then
+				if not c.slacking then
+					notify(player, `🔦 {c.name}이(가) 그새 일하는 척을 해요. 늦었어요!`)
+				else
+					patrol.caught[c.name] = true
+					patrol.count += 1
+					local reward = patrolReward(d)
+					patrol.total += reward
+					c.slacking = false
+					c.holdSlackUntil = nil
+					c.model:SetAttribute("Pose", "work")
+					-- (동료의 평소 행동이 바로 "⌨️ 일하는 중"과 혼잣말로 덮어써서 대사가 안 보일 수 있어요 → 그 뒤에 한 번 더 띄워요)
+					local excuse = pick({ "헉! 죄, 죄송합니다 부장님!", "아, 이건 그… 업무 자료 찾던 중이었어요!", "넵! 바로 일하겠습니다!" })
+					Npc.setStatus(c.model, "😰")
+					Npc.say(c.model, excuse, 4)
+					task.delay(0.6, function()
+						if not c.removed and not c.chatting then
+							Npc.setStatus(c.model, "😰")
+							Npc.say(c.model, excuse, 4)
+						end
+					end)
+					ctx.patrolReward(player, d, reward)
+					ctx.addFriendship(player, d, c.name, SalaryConfig.PATROL_FRIEND, "quiet")
+					if juniorOf(player, d) == c then
+						juniorGrudge(d, SalaryConfig.PATROL_JUNIOR_GRUDGE)
+					end
+					local extras = {}
+					-- ① 오늘 처음 지적: "일 열심히 하는 부장" → 의심도 속도 ↓ · 인사평가 태도 +
+					if patrol.count == 1 then
+						ctx.speed(player, d, SalaryConfig.PATROL_SPEED_DELTA, "🔦 순찰 성실")
+						local today = d.today :: any
+						today.reviewPatrol = true
+						table.insert(extras, `의심도 속도 {SalaryConfig.PATROL_SPEED_DELTA}`)
+						if eligible(d) then
+							table.insert(extras, `태도 점수 +{SalaryConfig.REVIEW_PATROL}`)
+						end
+					end
+					-- ② 인사평가 경쟁자를 지적하면 그 사람 점수가 깎여요
+					local rival = if eligible(d) then rivalOf(ensure(d), c.name) else nil
+					if rival then
+						rival.adj -= SalaryConfig.PATROL_RIVAL
+						table.insert(extras, `경쟁자 {c.name} -{SalaryConfig.PATROL_RIVAL}점`)
+						publish(player, d)
+					end
+					notify(player, `🔦 {c.name} 지적! 순찰 실적 +{reward}원 ({patrol.count}/{SalaryConfig.PATROL_MAX_CATCH}명) · 친밀도 {SalaryConfig.PATROL_FRIEND}`
+						.. (if #extras > 0 then " · " .. table.concat(extras, " · ") else ""), 5)
+					-- ③ 전원 적발: 추가 실적 + 업적·칭호
+					if patrol.count >= SalaryConfig.PATROL_MAX_CATCH then
+						local bonus = math.floor(SalaryConfig.dailyTarget(d.profile.rank) * SalaryConfig.PATROL_FULL_BONUS_RATE)
+						patrol.total += bonus
+						ctx.patrolReward(player, d, bonus, true)
+						ctx.unlock(player, d, "patrol_full")
+					end
+				end
+			end
+		elseif choice == "junior_work" then
+			local daily = ctx.daily(d)
+			if juniorOf(player, d) == c and not daily.juniorWork and c.atDesk and not c.chatting and dayCycle.phase == "work" then
+				daily.juniorWork = true
+				local seconds = ctx.delegate(player, d, SalaryConfig.JUNIOR_WORK_SHARE)
+				local grudge = juniorGrudge(d, SalaryConfig.JUNIOR_GRUDGE_WORK)
+				Npc.setStatus(c.model, "⌨️")
+				if grudge >= SalaryConfig.JUNIOR_GRUDGE_MAX then
+					-- 😤 참다 참다 부장님께 일러요 (일은 해 놓고요)
+					juniorGrudge(d, SalaryConfig.JUNIOR_GRUDGE_AFTER_TATTLE - grudge)
+					Npc.say(c.model, "부장님… 차장님이 자꾸 자기 일을 저한테 시켜요…", 4)
+					notify(player, `😤 {c.name}이(가) 참다 못해 부장님께 일렀어요! 오늘 업무 +{seconds}초는 받았지만… (간식을 주거나 딴짓을 눈감아 주면 불만이 줄어요)`, 6)
+					ctx.tattled(player, d, c.name)
+				else
+					Npc.say(c.model, if grudge >= SalaryConfig.JUNIOR_GRUDGE_WARN then "…네. (한숨)" else "넵, 제가 할게요!", 3)
+					notify(player, `🐣 {c.name}에게 일을 시켰어요! 오늘 업무 +{seconds}초 · 후배 불만 {grudge}%` .. (if grudge >= SalaryConfig.JUNIOR_GRUDGE_WARN then " ⚠️ 100%가 되면 부장님께 일러요" else ""), 5)
+				end
+			end
+		elseif choice == "junior_cover" then
+			local daily = ctx.daily(d)
+			if juniorOf(player, d) == c and not daily.juniorCover and c.slacking and dayCycle.phase == "work" then
+				daily.juniorCover = true
+				daily.juniorLookout = "ready"
+				local left = juniorGrudge(d, -SalaryConfig.JUNIOR_GRUDGE_COVER)
+				ctx.addFriendship(player, d, c.name, SalaryConfig.JUNIOR_COVER_FRIEND, "quiet")
+				Npc.say(c.model, "헉… 못 본 걸로 해 주시는 거죠? 오늘은 제가 망볼게요!", 4)
+				notify(player, `🙈 {c.name}의 딴짓을 눈감아 줬어요. 불만 {left}% · 오늘 한 번, 의심도가 높아지면 후배가 부장님 시선을 돌려 줘요.`, 6)
 			end
 		elseif choice == "report" then
 			if c.slacking then
@@ -837,9 +1082,47 @@ function Review.start(ctx)
 			for _, c in coworkers.list() do
 				refreshPrompt(c)
 			end
+			-- 🔦 순찰 시간이 끝났거나 퇴근·퇴장이면 마무리
+			for player, patrol in patrols do
+				if now >= patrol.untilTime or not player.Parent or dayCycle.phase ~= "work" then
+					endPatrol(player)
+				end
+			end
 			for player, d in data do
 				if player:GetAttribute("Review") == nil then
 					publish(player, d) -- (하루 중간에 들어온 사람도 순위표를 볼 수 있게)
+				end
+				-- 🐣 후배: 표시 붙이기 · 하루 한 번 불만 줄이기 · 망보기
+				local junior = juniorOf(player, d)
+				juniorTag(player, junior, junior ~= nil and (d.profile.juniorGrudge or 0) >= SalaryConfig.JUNIOR_GRUDGE_WARN)
+				if not junior and player:GetAttribute("Junior") ~= nil then
+					player:SetAttribute("Junior", nil)
+				end
+				if junior then
+					local daily = ctx.daily(d)
+					if not daily.juniorDay then
+						daily.juniorDay = true
+						juniorGrudge(d, -SalaryConfig.JUNIOR_GRUDGE_DAILY)
+					end
+					-- 📊 인사평가 창의 "🐣 내 후배" 칸에 보여 줄 상태
+					local state = game:GetService("HttpService"):JSONEncode({
+						name = junior.name,
+						grudge = d.profile.juniorGrudge or 0,
+						work = daily.juniorWork == true,
+						cover = daily.juniorCover == true,
+						lookout = daily.juniorLookout or "",
+					})
+					if player:GetAttribute("Junior") ~= state then
+						player:SetAttribute("Junior", state)
+					end
+					if daily.juniorLookout == "ready" and dayCycle.phase == "work" and junior.atDesk
+						and (d.suspicion or 0) >= SalaryConfig.JUNIOR_LOOKOUT_AT and not ctx.isWorking(player, d)
+					then
+						daily.juniorLookout = "used"
+						d.suspicion = math.max(0, d.suspicion - SalaryConfig.JUNIOR_LOOKOUT_DROP)
+						Npc.say(junior.model, "부장님! 이 서류 좀 봐 주세요!", 3)
+						notify(player, `🐣 {junior.name}이(가) 부장님 시선을 돌려 줬어요! 의심도 -{SalaryConfig.JUNIOR_LOOKOUT_DROP}`, 4)
+					end
 				end
 			end
 			for player, plan in plans do

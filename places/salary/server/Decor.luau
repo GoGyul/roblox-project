@@ -2,7 +2,7 @@
 --   [🪑] 버튼 → 온라인 주문 → 다음 근무일에 택배로 도착! 칸(의자·모니터·액자·책상 색·소품)마다 하나씩 장착해요.
 --   꾸민 책상은 다른 사람 눈에도 보이고, 책상 명패에 이름·칭호·인테리어 점수가 떠요.
 --   남의 책상 명패에서 [E] 자리 구경 → 그 사람의 인테리어와 칭호를 볼 수 있어요.
---   🏆 칭호는 업적으로 열리고 머리 위에 떠요.
+--   🏆 칭호는 업적으로 열리고 머리 위에 떠요. (내 것은 내 화면에서는 직급 창에 보여요)
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -247,6 +247,7 @@ local function updateTitleTag(player: Player, profile)
 		newTag.Size = UDim2.fromOffset(220, 26)
 		newTag.StudsOffset = Vector3.new(0, 3.1, 0)
 		newTag.MaxDistance = 60
+		newTag.PlayerToHideFrom = player -- 내 칭호는 내 화면 머리 위에는 안 떠요 (직급 창에 보여요). 다른 사람에게는 그대로 보여요
 		newTag.Parent = head
 		local text = Instance.new("TextLabel")
 		text.Name = "Text"

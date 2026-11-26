@@ -27,6 +27,11 @@ local Ranks = SalaryConfig.Ranks
 
 local Hud = {}
 
+-- 폰처럼 터치만 되는 기기인가? (맨 위에 둬요: 아래에서 버튼을 만들 때부터 써요)
+function Hud.isPhone(): boolean
+	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
 Hud.COLORS = {
 	panel = Theme.Color.surface,
 	good = Theme.Color.mint,
@@ -285,7 +290,8 @@ local moneyPanel = panel({
 	Position = UDim2.new(1, -12, 0, 8),
 	Size = UDim2.fromOffset(250, 136),
 })
-local rankText = text({ Size = UDim2.new(1, 0, 0, 22), TextSize = 19, TextColor3 = C.brass, Parent = moneyPanel })
+local rankText = text({ Size = UDim2.new(1, -18, 0, 22), TextSize = 19, TextScaled = true, RichText = true, TextColor3 = C.brass, Parent = moneyPanel })
+Ui.make("UITextSizeConstraint", { MaxTextSize = 19, MinTextSize = 10, Parent = rankText }) -- (🏆 칭호까지 한 줄에: 길면 글씨를 줄여요)
 local xpLabel, xpFill = bar(moneyPanel, 24, "")
 local todayText = text({ Position = UDim2.fromOffset(0, 64), Size = UDim2.new(1, 0, 0, 22), TextSize = 19, TextColor3 = COLORS.warn, Parent = moneyPanel })
 local totalText = text({ Position = UDim2.fromOffset(0, 88), Size = UDim2.new(1, 0, 0, 18), TextSize = 15, Parent = moneyPanel })
@@ -741,6 +747,7 @@ local hintText = text({
 	Parent = actionPanel,
 })
 Ui.corner(11).Parent = hintText
+Ui.make("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14), Parent = hintText }) -- (글자 양옆 여백)
 Ui.stroke(Theme.Color.navy, 1.5).Parent = hintText
 local buttonRow = Ui.make("Frame", {
 	Position = UDim2.fromOffset(0, 28),
@@ -870,10 +877,13 @@ local function buttonText(index: number, actionId: string, unlocked: boolean): s
 			return `<font size="22">🍪</font>\n[{index}] 없음`
 		end
 		local percent = math.floor((player:GetAttribute("SnackProgress") or 0) * 100)
-		return `<font size="22">{snack.emoji}</font>\n[{index}] {percent}%`
+		return if Hud.isPhone() then `<font size="20">{snack.emoji}</font>\n{percent}%` else `<font size="22">{snack.emoji}</font>\n[{index}] {percent}%`
 	end
 	if not unlocked then
 		return `<font size="22">🔒</font>\n[{index}]`
+	end
+	if Hud.isPhone() then
+		return `<font size="20">{info.emoji}</font>\n+{info.income}` -- 📱 숫자 키가 없으니 번호는 빼요
 	end
 	return `<font size="22">{info.emoji}</font>\n[{index}] +{info.income}`
 end
@@ -886,6 +896,9 @@ local function actionDetail(actionId: string): string
 		return if snack then `{snack.emoji} {snack.name} 몰래 먹기 · 다 먹으면 +{snack.bonus}원` else "🍪 간식은 탕비실·디저트집에서 가져와요"
 	end
 	local returnText = if (info.returnTime or 0) > 0 then ` · 복귀 {info.returnTime}초` else ""
+	if Hud.isPhone() then
+		return `{info.emoji} {info.name} · +{info.income}원/초{returnText}` -- 📱 짧게
+	end
 	return `{info.emoji} {info.name} · +{info.income}원/초{returnText} — {info.hint or ""}`
 end
 local hoveredAction: string? = nil
@@ -929,6 +942,81 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 ---------------------------------------------------------------------------
+-- 📱 폰 전용 상단 띠: 큰 창 세 개(상태·시계·직급) 대신 얇은 칩 한 줄(세로 화면은 두 줄)
+--   👔 직급 칩을 누르면 원래 창 세 개가 자세히 보기로 펼쳐져요 (다시 누르면 접혀요)
+--   PC에서는 만들기만 하고 숨겨 둬요.
+---------------------------------------------------------------------------
+local phone = { detail = false, bottom = 0 } -- (지역 변수 개수를 아끼려고 표 하나에 모아요)
+phone.strip = Ui.make("Frame", { Size = UDim2.fromScale(1, 0), BackgroundTransparency = 1, Visible = false, ZIndex = 30, Parent = gui })
+function phone.chip(withBar: boolean, button: boolean?): (GuiObject, TextLabel | TextButton, Frame?)
+	local frame = Ui.make(if button then "TextButton" else "Frame", {
+		Size = UDim2.fromOffset(90, 30),
+		BackgroundColor3 = COLORS.panel,
+		BackgroundTransparency = 0.06,
+		ZIndex = 30,
+		Parent = phone.strip,
+	}, { Ui.corner(10), Ui.stroke(Theme.Color.navy, 1.5) })
+	if button then
+		local asButton = frame :: TextButton
+		asButton.Text = ""
+		asButton.AutoButtonColor = true
+	end
+	local label = text({
+		Position = UDim2.fromOffset(7, 0),
+		Size = UDim2.new(1, -14, 1, if withBar then -6 else 0),
+		TextSize = 13,
+		TextScaled = true,
+		RichText = true,
+		ZIndex = 31,
+		Parent = frame,
+	})
+	Ui.make("UITextSizeConstraint", { MaxTextSize = 13, MinTextSize = 8, Parent = label })
+	local fill: Frame? = nil
+	if withBar then
+		local back = Ui.make("Frame", {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 7, 1, -4),
+			Size = UDim2.new(1, -14, 0, 4),
+			BackgroundColor3 = Color3.fromRGB(223, 230, 234),
+			ZIndex = 31,
+			Parent = frame,
+		}, { Ui.corner(2) })
+		fill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = COLORS.good, ZIndex = 32, Parent = back }, { Ui.corner(2) })
+	end
+	return frame, label, fill
+end
+phone.clock, phone.clockLabel = phone.chip(false)
+phone.susp, phone.suspLabel, phone.suspFill = phone.chip(true)
+phone.work, phone.workLabel, phone.workFill = phone.chip(true)
+phone.money, phone.moneyLabel = phone.chip(false)
+phone.rank, phone.rankLabel = phone.chip(false, true)
+phone.rankLabel.TextXAlignment = Enum.TextXAlignment.Center
+-- 🔦 순찰 남은 시간 (PC·폰 공통)
+phone.patrolText = text({
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 172),
+	Size = UDim2.fromOffset(460, 30),
+	TextSize = 22,
+	TextColor3 = Color3.fromRGB(255, 226, 120),
+	TextXAlignment = Enum.TextXAlignment.Center,
+	TextStrokeTransparency = 1,
+	Visible = false,
+	Parent = gui,
+})
+outline(phone.patrolText)
+
+-- 화면이 좁으면 창을 통째로 줄여서 글자·버튼이 화면 밖으로 잘리지 않게 해요 (출근 선택·수다·화상회의 창 등)
+function Hud.fitWidth(frame: GuiObject, width: number)
+	local scale = Ui.make("UIScale", { Parent = frame })
+	local function fit()
+		scale.Scale = math.clamp((gui.AbsoluteSize.X - 16) / width, 0.5, 1)
+	end
+	fit()
+	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+end
+Hud.fitWidth(clockIn, 420)
+
+---------------------------------------------------------------------------
 -- 📱 화면 크기에 따라 배치 바꾸기
 --   큰 화면(PC): 원래 배치
 --   작은 화면(폰·작은 창): 패널을 줄이고, 행동 버튼은 2줄로 위쪽에, 서로 겹치지 않게
@@ -946,17 +1034,66 @@ function Hud.isCompact(): boolean
 	return Hud.smallMode or Hud.isPhone() or viewport.X < 1000 or viewport.Y < 560
 end
 
--- 폰처럼 터치만 되는 기기인가? (행동 버튼을 2줄 큰 버튼으로)
-function Hud.isPhone(): boolean
-	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-end
-
 local function applyLayout()
 	local camera = workspace.CurrentCamera
 	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
 	local compact = Hud.isCompact()
 	local grid = buttonRow:FindFirstChild("Grid") :: UIGridLayout
 	local small = if compact then 0.7 else 1
+	local phoneMode = Hud.isPhone()
+	local guiSize = gui.AbsoluteSize
+	if guiSize.X < 50 then
+		guiSize = viewport -- (막 들어왔을 때는 아직 0일 수 있어요)
+	end
+	local landscape = guiSize.X > guiSize.Y and guiSize.X >= 560
+
+	-- 📱 폰: 상단 띠 배치 (가로 = Roblox 버튼 오른쪽 한 줄 / 세로·좁은 화면 = 직급 칩은 위, 나머지는 두 줄)
+	phone.strip.Visible = phoneMode
+	if phoneMode then
+		local inset = game:GetService("GuiService"):GetGuiInset().Y -- Roblox 상단 버튼 줄 높이 (우리 화면은 그 아래에서 시작해요)
+		-- (Roblox 버튼과 같은 높이에 맞춰요: 버튼 줄의 가운데는 상단 여백의 57%쯤)
+		local barY = if inset >= 34 then -inset + math.floor(inset * 0.57) - 14 else 4
+		local barX = if inset >= 34 then 215 else 6 -- (왼쪽 위는 Roblox 버튼 자리)
+		local barWidth = guiSize.X - barX - 8
+		local gap = 5
+		if barWidth >= 86 + 118 + 78 + 2 * 60 + 4 * gap then
+			-- 한 줄: 시각 · 의심 · 업무 · 돈 · 직급 (가운데 두 칩이 남는 폭을 나눠 가져요, 너무 길어지지는 않게)
+			local flexible = math.min(150, math.floor((barWidth - 86 - 118 - 78 - 4 * gap) / 2))
+			local x = guiSize.X - 8 - (86 + 118 + 78 + 2 * flexible + 4 * gap) -- 오른쪽 끝에 붙여요
+			for _, item in { { phone.clock, 86 }, { phone.susp, flexible }, { phone.work, flexible }, { phone.money, 118 }, { phone.rank, 78 } } do
+				item[1].Position = UDim2.fromOffset(x, barY)
+				item[1].Size = UDim2.fromOffset(item[2], 28)
+				x += item[2] + gap
+			end
+			phone.bottom = math.max(0, barY + 28) + 4
+		else
+			-- 두 줄: (위) 직급 칩은 Roblox 버튼 오른쪽 / (1줄) 시각 + 의심 / (2줄) 업무 + 돈
+			local top = 4
+			if inset >= 34 and barWidth >= 80 then
+				phone.rank.Position = UDim2.fromOffset(barX, barY)
+				phone.rank.Size = UDim2.fromOffset(math.min(barWidth, 130), 30)
+			else
+				phone.rank.Position = UDim2.fromOffset(6, top)
+				phone.rank.Size = UDim2.fromOffset(guiSize.X - 12, 28)
+				top += 32
+			end
+			local full = guiSize.X - 12
+			phone.clock.Position = UDim2.fromOffset(6, top)
+			phone.clock.Size = UDim2.fromOffset(96, 30)
+			phone.susp.Position = UDim2.fromOffset(6 + 96 + gap, top)
+			phone.susp.Size = UDim2.fromOffset(full - 96 - gap, 30)
+			phone.work.Position = UDim2.fromOffset(6, top + 34)
+			phone.work.Size = UDim2.fromOffset(full - 130 - gap, 30)
+			phone.money.Position = UDim2.fromOffset(6 + full - 130, top + 34)
+			phone.money.Size = UDim2.fromOffset(130, 30)
+			phone.bottom = top + 34 + 30 + 4
+		end
+	end
+	-- 큰 창 세 개는 폰에서는 "자세히 보기"를 켰을 때만
+	local showPanels = not phoneMode or phone.detail
+	statusPanel.Visible = showPanels
+	clockPanel.Visible = showPanels
+	moneyPanel.Visible = showPanels
 
 	local top = if compact then 0.7 else 0.88 -- (시계·직급 창은 큰 화면에서도 조금 작게)
 	scales[clockPanel].Scale = top
@@ -965,12 +1102,30 @@ local function applyLayout()
 	local banner = if eventText.Visible then (if compact then 22 else 28) else 0
 	eventText.Position = UDim2.new(0.5, 0, 0, if compact then 2 else 4)
 	eventText.TextSize = if compact then 15 else 19
+	eventText.Size = UDim2.fromOffset(560, 30)
+	eventText.TextWrapped = false
 	clockPanel.Position = UDim2.new(0.5, 0, 0, (if compact then 4 else 8) + banner)
 	local below = (if compact then 4 else 8) + banner + math.floor(clockPanel.AbsoluteSize.Y) + 6 -- 시계 창 바로 아래
+	if phoneMode then
+		-- 📱 돌발 이벤트 안내는 띠 바로 아래 두 줄까지 (양옆 버튼 자리는 비워요), 발소리·이과장 경고는 그 아래
+		banner = if eventText.Visible then 36 else 0
+		eventText.Position = UDim2.new(0.5, 0, 0, phone.bottom)
+		eventText.Size = UDim2.fromOffset(math.min(guiSize.X - 100, 520), 34)
+		eventText.TextWrapped = true
+		eventText.TextSize = 13
+		below = phone.bottom + banner
+		if phone.detail then
+			below += 56 -- (자세히 보기의 시계 창 아래로)
+		end
+	end
 	footstepText.Position = UDim2.new(0.5, 0, 0, below)
 	footstepText.TextSize = if compact then 17 else 22
 	leeText.Position = UDim2.new(0.5, 0, 0, below + (if compact then 22 else 30))
 	leeText.TextSize = if compact then 17 else 22
+	if phoneMode then
+		footstepText.TextSize = 15
+		leeText.TextSize = 14
+	end
 
 	scales[moneyPanel].Scale = top
 	moneyPanel.Position = UDim2.new(1, if compact then -6 else -12, 0, if compact then 4 else 8)
@@ -995,11 +1150,32 @@ local function applyLayout()
 		Hud.toolbar.Position = UDim2.new(0, 12, 0, 8 + STATUS_HEIGHT + 8)
 	end
 	scales[Hud.toolbar].Scale = if compact then 0.85 else 1
+	local toolbarLayout = Hud.toolbar:FindFirstChildOfClass("UIListLayout")
+	Hud.toolbar.Size = UDim2.fromOffset(250, 40)
+	if toolbarLayout then
+		pcall(function()
+			(toolbarLayout :: any).Wraps = phoneMode -- 📱 메뉴를 펼치면 화면 폭에 맞춰 여러 줄로
+		end)
+	end
+	if phoneMode then
+		-- 📱 자세히 보기: 띠 아래에 창 세 개를 펼쳐요 (가로 = 왼쪽·가운데·오른쪽 / 세로 = 왼쪽·오른쪽 위아래)
+		local y = phone.bottom
+		statusPanel.Position = UDim2.new(0, 6, 0, y)
+		moneyPanel.Position = UDim2.new(1, -48, 0, y)
+		clockPanel.Position = if landscape then UDim2.new(0.5, 0, 0, y) else UDim2.new(1, -48 - 105, 0, y + math.floor(moneyPanel.AbsoluteSize.Y) + 6)
+		-- 🔔 알림 종은 오른쪽 세로 줄 맨 위, 알림 창·프로젝트 카드는 그 왼쪽
+		scales[bellButton].Scale = 0.8
+		bellButton.Position = UDim2.new(1, -6, 0, y + 2)
+		noticeWindow.Position = UDim2.new(1, -48, 0, y + 2)
+		missionPanel.Position = UDim2.new(1, -48, 0, y + 2 + (if phone.detail then math.floor(moneyPanel.AbsoluteSize.Y) + 6 else 0))
+		-- 메뉴 버튼은 띠 아래 왼쪽
+		Hud.toolbar.Position = UDim2.new(0, 6, 0, y + 2 + (if phone.detail then math.floor(STATUS_HEIGHT * small) + 4 else 0))
+		Hud.toolbar.Size = UDim2.fromOffset(math.floor((guiSize.X - 60) / 0.85), 40)
+	end
 
 	-- 행동 버튼
 	--   폰: 4개씩 2줄 큰 버튼, 조이스틱·점프 버튼과 겹치지 않게 위로
 	--   PC: 화면 크기와 상관없이 1줄 작은 버튼, 맨 아래에 붙여서 게임 화면을 덜 가리게
-	local phone = Hud.isPhone()
 	-- 보이는 버튼(잠긴 행동은 숨겨요) 개수에 맞춰서 배치
 	local visibleCount = 0
 	for _, button in buttons do
@@ -1008,29 +1184,46 @@ local function applyLayout()
 		end
 	end
 	visibleCount = math.max(visibleCount, 1)
-	local columns = if phone then math.min(5, visibleCount) else visibleCount
+	local columns = visibleCount
+	local cellWidth = if phoneMode then 48 else 62
+	local cellHeight = if phoneMode then 48 else 54
+	-- 📱 폰: 가로 화면은 조이스틱과 점프 버튼 사이, 세로 화면은 조작 버튼 위에. 한 줄에 안 들어가면 줄을 늘려요
+	local available = if landscape then guiSize.X - 2 * 175 else guiSize.X - 12
+	if phoneMode then
+		columns = math.clamp(math.floor((available + 5) / (cellWidth + 5)), 3, visibleCount)
+	end
 	local rows = math.ceil(visibleCount / columns)
-	local cellWidth = if phone then 66 else 62
-	local cellHeight = if phone then 58 else 54
 	grid.FillDirectionMaxCells = columns
 	grid.CellSize = UDim2.fromOffset(cellWidth, cellHeight)
-	local width = columns * cellWidth + (columns - 1) * 6
-	local height = rows * cellHeight + (rows - 1) * 6
+	local cellGap = if phoneMode then 5 else 6
+	grid.CellPadding = UDim2.fromOffset(cellGap, cellGap)
+	local width = columns * cellWidth + (columns - 1) * cellGap
+	local height = rows * cellHeight + (rows - 1) * cellGap
 	buttonRow.Size = UDim2.new(1, 0, 0, height)
 	actionPanel.Size = UDim2.fromOffset(width, 22 + height)
-	actionPanel.Position = UDim2.new(0.5, 0, 1, if phone then -90 else -6)
-	scales[actionPanel].Scale = math.clamp((viewport.X - 24) / width, 0.5, 1)
-	hintText.Size = UDim2.new(0, math.max(width, 720), 0, 18) -- 버튼 줄보다 넓게 (설명이 잘리지 않게)
-	hintText.TextSize = if phone then 16 else 16 -- (작다는 의견이 있어 키웠어요)
+	local bottomGap = if not phoneMode then 6 elseif landscape then 6 else 170 -- (세로 화면은 조이스틱·점프·달리기 버튼 위)
+	actionPanel.Position = UDim2.new(0.5, 0, 1, -bottomGap)
+	scales[actionPanel].Scale = math.clamp(((if phoneMode then guiSize.X else viewport.X) - 12) / width, 0.5, 1)
+	if phoneMode then
+		-- 📱 설명은 버튼 위 짧은 칩 한 줄
+		hintText.AutomaticSize = Enum.AutomaticSize.X
+		hintText.Size = UDim2.fromOffset(0, 20)
+		hintText.TextSize = 12
+	else
+		-- 흰 띠는 글자 길이에 딱 맞게 (예전엔 720폭 고정이라 양옆이 휑했어요)
+		hintText.AutomaticSize = Enum.AutomaticSize.X
+		hintText.Size = UDim2.fromOffset(0, 20)
+		hintText.TextSize = 16 -- (작다는 의견이 있어 키웠어요)
+	end
 	buttonRow.Position = UDim2.fromOffset(0, 22)
 	for _, button in buttons do
-		button.TextSize = if phone then 13 else 12
+		button.TextSize = 12
 	end
 
-	local bottomGap = if phone then 90 else 6
 	local barHeight = (22 + height) * scales[actionPanel].Scale
-	standHint.Position = UDim2.new(0.5, 0, 1, if phone then -100 else -24)
-	standHint.TextSize = if compact then 15 else 17
+	standHint.Position = UDim2.new(0.5, 0, 1, if phoneMode then -(bottomGap + 2) else -24)
+	standHint.TextSize = if phoneMode then 13 elseif compact then 15 else 17
+	standHint.Size = if phoneMode then UDim2.fromOffset(math.min(guiSize.X - 12, 320), 26) else UDim2.fromOffset(520, 28)
 	-- 안내 문구는 행동 버튼 위로
 	Ui.setToastPosition(UDim2.new(0.5, 0, 1, -(bottomGap + barHeight + 10)))
 end
@@ -1085,6 +1278,13 @@ Hud.relayout = function()
 	task.defer(applyLayout)
 end
 applyLayout()
+gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(applyLayout) -- 📱 폰을 돌리면 다시 배치
+phone.rank.Activated:Connect(function()
+	phone.detail = not phone.detail
+	Sounds.play("click", 0.4)
+	applyLayout()
+	task.defer(applyLayout) -- (창이 보인 뒤의 크기로 한 번 더 맞춰요)
+end)
 if workspace.CurrentCamera then
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyLayout)
 	-- 🗕 [H] 화면 표시 크게/작게 (글자를 치는 중에는 동작하지 않아요)
@@ -1242,6 +1442,9 @@ local function updateEvent()
 		Hud.relayout() -- (안내 줄이 생기거나 사라지면 시계 창 자리를 다시 맞춰요)
 	end
 	if message then
+		if Hud.isPhone() then
+			message = (string.gsub(message, "%[E%] ", "")) -- 📱 키보드 안내는 빼요
+		end
 		eventText.Text = message
 		eventText.TextColor3 = color
 	end
@@ -1327,7 +1530,9 @@ RunService.RenderStepped:Connect(function()
 	-- 직급과 경력
 	local rankIndex = player:GetAttribute("Rank") or 1
 	local rank = Ranks[rankIndex] or Ranks[1]
-	rankText.Text = `👔 {rank.name} {player.DisplayName}`
+	-- 🏆 내 칭호는 머리 위 대신 여기에 (머리 위 글씨가 내 화면을 가려서)
+	local myTitle = SalaryConfig.getTitle(player:GetAttribute("Title") or "")
+	rankText.Text = `👔 {rank.name} {player.DisplayName}` .. (if myTitle then ` <font size="13" color="#8A6A1F">· {myTitle.text}</font>` else "")
 	local xp = player:GetAttribute("XP") or 0
 	local nextXp = player:GetAttribute("NextXP") or 0
 	if nextXp > 0 then
@@ -1335,7 +1540,7 @@ RunService.RenderStepped:Connect(function()
 		xpLabel.Text = `📈 {nextRank.name} 승진까지 {comma(math.max(0, nextXp - xp))}`
 		xpFill.Size = UDim2.fromScale(math.clamp((xp - rank.xp) / (nextXp - rank.xp), 0, 1), 1)
 	else
-		xpLabel.Text = "📈 최고 직급! (사장 자리는 아직…)"
+		xpLabel.Text = "👑 최고 직급! 전설의 루팡"
 		xpFill.Size = UDim2.fromScale(1, 1)
 	end
 	xpFill.BackgroundColor3 = C.brass
@@ -1494,6 +1699,31 @@ RunService.RenderStepped:Connect(function()
 		applyLayout()
 	end
 	updateDeskMarker(seated)
+
+	-- 🔦 순찰 중: 남은 시간 (이과장 경고 줄 바로 아래)
+	local patrolUntil = player:GetAttribute("PatrolUntil")
+	local patrolLeft = if typeof(patrolUntil) == "number" then patrolUntil - workspace:GetServerTimeNow() else 0
+	phone.patrolText.Visible = patrolLeft > 0
+	if patrolLeft > 0 then
+		phone.patrolText.Position = leeText.Position + UDim2.fromOffset(0, leeText.TextSize + 12)
+		phone.patrolText.TextSize = leeText.TextSize
+		phone.patrolText.Text = `🔦 순찰 중 {math.ceil(patrolLeft)}초 · 딴짓하는 직원에게 말 걸기`
+	end
+
+	-- 📱 폰 상단 띠
+	if phone.strip.Visible then
+		local weekday = ReplicatedStorage:GetAttribute("SalaryWeekday") or ""
+		local nextChar = utf8.offset(weekday, 2)
+		phone.clockLabel.Text = string.format("🕘 %02d:%02d %s", minute // 60, minute % 60, if nextChar then string.sub(weekday, 1, nextChar - 1) else weekday)
+		local speedNow = player:GetAttribute("SuspicionSpeed") or 1
+		phone.suspLabel.Text = `🔍 의심 {suspicion}%` .. (if math.abs(speedNow - 1) > 0.005 then "  " .. speedText(speedNow) else "")
+		phone.suspFill.Size = suspicionFill.Size
+		phone.suspFill.BackgroundColor3 = suspicionFill.BackgroundColor3
+		phone.workLabel.Text = if work >= quota then "📄 업무 완료 ✅" else `📄 업무 {work}/{quota}`
+		phone.workFill.Size = workFill.Size
+		phone.moneyLabel.Text = `💰 {comma(earnedToday)}원 <font color="#3FAE6A">+{rate}/초</font>`
+		phone.rankLabel.Text = `👔 {rank.name} {if phone.detail then "–" else "+"}`
+	end
 
 	-- 부장 발소리 (이어폰이 있으면 더 멀리서 듣고, 지금 뭐 하는지도 알 수 있어요)
 	local hasEarphones = player:GetAttribute("Item_earphones") == true
@@ -1794,6 +2024,7 @@ local videoPopup = Ui.make("Frame", {
 	ZIndex = 40,
 	Parent = gui,
 }, { Ui.corner(12), Ui.stroke(Color3.fromRGB(90, 160, 255), 2), Ui.padding(12) })
+Hud.fitWidth(videoPopup, 460)
 local videoTitle = text({ Size = UDim2.new(1, 0, 0, 22), TextSize = 16, TextColor3 = Color3.fromRGB(140, 190, 255), ZIndex = 41, Parent = videoPopup })
 local videoQuestion = text({ Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 30), TextSize = 20, TextWrapped = true, ZIndex = 41, Parent = videoPopup })
 local videoTimer = Ui.make("Frame", {
@@ -1880,6 +2111,7 @@ local chatReactBar = Ui.make("Frame", {
 	ZIndex = 40,
 	Parent = gui,
 }, { Ui.corner(20), Ui.stroke(Theme.Color.navy, 3), Ui.padding(12) })
+Hud.fitWidth(chatReactBar, 560)
 local chatReactTitle = text({ Size = UDim2.new(1, 0, 0, 20), TextSize = 15, TextColor3 = Theme.Color.navy, ZIndex = 41, Parent = chatReactBar })
 -- 대사 기록 (위가 오래된 것, 아래가 방금 한 말)
 local chatLogLabels: { TextLabel } = {}
@@ -2179,6 +2411,7 @@ local elevatorBoard = Ui.make("Frame", {
 	ZIndex = 46,
 	Parent = elevatorGui,
 }, { Ui.corner(14), Ui.stroke(Color3.fromRGB(255, 200, 80), 2), Ui.padding(12) })
+Hud.fitWidth(elevatorBoard, 520)
 local elevatorRules = text({
 	Size = UDim2.new(1, 0, 0, 44),
 	TextSize = 16,
