@@ -342,6 +342,12 @@ end
 task.defer(function()
 	require(script.Parent.Ceremony).preview() -- 🧪 스튜디오 미리 보기 (SalaryConfig.TEST_CEREMONY)
 end)
+task.defer(function()
+	require(script.Parent.Webtoon).start() -- 📺 [웹툰 정주행]을 켜면 뜨는 웹툰 뷰어
+end)
+task.defer(function()
+	require(script.Parent.Meeting).start() -- 🎧 [화상회의 하는 척]을 켜면 뜨는 회의 창
+end)
 Remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
 	Sounds.play("swoosh", 0.5)
 	if slip.promotedTo then
@@ -1817,7 +1823,7 @@ local function toolButton(label: string, width: number, onClick: () -> (), tip: 
 	local b = Ui.button({
 		Size = UDim2.fromOffset(width, 36),
 		Text = label,
-		TextSize = 15,
+		TextSize = 13, -- (버튼이 작아져서 글씨도 조금 작게)
 		Parent = Hud.toolbar,
 	})
 	local colors = { Theme.Color.yellow, Theme.Color.mint, Theme.Color.coralSoft, Theme.Color.skySoft, Theme.Color.mintSoft, Theme.Color.coral }
@@ -1846,7 +1852,7 @@ end
 local menuToggle = Ui.button({
 	Size = UDim2.fromOffset(76, 36),
 	Text = "메뉴 +",
-	TextSize = 15,
+	TextSize = 13,
 	BackgroundColor3 = Theme.Color.surface,
 	TextColor3 = Theme.Color.navy,
 	Parent = Hud.toolbar,
@@ -2114,16 +2120,41 @@ function Panels.showApprovals()
 	render()
 end
 
-toolButton("🖋️", 46, function()
-	if current then
-		close()
-	else
-		Panels.showApprovals()
+-- 🔒 직급이 올라야 열리는 메뉴 (🔦 순찰 = 부장, 🖋️ 결재함 = 이사): 목록 맨 뒤에 두고, 아직 못 쓰면 흐리게 + 자물쇠
+do
+	local function rankTool(emoji: string, needRank: number, order: number, tip: string, onClick: () -> ())
+		local function unlocked(): boolean
+			return (player:GetAttribute("Rank") or 1) >= needRank
+		end
+		local b = toolButton(emoji, 46, function()
+			if not unlocked() then
+				Ui.toast(`🔒 {Ranks[needRank].name}부터 쓸 수 있어요.`, 2.5)
+				return
+			end
+			onClick()
+		end, tip)
+		b.LayoutOrder = order -- (누구나 쓰는 메뉴는 0이라 앞에 와요)
+		local function refresh()
+			local open = unlocked()
+			b.Text = if open then emoji else `🔒{emoji}`
+			b.BackgroundTransparency = if open then 0 else 0.55
+			b.TextTransparency = if open then 0 else 0.45
+		end
+		refresh()
+		player:GetAttributeChangedSignal("Rank"):Connect(refresh)
 	end
-end, "🖋️ 결재함 (이사부터)")
-toolButton("🔦", 46, function()
-	Remotes.Patrol:FireServer() -- 🔦 순찰 나가기 (부장부터, 하루 한 번. 안 되면 서버가 이유를 알려 줘요)
-end, "🔦 순찰 나가기 (부장부터)")
+	rankTool("🔦", SalaryConfig.PATROL_RANK, 91, "🔦 순찰 나가기 (부장부터)", function()
+		Remotes.Patrol:FireServer() -- 하루 한 번. 안 되면 서버가 이유를 알려 줘요
+	end)
+	rankTool("🖋️", SalaryConfig.APPROVAL_RANK, 92, "🖋️ 결재함 (이사부터)", function()
+		if current then
+			close()
+		else
+			Panels.showApprovals()
+		end
+	end)
+end
+
 toolButton("📮", 46, function()
 	if current then
 		close()
@@ -2190,7 +2221,7 @@ task.spawn(function()
 	while true do
 		local count = player:GetAttribute("Energy") or 0
 		local active = player:GetAttribute("EnergyActive") == true
-		energyButton.Text = if active then "⚡ 효과 중" else `⚡ 마시기 {count}`
+		energyButton.Text = if active then "⚡ 사용 중" else `⚡ ×{count}` -- (버튼이 작아져서 짧게. 설명은 마우스를 올리면 떠요)
 		energyButton.Visible = count > 0 or active
 		task.wait(0.5)
 	end

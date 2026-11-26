@@ -44,6 +44,9 @@ local Remotes = {
 	PlaneOpen = event("PlaneOpen"), -- 서버 → 클라: ✈️ 종이비행기 창 열기
 	PlaneThrow = func("PlaneThrow"),
 	PlaneFlight = event("PlaneFlight"), -- 서버 → 모든 클라: ✈️ 종이비행기 비행 경로 (모두의 화면에 날아가요) -- 클라 → 서버 → 답장: ✈️ ("begin") → 바람 / ("throw", 각도, 힘%, 방향°)
+	Meeting = event("Meeting"), -- 서버 → 클라: 🎧 화상회의 진행 ({ type = "open"/"topic"/"line"/"event"/"result"/"kicked"/"end", … })
+	MeetingAct = event("MeetingAct"), -- 클라 → 서버: 🎧 돌발 상황에 누른 버튼 (상황 ID, 버튼 ID 또는 보기 번호)
+	Webtoon = func("Webtoon"), -- 클라 → 서버 → 답장: 📺 웹툰 ("list" / "start", 작품, 화 / "finish", 작품, 화)
 	Approval = func("Approval"), -- 클라 → 서버 → 답장: 🖋️ 결재 ("list" / "read", 번호 / "approve"·"reject"·"stamp", 번호) (이사부터)
 	Patrol = event("Patrol"), -- 클라 → 서버: 🔦 순찰 나가기 (부장부터)
 	Retire = func("Retire"), -- 클라 → 서버 → 답장: 📮 사표 ("retire" = 🏝️ 조기 은퇴 / "handover" = 👑 회사 물려주고 재입사)

@@ -208,6 +208,329 @@ SalaryConfig.DELEGATE_RANK = 6
 --   · 간식을 주면 불만이 줄어요. 가만히 둬도 하루에 조금씩 줄어요
 --   (숫자는 임시 값이에요: 매일 시키기만 하면 닷새째에 일러요. 가끔 챙겨 주면 계속 시킬 수 있어요)
 SalaryConfig.JUNIOR_RANK = 6
+-- 🎧 화상회의 (새 방식): 회의 중에는 의심도가 느리게만 올라요. 대신 회의 "안에서" 살아남아야 해요
+--   · 회의 한 번 = 안건 MEETING_TOPICS개 (안건마다 돌발 상황 1번 + 지목 질문 1번). 다 넘기면 회의가 끝나고 [일하기]로 돌아가요
+--   · 하루 MEETING_DAILY번까지 (회의 한 번이 30초쯤이라 두 번이면 하루 7분 중 1분)
+--   · 회의 창에 자막이 흘러가고, 중간중간 돌발 상황이 터져요 → 제한 시간 안에 맞는 버튼 누르기
+--   · 주제마다 마지막에 지목 질문: 자막을 봤어야 맞혀요. "제가 맡겠습니다!"는 보상이 크지만 오늘 업무가 깎여요
+--   · 실패하면 집중도 한 칸. 하루 세 칸을 다 잃으면 회의에서 쫓겨나요 (의심도 크게 ↑, 그날은 회의 금지)
+--   · 초당 수입은 낮고(States.video.income), 돈은 돌발 상황을 넘길 때 벌어요
+--   (숫자는 임시 값이에요)
+SalaryConfig.MEETING_OLD = false -- true면 예전 방식(질문 팝업)으로
+-- 보상은 직급에 맞춰요: "하루 실적 목표의 몇 %"로 주고 10원 단위로 반올림 (사원 1,150 → 이사 5,150)
+--   회의 두 번을 실수 없이 마치면 어느 직급이든 하루 목표의 절반쯤 (초당 수입 포함)
+function SalaryConfig.meetingPay(rank: number, rate: number): number
+	return math.max(20, math.floor(SalaryConfig.dailyTarget(rank) * rate / 10 + 0.5) * 10)
+end
+SalaryConfig.MEETING_SUSPICION = 0.5 -- 회의 중 의심도가 차는 속도 배율 (부장님이 봐도 절반 속도)
+SalaryConfig.MEETING_TOPICS = 1 -- 회의 한 번에 다루는 안건 수 (= 선택 상황 2번: 돌발 상황 1 + 지목 질문 1, 약 30초)
+SalaryConfig.MEETING_DAILY = 2 -- 하루에 들어갈 수 있는 회의 수 (들어가는 순간 한 번으로 쳐요)
+SalaryConfig.MEETING_FINISH_RATE = 0.05 -- 쫓겨나지 않고 회의를 끝까지 마치면: 하루 실적 목표의 5%
+SalaryConfig.MEETING_LINE_SECONDS = 3.5 -- 자막 한 줄이 떠 있는 시간
+SalaryConfig.MEETING_PRESS_SECONDS = 4.5 -- 돌발 상황: 버튼 누를 시간
+SalaryConfig.MEETING_QUIZ_SECONDS = 8 -- 지목 질문: 대답할 시간
+SalaryConfig.MEETING_PRESS_RATE = 0.04 -- 돌발 상황 성공: 하루 실적 목표의 4%
+SalaryConfig.MEETING_QUIZ_RATE = 0.08 -- 지목 질문 정답 (🌍 토익이 있으면 ×1.5): 하루 실적 목표의 8%
+SalaryConfig.MEETING_BOLD_RATE = 0.2 -- "제가 맡겠습니다!": 하루 실적 목표의 20%
+SalaryConfig.MEETING_BOLD_WORK = 15 -- …대신 오늘 한 업무가 이만큼(초) 깎여요
+SalaryConfig.MEETING_PEEK_RATE = 0.05 -- 딴 창 열기 (다음 돌발 상황의 제한 시간이 절반이 돼요): 하루 실적 목표의 5%
+SalaryConfig.MEETING_DODGE_CHANCE = 0.5 -- "연결이 끊겨서요…"가 통할 확률
+SalaryConfig.MEETING_FOCUS = 2 -- 하루 집중도 칸
+SalaryConfig.MEETING_KICK_SUSPICION = 40 -- 쫓겨날 때 의심도
+-- 회의 창의 버튼들 (돌발 상황마다 이 중 하나가 정답이에요)
+SalaryConfig.MeetingButtons = {
+	{ id = "mute", emoji = "🔇", name = "음소거" },
+	{ id = "camera", emoji = "📷", name = "카메라 켜기" },
+	{ id = "hide", emoji = "🙈", name = "화면 가리기" },
+	{ id = "share", emoji = "🛑", name = "공유 중지" },
+	{ id = "nod", emoji = "🙂", name = "끄덕이기" },
+	{ id = "laugh", emoji = "😂", name = "웃기" },
+	{ id = "clap", emoji = "👏", name = "박수" },
+	{ id = "hand", emoji = "✋", name = "손 들기" },
+	{ id = "chat", emoji = "💬", name = "채팅 \"네!\"" },
+	{ id = "reconnect", emoji = "🔌", name = "재접속" },
+	{ id = "peek", emoji = "📺", name = "딴 창 열기" },
+}
+-- 돌발 상황: { 안내 문구, 눌러야 하는 버튼 }
+SalaryConfig.MeetingCases = {
+	{ "🍪 과자 씹는 소리가 회의에 나가고 있어요!", "mute" },
+	{ "😴 코 고는 소리가 들린대요!", "mute" },
+	{ "📱 폰 게임 효과음이 나가는 중!", "mute" },
+	{ "🔔 휴대폰 벨소리가 울려요!", "mute" },
+	{ "⌨️ 게임하는 키보드 소리가 요란해요!", "mute" },
+	{ "📷 \"카메라 좀 켜 주세요\"", "camera" },
+	{ "📷 \"화면에 정수리만 보여요\"", "camera" },
+	{ "🛏️ 카메라에 침대가 보여요!", "hide" },
+	{ "🐱 고양이가 카메라 앞에서 엉덩이를 보여 줘요!", "hide" },
+	{ "🍜 라면 먹는 모습이 찍히고 있어요!", "hide" },
+	{ "🖥️ 화면 공유에 쇼핑몰이 떠 있어요!", "share" },
+	{ "🖥️ 화면 공유에 웹툰이 보여요!", "share" },
+	{ "🖥️ 공유 화면에 '퇴사하는 법' 검색 기록이!", "share" },
+	{ "😤 부장님이 농담을 했어요. 아무도 안 웃어요…", "laugh" },
+	{ "😤 부장님: \"하하, 재밌죠?\"", "laugh" },
+	{ "🎤 박대리의 발표가 끝났어요.", "clap" },
+	{ "🏆 \"우수 사원을 축하합시다!\"", "clap" },
+	{ "✋ \"찬성하는 분 손 들어 주세요\"", "hand" },
+	{ "✋ \"출석 확인합니다. 손 들어 주세요\"", "hand" },
+	{ "💬 \"들리면 채팅에 '네'라고 쳐 주세요\"", "chat" },
+	{ "💬 \"{name} 씨, 자리에 있어요?\"", "chat" },
+	{ "🙂 \"다들 이해하셨죠?\"", "nod" },
+	{ "🙂 부장님의 긴 훈화가 시작됐어요. 경청하는 척!", "nod" },
+	{ "🙂 \"중요한 얘기니까 잘 들으세요\"", "nod" },
+	{ "🔌 '연결이 불안정합니다' 화면이 멈췄어요!", "reconnect" },
+	{ "🔌 내 목소리가 로봇처럼 들린대요!", "reconnect" },
+}
+-- 회의 주제: 자막 세 줄 + 지목 질문 (right = 자막에 나온 내용, wrong = 그럴듯한 오답)
+SalaryConfig.MeetingTopics = {
+	{ title = "주간 보고", lines = { { "부장", "이번 주 매출은 지난주보다 12% 올랐습니다." }, { "박대리", "신규 거래처 두 곳 덕분입니다." }, { "부장", "다음 주 목표는 15%로 잡죠." } }, question = "이번 주 매출이 얼마나 올랐죠?", right = "12% 올랐습니다", wrong = "15% 올랐습니다" },
+	{ title = "예산 조정", lines = { { "부장", "마케팅 예산을 300만원 줄입니다." }, { "이사원", "대신 교육비를 100만원 늘립니다." }, { "부장", "변경은 다음 달 1일부터입니다." } }, question = "변경은 언제부터 적용이죠?", right = "다음 달 1일부터입니다", wrong = "이번 주 금요일부터입니다" },
+	{ title = "신제품 이름", lines = { { "박대리", "후보는 '눈치봇'과 '칼퇴기'입니다." }, { "이사원", "설문에서는 '칼퇴기'가 앞섰습니다." }, { "부장", "최종 결정은 수요일에 합니다." } }, question = "설문 1위가 뭐였죠?", right = "'칼퇴기'였습니다", wrong = "'눈치봇'이었습니다" },
+	{ title = "워크숍 장소", lines = { { "이사원", "후보는 강릉과 가평입니다." }, { "박대리", "버스로 가평은 1시간, 강릉은 3시간입니다." }, { "부장", "가까운 가평으로 하죠." } }, question = "워크숍을 어디로 정했죠?", right = "가평입니다", wrong = "강릉입니다" },
+	{ title = "회식 메뉴", lines = { { "부장", "이번 회식은 목요일입니다." }, { "박대리", "삼겹살과 회 중에 투표했습니다." }, { "이사원", "7 대 5로 삼겹살입니다." } }, question = "회식이 무슨 요일이죠?", right = "목요일입니다", wrong = "금요일입니다" },
+	{ title = "복합기 고장", lines = { { "이사원", "3층 복합기가 고장 났습니다." }, { "박대리", "수리 기사는 내일 오전에 옵니다." }, { "부장", "그동안 5층 것을 쓰세요." } }, question = "그동안 어디 복합기를 쓰죠?", right = "5층 복합기입니다", wrong = "2층 복합기입니다" },
+	{ title = "신입 교육", lines = { { "부장", "신입 교육은 월요일부터 3일간입니다." }, { "이사원", "장소는 회의실 B입니다." }, { "박대리", "강사는 서차장님이 맡습니다." } }, question = "교육 장소가 어디죠?", right = "회의실 B입니다", wrong = "회의실 A입니다" },
+	{ title = "고객 불만", lines = { { "박대리", "배송 지연 불만이 이번 주 8건입니다." }, { "이사원", "원인은 택배사 파업입니다." }, { "부장", "사과 쿠폰을 보내기로 하죠." } }, question = "불만이 몇 건이었죠?", right = "8건입니다", wrong = "18건입니다" },
+	{ title = "연차 사용", lines = { { "부장", "연차는 12월 20일까지 써야 합니다." }, { "이사원", "남은 연차는 돈으로 안 줍니다." }, { "박대리", "신청은 3일 전까지입니다." } }, question = "연차를 언제까지 써야 하죠?", right = "12월 20일까지입니다", wrong = "12월 31일까지입니다" },
+	{ title = "사무실 온도", lines = { { "이사원", "여름 냉방 온도는 26도로 맞춥니다." }, { "박대리", "개인 선풍기는 허용합니다." }, { "부장", "전기 히터는 금지입니다." } }, question = "냉방 온도가 몇 도죠?", right = "26도입니다", wrong = "24도입니다" },
+	{ title = "보안 점검", lines = { { "부장", "비밀번호는 3개월마다 바꿉니다." }, { "박대리", "점검은 화요일 오후 2시입니다." }, { "이사원", "모니터에 비밀번호 메모를 붙이지 마세요." } }, question = "보안 점검이 언제죠?", right = "화요일 오후 2시입니다", wrong = "목요일 오후 2시입니다" },
+	{ title = "주차장 공사", lines = { { "이사원", "지하 주차장 공사가 2주간 있습니다." }, { "박대리", "그동안 옆 건물 주차장을 씁니다." }, { "부장", "주차권은 총무팀에서 받으세요." } }, question = "주차권은 어디서 받죠?", right = "총무팀입니다", wrong = "인사팀입니다" },
+	{ title = "탕비실 커피", lines = { { "박대리", "탕비실 커피가 캡슐로 바뀝니다." }, { "부장", "하루 1인 2개까지입니다." }, { "이사원", "컵은 각자 씻어 주세요." } }, question = "캡슐은 하루에 몇 개까지죠?", right = "2개까지입니다", wrong = "3개까지입니다" },
+	{ title = "프로젝트 일정", lines = { { "부장", "마감을 2주 미룹니다." }, { "이사원", "대신 중간 점검을 금요일에 합니다." }, { "박대리", "발표는 제가 하겠습니다." } }, question = "마감이 어떻게 됐죠?", right = "2주 미뤄졌습니다", wrong = "1주 당겨졌습니다" },
+	{ title = "야근 식대", lines = { { "이사원", "야근 식대가 8천원에서 만원으로 오릅니다." }, { "박대리", "밤 9시 이후 퇴근만 해당합니다." }, { "부장", "영수증은 꼭 내세요." } }, question = "식대가 얼마로 오르죠?", right = "만원입니다", wrong = "만 2천원입니다" },
+	{ title = "체육 대회", lines = { { "부장", "체육 대회는 다음 달 둘째 주 토요일입니다." }, { "박대리", "종목은 족구와 줄다리기입니다." }, { "이사원", "우승 팀 상금은 50만원입니다." } }, question = "종목이 뭐였죠?", right = "족구와 줄다리기입니다", wrong = "축구와 계주입니다" },
+	{ title = "명함 신청", lines = { { "이사원", "명함 디자인이 바뀝니다." }, { "박대리", "신청은 이번 주 수요일까지입니다." }, { "부장", "한 사람당 200장입니다." } }, question = "명함 신청 마감이 언제죠?", right = "수요일까지입니다", wrong = "금요일까지입니다" },
+	{ title = "재택근무", lines = { { "부장", "재택근무는 주 1회 가능합니다." }, { "이사원", "요일은 팀장과 정하세요." }, { "박대리", "단, 화요일은 전원 출근입니다." } }, question = "전원 출근하는 요일이 언제죠?", right = "화요일입니다", wrong = "월요일입니다" },
+	{ title = "거래처 방문", lines = { { "박대리", "내일 거래처 사장님이 오십니다." }, { "이사원", "도착은 오전 11시입니다." }, { "부장", "회의실 A를 비워 두세요." } }, question = "거래처 사장님이 몇 시에 오시죠?", right = "오전 11시입니다", wrong = "오후 1시입니다" },
+	{ title = "만족도 설문", lines = { { "이사원", "만족도 설문 응답률이 40%입니다." }, { "부장", "목표는 80%입니다." }, { "박대리", "이번 주 금요일까지 꼭 해 주세요." } }, question = "지금 응답률이 얼마죠?", right = "40%입니다", wrong = "80%입니다" },
+	{ title = "엘리베이터 점검", lines = { { "박대리", "2호기 엘리베이터 점검이 있습니다." }, { "이사원", "점검은 오후 3시부터 1시간입니다." }, { "부장", "그동안 1호기만 운행합니다." } }, question = "점검이 몇 시부터죠?", right = "오후 3시부터입니다", wrong = "오후 1시부터입니다" },
+	{ title = "우수 사원", lines = { { "부장", "이번 달 우수 사원은 박대리입니다." }, { "이사원", "상품은 상품권 10만원입니다." }, { "박대리", "시상은 월요일 조회 때 한답니다." } }, question = "이번 달 우수 사원이 누구죠?", right = "박대리님입니다", wrong = "이사원님입니다" },
+}
+
+-- 📺 웹툰: [웹툰 정주행] 농땡이를 켜면 폰 화면에 네컷 만화가 떠요 (그림은 이모지·말풍선으로 코드가 그려요)
+--   · 한 화 = 네 컷. 컷마다 WEBTOON_PANEL_SECONDS초는 봐야 다음 컷으로 넘어가요
+--   · 끝까지 보면 완독 보너스 (처음 보는 화만, 하루 WEBTOON_DAILY_NEW화까지: 다음 화는 내일)
+--   · 중간에 일하기로 돌아가면 그 화는 처음부터 다시 봐요
+--   · 초당 수입과 의심도는 원래 [웹툰 정주행] 규칙 그대로예요
+--   (보너스 금액은 임시 값이에요)
+SalaryConfig.WEBTOON_PANEL_SECONDS = 2.5
+SalaryConfig.WEBTOON_BONUS = 150
+SalaryConfig.WEBTOON_DAILY_NEW = 2
+-- 컷: scene(배경) · left/right(등장인물 이모지) · prop(가운데 소품) · sayLeft/sayRight(말풍선) · caption(아래 해설) · sfx(효과음 글씨)
+SalaryConfig.Webtoons = {
+	{
+		id = "boss",
+		emoji = "👔",
+		title = "오늘도 김부장",
+		blurb = "부장님 눈에는 사무실이 이렇게 보인다",
+		episodes = {
+			{
+				title = "순찰",
+				panels = {
+					{ scene = "office", left = "😤", sayLeft = "다들 일하고 있겠지?", caption = "오전 10시. 순찰 시간." },
+					{ scene = "office", left = "🧐", right = "🤓", sayRight = "(타닥타닥타닥)", caption = "모두 모니터만 보고 있다." },
+					{ scene = "office", left = "🥹", sayLeft = "역시 우리 팀… 감동이야.", caption = "부장은 흐뭇하게 돌아섰다." },
+					{ scene = "office", right = "😴", prop = "📱", sfx = "스르륵", caption = "돌아서자마자." },
+				},
+			},
+			{
+				title = "커피",
+				panels = {
+					{ scene = "office", left = "😊", right = "🙂", prop = "☕", sayRight = "부장님, 커피 드세요!" },
+					{ scene = "office", left = "😎", right = "🙂", sayLeft = "자네, 승진 생각 있나?", caption = "기특한 부하 직원." },
+					{ scene = "office", left = "🥱", sayLeft = "왜 이렇게… 졸리지…", caption = "10분 뒤." },
+					{ scene = "office", left = "😴", right = "😏", sfx = "쿨쿨", caption = "약국에서 산 그 커피였다." },
+				},
+			},
+			{
+				title = "발소리",
+				panels = {
+					{ scene = "hall", left = "🤫", sayLeft = "살금살금 가야 딴짓을 잡지.", caption = "부장의 비밀 작전." },
+					{ scene = "hall", left = "🚶", prop = "👞", sfx = "저벅저벅", caption = "문제는 구두였다." },
+					{ scene = "office", right = "🎧", sayRight = "부장님 3미터 접근 중.", caption = "이어폰 너머로 다 들린다." },
+					{ scene = "hall", left = "😑", sayLeft = "…운동화를 살까.", caption = "오늘도 한 명도 못 잡았다." },
+				},
+			},
+			{
+				title = "회식",
+				panels = {
+					{ scene = "office", left = "🥳", sayLeft = "오늘 회식이다!", caption = "부장은 신이 났다." },
+					{ scene = "office", right = "😱", sayRight = "…네. (약속 있는데)", caption = "직원들은 아니었다." },
+					{ scene = "night", left = "🎤", right = "😵", sayLeft = "한 곡만 더!", sfx = "🎵", caption = "3차 노래방." },
+					{ scene = "office", left = "🤕", right = "😆", sayLeft = "오늘은 순찰… 쉴게…", caption = "다음 날. 사무실에 평화가 왔다." },
+				},
+			},
+			{
+				title = "인사평가",
+				panels = {
+					{ scene = "office", left = "🤓", prop = "📋", sayLeft = "누가 제일 열심히 했나 볼까.", caption = "금요일. 평가의 시간." },
+					{ scene = "screen", prop = "🪑", sfx = "?!", caption = "기록: 의자 젖히기 3시간 12분." },
+					{ scene = "office", left = "🤔", sayLeft = "…의자 테스트도 업무인가?", caption = "부장은 깊이 고민했다." },
+					{ scene = "office", left = "😐", right = "😌", sayRight = "네. 의자 품질 검수 중입니다.", caption = "그날 이후로 아무도 말리지 못했다." },
+				},
+			},
+		},
+	},
+	{
+		id = "cat",
+		emoji = "🐱",
+		title = "월급냥 일기",
+		blurb = "이 회사의 진짜 실세는 고양이다",
+		episodes = {
+			{
+				title = "출근",
+				panels = {
+					{ scene = "office", left = "🐱", sayLeft = "나는 월급냥. 이 회사의 실세다.", caption = "오전 9시 10분." },
+					{ scene = "office", left = "🐱", right = "😤", sayRight = "고양이가 왜 사무실에…", caption = "부장이 다가온다." },
+					{ scene = "office", left = "🐱", right = "😍", sayRight = "…귀, 귀엽네.", sfx = "야옹", caption = "필살기 발동." },
+					{ scene = "office", left = "😼", right = "😴", prop = "📱", sayLeft = "오늘도 한 건 했다.", caption = "부장이 넋을 놓은 사이, 직원들은 평화로웠다." },
+				},
+			},
+			{
+				title = "간식",
+				panels = {
+					{ scene = "office", left = "🐱", sayLeft = "배가 고프다.", caption = "점심시간." },
+					{ scene = "office", right = "🙂", prop = "🍪", sayRight = "이건 내 간식인데…", caption = "목표 발견." },
+					{ scene = "office", left = "🥺", sayLeft = "(빤히)", sfx = "초롱초롱", caption = "3초. 5초. 10초." },
+					{ scene = "office", left = "😸", right = "😭", prop = "🍪", caption = "이 사무실에서 간식을 지킨 사람은 아직 없다." },
+				},
+			},
+			{
+				title = "키보드",
+				panels = {
+					{ scene = "office", right = "🤓", sayRight = "보고서 마감 10분 전!", caption = "긴박한 오후." },
+					{ scene = "office", left = "🐱", prop = "⌨️", sfx = "털썩", caption = "따뜻한 자리를 찾았다." },
+					{ scene = "screen", prop = "📄", sfx = "?!", caption = "보고서 3쪽: ㅁㄴㅇㄹㄹㄹㄹㄹㄹㄹㄹ" },
+					{ scene = "office", left = "😐", right = "😓", sayLeft = "오타가 좀 많군.", sayRight = "고양이가 썼습니다…", caption = "부장은 믿지 않았다." },
+				},
+			},
+			{
+				title = "쓰다듬기",
+				panels = {
+					{ scene = "office", left = "🐱", sayLeft = "오늘은 몇 명이 쓰다듬나 세어 보자.", caption = "인기 조사." },
+					{ scene = "office", left = "😽", right = "🤗", sfx = "쓰담쓰담", caption = "한 명. 두 명. 열 명." },
+					{ scene = "office", left = "🙀", sayLeft = "털이… 털이 빠진다!", caption = "스무 명째." },
+					{ scene = "office", left = "😾", sayLeft = "인기도 일이다.", caption = "다음 날, 월급냥은 책상 밑에서 나오지 않았다." },
+				},
+			},
+			{
+				title = "퇴근",
+				panels = {
+					{ scene = "office", right = "🙂", sayRight = "월급냥은 퇴근 안 해?", caption = "오후 6시." },
+					{ scene = "office", left = "🐱", sayLeft = "나는 여기 산다.", caption = "당연한 걸 묻는다." },
+					{ scene = "night", left = "🐱", prop = "🖥️", sfx = "딸깍", caption = "밤. 아무도 없는 사무실." },
+					{ scene = "screen", prop = "🐟", sfx = "결제 완료", caption = "검색 기록: 참치 캔 대량 구매 (법인 카드)." },
+				},
+			},
+		},
+	},
+	{
+		id = "newbie",
+		emoji = "🐥",
+		title = "신입 생존기",
+		blurb = "열심히 하는 '척'을 배워 가는 신입의 기록",
+		episodes = {
+			{
+				title = "첫 출근",
+				panels = {
+					{ scene = "office", left = "🐥", sayLeft = "열심히 하겠습니다!", caption = "입사 첫날." },
+					{ scene = "office", left = "🐥", right = "😏", sayRight = "여기선 열심히 하는 '척'이 중요해.", caption = "옆자리 선배." },
+					{ scene = "office", left = "😳", sayLeft = "…척이요?", caption = "신입은 혼란에 빠졌다." },
+					{ scene = "office", left = "🐥", right = "😴", prop = "📱", sfx = "쿨", caption = "선배는 벌써 꿈나라였다." },
+				},
+			},
+			{
+				title = "모니터 가리개",
+				panels = {
+					{ scene = "office", left = "🤔", prop = "🖥️", sayLeft = "이게 왜 매점 인기 1위지?", caption = "모니터 가리개." },
+					{ scene = "office", left = "🐥", right = "😎", sayRight = "부장님 시야각을 계산해 봐.", caption = "선배의 가르침." },
+					{ scene = "screen", prop = "📐", sfx = "철컥", caption = "각도 37도. 사각지대 완성." },
+					{ scene = "office", left = "😈", sayLeft = "…과학이네요.", caption = "신입은 한 단계 성장했다." },
+				},
+			},
+			{
+				title = "아슬아슬",
+				panels = {
+					{ scene = "office", left = "😆", prop = "📱", caption = "게임에 정신이 팔린 신입." },
+					{ scene = "hall", left = "🚶", sfx = "저벅저벅", caption = "가까워지는 발소리." },
+					{ scene = "office", left = "😱", sayLeft = "지금?!", sfx = "휙", caption = "손이 눈보다 빨랐다." },
+					{ scene = "office", left = "🤓", right = "🧐", sayRight = "음, 열심히 하는군.", caption = "0.3초 차이. 심장은 아직도 뛴다." },
+				},
+			},
+			{
+				title = "점심",
+				panels = {
+					{ scene = "office", left = "😋", sayLeft = "푸드트럭 닭강정이다!", caption = "12시 정각." },
+					{ scene = "hall", prop = "🚚", sfx = "…", caption = "줄이 공원 끝까지 서 있다." },
+					{ scene = "hall", left = "😰", prop = "⏰", sayLeft = "12시 55분?!", caption = "드디어 받았는데." },
+					{ scene = "office", left = "🏃", right = "😠", sayRight = "점심 지각이군.", caption = "닭강정은 맛있었다. 그걸로 됐다." },
+				},
+			},
+			{
+				title = "첫 월급",
+				panels = {
+					{ scene = "office", left = "🤩", prop = "🧾", sayLeft = "드디어 첫 월급!", caption = "기다리던 날." },
+					{ scene = "screen", prop = "🧾", sfx = "어?", caption = "시말서 감봉 -1,000 · 업무 미달 감봉 -2,000" },
+					{ scene = "office", left = "😇", sayLeft = "…내일부터는 일도 좀 하자.", caption = "신입은 다짐했다." },
+					{ scene = "office", left = "😴", prop = "📱", sfx = "쿨쿨", caption = "다음 날." },
+				},
+			},
+		},
+	},
+	{
+		id = "lee",
+		emoji = "👀",
+		title = "이과장은 보고 있다",
+		blurb = "취미는 관찰, 특기는 고자질",
+		episodes = {
+			{
+				title = "관찰",
+				panels = {
+					{ scene = "office", left = "🧐", sayLeft = "오늘은 누가 딴짓을 하나.", caption = "이과장. 취미는 관찰." },
+					{ scene = "office", right = "😴", sfx = "👀", caption = "3번 자리. 졸고 있다." },
+					{ scene = "office", left = "😏", prop = "📝", sayLeft = "기록, 기록.", caption = "수첩이 빼곡하다." },
+					{ scene = "screen", prop = "📒", sfx = "성실", caption = "수첩에는 이과장 본인의 낮잠 시간도 적혀 있었다." },
+				},
+			},
+			{
+				title = "고자질",
+				panels = {
+					{ scene = "office", left = "😤", sayLeft = "부장님! 드릴 말씀이!", caption = "결정적 순간을 봤다." },
+					{ scene = "office", left = "🤫", right = "😠", sayLeft = "저 친구가 폰을…", sayRight = "뭔가?" },
+					{ scene = "office", right = "🤓", sfx = "타닥타닥", caption = "돌아보니 열심히 일하고 있다." },
+					{ scene = "office", left = "😨", right = "😡", sayRight = "허위 보고는 곤란하네.", caption = "오늘의 교훈: 타이밍." },
+				},
+			},
+			{
+				title = "케이크",
+				panels = {
+					{ scene = "hall", left = "🚶", sfx = "성큼성큼", caption = "고자질하러 가는 이과장." },
+					{ scene = "hall", left = "😮", right = "🙂", prop = "🍰", sayRight = "이과장님, 케이크 드실래요?" },
+					{ scene = "hall", left = "🤤", sayLeft = "…무슨 얘기 하려고 했더라.", caption = "발걸음이 멈췄다." },
+					{ scene = "hall", left = "😋", right = "😌", caption = "케이크는 평화를 지킨다." },
+				},
+			},
+			{
+				title = "휴가",
+				panels = {
+					{ scene = "office", right = "🥳", sayRight = "이과장님 오늘 휴가래!", caption = "수요일 아침." },
+					{ scene = "office", right = "😴", prop = "📱", sfx = "자유", caption = "사무실은 축제 분위기." },
+					{ scene = "night", left = "😎", prop = "🔭", sayLeft = "휴가 중에도 감은 잃지 않지.", caption = "한편, 바닷가의 이과장." },
+					{ scene = "screen", prop = "📒", sfx = "직업병", caption = "수첩: '아무도 안 보임. 불안함.'" },
+				},
+			},
+			{
+				title = "점심 친구",
+				panels = {
+					{ scene = "office", left = "😔", sayLeft = "왜 아무도 나랑 점심을 안 먹지.", caption = "12시. 혼자 남은 이과장." },
+					{ scene = "office", left = "😔", right = "🐥", sayRight = "이과장님, 같이 가실래요?", caption = "눈치 없는 신입." },
+					{ scene = "office", left = "🥹", sayLeft = "자네… 좋은 사람이군.", caption = "이과장은 감동했다." },
+					{ scene = "office", left = "😊", right = "😅", prop = "📒", sfx = "특별 대우", caption = "그날 수첩에는 신입 이름만 빠져 있었다." },
+				},
+			},
+		},
+	},
+}
+
 -- 🖋️ 결재 서류 (이사부터): 매일 결재함에 서류가 올라와요. 메뉴의 🖋️ 버튼 (자리에 앉아 있을 때)
 --   · 🔍 읽어 보기: 몇 초 걸리지만 내용을 보고 ✅ 승인 / ❌ 반려를 고를 수 있어요
 --   · 🖋️ 그냥 도장: 안 읽고 바로 승인. 빠르지만 함정 서류면 회사에 손해를 끼쳐요
@@ -762,12 +1085,12 @@ SalaryConfig.States = {
 	video = {
 		emoji = "🎧",
 		name = "화상회의 하는 척",
-		income = 10,
+		income = 5, -- (10 → 5: 의심도가 느리게 오르는 대신, 돈은 회의 속 돌발 상황에서 벌어요)
 		detect = 15,
 		returnTime = 0.5,
 		unlockRank = 2,
 		payLabel = "회의 참석(?) 수당",
-		hint = "사원부터. 회의 중인 척이라 잘 안 들켜요. 대신 가끔 질문이 오면 6초 안에 대답!",
+		hint = "의심도가 느리게 올라요. 대신 회의 속 돌발 상황을 넘겨야 해요! (하루 2번)",
 	},
 	recline = {
 		emoji = "🛌",

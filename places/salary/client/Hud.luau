@@ -664,7 +664,14 @@ Hud.toolbar = Ui.make("Frame", {
 	BackgroundTransparency = 1,
 	Parent = gui,
 }, {
-	Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6) }),
+	-- 버튼을 바둑판으로: 한 줄에 네 개씩 아래로 줄을 바꿔요 (예전엔 가로 한 줄이라 메뉴를 펼치면 화면을 가로질렀어요)
+	Ui.make("UIGridLayout", {
+		CellSize = UDim2.fromOffset(58, 30),
+		CellPadding = UDim2.fromOffset(6, 6),
+		FillDirection = Enum.FillDirection.Horizontal,
+		FillDirectionMaxCells = 4,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}),
 })
 
 -- 💾 저장이 꺼져 있을 때만 왼쪽 아래 작은 아이콘 (마우스를 올리거나 누르면 설명)
@@ -855,7 +862,12 @@ for i, phoneGame in SalaryConfig.PhoneGames do
 end
 
 Hud.onShoppingAgain = nil :: (() -> ())? -- 🛒 쇼핑 중에 [쇼핑]을 또 누르면 쇼핑몰 다시 열기 (Panels가 채워요)
+Hud.onWebtoonAgain = nil :: (() -> ())? -- 📺 웹툰 보는 중에 [웹툰]을 또 누르면 웹툰 창 다시 열기 (Webtoon이 채워요)
 local function chooseAction(actionId: string)
+	if actionId == "webtoon" and player:GetAttribute("SalaryState") == "webtoon" and Hud.onWebtoonAgain then
+		Hud.onWebtoonAgain()
+		return
+	end
 	if actionId == "shopping" and player:GetAttribute("SalaryState") == "shopping" and Hud.onShoppingAgain then
 		Hud.onShoppingAgain()
 		return
@@ -1150,12 +1162,10 @@ local function applyLayout()
 		Hud.toolbar.Position = UDim2.new(0, 12, 0, 8 + STATUS_HEIGHT + 8)
 	end
 	scales[Hud.toolbar].Scale = if compact then 0.85 else 1
-	local toolbarLayout = Hud.toolbar:FindFirstChildOfClass("UIListLayout")
+	local toolbarLayout = Hud.toolbar:FindFirstChildOfClass("UIGridLayout")
 	Hud.toolbar.Size = UDim2.fromOffset(250, 40)
 	if toolbarLayout then
-		pcall(function()
-			(toolbarLayout :: any).Wraps = phoneMode -- 📱 메뉴를 펼치면 화면 폭에 맞춰 여러 줄로
-		end)
+		toolbarLayout.FillDirectionMaxCells = 4 -- (PC: 상태 창 폭에 맞춰 네 개씩)
 	end
 	if phoneMode then
 		-- 📱 자세히 보기: 띠 아래에 창 세 개를 펼쳐요 (가로 = 왼쪽·가운데·오른쪽 / 세로 = 왼쪽·오른쪽 위아래)
@@ -1170,7 +1180,11 @@ local function applyLayout()
 		missionPanel.Position = UDim2.new(1, -48, 0, y + 2 + (if phone.detail then math.floor(moneyPanel.AbsoluteSize.Y) + 6 else 0))
 		-- 메뉴 버튼은 띠 아래 왼쪽
 		Hud.toolbar.Position = UDim2.new(0, 6, 0, y + 2 + (if phone.detail then math.floor(STATUS_HEIGHT * small) + 4 else 0))
-		Hud.toolbar.Size = UDim2.fromOffset(math.floor((guiSize.X - 60) / 0.85), 40)
+		local toolbarWidth = math.floor((guiSize.X - 60) / 0.85)
+		Hud.toolbar.Size = UDim2.fromOffset(toolbarWidth, 40)
+		if toolbarLayout then
+			toolbarLayout.FillDirectionMaxCells = math.max(4, math.floor((toolbarWidth + 6) / 64)) -- 📱 화면 폭만큼
+		end
 	end
 
 	-- 행동 버튼

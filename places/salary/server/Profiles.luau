@@ -65,6 +65,7 @@ export type Profile = {
 	stats: { days: number, nearMiss: number, caught: number, fired: number, stockProfit: number },
 	endings: { [string]: number }, -- 👑 본 엔딩 (엔딩 ID → 그때의 근무일 수)
 	rebirths: number, -- 🔁 재입사한 횟수 (회차마다 농땡이 수입 보너스)
+	webtoons: { [string]: number }, -- 📺 작품별로 몇 화까지 봤나
 	junior: string, -- 🐣 내 후배 (동료 이름, 차장부터. 그 동료가 이 사무실에 없으면 새로 배정돼요)
 	juniorGrudge: number, -- 🐣 후배의 불만 (0~100)
 	juniorCompany: string, -- 🐣 위 후배가 어느 회사 사람인가
@@ -126,6 +127,7 @@ function Profiles.default(): Profile
 		stats = { days = 0, nearMiss = 0, caught = 0, fired = 0, stockProfit = 0 },
 		endings = {},
 		rebirths = 0,
+		webtoons = {},
 		junior = "",
 		juniorGrudge = 0,
 		juniorCompany = "",

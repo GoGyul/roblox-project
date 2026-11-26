@@ -60,6 +60,10 @@ type DayRecord = {
 	chatTopics: number, -- 오늘 끝까지 나눈 수다 주제 수
 	snackBonus: number, -- 간식 완식 보너스 합계
 	patrolBonus: number, -- 🔦 순찰 실적 합계
+	meetingBonus: number, -- 🎧 화상회의 활약 수당 합계
+	meetingCount: number,
+	webtoonBonus: number, -- 📺 웹툰 완독 보너스 합계
+	webtoonCount: number,
 	approvalBonus: number, -- 🖋️ 결재 실적 합계 (함정 서류를 승인하면 마이너스)
 	approvalCount: number,
 	patrolCatches: number,
@@ -157,7 +161,7 @@ type EmployeeData = {
 }
 
 local function newDay(): DayRecord
-	return { earned = {}, seconds = {}, nearMiss = 0, nearMissCount = 0, photos = 0, emptyPhotos = 0, accuseWrong = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, patrolBonus = 0, patrolCatches = 0, approvalBonus = 0, approvalCount = 0, eventBonus = 0, snacksEaten = 0, stockProfit = 0, settled = false }
+	return { earned = {}, seconds = {}, nearMiss = 0, nearMissCount = 0, photos = 0, emptyPhotos = 0, accuseWrong = 0, caught = 0, chatBonus = 0, chatTopics = 0, snackBonus = 0, patrolBonus = 0, patrolCatches = 0, approvalBonus = 0, approvalCount = 0, webtoonBonus = 0, webtoonCount = 0, meetingBonus = 0, meetingCount = 0, eventBonus = 0, snacksEaten = 0, stockProfit = 0, settled = false }
 end
 
 local function inZone(zone: BasePart, position: Vector3): boolean
@@ -321,7 +325,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			total += amount
 		end
 		local auditReport = if auditReported(d) then SalaryConfig.caughtPenalty(d.profile.rank) else 0
-		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus + (d.today.patrolBonus or 0) + (d.today.approvalBonus or 0) + d.today.eventBonus - d.today.caught * SalaryConfig.caughtPenalty(d.profile.rank) - auditReport
+		return total + d.today.nearMiss + d.today.chatBonus + d.today.snackBonus + (d.today.patrolBonus or 0) + (d.today.approvalBonus or 0) + (d.today.webtoonBonus or 0) + (d.today.meetingBonus or 0) + d.today.eventBonus - d.today.caught * SalaryConfig.caughtPenalty(d.profile.rank) - auditReport
 	end
 
 	local function getHumanoid(player: Player): Humanoid?
@@ -1167,6 +1171,17 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if actionId == "snack" and not d.heldSnack then
 			remotes.Notify:FireClient(player, "🍪 탕비실 간식 테이블에서 간식을 먼저 가져오세요!")
 			return
+		end
+		if actionId == "video" and daily(d).meetingBanned then
+			remotes.Notify:FireClient(player, "🎧 오늘은 회의에서 쫓겨났어요. 내일 다시 들어갈 수 있어요.")
+			return
+		end
+		if actionId == "video" and not SalaryConfig.MEETING_OLD and d.deskAction ~= "video" then
+			local used = daily(d).meetings
+			if typeof(used) == "number" and used >= SalaryConfig.MEETING_DAILY then
+				remotes.Notify:FireClient(player, `🎧 오늘 회의는 다 들어갔어요. (하루 {SalaryConfig.MEETING_DAILY}번)`)
+				return
+			end
 		end
 		if actionId == d.deskAction and not d.returnUntil then
 			return
@@ -2222,7 +2237,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			if d.state == "phone" then
 				noise *= SalaryConfig.PHONE_GAME_WATCH -- 📱 폰 게임 중엔 부장님이 잘 안 와요
 			end
-			if d.slackSince and now - d.slackSince >= SalaryConfig.SLACK_FORCE_VISIT then
+			if d.slackSince and now - d.slackSince >= SalaryConfig.SLACK_FORCE_VISIT and (d.state ~= "video" or SalaryConfig.MEETING_OLD) then
 				noise = 1 -- 🤨 너무 오래 안 보였어요: 이번엔 반드시 확인하러 와요
 			end
 			if noise > chance then
@@ -2453,7 +2468,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end
 
 		-- 1.5 🎧 화상회의 하는 척: 가끔 질문이 와요
-		if d.state == "video" and dayCycle.phase == "work" and not daily(d).halfday then
+		if SalaryConfig.MEETING_OLD and d.state == "video" and dayCycle.phase == "work" and not daily(d).halfday then
 			if not d.videoQ and now >= d.videoNext then
 				if d.videoNext == 0 then
 					d.videoNext = now + math.random(SalaryConfig.VIDEO_GAP[1], SalaryConfig.VIDEO_GAP[2]) -- 막 시작했으면 조금 있다가
@@ -2742,6 +2757,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			if d.state == "phone" then
 				rate *= SalaryConfig.PHONE_GAME_SUSPICION -- 📱 폰 게임은 느긋하게 (10배 느리게)
 			end
+			if d.state == "video" and not SalaryConfig.MEETING_OLD then
+				rate *= SalaryConfig.MEETING_SUSPICION -- 🎧 회의 중: 회의하는 모습이라 의심도가 느리게 차요
+			end
 			if onHalfDay or commuting then
 				rate = 0 -- 🏖️ 반차 중엔 아무도 뭐라 안 해요 (🚏 출근길도요)
 			end
@@ -2919,7 +2937,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				d.leeWatch = 0
 			end
 			-- 🤨 쉬지 않고 오래 농땡이: 안 보여도 "요즘 저 친구 뭐 하지?" 의심도가 슬금슬금
-			if d.slackSince and not onHalfDay and not blackout and now - d.slackSince >= SalaryConfig.SLACK_HUNCH_AFTER + fitnessEffect(d, "hunch") + (if d.state == "street" then SalaryConfig.STREET_HUNCH_EXTRA else 0) then -- 🔋 지구력: 눈치가 늦게 (최대 +30초)
+			if d.slackSince and (d.state ~= "video" or SalaryConfig.MEETING_OLD) and not onHalfDay and not blackout and now - d.slackSince >= SalaryConfig.SLACK_HUNCH_AFTER + fitnessEffect(d, "hunch") + (if d.state == "street" then SalaryConfig.STREET_HUNCH_EXTRA else 0) then -- 🔋 지구력: 눈치가 늦게 (최대 +30초)
 				local hunch = SalaryConfig.SLACK_HUNCH_RATE * d.speed * SalaryConfig.SUSPICION_SPEED * 3
 					* (if d.state == "phone" then SalaryConfig.PHONE_GAME_SUSPICION else 1)
 				d.suspicion += hunch * dt
@@ -3156,6 +3174,284 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			d.profile.bag.coffee = (d.profile.bag.coffee or 0) + 1
 			publishBag(player, d)
 			remotes.Notify:FireClient(player, "🥤 포장 커피를 꺼냈어요! 동료에게 [E] 말 걸기 → 간식 주기로 줄 수 있어요. (🎒 가방)")
+		end)
+	end
+
+	---------------------------------------------------------------- 🎧 화상회의 (새 방식): 자막 → 돌발 상황 → 자막 → 지목 질문
+	if not SalaryConfig.MEETING_OLD then
+		local sessions: { [Player]: any } = {}
+		local topicDeck = Deck.new(function()
+			return #SalaryConfig.MeetingTopics
+		end)
+		local caseDeck = Deck.new(function()
+			return #SalaryConfig.MeetingCases
+		end)
+		local nextId = 0
+		local function send(player: Player, message: { [string]: any })
+			remotes.Meeting:FireClient(player, message)
+		end
+		local function focusLeft(d: EmployeeData): number
+			local used = daily(d).meetingMiss
+			return math.max(0, SalaryConfig.MEETING_FOCUS - (if typeof(used) == "number" then used else 0))
+		end
+		local function reward(player: Player, d: EmployeeData, amount: number)
+			if amount > 0 then
+				d.today.meetingBonus = (d.today.meetingBonus or 0) + amount
+				d.today.meetingCount = (d.today.meetingCount or 0) + 1
+				publish(player, d)
+			end
+		end
+		local function succeed(player: Player, d: EmployeeData, s: any, text: string, amount: number)
+			s.event = nil
+			s.streak += 1
+			s.nextAt = os.clock() + 2
+			reward(player, d, amount)
+			if s.streak >= 5 then
+				unlockAchievement(player, d, "video_pro")
+				publishCollection(player, d)
+			end
+			send(player, { type = "result", ok = true, text = text, amount = amount, focus = focusLeft(d) })
+		end
+		local function fail(player: Player, d: EmployeeData, s: any, text: string)
+			s.event = nil
+			s.streak = 0
+			s.nextAt = os.clock() + 2
+			local today = daily(d)
+			today.meetingMiss = (if typeof(today.meetingMiss) == "number" then today.meetingMiss else 0) + 1
+			if focusLeft(d) > 0 then
+				send(player, { type = "result", ok = false, text = text, amount = 0, focus = focusLeft(d) })
+				return
+			end
+			-- 집중도를 다 잃었어요: 회의에서 쫓겨나고, 부장님이 찾아와요. 오늘은 회의 금지
+			today.meetingBanned = true
+			sessions[player] = nil
+			d.suspicion = math.min(95, d.suspicion + SalaryConfig.MEETING_KICK_SUSPICION)
+			adjustSpeed(player, d, "videoFail")
+			d.returnUntil = nil
+			d.deskAction = "work"
+			boss:callTo(d.desk.behind)
+			publish(player, d)
+			send(player, { type = "kicked", text = `{text}\n😤 "{player.DisplayName} 씨, 회의 듣고 있습니까?" (의심도 +{SalaryConfig.MEETING_KICK_SUSPICION} · 오늘은 회의 금지)` })
+		end
+		-- 다음 장면으로: ① 자막 ② 자막 ③ 돌발 상황 ④ 자막 ⑤ 지목 질문 → 다음 주제
+		local function advance(player: Player, d: EmployeeData, s: any)
+			local now = os.clock()
+			s.step += 1
+			if s.step > 5 or not s.topic then
+				if s.topic then
+					s.topicsDone += 1
+				end
+				if s.topicsDone >= SalaryConfig.MEETING_TOPICS then
+					-- 🎉 회의 끝: 끝까지 버틴 보너스를 주고 [일하기]로 돌려보내요
+					sessions[player] = nil
+					local finishPay = SalaryConfig.meetingPay(d.profile.rank, SalaryConfig.MEETING_FINISH_RATE)
+					reward(player, d, finishPay)
+					d.returnUntil = nil
+					d.deskAction = "work"
+					publish(player, d)
+					local left = SalaryConfig.MEETING_DAILY - (if typeof(daily(d).meetings) == "number" then daily(d).meetings else 0)
+					send(player, { type = "finished", text = `🎧 회의 끝! 수고하셨습니다. +{finishPay}원 (오늘 남은 회의 {math.max(0, left)}번)` })
+					return
+				end
+				s.step = 1
+				s.topic = SalaryConfig.MeetingTopics[topicDeck()]
+				send(player, { type = "topic", title = s.topic.title, focus = focusLeft(d), index = s.topicsDone + 1, total = SalaryConfig.MEETING_TOPICS })
+			end
+			local topic = s.topic
+			local rush = if s.rushed then 0.5 else 1
+			if s.step == 1 or s.step == 2 or s.step == 4 then
+				local line = topic.lines[if s.step == 4 then 3 else s.step]
+				send(player, { type = "line", who = line[1], text = line[2] })
+				s.nextAt = now + SalaryConfig.MEETING_LINE_SECONDS
+			elseif s.step == 3 then
+				nextId += 1
+				if math.random() < 0.2 then
+					-- 📺 딴 창 기회 (안 눌러도 돼요)
+					s.event = { id = nextId, kind = "peek", deadline = now + 5 }
+					send(player, { type = "event", id = nextId, kind = "peek", text = "📺 이사원이 길게 발표하는 중… 딴 창을 열 기회! (안 눌러도 돼요)", seconds = 5 })
+				else
+					s.rushed = false
+					local case = SalaryConfig.MeetingCases[caseDeck()]
+					local seconds = SalaryConfig.MEETING_PRESS_SECONDS * rush
+					s.event = { id = nextId, kind = "press", button = case[2], deadline = now + seconds }
+					send(player, { type = "event", id = nextId, kind = "press", text = (string.gsub(case[1], "{name}", player.DisplayName)), seconds = seconds })
+				end
+			else
+				nextId += 1
+				s.rushed = false
+				local seconds = SalaryConfig.MEETING_QUIZ_SECONDS * rush
+				local options = {
+					{ key = "right", text = topic.right },
+					{ key = "wrong", text = topic.wrong },
+					{ key = "dodge", text = "죄송합니다, 연결이 끊겨서 못 들었어요…" },
+					{ key = "bold", text = "그 건은 제가 맡겠습니다!" },
+				}
+				for i = #options, 2, -1 do
+					local j = math.random(1, i)
+					options[i], options[j] = options[j], options[i]
+				end
+				local keys, texts = {}, {}
+				for i, option in options do
+					keys[i] = option.key
+					texts[i] = option.text
+				end
+				s.event = { id = nextId, kind = "quiz", keys = keys, deadline = now + seconds }
+				send(player, { type = "event", id = nextId, kind = "quiz", text = `😤 "{player.DisplayName} 씨, {topic.question}"`, options = texts, seconds = seconds })
+			end
+		end
+		remotes.MeetingAct.OnServerEvent:Connect(function(player: Player, id: any, value: any)
+			local d = data[player]
+			local s = sessions[player]
+			local event = s and s.event
+			if not d or not s or not event or event.id ~= id or os.clock() > event.deadline then
+				return
+			end
+			if event.kind == "peek" then
+				if value == "peek" then
+					s.event = nil
+					s.rushed = true
+					s.nextAt = os.clock() + 2
+					local peekPay = SalaryConfig.meetingPay(d.profile.rank, SalaryConfig.MEETING_PEEK_RATE)
+					reward(player, d, peekPay)
+					send(player, { type = "result", ok = true, text = "📺 몰래 딴 창을 봤어요! 대신 다음 돌발 상황은 시간이 절반이에요.", amount = peekPay, focus = focusLeft(d) })
+				end
+			elseif event.kind == "press" then
+				if value == event.button then
+					succeed(player, d, s, "✅ 잘 넘겼어요!", SalaryConfig.meetingPay(d.profile.rank, SalaryConfig.MEETING_PRESS_RATE))
+				elseif typeof(value) == "string" then
+					fail(player, d, s, "😬 엉뚱한 버튼을 눌렀어요!")
+				end
+			elseif event.kind == "quiz" then
+				local key = if typeof(value) == "number" then event.keys[value] else nil
+				if key == "right" then
+					local toeic = hasCert(d, "toeic")
+					succeed(player, d, s, if toeic then "🎧 유창한 영어로 정확한 대답!" else "🎧 정확한 대답!", SalaryConfig.meetingPay(d.profile.rank, SalaryConfig.MEETING_QUIZ_RATE * (if toeic then 1.5 else 1)))
+				elseif key == "bold" then
+					d.workSeconds = math.max(0, d.workSeconds - SalaryConfig.MEETING_BOLD_WORK)
+					succeed(player, d, s, `🙋 일을 떠맡았어요! (오늘 업무 -{SalaryConfig.MEETING_BOLD_WORK}초)`, SalaryConfig.meetingPay(d.profile.rank, SalaryConfig.MEETING_BOLD_RATE))
+				elseif key == "dodge" then
+					if math.random() < SalaryConfig.MEETING_DODGE_CHANCE then
+						succeed(player, d, s, "😮‍💨 휴… 그냥 넘어갔어요.", 0)
+					else
+						fail(player, d, s, "😤 \"방금 다 말했는데요?\" 핑계가 안 통했어요!")
+					end
+				elseif key == "wrong" then
+					fail(player, d, s, "😱 틀린 대답! 안 듣고 있던 게 들켰어요.")
+				end
+			end
+		end)
+		task.spawn(function()
+			while true do
+				task.wait(0.25)
+				local now = os.clock()
+				for player, d in data do
+					local active = d.state == "video" and dayCycle.phase == "work" and not d.fired and daily(d).halfday ~= true and daily(d).meetingBanned ~= true
+					local s = sessions[player]
+					if active and not s then
+						local today = daily(d)
+						today.meetings = (if typeof(today.meetings) == "number" then today.meetings else 0) + 1 -- (들어가는 순간 한 번으로 쳐요)
+						sessions[player] = { step = 5, topic = nil, topicsDone = 0, nextAt = now + 1.5, streak = 0, rushed = false, event = nil }
+						send(player, { type = "open", focus = focusLeft(d) })
+					elseif not active and s then
+						sessions[player] = nil
+						send(player, { type = "end" })
+					elseif s then
+						if s.event then
+							if now > s.event.deadline then
+								if s.event.kind == "peek" then
+									s.event = nil
+									s.nextAt = now + 0.5
+									send(player, { type = "result", ok = true, text = "", amount = 0, focus = focusLeft(d) })
+								else
+									fail(player, d, s, "⏰ 반응이 늦었어요!")
+								end
+							end
+						elseif now >= s.nextAt then
+							advance(player, d, s)
+						end
+					end
+				end
+			end
+		end)
+		Players.PlayerRemoving:Connect(function(player)
+			sessions[player] = nil
+		end)
+	end
+
+	---------------------------------------------------------------- 📺 웹툰: 읽은 화 기록 · 완독 보너스
+	do
+		local reading: { [Player]: { series: string, episode: number, startedAt: number } } = {}
+		local allowWebtoon = RateLimit.new(0.3)
+		local function findSeries(seriesId: any)
+			for _, series in SalaryConfig.Webtoons do
+				if series.id == seriesId then
+					return series
+				end
+			end
+			return nil
+		end
+		-- 화면에 보낼 진행 상황: 작품별로 몇 화까지 봤나 + 오늘 새로 볼 수 있는 화 수
+		local function progress(d: EmployeeData)
+			local used = daily(d).webtoonNew
+			return {
+				read = d.profile.webtoons,
+				newLeft = math.max(0, SalaryConfig.WEBTOON_DAILY_NEW - (if typeof(used) == "number" then used else 0)),
+			}
+		end
+		remotes.Webtoon.OnServerInvoke = function(player: Player, action: any, seriesId: any, episode: any)
+			local d = data[player]
+			if not d or d.fired then
+				return { ok = false }
+			end
+			if action == "list" then
+				return { ok = true, progress = progress(d) } -- (목록은 연타 제한 없이: 완독 직후에 바로 다시 불러요)
+			end
+			if not allowWebtoon(player) then
+				return { ok = false, message = "잠시 후 다시 눌러 주세요." }
+			end
+			local series = findSeries(seriesId)
+			if not series or typeof(episode) ~= "number" or not series.episodes[episode] then
+				return { ok = false, message = "없는 화예요." }
+			end
+			local seen = d.profile.webtoons[series.id] or 0
+			if action == "start" then
+				if episode > seen + 1 then
+					return { ok = false, message = "📺 앞의 화부터 봐야 해요." }
+				end
+				if episode == seen + 1 and progress(d).newLeft <= 0 then
+					return { ok = false, message = "📺 오늘 새 화는 다 봤어요. 다음 화는 내일! (본 화는 다시 볼 수 있어요)" }
+				end
+				reading[player] = { series = series.id, episode = episode, startedAt = os.clock() }
+				return { ok = true }
+			elseif action == "finish" then
+				local now = reading[player]
+				reading[player] = nil
+				local panels = #series.episodes[episode].panels
+				if not now or now.series ~= series.id or now.episode ~= episode or d.state ~= "webtoon"
+					or os.clock() - now.startedAt < panels * SalaryConfig.WEBTOON_PANEL_SECONDS - 1
+				then
+					return { ok = false, message = "📺 끝까지 못 봤어요. 처음부터 다시!" }
+				end
+				if episode ~= seen + 1 then
+					return { ok = true, bonus = 0, progress = progress(d) } -- (다시 본 화: 보너스 없음)
+				end
+				local today = daily(d)
+				local used = if typeof(today.webtoonNew) == "number" then today.webtoonNew else 0
+				if used >= SalaryConfig.WEBTOON_DAILY_NEW then
+					return { ok = false, message = "📺 오늘 새 화는 다 봤어요. 다음 화는 내일!" }
+				end
+				today.webtoonNew = used + 1
+				d.profile.webtoons[series.id] = episode
+				d.today.webtoonBonus = (d.today.webtoonBonus or 0) + SalaryConfig.WEBTOON_BONUS
+				d.today.webtoonCount = (d.today.webtoonCount or 0) + 1
+				remotes.Bonus:FireClient(player, `📺 {series.title} {episode}화 완독!`, SalaryConfig.WEBTOON_BONUS)
+				publish(player, d)
+				return { ok = true, bonus = SalaryConfig.WEBTOON_BONUS, progress = progress(d) }
+			end
+			return { ok = false }
+		end
+		Players.PlayerRemoving:Connect(function(player)
+			reading[player] = nil
 		end)
 	end
 
@@ -5021,6 +5317,12 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 			if (d.today.patrolBonus or 0) > 0 then
 				table.insert(lines, { label = `🔦 순찰 실적 ({d.today.patrolCatches or 0}명 지적)`, amount = d.today.patrolBonus })
+			end
+			if (d.today.meetingBonus or 0) > 0 then
+				table.insert(lines, { label = `🎧 회의 활약 수당 ({d.today.meetingCount or 0}번)`, amount = d.today.meetingBonus })
+			end
+			if (d.today.webtoonBonus or 0) > 0 then
+				table.insert(lines, { label = `📺 웹툰 완독 보너스 ({d.today.webtoonCount or 0}화)`, amount = d.today.webtoonBonus })
 			end
 			if (d.today.approvalCount or 0) > 0 then
 				table.insert(lines, { label = `🖋️ 결재 실적 ({d.today.approvalCount}건 처리)`, amount = d.today.approvalBonus or 0 })
