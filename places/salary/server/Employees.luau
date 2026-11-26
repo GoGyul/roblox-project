@@ -3283,8 +3283,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				local options = {
 					{ key = "right", text = topic.right },
 					{ key = "wrong", text = topic.wrong },
-					{ key = "dodge", text = "죄송합니다, 연결이 끊겨서 못 들었어요…" },
-					{ key = "bold", text = "그 건은 제가 맡겠습니다!" },
+					{ key = "dodge", text = SalaryConfig.MeetingDodges[math.random(1, #SalaryConfig.MeetingDodges)] },
+					{ key = "bold", text = SalaryConfig.MeetingBolds[math.random(1, #SalaryConfig.MeetingBolds)] },
 				}
 				for i = #options, 2, -1 do
 					local j = math.random(1, i)
@@ -3323,12 +3323,25 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				end
 			elseif event.kind == "quiz" then
 				local key = if typeof(value) == "number" then event.keys[value] else nil
-				if key == "right" then
+				if key == "right" and event.bold then
+					-- 🙋 나선 뒤 되물음까지 맞혔어요: 큰 보상, 대신 일을 떠맡아요
+					d.workSeconds = math.max(0, d.workSeconds - SalaryConfig.MEETING_BOLD_WORK)
+					succeed(player, d, s, `🙋 믿음직하게 일을 맡았어요! (오늘 업무 -{SalaryConfig.MEETING_BOLD_WORK}초)`, SalaryConfig.meetingPay(d.profile.rank, SalaryConfig.MEETING_BOLD_RATE))
+				elseif key == "right" then
 					local toeic = hasCert(d, "toeic")
 					succeed(player, d, s, if toeic then "🎧 유창한 영어로 정확한 대답!" else "🎧 정확한 대답!", SalaryConfig.meetingPay(d.profile.rank, SalaryConfig.MEETING_QUIZ_RATE * (if toeic then 1.5 else 1)))
 				elseif key == "bold" then
-					d.workSeconds = math.max(0, d.workSeconds - SalaryConfig.MEETING_BOLD_WORK)
-					succeed(player, d, s, `🙋 일을 떠맡았어요! (오늘 업무 -{SalaryConfig.MEETING_BOLD_WORK}초)`, SalaryConfig.meetingPay(d.profile.rank, SalaryConfig.MEETING_BOLD_RATE))
+					-- 🙋 "제가 맡겠습니다!"는 질문을 피하는 길이 아니에요: 부장님이 바로 되물어요 (보기 둘, 시간 짧게)
+					--   맞히면 큰 보상, 틀리면 실패 → 자막을 봤을 때만 노릴 수 있는 "판돈 올리기"
+					local topic = s.topic
+					nextId += 1
+					local keys = if math.random() < 0.5 then { "right", "wrong" } else { "wrong", "right" }
+					local texts = {}
+					for i, optionKey in keys do
+						texts[i] = if optionKey == "right" then topic.right else topic.wrong
+					end
+					s.event = { id = nextId, kind = "quiz", keys = keys, bold = true, deadline = os.clock() + SalaryConfig.MEETING_BOLD_SECONDS }
+					send(player, { type = "event", id = nextId, kind = "quiz", text = `😤 "좋습니다! 그럼 맡을 사람이 정리해 봐요. {topic.question}"`, options = texts, seconds = SalaryConfig.MEETING_BOLD_SECONDS })
 				elseif key == "dodge" then
 					if math.random() < SalaryConfig.MEETING_DODGE_CHANCE then
 						succeed(player, d, s, "😮‍💨 휴… 그냥 넘어갔어요.", 0)
