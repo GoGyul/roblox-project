@@ -705,6 +705,139 @@ function Review.start(ctx)
 		return true
 	end
 
+	---------------------------------------------------------------- ☕ 옥상 휴게 동료 + 옥상 뒷담화
+	--   init이 옥상을 지은 뒤 api.setRoof(옥상, 돌발 이벤트)를 불러요. 그 전엔 아무도 안 올라가요
+	function api.setRoof(rooftop, events)
+		local visitor: any = nil -- 지금 옥상에 있는 동료 (한 명만)
+		local untilTime, nextAt = 0, os.clock() + math.random(SalaryConfig.ROOF_BREAK_GAP[1], SalaryConfig.ROOF_BREAK_GAP[2])
+		local function sendBack()
+			local c = visitor
+			visitor = nil
+			if c and not c.removed then
+				Npc.say(c.model, "이제 들어가 볼게요~", 2)
+				task.delay(1.5, function()
+					coworkers.returnOne(c)
+				end)
+			end
+		end
+		-- 오늘 이 동료가 알려 줄 수 있는 것 (친밀도 단계만큼)
+		local function gossip(player: Player, d, c): { string }
+			local level = SalaryConfig.friendLevel(ctx.friendPoints(d, c.name))
+			local lines = {}
+			local mood = game:GetService("ReplicatedStorage"):GetAttribute("SalaryMood") or "보통"
+			local area = if rooftop.bossArea then rooftop.bossArea() else "어딘가"
+			table.insert(lines, `😤 부장님 오늘 기분: {mood} · 지금 {area}`)
+			if level >= 1 then
+				local eventInfo = nil
+				for _, info in SalaryConfig.Events do
+					if events and info.id == events.todayId then
+						eventInfo = info
+					end
+				end
+				local running = game:GetService("ReplicatedStorage"):GetAttribute("SalaryEvent")
+				if not eventInfo then
+					table.insert(lines, "📅 오늘은 별일 없을 거래요. 조용한 하루!")
+				elseif running == eventInfo.id then
+					table.insert(lines, `📅 지금 {eventInfo.emoji} {eventInfo.name} 중이잖아요. 조심해요!`)
+				else
+					table.insert(lines, `📅 오늘 {eventInfo.emoji} {eventInfo.name} 있대요. 미리 알아 둬요!`)
+				end
+			end
+			if level >= 2 then
+				local plan = plans[player]
+				local tattle = plan and plan.tattle
+				if tattle and not tattle.done and tattle.name ~= c.name then
+					local hour, minute = math.floor(tattle.minute / 60), tattle.minute % 60
+					table.insert(lines, `🙊 {tattle.name}이(가) 너 벼르고 있더라. {hour}시 {minute}분쯤 조심해요.`)
+				else
+					table.insert(lines, "🙊 오늘은 아무도 너 안 노린대요.")
+				end
+			end
+			if level >= 3 then
+				local auditor = nil
+				for _, other in coworkers.list() do
+					if other.auditor then
+						auditor = other
+					end
+				end
+				if auditor then
+					table.insert(lines, `🕶️ 쉿… 감사관은 {auditor.name}이래요.`)
+				else
+					local company = SalaryConfig.getCompany(game:GetService("ReplicatedStorage"):GetAttribute("SalaryCompany") or "daechung")
+					table.insert(lines, `👀 이과장은 {table.concat(company.leeDays, "·")}에 나온대요.`)
+				end
+			end
+			if level < 3 then
+				table.insert(lines, "(더 친해지면 더 알려 줄지도…)")
+			end
+			return lines
+		end
+		coworkers.onRoofTalk = function(player: Player, c)
+			local d = data[player]
+			if not d or d.fired then
+				return
+			end
+			-- 🔦 부장이 순찰 중이면: 옥상에서 쉬는 동료도 딴짓이에요 → 적발하고 내려보내요
+			if api.patrolRoofCatch and api.patrolRoofCatch(player, d, c) then
+				untilTime = os.clock() + 2.5
+				return
+			end
+			local daily = ctx.daily(d)
+			daily.roofTalk = if typeof(daily.roofTalk) == "table" then daily.roofTalk else {}
+			if daily.roofTalk[c.name] then
+				Npc.say(c.model, "아까 다 얘기했잖아요~", 2)
+				return
+			end
+			daily.roofTalk[c.name] = true
+			local lines = gossip(player, d, c)
+			Npc.say(c.model, "쉿, 이건 우리끼리 얘기인데…", 4)
+			-- 🐣 내 후배면 옥상에서 커피 한잔: 불만이 크게 줄어요 (하루 한 번)
+			local coffee = if api.juniorRoofCoffee then api.juniorRoofCoffee(player, d, c) else nil
+			if coffee then
+				table.insert(lines, 1, coffee)
+			end
+			ctx.addFriendship(player, d, c.name, SalaryConfig.ROOF_TALK_FRIEND, "quiet")
+			notify(player, `☕ {c.name}의 옥상 뒷담화\n` .. table.concat(lines, "\n"), 9)
+			ctx.pushNotice(player, "☕", `{c.name}: ` .. table.concat(lines, " / "), "roof")
+			untilTime = math.max(untilTime, os.clock() + 8) -- (얘기하는 동안 내려가지 않게)
+		end
+		task.spawn(function()
+			while true do
+				task.wait(1)
+				local now = os.clock()
+				local working = dayCycle.phase == "work" and not (ctx.eventBusy and ctx.eventBusy())
+				if visitor then
+					if visitor.removed or not working or now >= untilTime then
+						sendBack()
+						nextAt = now + math.random(SalaryConfig.ROOF_BREAK_GAP[1], SalaryConfig.ROOF_BREAK_GAP[2])
+					end
+				elseif working and now >= nextAt and next(data) ~= nil then
+					local candidates = {}
+					for _, c in coworkers.list() do
+						local busy = tattling ~= nil and tattling.c == c
+						if c.atDesk and not c.chatting and not c.slacking and not c.borrowed and not c.auditor and not busy then
+							table.insert(candidates, c)
+						end
+					end
+					nextAt = now + math.random(SalaryConfig.ROOF_BREAK_GAP[1], SalaryConfig.ROOF_BREAK_GAP[2])
+					if #candidates > 0 then
+						local c = candidates[math.random(1, #candidates)]
+						if coworkers.borrowOne(c) then
+							local spot = rooftop.breakSpots[math.random(1, #rooftop.breakSpots)]
+							c.model:PivotTo(CFrame.lookAt(spot + Vector3.new(0, 3, 0), spot + Vector3.new(0, 3, -1)))
+							coworkers.setState(c, "coffee", "☕")
+							c.roofBreak = true
+							c.prompt.Enabled = true
+							visitor = c
+							untilTime = now + SalaryConfig.ROOF_BREAK_STAY
+							Npc.say(c.model, "후~ 옥상 바람 좋다", 3)
+						end
+					end
+				end
+			end
+		end)
+	end
+
 	---------------------------------------------------------------- 🐣 후배 배정 (차장부터)
 	-- 내 후배 표시: 내 화면에서만 보이게 PlayerGui에 두고, 후배 머리에 붙여요
 	local function juniorTag(player: Player, c, angry: boolean?)
@@ -791,11 +924,84 @@ function Review.start(ctx)
 		d.profile.juniorGrudge = value
 		return value
 	end
+	-- ☕ 옥상에서 쉬는 내 후배와 커피 한잔 (옥상 휴게 쪽에서 불러요) → 안내 한 줄 (후배가 아니거나 오늘 이미 했으면 nil)
+	function api.juniorRoofCoffee(player: Player, d, c): string?
+		local daily = ctx.daily(d)
+		if juniorOf(player, d) ~= c or daily.juniorRoofCoffee then
+			return nil
+		end
+		daily.juniorRoofCoffee = true
+		local left = juniorGrudge(d, -SalaryConfig.JUNIOR_GRUDGE_ROOF)
+		ctx.addFriendship(player, d, c.name, SalaryConfig.JUNIOR_COVER_FRIEND, "quiet")
+		return `🐣 후배와 옥상에서 커피 한잔! 불만 -{SalaryConfig.JUNIOR_GRUDGE_ROOF}% → {left}%`
+	end
 
 	---------------------------------------------------------------- 🔦 순찰 (부장부터)
 	local patrols: { [Player]: { untilTime: number, caught: { [string]: boolean }, count: number, total: number } } = {}
 	local function patrolReward(d): number
 		return math.floor(SalaryConfig.dailyTarget(d.profile.rank) * SalaryConfig.PATROL_REWARD_RATE)
+	end
+	-- 🔦 딴짓 지적 (사무실 · ☕ 옥상 공통). onRoof면 옥상까지 올라가 잡은 것
+	local function catchSlacker(player: Player, d, c, patrol, onRoof: boolean)
+		patrol.caught[c.name] = true
+		patrol.count += 1
+		local reward = math.floor(patrolReward(d) * (if onRoof then SalaryConfig.PATROL_ROOF_RATE else 1)) -- (☕ 옥상까지 올라가서 잡으면 더)
+		patrol.total += reward
+		c.slacking = false
+		c.holdSlackUntil = nil
+		c.model:SetAttribute("Pose", "work")
+		-- (동료의 평소 행동이 바로 "⌨️ 일하는 중"과 혼잣말로 덮어써서 대사가 안 보일 수 있어요 → 그 뒤에 한 번 더 띄워요)
+		local excuse = pick({ "헉! 죄, 죄송합니다 부장님!", "아, 이건 그… 업무 자료 찾던 중이었어요!", "넵! 바로 일하겠습니다!" })
+		Npc.setStatus(c.model, "😰")
+		Npc.say(c.model, excuse, 4)
+		task.delay(0.6, function()
+			if not c.removed and not c.chatting then
+				Npc.setStatus(c.model, "😰")
+				Npc.say(c.model, excuse, 4)
+			end
+		end)
+		ctx.patrolReward(player, d, reward)
+		ctx.addFriendship(player, d, c.name, SalaryConfig.PATROL_FRIEND, "quiet")
+		if juniorOf(player, d) == c then
+			juniorGrudge(d, SalaryConfig.PATROL_JUNIOR_GRUDGE)
+		end
+		local extras = {}
+		-- ① 오늘 처음 지적: "일 열심히 하는 부장" → 의심도 속도 ↓ · 인사평가 태도 +
+		if patrol.count == 1 then
+			ctx.speed(player, d, SalaryConfig.PATROL_SPEED_DELTA, "🔦 순찰 성실")
+			local today = d.today :: any
+			today.reviewPatrol = true
+			table.insert(extras, `의심도 속도 {SalaryConfig.PATROL_SPEED_DELTA}`)
+			if eligible(d) then
+				table.insert(extras, `태도 점수 +{SalaryConfig.REVIEW_PATROL}`)
+			end
+		end
+		-- ② 인사평가 경쟁자를 지적하면 그 사람 점수가 깎여요
+		local rival = if eligible(d) then rivalOf(ensure(d), c.name) else nil
+		if rival then
+			rival.adj -= SalaryConfig.PATROL_RIVAL
+			table.insert(extras, `경쟁자 {c.name} -{SalaryConfig.PATROL_RIVAL}점`)
+			publish(player, d)
+		end
+		notify(player, `🔦 {if onRoof then "옥상에서 " else ""}{c.name} 지적! 순찰 실적 +{reward}원 ({patrol.count}/{SalaryConfig.PATROL_MAX_CATCH}명) · 친밀도 {SalaryConfig.PATROL_FRIEND}`
+			.. (if #extras > 0 then " · " .. table.concat(extras, " · ") else ""), 5)
+		-- ③ 전원 적발: 추가 실적 + 업적·칭호
+		if patrol.count >= SalaryConfig.PATROL_MAX_CATCH then
+			local bonus = math.floor(SalaryConfig.dailyTarget(d.profile.rank) * SalaryConfig.PATROL_FULL_BONUS_RATE)
+			patrol.total += bonus
+			ctx.patrolReward(player, d, bonus, true)
+			ctx.unlock(player, d, "patrol_full")
+		end
+	end
+	-- ☕ 옥상에서 쉬는 동료를 순찰 중에 만났어요 → 지적 (옥상 휴게 쪽에서 불러요). 처리했으면 true
+	function api.patrolRoofCatch(player: Player, d, c): boolean
+		local patrol = patrols[player]
+		if not patrol or patrol.caught[c.name] or patrol.count >= SalaryConfig.PATROL_MAX_CATCH then
+			return false
+		end
+		patrol.untilTime = math.max(patrol.untilTime, os.clock() + 1)
+		catchSlacker(player, d, c, patrol, true)
+		return true
 	end
 	local function endPatrol(player: Player)
 		local patrol = patrols[player]
@@ -950,55 +1156,7 @@ function Review.start(ctx)
 				if not c.slacking then
 					notify(player, `🔦 {c.name}이(가) 그새 일하는 척을 해요. 늦었어요!`)
 				else
-					patrol.caught[c.name] = true
-					patrol.count += 1
-					local reward = patrolReward(d)
-					patrol.total += reward
-					c.slacking = false
-					c.holdSlackUntil = nil
-					c.model:SetAttribute("Pose", "work")
-					-- (동료의 평소 행동이 바로 "⌨️ 일하는 중"과 혼잣말로 덮어써서 대사가 안 보일 수 있어요 → 그 뒤에 한 번 더 띄워요)
-					local excuse = pick({ "헉! 죄, 죄송합니다 부장님!", "아, 이건 그… 업무 자료 찾던 중이었어요!", "넵! 바로 일하겠습니다!" })
-					Npc.setStatus(c.model, "😰")
-					Npc.say(c.model, excuse, 4)
-					task.delay(0.6, function()
-						if not c.removed and not c.chatting then
-							Npc.setStatus(c.model, "😰")
-							Npc.say(c.model, excuse, 4)
-						end
-					end)
-					ctx.patrolReward(player, d, reward)
-					ctx.addFriendship(player, d, c.name, SalaryConfig.PATROL_FRIEND, "quiet")
-					if juniorOf(player, d) == c then
-						juniorGrudge(d, SalaryConfig.PATROL_JUNIOR_GRUDGE)
-					end
-					local extras = {}
-					-- ① 오늘 처음 지적: "일 열심히 하는 부장" → 의심도 속도 ↓ · 인사평가 태도 +
-					if patrol.count == 1 then
-						ctx.speed(player, d, SalaryConfig.PATROL_SPEED_DELTA, "🔦 순찰 성실")
-						local today = d.today :: any
-						today.reviewPatrol = true
-						table.insert(extras, `의심도 속도 {SalaryConfig.PATROL_SPEED_DELTA}`)
-						if eligible(d) then
-							table.insert(extras, `태도 점수 +{SalaryConfig.REVIEW_PATROL}`)
-						end
-					end
-					-- ② 인사평가 경쟁자를 지적하면 그 사람 점수가 깎여요
-					local rival = if eligible(d) then rivalOf(ensure(d), c.name) else nil
-					if rival then
-						rival.adj -= SalaryConfig.PATROL_RIVAL
-						table.insert(extras, `경쟁자 {c.name} -{SalaryConfig.PATROL_RIVAL}점`)
-						publish(player, d)
-					end
-					notify(player, `🔦 {c.name} 지적! 순찰 실적 +{reward}원 ({patrol.count}/{SalaryConfig.PATROL_MAX_CATCH}명) · 친밀도 {SalaryConfig.PATROL_FRIEND}`
-						.. (if #extras > 0 then " · " .. table.concat(extras, " · ") else ""), 5)
-					-- ③ 전원 적발: 추가 실적 + 업적·칭호
-					if patrol.count >= SalaryConfig.PATROL_MAX_CATCH then
-						local bonus = math.floor(SalaryConfig.dailyTarget(d.profile.rank) * SalaryConfig.PATROL_FULL_BONUS_RATE)
-						patrol.total += bonus
-						ctx.patrolReward(player, d, bonus, true)
-						ctx.unlock(player, d, "patrol_full")
-					end
+					catchSlacker(player, d, c, patrol, false)
 				end
 			end
 		elseif choice == "junior_work" then
@@ -1063,6 +1221,8 @@ function Review.start(ctx)
 		end
 		if job and job.c == c and not c.removed then
 			c.prompt.Enabled = holding
+		elseif c.roofBreak and not c.removed then
+			c.prompt.Enabled = true -- ☕ 옥상에서 쉬는 중: 옥상 뒷담화
 		elseif not c.atDesk and not c.removed then
 			-- 돌아다니는 동료에게도 말을 걸 수 있어요 (간식 주기 · 감사 기간의 "감사팀이죠?" / 수다는 자리에서만)
 			c.prompt.Enabled = not c.borrowed and dayCycle.phase ~= "offwork"

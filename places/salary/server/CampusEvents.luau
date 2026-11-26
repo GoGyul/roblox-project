@@ -110,7 +110,7 @@ function CampusEvents.start(office, dayCycle, remotes, hooks)
 			label.Text = `오늘의 푸드트럭 · {names}`
 		end
 		if campus.truckMenuLabel then
-			campus.truckMenuLabel.Text = `🚚 점심 한정\n12시~1시\n{lines}`
+			campus.truckMenuLabel.Text = `🚚 점심 한정\n{SalaryConfig.clockText(SalaryConfig.LUNCH_START)}~{SalaryConfig.clockText(SalaryConfig.LUNCH_END)}\n{lines}`
 		end
 		-- 알림
 		local notes = { `🚚 오늘의 푸드트럭(점심): {names}` }
@@ -138,7 +138,7 @@ function CampusEvents.start(office, dayCycle, remotes, hooks)
 		label.Text = `오늘의 푸드트럭 · {names}`
 	end
 	if campus.truckMenuLabel then
-		campus.truckMenuLabel.Text = `🚚 점심 한정\n12시~1시\n{lines}`
+		campus.truckMenuLabel.Text = `🚚 점심 한정\n{SalaryConfig.clockText(SalaryConfig.LUNCH_START)}~{SalaryConfig.clockText(SalaryConfig.LUNCH_END)}\n{lines}`
 	end
 	local _ = Theme
 end

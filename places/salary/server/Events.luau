@@ -45,7 +45,7 @@ local function triggerMinute(): number
 	if math.random() < 0.35 then
 		return math.random(10 * 60, 10 * 60 + 30) -- 10:00 ~ 10:30 (점심 전에 끝나게)
 	end
-	return math.random(13 * 60 + 20, 16 * 60 + 20) -- 13:20 ~ 16:20
+	return math.random(SalaryConfig.LUNCH_END + 20, 16 * 60 + 20) -- 점심 끝나고 20분 뒤 ~ 16:20
 end
 
 function Events.new(office, boss, dayCycle, remotes, coworkers)

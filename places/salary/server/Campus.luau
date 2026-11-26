@@ -349,7 +349,7 @@ function Campus.build(parent: Instance, helpers: any, companyId: string)
 		else P(Vector3.new(10, 0.5, 1.6), Vector3.new(169, 4.4, 43), { Name = "ShopCounter", Color = Color3.fromRGB(250, 246, 236) })
 	local truckSign = deco(Vector3.new(4.6, 5.4, 0.3), Vector3.new(181.5, 3.2, 41.2), Color3.fromRGB(44, 62, 92))
 	truckSign.CFrame *= CFrame.Angles(math.rad(-12), 0, 0)
-	F.truckMenuLabel = Build.surfaceText(truckSign, Enum.NormalId.Front, "🚚 점심 한정\n12시~1시", { Font = Enum.Font.GothamBold, TextColor3 = Color3.new(1, 1, 1) })
+	F.truckMenuLabel = Build.surfaceText(truckSign, Enum.NormalId.Front, `🚚 점심 한정\n{SalaryConfig.clockText(SalaryConfig.LUNCH_START)}~{SalaryConfig.clockText(SalaryConfig.LUNCH_END)}`, { Font = Enum.Font.GothamBold, TextColor3 = Color3.new(1, 1, 1) })
 	F.shops.truck = { counter = truckCounter, clerkSpot = Campus.point(if truckReady then 165.5 else 156, 0, if truckReady then 41.4 else 45.5), clerkLook = Vector3.new(0, 0, -1) } -- (사장님은 창구 옆에 나와 서 있어요)
 
 	---------------------------------------------------------------- 중앙 공원

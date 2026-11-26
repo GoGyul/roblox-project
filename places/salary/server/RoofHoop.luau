@@ -64,6 +64,78 @@ function RoofHoop.start(folder: Instance, base: Vector3, remotes, hooks)
 		remotes.HoopOpen:FireClient(player, spot) -- 🚪 자유투 라인에서 멀어지면 창이 닫혀요
 	end)
 
+	---------------------------------------------------------------- 🏆 오늘의 농구 기록판 (코트 옆, 자유투 라인 쪽을 봐요)
+	--   그날 서버의 1위를 다른 사람에게서 빼앗으면 보너스 (hooks.recordBonus). 근무일이 바뀌면 지워져요
+	local recordBoard = B:part(Vector3.new(5, 3.4, 0.2), base + Vector3.new(6, 2.6, -3), { Color = Color3.fromRGB(25, 30, 45) })
+	local recordGui = Instance.new("SurfaceGui")
+	recordGui.Face = Enum.NormalId.Front
+	recordGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	recordGui.PixelsPerStud = 50
+	recordGui.LightInfluence = 0
+	recordGui.Parent = recordBoard
+	local recordText = Instance.new("TextLabel")
+	recordText.Size = UDim2.fromScale(1, 1)
+	recordText.BackgroundTransparency = 1
+	recordText.TextColor3 = Color3.fromRGB(255, 230, 150)
+	recordText.Font = Enum.Font.GothamBold
+	recordText.TextSize = 20
+	recordText.TextYAlignment = Enum.TextYAlignment.Top
+	recordText.Parent = recordGui
+	local records: { { id: number, name: string, score: number } } = {}
+	local recordDay = if hooks.workDay then hooks.workDay() else 0
+	local function checkDay()
+		local day = if hooks.workDay then hooks.workDay() else 0
+		if day ~= recordDay then
+			recordDay = day
+			table.clear(records)
+		end
+	end
+	local function refreshRecords()
+		checkDay()
+		local lines = { "🏆 오늘의 농구 기록" }
+		for i = 1, 5 do
+			local record = records[i]
+			table.insert(lines, if record then `{i}. {record.name}  {record.score}점` else `{i}. -`)
+		end
+		table.insert(lines, `1위를 빼앗으면 +{SalaryConfig.ROOF_RECORD_BONUS}원`)
+		recordText.Text = table.concat(lines, "\n")
+	end
+	refreshRecords()
+	task.spawn(function() -- (근무일이 바뀌면 기록판을 비워요)
+		while recordBoard.Parent do
+			task.wait(5)
+			refreshRecords()
+		end
+	end)
+	local function addRecord(player: Player, score: number)
+		checkDay()
+		local top = records[1]
+		local mine = nil
+		for _, record in records do
+			if record.id == player.UserId then
+				mine = record
+			end
+		end
+		if mine then
+			mine.score = math.max(mine.score, score)
+		else
+			table.insert(records, { id = player.UserId, name = player.DisplayName, score = score })
+		end
+		table.sort(records, function(a, b)
+			return a.score > b.score
+		end)
+		refreshRecords()
+		-- 다른 사람의 1위를 빼앗았어요
+		if top and top.id ~= player.UserId and records[1].id == player.UserId and score > top.score then
+			if hooks.recordBonus then
+				hooks.recordBonus(player, "🏀 농구 기록 1위 탈환!")
+			end
+			for _, other in Players:GetPlayers() do
+				remotes.Notify:FireClient(other, `🏀 {player.DisplayName} 님이 {top.name} 님을 제치고 옥상 농구 1위! ({score}점)`)
+			end
+		end
+	end
+
 	---------------------------------------------------------------- 한 판
 	type Round = { shot: number, score: number, streak: number, makes: number, swishes: number, gaugeStart: number }
 	local rounds: { [Player]: Round } = {}
@@ -146,6 +218,9 @@ function RoofHoop.start(folder: Instance, base: Vector3, remotes, hooks)
 			if round.shot >= SalaryConfig.HOOP_SHOTS then
 				rounds[player] = nil
 				reply.done = true
+				if round.score > 0 then
+					addRecord(player, round.score) -- 🏆 오늘의 기록판
+				end
 				reply.prize = 0
 				reply.label = "😅 다음엔 더 잘할 거예요"
 				for _, tier in SalaryConfig.HoopPrizes do

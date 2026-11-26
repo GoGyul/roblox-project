@@ -11,7 +11,13 @@ SalaryConfig.START_MINUTE = 9 * 60
 SalaryConfig.DESK_SEAT_OFFSET = 3.3 -- 📐 의자가 책상 가운데에서 뒤로 떨어진 거리 (책상 깊이 4)
 SalaryConfig.END_MINUTE = 18 * 60
 SalaryConfig.LUNCH_START = 12 * 60
-SalaryConfig.LUNCH_END = 13 * 60
+SalaryConfig.LUNCH_END = 13 * 60 + 30 -- (점심 1시간 30분: 옥상 피크닉·푸드트럭·산책을 다 하려면 1시간은 빠듯했어요)
+-- 점심 끝 시각을 "1시 30분"처럼 (안내 문구에 써요)
+function SalaryConfig.clockText(minute: number): string
+	local hour, rest = math.floor(minute / 60), minute % 60
+	local h12 = if hour > 12 then hour - 12 else hour
+	return if rest == 0 then `{h12}시` else `{h12}시 {rest}분`
+end
 SalaryConfig.PAYSLIP_SECONDS = 15 -- 퇴근 후 명세서 보는 시간 (그다음 🏢 출근하기 대기)
 SalaryConfig.CLOCKIN_WAIT = 20 -- 여럿이 할 때: 누군가 출근하기를 누르고 이만큼 지나면 나머지를 기다리지 않고 출근
 
@@ -862,7 +868,26 @@ end
 --   · 미니 냉장고에서 하루 한 번 포장 커피를 꺼낼 수 있어요 (동료에게 주는 선물로 써요)
 --   (숫자는 임시 값이에요)
 SalaryConfig.EXEC_RANK = 8
-SalaryConfig.EXEC_AWAY = 0.5
+SalaryConfig.EXEC_AWAY = 0.5 -- (👔 임원실 · ☁️ 옥상 공통: 이사는 옥상에서도 자리 부재가 절반 속도)
+
+-- ☕ 옥상 휴게 동료: 근무 중 가끔 동료 한 명이 옥상에 올라와 쉬어요 → [E] 말 걸기 = 옥상 뒷담화 (쓸모 있는 정보)
+--   · 친밀도가 높을수록 더 많이 알려 줘요: 0 부장님 기분·위치 / ❤️1 오늘 돌발 이벤트 / ❤️2 고자질 계획 / ❤️3 감사관 정체·이과장 출근일
+--   · 같은 동료와는 하루 한 번. 말 걸면 친밀도 + (숫자는 임시 값이에요)
+SalaryConfig.ROOF_BREAK_GAP = { 60, 110 } -- 다음 동료가 올라올 때까지 (초)
+SalaryConfig.ROOF_BREAK_STAY = 45 -- 옥상에 머무는 시간 (초)
+SalaryConfig.ROOF_TALK_FRIEND = 2 -- 옥상에서 말 걸면 친밀도 +
+-- 🧺 점심 옥상 피크닉: 점심시간에 옥상 돗자리에 PICNIC_SECONDS초 앉아 있으면 (하루 한 번)
+--   · 오후 의심도 속도 PICNIC_SPEED (푸드트럭 음식을 먹은 날은 PICNIC_FOOD_SPEED: 도시락 피크닉)
+--   · 그때 다른 사람도 돗자리에 앉아 있으면 함께 먹기 보너스
+--   · 점심 끝나기 전에 자리로 돌아가야 해요 (엘리베이터 시간 조심!) (숫자는 임시 값이에요)
+SalaryConfig.PICNIC_SECONDS = 15
+SalaryConfig.PICNIC_SPEED = -0.05
+SalaryConfig.PICNIC_FOOD_SPEED = -0.10
+SalaryConfig.PICNIC_TOGETHER = 200
+SalaryConfig.PICNIC_FOODS = { "taco", "gangjeong", "cupbap", "hotdog", "burger" } -- (푸드트럭 메뉴)
+
+-- 🏆 옥상 기록판 (농구·종이비행기): 그날 서버의 1위를 "다른 사람에게서" 빼앗으면 보너스 (내 기록을 내가 깨는 건 X)
+SalaryConfig.ROOF_RECORD_BONUS = 300
 
 -- 🔦 순찰 (부장부터): 이제 내가 잡는 쪽! 메뉴의 🔦 버튼으로 하루 한 번 순찰을 나가요.
 --   · 순찰 중에 딴짓하는 직원에게 [E] 말 걸기 → "딴짓 지적하기" → 순찰 실적 (하루 실적 목표의 일정 비율)
@@ -881,6 +906,7 @@ SalaryConfig.PATROL_SPEED_DELTA = -0.05 -- 한 명이라도 지적하면: 오늘
 SalaryConfig.REVIEW_PATROL = 2 -- 한 명이라도 지적하면: 그날 인사평가 태도 점수 + (20점까지만. ☕ 커피와 같은 크기)
 SalaryConfig.PATROL_RIVAL = 3 -- 인사평가 경쟁자를 지적하면 그 사람 점수 - (📢 신고의 절반)
 SalaryConfig.PATROL_FULL_BONUS_RATE = 0.04 -- 한 번 순찰에 최대 인원을 다 지적하면 추가 실적 (하루 실적 목표의 4% = 한 명 몫)
+SalaryConfig.PATROL_ROOF_RATE = 1.5 -- ☕ 순찰 중 옥상에서 쉬는 동료를 잡으면 실적 ×1.5 (엘리베이터까지 타고 올라간 수고)
 SalaryConfig.PATROL_SLACK_MIN = 15 -- 순찰 중에 시작한 딴짓은 이만큼 길어져요 (평소 8~16초: 걸어가는 사이에 끝나 버려서)
 SalaryConfig.PATROL_SLACK_MAX = 25
 SalaryConfig.PATROL_HOLD = 10 -- 말을 걸어 고르는 동안 딴짓을 멈추지 못하는 시간
@@ -892,6 +918,7 @@ SalaryConfig.JUNIOR_GRUDGE_AFTER_TATTLE = 50 -- 이르고 나면 이만큼으로
 SalaryConfig.JUNIOR_GRUDGE_COVER = 25 -- 눈감아 주면 불만 -
 SalaryConfig.JUNIOR_GRUDGE_GIFT = 30 -- 간식 주면 불만 -
 SalaryConfig.JUNIOR_GRUDGE_DAILY = 10 -- 하루 지나면 불만 -
+SalaryConfig.JUNIOR_GRUDGE_ROOF = 40 -- ☕ 옥상에서 쉬는 후배와 커피 한잔 (하루 한 번): 불만 -
 SalaryConfig.JUNIOR_COVER_FRIEND = 6 -- 눈감아 주면 친밀도 +
 SalaryConfig.JUNIOR_LOOKOUT_AT = 60 -- 망보기: 농땡이 중 의심도가 이만큼 차면
 SalaryConfig.JUNIOR_LOOKOUT_DROP = 25 -- 의심도를 이만큼 내려 줘요 (하루 한 번)
@@ -2131,9 +2158,9 @@ SalaryConfig.COMMUTE_BONUS = 0.25 -- 칼출근 보너스 = 기본급의 25%
 SalaryConfig.COMMUTE_EARLY_DELTA = -0.05 -- 칼출근: 오늘의 의심도 속도
 SalaryConfig.COMMUTE_LATE_DELTA = 0.15 -- 지각: 오늘의 의심도 속도
 
--- 🍚 점심시간: 12:45에 "곧 1시" 알림, 13:20까지 단지에 남아 있으면 지각
-SalaryConfig.LUNCH_WARN = 12 * 60 + 45
-SalaryConfig.LUNCH_LATE = 13 * 60 + 20 -- (단지나 옥상에 남아 있으면)
+-- 🍚 점심시간: 끝나기 15분 전에 "곧 끝나요" 알림, 끝나고 20분까지 단지·옥상에 남아 있으면 지각
+SalaryConfig.LUNCH_WARN = SalaryConfig.LUNCH_END - 15
+SalaryConfig.LUNCH_LATE = SalaryConfig.LUNCH_END + 20 -- (단지나 옥상에 남아 있으면)
 SalaryConfig.LUNCH_LATE_SUSPICION = 30 -- 점심 지각: 의심도 +
 
 -- 👀 창밖 시선: 부장님이 가끔 창가에서 단지를 내려다봐요. 지붕·나무 밑·건물 안이면 안 보여요
@@ -2451,7 +2478,7 @@ end
 export type MissionStep = { kind: string, text: string, count: number?, place: string? }
 export type MissionInfo = { id: string, emoji: string, name: string, seconds: number, steps: { MissionStep }, company: string? }
 
-SalaryConfig.MISSION_WINDOWS = { { 10 * 60, 10 * 60 + 25 }, { 13 * 60 + 5, 15 * 60 } } -- 시작 시각 (점심과 겹치지 않게)
+SalaryConfig.MISSION_WINDOWS = { { 10 * 60, 10 * 60 + 25 }, { SalaryConfig.LUNCH_END + 5, 15 * 60 } } -- 시작 시각 (점심과 겹치지 않게)
 SalaryConfig.MISSION_LAST_START = 15 * 60 + 10 -- 이 시각을 넘기면 오늘 프로젝트는 건너뛰어요 (퇴근 전에 끝낼 수 없어서)
 SalaryConfig.MISSION_BONUS = 3000 -- 경고가 없을 때 성공 보너스
 SalaryConfig.MEMORY_SHOW = 3 -- 주문번호를 보여 주는 시간 (초)
@@ -2970,7 +2997,7 @@ SalaryConfig.SCOPE_FOCUS = 1.2
 SalaryConfig.SCOPE_ACTIVE = { 3, 5 } -- 동시에 장면이 보이는 창문 수 (최소, 최대)
 SalaryConfig.SCOPE_SHOW = { 6, 12 } -- 장면 하나가 보이는 시간 (초)
 SalaryConfig.ScopeRewards = { common = 230, rare = 750, legend = 1500 }
--- times: 나오는 시간대 ("morning" 9~12시 · "lunch" 12~13시 · "afternoon" 13~18시) / weight: 잘 나오는 정도
+-- times: 나오는 시간대 ("morning" 9~12시 · "lunch" 점심시간 · "afternoon" 점심 뒤~18시) / weight: 잘 나오는 정도
 SalaryConfig.ScopeScenes = {
 	{ id = "sleeper", emoji = "😴💤", name = "엎드려 자는 대리", rarity = "common", weight = 10, times = { "morning", "afternoon" }, description = "우리랑 똑같네…" },
 	{ id = "ramen", emoji = "🍜🥢", name = "몰래 컵라면", rarity = "common", weight = 10, times = { "lunch", "afternoon" }, description = "냄새가 여기까지 날 것 같아요" },

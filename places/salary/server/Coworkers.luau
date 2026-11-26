@@ -33,6 +33,7 @@ export type Coworker = {
 	extra: boolean, -- 🧑‍💼 플레이어 자리가 아닌 책상의 직원 (딴짓·심부름을 조금 덜 해요: 사무실이 너무 어수선하지 않게)
 	borrowed: boolean, -- 🌸 워크숍·🍻 회식에 불려 가 있는 중 (평소 AI 멈춤)
 	auditor: boolean, -- 🕶️ 오늘 몰래 감사관 (감사 기간)
+	roofBreak: boolean?, -- ☕ 지금 옥상에서 쉬는 중 (말 걸면 옥상 뒷담화)
 	accusePrompt: ProximityPrompt, -- [R] "감사팀이죠?"
 }
 
@@ -267,6 +268,10 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 		end)
 		Npc.stopForPrompt(prompt, c.humanoid, root, 8) -- ✋ 말 거는 동안(고르는 창이 떠 있는 동안) 걸어가다가도 멈춰 서요
 		prompt.Triggered:Connect(function(player)
+			if (c :: any).roofBreak and api.onRoofTalk then
+				api.onRoofTalk(player, c) -- ☕ 옥상에서 쉬는 동료: 옥상 뒷담화
+				return
+			end
 			if api.onHold and api.onHold(player, c) then
 				return -- 🍪 고자질하러 가는 동료를 붙잡았어요
 			end
@@ -372,6 +377,32 @@ function Coworkers.start(office, boss, dayCycle, remotes, onChat: (Player, Cowor
 		end
 		return borrowed
 	end
+
+	-- ☕ 한 명만 데려가기 (옥상 휴게 등): 자리에서 일어나 borrowed 상태로 (평소 AI 멈춤)
+	function api.borrowOne(c: Coworker): boolean
+		if c.removed or c.chatting or c.borrowed or not c.atDesk or c.slacking or c.auditor then
+			return false
+		end
+		c.borrowed = true
+		c.atDesk = false
+		Npc.stand(c.model, c.desk.seat)
+		c.desk.seat.Disabled = true
+		Npc.standUpright(c.model)
+		return true
+	end
+	function api.returnOne(c: Coworker)
+		if c.removed or not c.borrowed then
+			return
+		end
+		c.roofBreak = nil
+		c.desk.seat.Disabled = false
+		Npc.sit(c.model, c.desk.seat)
+		c.atDesk = true
+		c.prompt.Enabled = true
+		c.borrowed = false
+		setState(c, "work", "⌨️")
+	end
+	api.setState = setState
 
 	-- 이벤트가 끝나면 자리로 돌려보내요 (instant면 바로 순간이동해서 앉아요)
 	function api.returnAll(instant: boolean?)

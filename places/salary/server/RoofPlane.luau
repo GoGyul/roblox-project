@@ -121,13 +121,20 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 	boardText.TextSize = 20
 	boardText.TextYAlignment = Enum.TextYAlignment.Top
 	boardText.Parent = boardGui
-	local records: { { name: string, distance: number } } = {}
+	local records: { { id: number, name: string, distance: number } } = {}
+	local recordDay = if hooks.workDay then hooks.workDay() else 0
 	local function refreshBoard()
+		local day = if hooks.workDay then hooks.workDay() else 0
+		if day ~= recordDay then
+			recordDay = day
+			table.clear(records) -- (근무일이 바뀌면 "오늘의" 기록판을 비워요)
+		end
 		local lines = { "🏆 오늘의 종이비행기 기록" }
 		for i = 1, 5 do
 			local record = records[i]
 			table.insert(lines, if record then `{i}. {record.name}  {math.floor(record.distance)}m` else `{i}. -`)
 		end
+		table.insert(lines, `1위를 빼앗으면 +{SalaryConfig.ROOF_RECORD_BONUS}원`)
 		boardText.Text = table.concat(lines, "\n")
 	end
 	refreshBoard()
@@ -281,22 +288,36 @@ function RoofPlane.start(folder: Instance, launch: Vector3, remotes, hooks)
 				local isRecord, best = hooks.best(player, distance)
 				result.record = isRecord
 				result.best = best
-				-- 오늘의 기록판 (이름마다 최고 기록 하나)
+				-- 오늘의 기록판 (사람마다 최고 기록 하나)
+				refreshBoard()
+				local top = records[1]
 				local mine = nil
 				for _, record in records do
-					if record.name == player.DisplayName then
+					if record.id == player.UserId then
 						mine = record
 					end
 				end
 				if mine then
 					mine.distance = math.max(mine.distance, distance)
 				else
-					table.insert(records, { name = player.DisplayName, distance = distance })
+					table.insert(records, { id = player.UserId, name = player.DisplayName, distance = distance })
 				end
 				table.sort(records, function(a, b)
 					return a.distance > b.distance
 				end)
 				refreshBoard()
+				-- 🏆 다른 사람의 1위를 빼앗았어요 (비행기가 땅에 닿은 뒤에 알려요)
+				if top and top.id ~= player.UserId and records[1].id == player.UserId and distance > top.distance then
+					local beaten = top.name
+					task.delay(duration, function()
+						if player.Parent and hooks.recordBonus then
+							hooks.recordBonus(player, "✈️ 종이비행기 기록 1위 탈환!")
+						end
+						for _, other in Players:GetPlayers() do
+							remotes.Notify:FireClient(other, `✈️ {player.DisplayName} 님이 {beaten} 님을 제치고 종이비행기 1위! ({math.floor(distance)}m)`)
+						end
+					end)
+				end
 			end
 			return result
 		end

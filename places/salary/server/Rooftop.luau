@@ -638,6 +638,10 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 
 	-- 🏀 옥상 농구 (뒤쪽 왼편 구석) — 공 소리에 👮 경비원이 확인하러 와요
 	RoofHoop.start(folder, spread(-26, 0, 22), remotes, {
+		workDay = function(): number
+			return dayCycle.day
+		end,
+		recordBonus = hooks.roofRecordBonus, -- 🏆 다른 사람의 1위를 빼앗으면
 		prize = hooks.hoopPrize,
 		unlock = hooks.unlock,
 		noise = function()
@@ -653,6 +657,10 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 
 	-- ✈️ 종이비행기 (앞 난간, 도시 쪽으로)
 	RoofPlane.start(folder, spread(8, 0, -21), remotes, {
+		workDay = function(): number
+			return dayCycle.day
+		end,
+		recordBonus = hooks.roofRecordBonus, -- 🏆 다른 사람의 1위를 빼앗으면
 		onRoof = function(position: Vector3)
 			return api.onRoof(position)
 		end,
@@ -918,6 +926,107 @@ function Rooftop.start(office, boss, dayCycle, remotes, hooks, events)
 		radar[player] = nil
 	end)
 
+	---------------------------------------------------------------- 🧺 점심 옥상 피크닉 (돗자리 두 장, 한 장에 두 자리)
+	--   옥상마다 물건 배치가 달라서, 후보 자리 중 "비어 있는" 곳을 골라 깔아요
+	do
+		local PB = Build.new(folder, Vector3.zero)
+		local MAT = Vector3.new(7, 0.12, 5)
+		local overlap = OverlapParams.new()
+		overlap.FilterType = Enum.RaycastFilterType.Exclude
+		local function free(center: Vector3): boolean
+			local parts = workspace:GetPartBoundsInBox(CFrame.new(center + Vector3.new(0, 2.6, 0)), Vector3.new(MAT.X + 2, 4.6, MAT.Z + 2), overlap)
+			for _, part in parts do
+				local flat = part.Size.X * part.Size.Z > 400 -- (옥상 바닥)
+				if not flat and (part.CanCollide or part:IsA("Seat") or part.Transparency < 1) and part.Size.Y > 0.3 then
+					return false
+				end
+			end
+			return true
+		end
+		local candidates = {
+			spread(-2, 0, -6), spread(4, 0, 6), spread(-14, 0, 10), spread(14, 0, -2), spread(-20, 0, -10),
+			spread(0, 0, -14), spread(-8, 0, -2), spread(18, 0, 10), spread(-24, 0, 4), spread(10, 0, -10),
+		}
+		local chosen = {}
+		for _, center in candidates do
+			if #chosen >= 2 then
+				break
+			end
+			local farEnough = true
+			for _, other in chosen do
+				if (other - center).Magnitude < 9 then
+					farEnough = false
+				end
+			end
+			if farEnough and free(center) then
+				table.insert(chosen, center)
+			end
+		end
+		if #chosen == 0 then
+			warn("🧺 [옥상] 돗자리를 깔 빈자리를 못 찾았어요")
+		end
+		local PICNIC_COLORS = { Color3.fromRGB(226, 92, 92), Color3.fromRGB(92, 150, 220) }
+		for index, center in chosen do
+			PB:part(MAT, center + Vector3.new(0, 0.07, 0), { Color = Color3.new(1, 1, 1), Material = Enum.Material.Fabric, CanCollide = false })
+			for gx = 0, 3 do -- 체크무늬
+				for gz = 0, 2 do
+					if (gx + gz) % 2 == 0 then
+						PB:part(Vector3.new(MAT.X / 4, 0.02, MAT.Z / 3), center + Vector3.new(-MAT.X / 2 + MAT.X / 8 + gx * MAT.X / 4, 0.14, -MAT.Z / 2 + MAT.Z / 6 + gz * MAT.Z / 3), { Color = PICNIC_COLORS[index], Material = Enum.Material.Fabric, CanCollide = false, CanQuery = false })
+					end
+				end
+			end
+			-- 바구니 + 도시락 상자
+			PB:part(Vector3.new(1.6, 1, 1.1), center + Vector3.new(0, 0.6, 0), { Color = Color3.fromRGB(176, 130, 80), Material = Enum.Material.WoodPlanks, CanCollide = false })
+			PB:part(Vector3.new(0.9, 0.35, 0.7), center + Vector3.new(1.4, 0.3, 0.9), { Color = Color3.fromRGB(250, 235, 190), CanCollide = false })
+			-- 앉는 자리 둘 (바구니를 사이에 두고 마주 보기)
+			for _, side in { -1, 1 } do
+				local seat = PB:part(Vector3.new(1.8, 0.25, 1.8), nil, {
+					ClassName = "Seat",
+					Name = "PicnicSeat",
+					Transparency = 1,
+					CFrame = CFrame.new(center + Vector3.new(side * 2.3, 0.3, 0)) * CFrame.Angles(0, math.rad(if side < 0 then -90 else 90), 0),
+				})
+				seat:SetAttribute("PromptText", "🧺 돗자리")
+			end
+		end
+		-- 점심시간에 돗자리에 앉아 있는 시간을 세요
+		local sitting: { [Player]: number } = {}
+		task.spawn(function()
+			while folder.Parent do
+				task.wait(1)
+				local seated = {}
+				for _, player in Players:GetPlayers() do
+					local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+					local seat = humanoid and humanoid.SeatPart
+					if seat and seat.Name == "PicnicSeat" then
+						table.insert(seated, player)
+					end
+				end
+				for _, player in seated do
+					if dayCycle.phase == "lunch" and not player:GetAttribute("PicnicDone") then
+						sitting[player] = (sitting[player] or 0) + 1
+						player:SetAttribute("PicnicSit", math.min(sitting[player], SalaryConfig.PICNIC_SECONDS))
+						if sitting[player] == SalaryConfig.PICNIC_SECONDS and hooks.picnic then
+							hooks.picnic(player, #seated >= 2)
+						end
+					end
+				end
+				for player in sitting do
+					if not table.find(seated, player) or not player.Parent or dayCycle.phase ~= "lunch" or player:GetAttribute("PicnicDone") then
+						sitting[player] = nil
+						if player.Parent then
+							player:SetAttribute("PicnicSit", nil)
+						end
+					end
+				end
+			end
+		end)
+	end
+
+	-- ☕ 옥상 휴게 동료가 서 있을 자리 (벤치 앞 · 난간 쪽) · 엘리베이터 앞 · 부장님이 지금 어디쯤인지
+	api.breakSpots = { spread(-4, 0, 16), spread(20, 0, -14) }
+	api.door = roof.spawn
+	api.bossArea = bossArea
 	return api
 end
 

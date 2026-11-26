@@ -154,6 +154,9 @@ PhoneGames.start(Remotes, { -- 📱 폰 게임 (💣 지뢰 피하기)
 	baseballPrize = Employees.payBaseball,
 })
 Employees.hooks.onRoof = rooftop.onRoof
+if Employees.reviewApi then
+	Employees.reviewApi.setRoof(rooftop, events) -- ☕ 옥상 휴게 동료 시작
+end
 local windowWatch = require(script.WindowWatch).start(office, boss, dayCycle, events, Remotes) -- 👀 부장님이 창가에서 단지를 내려다봐요
 if windowWatch then
 	Employees.hooks.windowSees = windowWatch.sees

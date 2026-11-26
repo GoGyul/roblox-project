@@ -539,7 +539,7 @@ local comboInfoClose = Ui.make("TextButton", {
 	Parent = comboInfo,
 })
 local comboInfoOpenedAt = 0
-local infoMode = "combo" -- "combo" 🔥 콤보 설명 / "speed" ⏩ 오늘의 의심도 속도
+local infoMode = "combo" -- "combo" 🔥 콤보 설명 / "speed" ⏩ 오늘의 의심도 속도 / "income" 💸 초당 수입 내역
 
 -- ⏩ 오늘의 의심도 속도 글자 (x1.00이면 회색, 빠르면 빨강, 느리면 초록)
 local function speedText(speed: number): string
@@ -569,6 +569,43 @@ local function refreshSpeedInfo()
 		.. `\n<font color="#9A9AA5">🍻 회식·🎁 홍삼은 다음 날 아침에 반영돼요</font>`
 end
 
+-- 💸 지금 초당 수입 내역: 기본 수입에 무엇이 곱해지고 더해졌는지
+local function refreshIncomeInfo()
+	local ok, info = pcall(function()
+		return game:GetService("HttpService"):JSONDecode(player:GetAttribute("IncomeParts") or "{}")
+	end)
+	info = if ok and typeof(info) == "table" then info else {}
+	local rate = player:GetAttribute("IncomeRate") or 0
+	local base = info.base or 0
+	local lines = { `{info.name or "지금 행동"} 기본  <b>+{base}원/초</b>` }
+	local running = base
+	for _, part in (if typeof(info.parts) == "table" then info.parts else {}) do
+		local label, kind, value = part[1], part[2], part[3]
+		if kind == "+" then
+			running += value
+			table.insert(lines, `{label}  <font color="#7CE08A"><b>+{value}원</b></font>`)
+		elseif kind == "×" then
+			running *= value
+			local color = if value >= 1 then "#7CE08A" else "#FF7A7A"
+			table.insert(lines, `{label}  <font color="{color}"><b>×{value}</b></font>`)
+		else
+			running = 0
+			table.insert(lines, `{label}  <font color="#FF7A7A"><b>수입 없음</b></font>`)
+		end
+	end
+	local gap = rate - base
+	local summary = if gap > 0.05 then `<font color="#7CE08A">기본보다 +{math.floor(gap * 10 + 0.5) / 10}원 더 벌어요</font>`
+		elseif gap < -0.05 then `<font color="#FF7A7A">기본보다 {math.floor(gap * 10 + 0.5) / 10}원 덜 벌어요</font>`
+		else `<font color="#9A9AA5">기본 그대로예요</font>`
+	comboInfoText.Text = `<font size="18"><b>💸 지금 초당 수입 +{rate}원/초</b></font>\n`
+		.. summary .. "\n\n"
+		.. `<b>📋 계산</b>\n` .. table.concat(lines, "\n")
+		.. (if #(info.parts or {}) == 0 then "\n<font color=\"#9A9AA5\">붙은 효과가 없어요</font>" else "")
+		.. `\n\n<font color="#7CE08A"><b>⬆️ 늘어나요:</b></font> 직급(농땡이만), 재입사 회차, 감사 기간(사무실 안 농땡이 ×2), 🌮 타코, 💻 컴활(일하기 +1), 단지 산책 장소·🌸 벚꽃`
+		.. `\n<font color="#FF7A7A"><b>⬇️ 0이 돼요:</b></font> 🏖️ 반차, 🚏 출근길, 💡 정전(일하기·화면 농땡이)`
+		.. `\n<font color="#9A9AA5">일하기는 직급 배율을 안 받아요. 명세서의 보너스(아슬아슬·수다·회의 등)는 여기 말고 따로 쌓여요</font>`
+end
+
 -- 📄 오늘 업무 게이지 설명
 local function refreshWorkInfo()
 	local work = math.floor(player:GetAttribute("WorkSeconds") or 0)
@@ -586,6 +623,10 @@ local function refreshWorkInfo()
 end
 
 local function refreshComboInfo()
+	if infoMode == "income" then
+		refreshIncomeInfo()
+		return
+	end
 	if infoMode == "speed" then
 		refreshSpeedInfo()
 		return
@@ -622,6 +663,19 @@ end
 comboButton.Activated:Connect(function()
 	local same = infoMode == "combo"
 	infoMode = "combo"
+	toggleComboInfo(not (comboInfo.Visible and same))
+end)
+-- 💸 맨 위 행동 줄(예: "😶 멍때리기 +27원/초")을 누르면 초당 수입 내역
+local incomeButton = Ui.make("TextButton", {
+	Size = UDim2.new(1, 0, 0, 30),
+	BackgroundTransparency = 1,
+	Text = "",
+	ZIndex = 5,
+	Parent = statusPanel,
+})
+incomeButton.Activated:Connect(function()
+	local same = infoMode == "income"
+	infoMode = "income"
 	toggleComboInfo(not (comboInfo.Visible and same))
 end)
 -- ⏩ 의심도 줄을 누르면 오늘의 의심도 속도 설명
@@ -1666,6 +1720,12 @@ RunService.RenderStepped:Connect(function()
 				table.insert(extras, `{info[2]} 못 본 척 {SalaryConfig.gameDurationText(SalaryConfig.secondsToGameMinutes(left))}`)
 			end
 		end
+	end
+	-- 🧺 점심 옥상 피크닉: 돗자리에 앉아 있는 동안 진행, 끝나면 그날 내내 ✅
+	if player:GetAttribute("PicnicDone") then
+		table.insert(extras, "🧺 피크닉 ✅")
+	elseif typeof(player:GetAttribute("PicnicSit")) == "number" then
+		table.insert(extras, `🧺 피크닉 {player:GetAttribute("PicnicSit")}/{SalaryConfig.PICNIC_SECONDS}초`)
 	end
 	local heldSnack = SalaryConfig.getSnack(player:GetAttribute("HeldSnack") or "")
 	if heldSnack then

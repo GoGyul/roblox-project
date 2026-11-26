@@ -129,6 +129,7 @@ type EmployeeData = {
 	moving: boolean, -- 📦 지금 새 회사로 이동 중
 	leeCooldownUntil: number, -- 이 시각 전에는 다시 고자질 안 해요
 	incomeRate: number, -- 지금 1초에 버는 돈
+	incomeKey: string?, -- 💸 지난번에 보낸 수입 내역 (바뀔 때만 다시 보내요)
 	buffs: { [string]: boolean }, -- 🏙️ 오늘 마신 카페 음료 (americano, latte, smoothie)
 	heldGift: string?, -- 🎁 들고 있는 부장님 선물 (hongsam, flowers, choco)
 	flowerDay: number, -- 💐 꽃다발 효과가 있는 날
@@ -2506,24 +2507,44 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 
 		-- 2. 돈 벌기 (농땡이는 직급 배율을 받아요)
 		local onHalfDay = daily(d).halfday == true -- 🏖️ 반차: 쉬는 중 (수입 없음, 안 들킴)
+		-- 💸 "+N원/초"가 왜 그만큼인지 내역 (화면의 수입 줄을 누르면 보여요): { 이름, 종류("+"/"×"/"0"), 값 }
+		local parts: { { any } } = {}
 		local multiplier = if onHalfDay then 0 elseif d.state == "work" then 1 else rankOf(d).bonus
+		if d.state ~= "work" and not onHalfDay and rankOf(d).bonus ~= 1 then
+			table.insert(parts, { `👔 {rankOf(d).name} 직급 배율`, "×", rankOf(d).bonus })
+		end
 		if d.state ~= "work" then
-			multiplier *= SalaryConfig.rebirthBonus(d.profile.rebirths) -- 🔁 재입사 회차 보너스 (농땡이 수입)
+			local rebirth = SalaryConfig.rebirthBonus(d.profile.rebirths)
+			multiplier *= rebirth -- 🔁 재입사 회차 보너스 (농땡이 수입)
+			if rebirth ~= 1 then
+				table.insert(parts, { `🔁 {d.profile.rebirths + 1}회차 재입사 보너스`, "×", rebirth })
+			end
 		end
 		if events:is("audit") and d.state ~= "work" and office.insideOffice(root.Position) then -- (감사관이 있는 사무실 안에서만: 단지·옥상은 위험이 없으니 그대로)
 			multiplier *= SalaryConfig.AUDIT_INCOME -- 🔍 감사 기간: 위험한 만큼 농땡이 수입 ×2
+			table.insert(parts, { "🔍 감사 기간 (사무실 안)", "×", SalaryConfig.AUDIT_INCOME })
 		end
 		if d.buffs.taco and d.state ~= "work" then
 			multiplier *= SalaryConfig.TACO_INCOME -- 🌮 든든 타코: 농땡이 수입 +25%
+			table.insert(parts, { "🌮 든든 타코", "×", SalaryConfig.TACO_INCOME })
+		end
+		if onHalfDay then
+			table.insert(parts, { "🏖️ 반차 중", "0", 0 })
 		end
 		if d.commute then
 			multiplier = 0 -- 🚏 출근길엔 수입이 없어요 (대신 칼출근 보너스)
+			table.insert(parts, { "🚏 출근길", "0", 0 })
 		end
 		local blackout = events:is("blackout")
 		if blackout and (d.state == "work" or info.screen) then
 			multiplier = 0 -- 💡 정전: 컴퓨터가 꺼져서 일도, 화면 농땡이도 돈이 안 나와요
+			table.insert(parts, { "💡 정전 (컴퓨터 꺼짐)", "0", 0 })
 		end
-		local baseIncome = info.income + (if d.state == "work" and hasCert(d, "computer") then 1 else 0) -- 💻 컴활: 일하기 +1
+		local certBonus = if d.state == "work" and hasCert(d, "computer") then 1 else 0
+		if certBonus > 0 then
+			table.insert(parts, 1, { "💻 컴활 자격증", "+", certBonus })
+		end
+		local baseIncome = info.income + certBonus -- 💻 컴활: 일하기 +1
 		if d.state == "street" and office.streetScale then
 			-- 💰 단지 산책: 건물 안 < 그늘 < 탁 트인 곳 (위험할수록 많이 벌어요)
 			local scale, zone = office.streetScale(root.Position)
@@ -2534,12 +2555,25 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				scale *= SalaryConfig.BLOSSOM_INCOME -- 🌸 벚꽃 구경
 			end
 			baseIncome *= scale
+			if scale ~= 1 then
+				local zoneName = if zone == "open" then "☀️ 탁 트인 곳" elseif zone == "indoor" then "🏢 건물 안" else "🌳 그늘"
+				table.insert(parts, 1, { `{zoneName} 산책 수당`, "×", math.floor(scale * 100 + 0.5) / 100 })
+			end
 			if zone == "open" and not d.openTipped then
 				d.openTipped = true
 				remotes.Notify:FireClient(player, "☀️ 탁 트인 곳! 단지 산책 수당 1.4배. 대신 👀 부장님이 창가에 서면 그대로 보여요. (그늘·창에서 안 보이는 곳 1배 · 건물 안 0.8배)")
 			end
 		end
 		d.incomeRate = baseIncome * multiplier -- 화면에 "+N원/초"로 보여 줘요
+		-- 내역이 바뀔 때만 보내요 (기본 수입 + 붙은 것들)
+		local key = `{d.state}|{info.income}`
+		for _, part in parts do
+			key ..= `|{part[1]}{part[2]}{part[3]}`
+		end
+		if key ~= d.incomeKey then
+			d.incomeKey = key
+			player:SetAttribute("IncomeParts", HttpService:JSONEncode({ name = `{info.emoji} {info.name}`, base = info.income, parts = parts, work = d.state == "work" }))
+		end
 		local income = baseIncome * multiplier * dt
 		d.today.earned[d.state] = (d.today.earned[d.state] or 0) + income
 		d.today.seconds[d.state] = (d.today.seconds[d.state] or 0) + dt
@@ -2686,7 +2720,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		if dayCycle.phase == "lunch" and not d.lunchWarned and dayCycle.minute >= SalaryConfig.LUNCH_WARN then
 			d.lunchWarned = true
 			if onCampus or (Employees.hooks.onRoof ~= nil and Employees.hooks.onRoof(root.Position)) then
-				remotes.Notify:FireClient(player, "🍚 곧 1시예요! 슬슬 사무실로 돌아가요. (1시 20분까지 단지나 옥상에 있으면 지각)")
+				remotes.Notify:FireClient(player, `🍚 곧 {SalaryConfig.clockText(SalaryConfig.LUNCH_END)}예요! 슬슬 사무실로 돌아가요. ({SalaryConfig.clockText(SalaryConfig.LUNCH_LATE)}까지 단지나 옥상에 있으면 지각)`)
 			end
 		end
 		if d.lunchDue and dayCycle.phase == "work" and dayCycle.minute >= d.lunchDue then
@@ -2706,7 +2740,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			local smoothie = if d.buffs.smoothie then SalaryConfig.SMOOTHIE_AWAY elseif d.buffs.vitamin then SalaryConfig.VITAMIN_AWAY else 1 -- 🍹 에너지 스무디 / 🧃 비타민 음료
 			smoothie *= if d.buffs.hotdog then SalaryConfig.HOTDOG_AWAY else 1 -- 🌭 핫도그
 			local late = if dayCycle.minute >= SalaryConfig.AWAY_LATE_FROM then SalaryConfig.AWAY_LATE_SCALE else 1 -- 🕟 4시 반 이후엔 절반 속도
-			local exec = if d.profile.rank >= SalaryConfig.EXEC_RANK and Employees.inExecRoom(root.Position) then SalaryConfig.EXEC_AWAY else 1 -- 👔 임원실에서는 절반 속도
+			-- 👔 이사: 임원실·옥상에서는 자리 부재가 절반 속도 (임원은 "바람 쐬러 갔다"로 통해요)
+			local execPlace = Employees.inExecRoom(root.Position) or (Employees.hooks.onRoof ~= nil and Employees.hooks.onRoof(root.Position))
+			local exec = if d.profile.rank >= SalaryConfig.EXEC_RANK and execPlace then SalaryConfig.EXEC_AWAY else 1
 			d.away = math.min(100, d.away + 100 / awayLimit(d) * smoothie * late * exec * dt)
 			if late < 1 and not d.lateTipped then
 				d.lateTipped = true
@@ -3773,7 +3809,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			return false, `{item.emoji} {item.name}은(는) 오늘 메뉴가 아니에요.`
 		end
 		if SalaryConfig.StreetShops[shopId].lunchOnly and dayCycle.phase ~= "lunch" then
-			return false, "🚚 점심시간(12시~1시)에만 팔아요!"
+			return false, `🚚 점심시간({SalaryConfig.clockText(SalaryConfig.LUNCH_START)}~{SalaryConfig.clockText(SalaryConfig.LUNCH_END)})에만 팔아요!`
 		end
 		-- 🔒 직급 제한 (가게 전체 또는 물건 하나)
 		local needRank = math.max(SalaryConfig.StreetShops[shopId].minRank or 1, item.minRank or 1)
@@ -4444,6 +4480,44 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			return Employees.useGuardGift(player, giftId)
 		end,
 		-- 🏀 옥상 농구 상금 (하루 HOOP_DAILY_PRIZES번까지) → (준 돈, 남은 횟수)
+		-- 🧺 점심 옥상 피크닉 (하루 한 번): 오후 의심도 속도 ↓, 함께 먹으면 보너스
+		picnic = function(player: Player, together: boolean)
+			local d = data[player]
+			if not d or d.fired or daily(d).picnic then
+				return
+			end
+			daily(d).picnic = true
+			player:SetAttribute("PicnicDone", true) -- (상태 창 "🧺 피크닉 ✅")
+			local ate = false
+			for _, foodId in SalaryConfig.PICNIC_FOODS do
+				if d.buffs[foodId] then
+					ate = true
+				end
+			end
+			local delta = if ate then SalaryConfig.PICNIC_FOOD_SPEED else SalaryConfig.PICNIC_SPEED
+			adjustSpeed(player, d, "review", false, delta, if ate then "🍱 옥상 도시락 피크닉" else "🧺 옥상 피크닉")
+			local lines = { if ate then `🍱 푸드트럭 도시락으로 옥상 피크닉! 오후 의심도 속도 {delta}` else `🧺 옥상 피크닉! 오후 의심도 속도 {delta} (푸드트럭 음식을 먹으면 두 배)` }
+			if together then
+				d.today.eventBonus += SalaryConfig.PICNIC_TOGETHER
+				remotes.Bonus:FireClient(player, "🧺 함께 먹으니 더 맛있다!", SalaryConfig.PICNIC_TOGETHER)
+				table.insert(lines, `👥 함께 먹기 보너스 +{SalaryConfig.PICNIC_TOGETHER}원`)
+			end
+			table.insert(lines, "⏰ 점심 끝나기 전에 자리로!")
+			remotes.Notify:FireClient(player, table.concat(lines, "\n"))
+			publish(player, d)
+		end,
+		-- 🏆 옥상 기록판에서 남의 1위를 빼앗았어요: 그날 보너스 (명세서 "돌발 이벤트 보너스"에 합쳐요)
+		roofRecordBonus = function(player: Player, label: string): number
+			local d = data[player]
+			if not d then
+				return 0
+			end
+			local amount = SalaryConfig.ROOF_RECORD_BONUS
+			d.today.eventBonus += amount
+			remotes.Bonus:FireClient(player, label, amount)
+			publish(player, d)
+			return amount
+		end,
 		hoopPrize = function(player: Player, amount: number): (number, number)
 			local d = data[player]
 			if not d then
@@ -5186,6 +5260,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end,
 	})
 
+	Employees.reviewApi = reviewApi -- (init이 옥상을 지은 뒤 setRoof로 알려 줘요)
 	Employees.coworkerMenu = reviewApi.menu -- 💬 동료 [E] 말 걸기: 고를 게 여러 개면 창을 띄워요
 
 	---------------------------------------------------------------- 하루 일정
@@ -5214,6 +5289,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			d.leeWatch, d.leeBribed = 0, false
 			d.away, d.awayWarned = 0, false
 			d.buffs = {} -- 카페 음료 효과는 하루만
+			player:SetAttribute("PicnicDone", nil)
 			-- 🐦 어제 과자를 안 줬으면 비둘기 친밀도가 조금 줄어요
 			if d.profile.pigeonFeeds > 0 and not d.pigeonFedToday and dayCycle.day > 1 then
 				d.profile.pigeonFeeds = math.max(0, d.profile.pigeonFeeds - SalaryConfig.PIGEON_DECAY)
@@ -5290,14 +5366,14 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	dayCycle:on("lunchStart", function()
 		boss:goLunch()
 		for player in data do
-			remotes.Notify:FireClient(player, "🍚 점심시간! 부장님이 나갔어요. 1시까지는 마음껏!")
+			remotes.Notify:FireClient(player, `🍚 점심시간! 부장님이 나갔어요. {SalaryConfig.clockText(SalaryConfig.LUNCH_END)}까지는 마음껏!`)
 		end
 	end)
 
 	dayCycle:on("lunchEnd", function()
 		boss:backFromLunch()
 		for player, d in data do
-			remotes.Notify:FireClient(player, "⚠️ 1시! 부장님이 돌아왔어요!")
+			remotes.Notify:FireClient(player, `⚠️ {SalaryConfig.clockText(SalaryConfig.LUNCH_END)}! 부장님이 돌아왔어요!`)
 			d.lunchDue = SalaryConfig.LUNCH_LATE -- 🍚 이때까지 단지에 남아 있으면 점심 지각
 		end
 	end)

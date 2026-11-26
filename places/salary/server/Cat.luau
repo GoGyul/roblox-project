@@ -266,7 +266,7 @@ function Cat.start(office, boss, dayCycle, remotes, hooks)
 					table.insert(state.visits, SalaryConfig.START_MINUTE + 10)
 				end
 				for _ = 1, SalaryConfig.CAT_VISITS do
-					local window = pick({ { 9 * 60 + 30, 11 * 60 + 30 }, { 13 * 60 + 10, 16 * 60 + 40 } })
+					local window = pick({ { 9 * 60 + 30, 11 * 60 + 30 }, { SalaryConfig.LUNCH_END + 10, 16 * 60 + 40 } })
 					table.insert(state.visits, math.random(window[1], window[2]))
 				end
 				table.sort(state.visits)
