@@ -64,6 +64,9 @@ export type Profile = {
 	notices: { { e: string, t: string, k: string?, day: number, min: number, read: boolean? } }, -- 🔔 알림 (최근 30개)
 	stats: { days: number, nearMiss: number, caught: number, fired: number, stockProfit: number },
 	endings: { [string]: number }, -- 👑 본 엔딩 (엔딩 ID → 그때의 근무일 수)
+	leaveDays: number, -- 📅 쓸 수 있는 연차
+	leaveProgress: number, -- 📅 다음 연차까지 출근한 날
+	leaveBooked: number, -- 📅 휴가로 잡은 날 (근무일 번호, 0이면 없음)
 	rebirths: number, -- 🔁 재입사한 횟수 (회차마다 농땡이 수입 보너스)
 	webtoons: { [string]: number }, -- 📺 작품별로 몇 화까지 봤나
 	junior: string, -- 🐣 내 후배 (동료 이름, 차장부터. 그 동료가 이 사무실에 없으면 새로 배정돼요)
@@ -127,6 +130,9 @@ function Profiles.default(): Profile
 		stats = { days = 0, nearMiss = 0, caught = 0, fired = 0, stockProfit = 0 },
 		endings = {},
 		rebirths = 0,
+		leaveDays = 0,
+		leaveProgress = 0,
+		leaveBooked = 0,
 		webtoons = {},
 		junior = "",
 		juniorGrudge = 0,

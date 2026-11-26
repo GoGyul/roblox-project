@@ -450,7 +450,15 @@ Remotes:WaitForChild("Payslip").OnClientEvent:Connect(function(slip)
 		end)
 	end
 
-	button(frame, 0, "닫기 (출근 준비)", close)
+	-- 📅 연차가 있으면 여기서 바로 내일 휴가 신청
+	if (player:GetAttribute("LeaveDays") or 0) > 0 and not slip.fired and player:GetAttribute("LeaveBooked") ~= true then
+		button(frame, -95, `📅 내일 휴가 ({player:GetAttribute("LeaveDays")}일)`, function()
+			Panels.showLeave()
+		end)
+		button(frame, 95, "닫기 (출근 준비)", close)
+	else
+		button(frame, 0, "닫기 (출근 준비)", close)
+	end
 end)
 
 ---------------------------------------------------------------------------
@@ -2155,6 +2163,63 @@ do
 	end)
 end
 
+---------------------------------------------------------------------------
+-- 📅 연차 휴가: 남은 연차 · 다음 연차까지 · 내일 휴가 신청/취소
+---------------------------------------------------------------------------
+function Panels.showLeave()
+	local days = player:GetAttribute("LeaveDays") or 0
+	local progress = player:GetAttribute("LeaveProgress") or 0
+	local every = player:GetAttribute("LeaveEvery") or 5
+	local booked = player:GetAttribute("LeaveBooked") == true
+	local onLeave = player:GetAttribute("OnLeave") == true
+	local frame = sheet(460, 380)
+	line(frame, 0, 30, "📅 연차 휴가", { Font = Enum.Font.GothamBlack, TextSize = 22 })
+	line(frame, 40, 26, `남은 연차 {string.rep("🟩", days)}{string.rep("⬜", math.max(0, SalaryConfig.LEAVE_MAX - days))}  {days}/{SalaryConfig.LEAVE_MAX}일`, { Font = Enum.Font.GothamBold, TextSize = 19 })
+	line(frame, 70, 22, `다음 연차까지 출근 {progress}/{every}일 ({Ranks[player:GetAttribute("Rank") or 1].name}: {every}일마다 1일)`, { TextSize = 15, TextColor3 = MUTED })
+	local state = if onLeave then "🏖️ 오늘은 휴가 중이에요!" elseif booked then "✅ 내일 휴가가 잡혀 있어요." else "내일 휴가가 없어요."
+	line(frame, 104, 24, state, { Font = Enum.Font.GothamBold, TextSize = 17 })
+	line(frame, 136, 140,
+		"· 휴가 날은 출근 안 해요: 업무·실적 목표·지각 없음, 경고 없음\n"
+			.. "· 기본급은 그대로, 농땡이 수입은 없어요\n"
+			.. "· 단지에서 시작해요. 단지·옥상·사무실 어디든 자유롭게\n"
+			.. "· 다음 날 아침 의심도 속도가 조금 내려가요\n"
+			.. "· 전날 신청 · 휴가 날 아침 출근 전까지 취소 가능\n"
+			.. "· 금요일 · 이틀 연속 · 경고가 해고 직전이면 안 돼요",
+		{ TextSize = 14, TextColor3 = MUTED })
+	local status = line(frame, 280, 22, "", { TextSize = 14, TextColor3 = RED, TextXAlignment = Enum.TextXAlignment.Center })
+	local function request(action: string)
+		local ok, result = pcall(function()
+			return Remotes.Leave:InvokeServer(action)
+		end)
+		local message = if ok and typeof(result) == "table" then result.message else nil
+		if ok and typeof(result) == "table" and result.ok then
+			Sounds.play("ping", 0.6, 1.1)
+			close()
+			Ui.toast(message or "📅 처리했어요.", 5)
+		else
+			Sounds.play("bass", 0.5, 0.9)
+			status.Text = message or "잠시 후 다시 시도해 주세요."
+		end
+	end
+	if booked then
+		button(frame, -95, "↩️ 휴가 취소", function()
+			request("cancel")
+		end)
+	else
+		button(frame, -95, "🏖️ 내일 휴가 쓰기", function()
+			request("book")
+		end)
+	end
+	button(frame, 95, "닫기", close)
+end
+
+toolButton("📅", 46, function()
+	if current then
+		close()
+	else
+		Panels.showLeave()
+	end
+end, "📅 연차 휴가")
 toolButton("📮", 46, function()
 	if current then
 		close()

@@ -66,6 +66,7 @@ SalaryConfig.SLACK_FORCE_VISIT = 70
 SalaryConfig.SPEED_MIN = 0.5 -- (0.7 → 0.5) 아무리 잘해도 이 밑으로는 안 내려가요
 SalaryConfig.SPEED_MAX = 2.0 -- (2.5 → 2.0) 아무리 찍혀도 이 위로는 안 올라가요
 SalaryConfig.SpeedFactors = {
+	vacation = { delta = -0.05, label = "🏖️ 휴가 다녀와서 개운해요" },
 	-- 빨라지는 것 (위험!)
 	caught = { delta = 0.15, label = "🚨 적발" },
 	accuseWrong = { delta = 0.20, label = "😠 엉뚱한 동료를 감사관으로 의심" },
@@ -869,6 +870,17 @@ end
 --   (숫자는 임시 값이에요)
 SalaryConfig.EXEC_RANK = 8
 SalaryConfig.EXEC_AWAY = 0.5 -- (👔 임원실 · ☁️ 옥상 공통: 이사는 옥상에서도 자리 부재가 절반 속도)
+
+-- 📅 연차 휴가: 출근할 때마다 쌓여서 연차 1일이 돼요 (최대 LEAVE_MAX일)
+--   · 신청은 전날 (근무 중이나 퇴근 뒤 명세서에서). 휴가 날 아침 출근 전까지는 취소할 수 있어요
+--   · 휴가 날: 출근 안 해요 (업무·실적 목표·지각 없음, 경고 없음), 기본급은 그대로, 농땡이 수입은 없어요
+--     단지에서 시작하고, 단지·옥상·사무실 어디든 자유롭게 다녀요. 다음 날 아침 의심도 속도 ↓
+--   · 금요일(인사평가 발표) · 경고가 해고 직전일 때 · 이틀 연속은 안 돼요
+--   · 휴가 날은 인사평가 일수에 안 들어가요
+SalaryConfig.LEAVE_MAX = 3
+function SalaryConfig.leaveEvery(rank: number): number
+	return if rank >= 7 then 3 elseif rank >= 4 then 4 else 5 -- 인턴~주임 5일 · 대리~차장 4일 · 부장부터 3일마다 1일
+end
 
 -- ☕ 옥상 휴게 동료: 근무 중 가끔 동료 한 명이 옥상에 올라와 쉬어요 → [E] 말 걸기 = 옥상 뒷담화 (쓸모 있는 정보)
 --   · 친밀도가 높을수록 더 많이 알려 줘요: 0 부장님 기분·위치 / ❤️1 오늘 돌발 이벤트 / ❤️2 고자질 계획 / ❤️3 감사관 정체·이과장 출근일
@@ -1968,6 +1980,7 @@ SalaryConfig.Companies = {
 
 SalaryConfig.TEST_MONEY = 100000 -- 🧪 스튜디오에서 통장을 최소 이만큼 채워 줘요 (가게·인형뽑기 테스트용, 실제 게임엔 영향 없음)
 SalaryConfig.TEST_NO_SAVE = true -- 🧪 true면 스튜디오에서는 실제 저장을 읽지도 쓰지도 않아요: 아래 TEST_RANK·TEST_MONEY가 먹히고 진짜 저장이 안 망가져요 (false면 스튜디오도 실제 저장으로 플레이). 실제 게임엔 영향 없음
+SalaryConfig.TEST_LEAVE = 1 -- 🧪 스튜디오에서 연차를 최소 이만큼 채워 줘요 (📅 휴가 시험용, 0이면 끔. 저장이 꺼져 있을 때만)
 SalaryConfig.TEST_RANK = 8 -- (8 = 이사: 🖋️ 결재·🔦 순찰·🐣 후배 배정·📊 인사평가를 시험하려고 올려 뒀어요) 🧪 스튜디오에서 직급을 최소 이만큼으로 (2 = 사원, 0이면 끔. 저장이 꺼져 있을 때만)
 SalaryConfig.TEST_CAMPUS_EVENT = "" -- 🧪 스튜디오에서 "rain" · "blossom" · "flea"를 넣으면 그 단지 행사를 바로 볼 수 있어요
 SalaryConfig.TEST_CEREMONY = "" -- 🧪 스튜디오에서 들어오고 8초 뒤 승진식을 미리 봐요: "promote"(사령장만) · "ending"(사장 취임 + 엔딩) · ""(끔). 실제 게임엔 영향 없음
@@ -3563,6 +3576,7 @@ if require(script.Parent.SalarySimulation).enabled() then
 	SalaryConfig.TEST_COMPANY = experiment.company
 	SalaryConfig.TEST_MONEY = 0
 	SalaryConfig.TEST_REVIEW = false
+	SalaryConfig.TEST_LEAVE = 0
 	SalaryConfig.TEST_CEREMONY = ""
 	SalaryConfig.TEST_EVENT = ""
 	SalaryConfig.TEST_MISSION = ""

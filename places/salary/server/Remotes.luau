@@ -49,6 +49,7 @@ local Remotes = {
 	Webtoon = func("Webtoon"), -- 클라 → 서버 → 답장: 📺 웹툰 ("list" / "start", 작품, 화 / "finish", 작품, 화)
 	Approval = func("Approval"), -- 클라 → 서버 → 답장: 🖋️ 결재 ("list" / "read", 번호 / "approve"·"reject"·"stamp", 번호) (이사부터)
 	Patrol = event("Patrol"), -- 클라 → 서버: 🔦 순찰 나가기 (부장부터)
+	Leave = func("Leave"), -- 클라 → 서버 → 답장: 📅 연차 ("status" / "book" 내일 휴가 / "cancel")
 	Retire = func("Retire"), -- 클라 → 서버 → 답장: 📮 사표 ("retire" = 🏝️ 조기 은퇴 / "handover" = 👑 회사 물려주고 재입사)
 	CertExam = func("CertExam"), -- 클라 → 서버 → 답장: 📚 ("start", 자격증 ID) / ("answer", 보기 번호)
 	BuyCoupon = func("BuyCoupon"), -- 클라 → 서버 → 답장: 🎟️ 쿠폰 사서 바로 쓰기 (쿠폰 ID)

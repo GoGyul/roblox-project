@@ -233,7 +233,7 @@ clockInDeskButton.Activated:Connect(function()
 end)
 
 local function updateClockIn()
-	local waiting = ReplicatedStorage:GetAttribute("SalaryWaiting") == true
+	local waiting = ReplicatedStorage:GetAttribute("SalaryWaiting") == true and player:GetAttribute("OnLeave") ~= true -- (📅 휴가 날엔 출근 창이 안 떠요)
 	clockIn.Visible = waiting
 	if not waiting then
 		return

@@ -196,6 +196,21 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 	local endActivity: (EmployeeData) -> () -- 아래에서 정의 (나갈 때 정리에서도 써요)
 
 	-- 📅 하루 한 번 제한 기록: 내 근무일(profile.stats.days) 기준이라 다시 들어오거나 서버를 옮겨도 그대로예요
+	-- 📅 휴가로 잡힌 근무일이 지금 근무일 번호와 같은가
+	--   (근무일 번호는 퇴근 정산 때 하나 늘어서, 휴가 전날 퇴근 뒤 ~ 휴가 날 퇴근까지 true예요)
+	local function onLeave(d: EmployeeData): boolean
+		local booked = d.profile.leaveBooked or 0
+		return booked ~= 0 and booked == d.profile.stats.days
+	end
+	-- 📅 지금 휴가 중인가 (휴가 날 출근 시간 ~ 퇴근 정산 전)
+	local function leaveNow(d: EmployeeData): boolean
+		return onLeave(d) and not d.today.settled
+	end
+	-- 📅 앞으로 쓸 휴가가 잡혀 있나 (아직 시작 안 함 → 취소할 수 있어요)
+	local function leaveUpcoming(d: EmployeeData): boolean
+		local booked = d.profile.leaveBooked or 0
+		return booked > d.profile.stats.days or (booked ~= 0 and booked == d.profile.stats.days and d.today.settled == true)
+	end
 	local function daily(d: EmployeeData): { [string]: any }
 		local profile = d.profile
 		if typeof(profile.daily) ~= "table" or profile.daily.day ~= profile.stats.days then
@@ -412,6 +427,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		player:SetAttribute("WorkSeconds", math.floor(d.workSeconds))
 		player:SetAttribute("WorkQuota", quotaOf(d))
 		player:SetAttribute("HalfDay", daily(d).halfday == true) -- 🏖️ 반차 중
+		player:SetAttribute("OnLeave", leaveNow(d) or (dayCycle.waiting and onLeave(d))) -- 📅 오늘 휴가 (휴가 날 아침 출근 창도 숨겨요)
+		player:SetAttribute("LeaveDays", profile.leaveDays or 0)
+		player:SetAttribute("LeaveProgress", profile.leaveProgress or 0)
+		player:SetAttribute("LeaveEvery", SalaryConfig.leaveEvery(profile.rank))
+		player:SetAttribute("LeaveBooked", leaveUpcoming(d)) -- (앞으로 쓸 휴가가 잡혀 있나)
 		player:SetAttribute("DailyTarget", SalaryConfig.dailyTarget(profile.rank))
 		player:SetAttribute("Combo", d.combo)
 		player:SetAttribute("AccuseLeft", math.max(0, SalaryConfig.AUDIT_WRONG_MAX - (d.today.accuseWrong or 0))) -- 🕶️ 감사관 카드
@@ -959,6 +979,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		-- 🧪 스튜디오 테스트용 용돈 (저장이 꺼져 있을 때만: 진짜 저장 데이터에 섞이지 않게)
 		if RunService:IsStudio() and not canSave and SalaryConfig.TEST_MONEY > 0 then
 			profile.money = math.max(profile.money, SalaryConfig.TEST_MONEY)
+		end
+		if RunService:IsStudio() and not canSave and (SalaryConfig.TEST_LEAVE or 0) > 0 then
+			profile.leaveDays = math.max(profile.leaveDays or 0, SalaryConfig.TEST_LEAVE) -- 🧪 📅 연차 시험용
 		end
 		if RunService:IsStudio() and not canSave and (SalaryConfig.TEST_RANK or 0) > 0 then
 			profile.rank = math.max(profile.rank, SalaryConfig.TEST_RANK)
@@ -2127,6 +2150,10 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		profile.stats.fired += 1
 		-- 해고: 통장 0원 + 직급 한 단계 강등
 		profile.money = 0
+		if leaveUpcoming(d) then
+			profile.leaveBooked = 0 -- 📅 잡아 둔 휴가는 취소 (연차는 돌려줘요)
+			profile.leaveDays = math.min(SalaryConfig.LEAVE_MAX, (profile.leaveDays or 0) + 1)
+		end
 		profile.rank = math.max(1, profile.rank - 1)
 		profile.xp = Ranks[profile.rank].xp
 		profile.warnings = 0
@@ -3504,6 +3531,64 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		end)
 	end
 
+	---------------------------------------------------------------- 📅 연차 휴가: 신청·취소
+	do
+		local allowLeave = RateLimit.new(1)
+		remotes.Leave.OnServerInvoke = function(player: Player, action: any)
+			local d = data[player]
+			if not d then
+				return { ok = false }
+			end
+			local profile = d.profile
+			if action == "status" then
+				return { ok = true }
+			end
+			if not allowLeave(player) then
+				return { ok = false, message = "잠시 후 다시 시도해 주세요." }
+			end
+			if action == "cancel" then
+				if not leaveUpcoming(d) then
+					return { ok = false, message = "📅 취소할 휴가가 없어요. (휴가 날 아침 출근 전까지만 취소할 수 있어요)" }
+				end
+				profile.leaveBooked = 0
+				profile.leaveDays = math.min(SalaryConfig.LEAVE_MAX, (profile.leaveDays or 0) + 1)
+				publish(player, d)
+				return { ok = true, message = "📅 휴가를 취소했어요. 연차는 돌려받았어요." }
+			end
+			if action ~= "book" then
+				return { ok = false }
+			end
+			if d.fired then
+				return { ok = false, message = "📅 지금은 휴가를 쓸 수 없어요." }
+			end
+			if dayCycle.waiting then
+				return { ok = false, message = "📅 휴가는 전날 신청해야 해요. (오늘 근무 중이나 퇴근 뒤에)" }
+			end
+			if (profile.leaveDays or 0) <= 0 then
+				return { ok = false, message = `📅 연차가 없어요. 출근 {SalaryConfig.leaveEvery(profile.rank)}일마다 1일씩 생겨요.` }
+			end
+			if leaveUpcoming(d) then
+				return { ok = false, message = "📅 내일 휴가는 이미 신청했어요." }
+			end
+			if leaveNow(d) then
+				return { ok = false, message = "📅 이틀 연속 휴가는 안 돼요. 하루는 출근해야 해요." }
+			end
+			if profile.warnings >= SalaryConfig.MAX_WARNINGS - 1 then
+				return { ok = false, message = "😤 \"경고가 그렇게 쌓였는데 휴가를?\" 부장님이 결재를 안 해 줘요. (경고가 줄면 다시)" }
+			end
+			-- 내일이 무슨 요일인가 (오늘 정산이 끝났어도 근무일 번호는 아직 오늘이에요)
+			local tomorrow = SalaryConfig.Weekdays[dayCycle.day % #SalaryConfig.Weekdays + 1]
+			if tomorrow.name == "금요일" then
+				return { ok = false, message = "📅 금요일은 인사평가 발표 날이라 휴가를 쓸 수 없어요." }
+			end
+			profile.leaveBooked = profile.stats.days + (if d.today.settled then 0 else 1)
+			profile.leaveDays -= 1
+			publish(player, d)
+			task.spawn(save, player, d)
+			return { ok = true, message = `🏖️ 내일({tomorrow.name}) 휴가 신청 완료! 출근 안 해도 되고 기본급은 그대로예요. (남은 연차 {profile.leaveDays}일)` }
+		end
+	end
+
 	---------------------------------------------------------------- 🖋️ 결재 서류 (이사부터)
 	do
 		-- 오늘의 서류 묶음 (하루에 한 번 뽑아요. 나갔다 들어와도 그대로)
@@ -3708,7 +3793,7 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			local total, ready = 0, 0
 			for _, d in data do
 				total += 1
-				if d.ready then
+				if d.ready or onLeave(d) then -- (📅 휴가인 사람은 출근을 안 기다려요)
 					ready += 1
 				end
 			end
@@ -3731,6 +3816,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 		-- 🚏 한 명이라도 걸어서 출근하면 오늘은 8시 30분에 시작해요 (바로 자리로 간 사람은 9시까지 여유 있게 앉아 있어요)
 		local anyWalk = false
 		for _, d in data do
+			if onLeave(d) then
+				d.commuteWalk = false -- (📅 휴가인 사람은 출근길이 없어요: 어제 고른 "걸어서 출근"이 남아 있지 않게)
+			end
 			anyWalk = anyWalk or d.commuteWalk == true
 		end
 		dayCycle.earlyStart = anyWalk and office.commuteSpawn ~= nil
@@ -5317,6 +5405,23 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				adjustSpeed(player, d, "reserved", true, reserved.delta, reserved.label)
 			end
 			d.nextDayFactors = {}
+			-- 📅 오늘 휴가: 반차처럼 쉬어요 (안 들키고 업무·실적 통과, 농땡이 수입 없음) + 단지로 내보내요
+			if onLeave(d) then
+				daily(d).halfday = true
+				daily(d).leave = true
+				d.workSeconds = quotaOf(d)
+				d.suspicion = 0
+				d.nearMissUsed = true
+				reserveSpeed(d, "vacation") -- 내일 아침: 개운해요
+				pushNotice(player, "🏖️", "오늘은 휴가! 기본급은 그대로 나와요. 단지·옥상에서 푹 쉬어요.", "leave")
+				task.delay(1.5, function()
+					remotes.Notify:FireClient(player, "🏖️ 오늘은 휴가예요! 출근 안 해도 돼요. 기본급은 그대로 · 단지·옥상·사무실 어디든 자유롭게 놀아요!")
+					local character = player.Character
+					if character and office.commuteSpawn then
+						character:PivotTo(office.commuteSpawn + Vector3.new(0, 3, 0))
+					end
+				end)
+			end
 			player:SetAttribute("SuspicionSpeed", d.speed)
 			player:SetAttribute("SpeedLog", HttpService:JSONEncode(d.speedLog))
 			if d.speed ~= 1 then
@@ -5387,10 +5492,11 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 			local profile = d.profile
 			local rank = rankOf(d)
+			local leaveToday = onLeave(d) -- 📅 (아래 근무일 번호가 바뀌기 전에)
 
 			-- 명세서 항목
 			local basePay = math.floor(rank.basePay * (if hasCert(d, "mba") then 1.1 else 1)) -- 🎓 MBA: 기본급 +10%
-			local lines = { { label = `기본급 ({rank.name})` .. (if hasCert(d, "mba") then " 🎓" else ""), amount = basePay } }
+			local lines = { { label = (if leaveToday then "🏖️ 유급휴가 · 기본급 " else "기본급 ") .. `({rank.name})` .. (if hasCert(d, "mba") then " 🎓" else ""), amount = basePay } }
 			for _, stateId in PAYSLIP_ORDER do
 				local amount = d.today.earned[stateId] or 0
 				if amount >= 1 then
@@ -5478,7 +5584,9 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			end
 
 			-- 📊 인사평가: 오늘 점수 (금요일이면 순위 발표 → 성과급·감봉 줄이 붙어요)
-			local reviewLines, reviewXp, reviewNote = reviewApi.settle(player, d, {
+			local reviewLines, reviewXp, reviewNote = {}, 0, nil
+			if not leaveToday then -- (📅 휴가 날은 인사평가에 안 들어가요)
+				reviewLines, reviewXp, reviewNote = reviewApi.settle(player, d, {
 				-- (적발 감봉은 빼지 않은 금액으로: 적발은 태도 점수에서 이미 깎여요. 실적까지 깎으면 이중 벌이에요)
 				earned = earned + d.today.caught * SalaryConfig.caughtPenalty(profile.rank),
 				target = target,
@@ -5487,7 +5595,8 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 				halfday = daily(d).halfday == true,
 				audit = auditReported(d),
 				bossAway = boss.awayToday == true or sleepDay == dayCycle.day,
-			})
+				})
+			end
 			for _, line in reviewLines do
 				table.insert(lines, line)
 			end
@@ -5502,6 +5611,17 @@ function Employees.start(office, boss, dayCycle, remotes, coworkers, events, lee
 			local ripened = growGarden(d) -- 🌱 오늘 물 준 화분이 자라요
 			if ripened > 0 then
 				pushNotice(player, "🌱", `옥상 텃밭 {ripened}개가 다 익었어요! 수확해요`, "garden")
+			end
+			-- 📅 연차 쌓기: 출근한 날만 (휴가 날은 안 쌓여요)
+			if not leaveToday and profile.warnings < SalaryConfig.MAX_WARNINGS then -- (해고되는 날은 빼요)
+				profile.leaveProgress = (profile.leaveProgress or 0) + 1
+				if profile.leaveProgress >= SalaryConfig.leaveEvery(profile.rank) then
+					profile.leaveProgress = 0
+					if (profile.leaveDays or 0) < SalaryConfig.LEAVE_MAX then
+						profile.leaveDays = (profile.leaveDays or 0) + 1
+						pushNotice(player, "📅", `연차 1일이 생겼어요! (지금 {profile.leaveDays}일 · 메뉴 📅에서 신청)`, "leave")
+					end
+				end
 			end
 			profile.stats.days += 1
 			player:SetAttribute("GymSets", 0) -- 📅 내일은 다시 운동 0/3부터
